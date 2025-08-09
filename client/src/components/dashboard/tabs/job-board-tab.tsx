@@ -200,7 +200,8 @@ export default function JobBoardTab() {
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
   const [showJobModal, setShowJobModal] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
-  const [jobFilter, setJobFilter] = useState<'all' | 'hot'>('all');
+  const [jobFilter, setJobFilter] = useState<'all' | 'hot' | 'saved'>('all');
+  const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState({
     company: '',
     role: '',
@@ -232,9 +233,22 @@ export default function JobBoardTab() {
     });
   };
 
+  const toggleSaveJob = (jobId: string) => {
+    setSavedJobs(prev => {
+      const newSavedJobs = new Set(prev);
+      if (newSavedJobs.has(jobId)) {
+        newSavedJobs.delete(jobId);
+      } else {
+        newSavedJobs.add(jobId);
+      }
+      return newSavedJobs;
+    });
+  };
+
   const filteredJobs = jobListings.filter(job => {
-    // Filter by hot/all jobs
+    // Filter by job type
     if (jobFilter === 'hot' && !job.isHot) return false;
+    if (jobFilter === 'saved' && !savedJobs.has(job.id)) return false;
     
     // Filter by search query
     const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -257,13 +271,17 @@ export default function JobBoardTab() {
   const totalJobs = filteredJobs.length;
   const totalPages = Math.ceil(totalJobs / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentJobs = filteredJobs.slice(0, currentPage * itemsPerPage);
+  const currentJobs = filteredJobs.slice(startIndex, startIndex + itemsPerPage);
   
-  const hasMoreJobs = currentPage * itemsPerPage < totalJobs;
-  
-  const loadMoreJobs = () => {
-    if (hasMoreJobs) {
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
       setCurrentPage(prev => prev + 1);
+    }
+  };
+  
+  const goToPrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
     }
   };
 
@@ -290,6 +308,20 @@ export default function JobBoardTab() {
 
           {/* Job Type Toggle and Filters */}
           <div className="flex items-center gap-4">
+            {/* Saved Jobs Button */}
+            <button
+              onClick={() => setJobFilter('saved')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                jobFilter === 'saved'
+                  ? 'bg-green-500 text-white'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 border border-gray-300 dark:border-gray-600'
+              }`}
+              data-testid="button-saved-jobs"
+            >
+              <i className="fas fa-bookmark mr-2"></i>
+              Saved Jobs ({savedJobs.size})
+            </button>
+
             {/* Hot Jobs / All Jobs Toggle */}
             <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
               <button
@@ -336,126 +368,143 @@ export default function JobBoardTab() {
       <div className="p-6">
         <div className="space-y-4">
           {currentJobs.map((job) => (
-            <div key={job.id} className={`${job.background} dark:bg-gray-800 rounded-2xl p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200 relative`}>
-              {/* Bookmark Icon - Top Right */}
-              <div className="absolute top-4 right-4">
-                <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
-                  <i className="fas fa-bookmark text-white text-sm" data-testid="icon-bookmark"></i>
-                </div>
+            <div key={job.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200 overflow-hidden">
+              {/* Company Logo Section - Full Width */}
+              <div className={`${job.background} h-24 flex items-center justify-center relative`}>
+                <img
+                  src={job.logo}
+                  alt={`${job.company} logo`}
+                  className="w-16 h-16 rounded object-cover"
+                />
+                {/* Save Job Button */}
+                <button
+                  onClick={() => toggleSaveJob(job.id)}
+                  className="absolute top-3 right-3 p-2 rounded-full bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow"
+                  data-testid={`button-save-${job.id}`}
+                >
+                  <i className={`fas fa-bookmark ${savedJobs.has(job.id) ? 'text-green-500' : 'text-gray-400'}`}></i>
+                </button>
               </div>
 
-              <div className="flex items-start gap-6">
-                {/* Large Company Logo */}
-                <div className={`w-32 h-32 ${job.background} rounded-2xl flex items-center justify-center border border-gray-200 dark:border-gray-600 flex-shrink-0`}>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-gray-700 dark:text-gray-300 mb-2">G</div>
-                    <div className="text-sm font-medium text-gray-600 dark:text-gray-400">Google</div>
-                  </div>
-                </div>
+              {/* Job Details */}
+              <div className="p-6">
+                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-1">{job.company}</h3>
+                <h4 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+                  {job.title}
+                  {job.isHot && <i className="fas fa-fire text-red-500 text-lg"></i>}
+                </h4>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">{job.description}</p>
                 
-                {/* Job Details */}
-                <div className="flex-1">
-                  <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-1">{job.company}</h3>
-                  <h4 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
-                    {job.title}
-                    {job.isHot && <i className="fas fa-fire text-red-500 text-lg"></i>}
-                  </h4>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4">{job.description}</p>
-                  
-                  <div className="flex items-center gap-6 text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    <span className="flex items-center gap-1">
-                      <i className="fas fa-briefcase"></i>
-                      {job.experience}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <i className="fas fa-rupee-sign"></i>
-                      {job.salary}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <i className="fas fa-map-marker-alt"></i>
-                      {job.location}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <i className="fas fa-clock"></i>
-                      {job.workType}
-                    </span>
-                    <span className="font-medium">{job.type}</span>
-                  </div>
+                <div className="flex items-center gap-6 text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  <span className="flex items-center gap-1">
+                    <i className="fas fa-briefcase"></i>
+                    {job.experience}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <i className="fas fa-rupee-sign"></i>
+                    {job.salary}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <i className="fas fa-map-marker-alt"></i>
+                    {job.location}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <i className="fas fa-clock"></i>
+                    {job.workType}
+                  </span>
+                  <span className="font-medium">{job.type}</span>
+                </div>
 
-                  {/* Job Tags */}
-                  <div className="flex items-center gap-3 mb-4">
-                    <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-sm">
-                      Open Positions ~ 2
-                    </span>
-                    <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-sm">
-                      Product
-                    </span>
-                    <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-sm">
-                      B2B
-                    </span>
-                    <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-sm">
-                      Full Time
-                    </span>
-                  </div>
+                {/* Job Tags */}
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-sm">
+                    Open Positions ~ 2
+                  </span>
+                  <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-sm">
+                    Product
+                  </span>
+                  <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-sm">
+                    B2B
+                  </span>
+                  <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-sm">
+                    Full Time
+                  </span>
+                </div>
 
-                  {/* Skills */}
-                  <div className="flex items-center gap-2 mb-4">
-                    {job.skills.map((skill, index) => (
-                      <span key={index} className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-3 py-1 rounded-full text-sm font-medium">
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
+                {/* Skills */}
+                <div className="flex items-center gap-2 mb-4">
+                  {job.skills.map((skill, index) => (
+                    <span key={index} className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-3 py-1 rounded-full text-sm font-medium">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
 
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Posted: {job.postedDays} days ago</span>
-                    <Button 
-                      onClick={() => handleViewMore(job)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium" 
-                      size="sm" 
-                      data-testid="button-view-more"
-                    >
-                      View More
-                    </Button>
-                  </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">Posted: {job.postedDays} days ago</span>
+                  <Button 
+                    onClick={() => handleViewMore(job)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium" 
+                    size="sm" 
+                    data-testid={`button-view-more-${job.id}`}
+                  >
+                    View More
+                  </Button>
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Load More / Pagination */}
+        {/* Pagination */}
         <div className="flex flex-col items-center gap-4 mt-8">
           <div className="text-sm text-gray-600 dark:text-gray-400">
-            Showing {currentJobs.length} of {totalJobs} jobs
+            Showing page {currentPage} of {totalPages} ({totalJobs} total jobs)
           </div>
           
-          {hasMoreJobs && (
-            <Button 
-              onClick={loadMoreJobs}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
-              data-testid="button-load-more"
+          {/* Page Navigation */}
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={goToPrevPage}
+              disabled={currentPage === 1}
+              variant="outline"
+              size="sm"
+              data-testid="button-prev-page"
             >
-              Load More Jobs
+              <i className="fas fa-chevron-left mr-2"></i>
+              Previous
             </Button>
-          )}
-          
-          {/* Page Numbers */}
-          <div className="flex items-center gap-2">
-            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map((page) => (
-              <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${
-                  currentPage >= page
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                }`}
-                data-testid={`button-page-${page}`}
-              >
-                {page}
-              </button>
-            ))}
+            
+            <div className="flex items-center gap-2">
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                const page = i + 1;
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${
+                      currentPage === page
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                    data-testid={`button-page-${page}`}
+                  >
+                    {page}
+                  </button>
+                );
+              })}
+            </div>
+            
+            <Button
+              onClick={goToNextPage}
+              disabled={currentPage === totalPages}
+              variant="outline"
+              size="sm"
+              data-testid="button-next-page"
+            >
+              Next
+              <i className="fas fa-chevron-right ml-2"></i>
+            </Button>
           </div>
         </div>
       </div>
