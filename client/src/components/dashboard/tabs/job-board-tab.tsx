@@ -528,7 +528,7 @@ export default function JobBoardTab() {
             <>
               <DialogHeader>
                 <div className="flex items-start gap-4 mb-4">
-                  <div className={`w-20 h-20 ${selectedJob.background} rounded-xl flex items-center justify-center`}>
+                  <div className={`w-32 h-20 ${selectedJob.background} rounded-xl flex items-center justify-center`} style={{width: '80%', maxWidth: '160px'}}>
                     <div className="text-center">
                       <div className="text-2xl font-bold text-gray-700 dark:text-gray-300">G</div>
                       <div className="text-xs font-medium text-gray-600 dark:text-gray-400">Google</div>
