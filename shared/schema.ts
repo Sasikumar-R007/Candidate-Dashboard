@@ -1,0 +1,109 @@
+import { sql } from "drizzle-orm";
+import { pgTable, text, varchar, timestamp, json, boolean } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+});
+
+export const profiles = pgTable("profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  title: text("title").notNull(),
+  location: text("location").notNull(),
+  education: text("education"),
+  portfolio: text("portfolio"),
+  mobile: text("mobile"),
+  whatsapp: text("whatsapp"),
+  primaryEmail: text("primary_email"),
+  secondaryEmail: text("secondary_email"),
+  currentLocation: text("current_location"),
+  preferredLocation: text("preferred_location"),
+  dateOfBirth: text("date_of_birth"),
+  portfolioUrl: text("portfolio_url"),
+  websiteUrl: text("website_url"),
+  linkedinUrl: text("linkedin_url"),
+  profilePicture: text("profile_picture"),
+  bannerImage: text("banner_image"),
+  appliedJobsCount: text("applied_jobs_count").default("0"),
+});
+
+export const jobPreferences = pgTable("job_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  profileId: varchar("profile_id").notNull(),
+  jobTitles: text("job_titles").notNull(),
+  workMode: text("work_mode").notNull(),
+  employmentType: text("employment_type").notNull(),
+  locations: text("locations").notNull(),
+  startDate: text("start_date").notNull(),
+  instructions: text("instructions"),
+});
+
+export const skills = pgTable("skills", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  profileId: varchar("profile_id").notNull(),
+  name: text("name").notNull(),
+  category: text("category").notNull(), // primary, secondary, knowledge
+});
+
+export const activities = pgTable("activities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  profileId: varchar("profile_id").notNull(),
+  type: text("type").notNull(), // resume_update, job_applied
+  description: text("description").notNull(),
+  date: text("date").notNull(),
+});
+
+export const jobApplications = pgTable("job_applications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  profileId: varchar("profile_id").notNull(),
+  jobTitle: text("job_title").notNull(),
+  company: text("company").notNull(),
+  jobType: text("job_type").notNull(),
+  appliedDate: text("applied_date").notNull(),
+  daysAgo: text("days_ago").notNull(),
+});
+
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+});
+
+export const insertProfileSchema = createInsertSchema(profiles).omit({
+  id: true,
+});
+
+export const insertJobPreferencesSchema = createInsertSchema(jobPreferences).omit({
+  id: true,
+});
+
+export const insertSkillSchema = createInsertSchema(skills).omit({
+  id: true,
+});
+
+export const insertActivitySchema = createInsertSchema(activities).omit({
+  id: true,
+});
+
+export const insertJobApplicationSchema = createInsertSchema(jobApplications).omit({
+  id: true,
+});
+
+export type InsertUser = z.infer<typeof insertUserSchema>;
+export type User = typeof users.$inferSelect;
+export type InsertProfile = z.infer<typeof insertProfileSchema>;
+export type Profile = typeof profiles.$inferSelect;
+export type InsertJobPreferences = z.infer<typeof insertJobPreferencesSchema>;
+export type JobPreferences = typeof jobPreferences.$inferSelect;
+export type InsertSkill = z.infer<typeof insertSkillSchema>;
+export type Skill = typeof skills.$inferSelect;
+export type InsertActivity = z.infer<typeof insertActivitySchema>;
+export type Activity = typeof activities.$inferSelect;
+export type InsertJobApplication = z.infer<typeof insertJobApplicationSchema>;
+export type JobApplication = typeof jobApplications.$inferSelect;
