@@ -368,88 +368,94 @@ export default function JobBoardTab() {
       <div className="p-6">
         <div className="space-y-4">
           {currentJobs.map((job) => (
-            <div key={job.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200 overflow-hidden">
-              {/* Company Logo Section - Full Width */}
-              <div className={`${job.background} h-24 flex items-center justify-center relative`}>
-                <img
-                  src={job.logo}
-                  alt={`${job.company} logo`}
-                  className="w-16 h-16 rounded object-cover"
-                />
-                {/* Save Job Button */}
-                <button
-                  onClick={() => toggleSaveJob(job.id)}
-                  className="absolute top-3 right-3 p-2 rounded-full bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow"
-                  data-testid={`button-save-${job.id}`}
-                >
-                  <i className={`fas fa-bookmark ${savedJobs.has(job.id) ? 'text-green-500' : 'text-gray-400'}`}></i>
-                </button>
-              </div>
-
-              {/* Job Details */}
-              <div className="p-6">
-                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-1">{job.company}</h3>
-                <h4 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
-                  {job.title}
-                  {job.isHot && <i className="fas fa-fire text-red-500 text-lg"></i>}
-                </h4>
-                <p className="text-gray-600 dark:text-gray-400 mb-4">{job.description}</p>
-                
-                <div className="flex items-center gap-6 text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  <span className="flex items-center gap-1">
-                    <i className="fas fa-briefcase"></i>
-                    {job.experience}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <i className="fas fa-rupee-sign"></i>
-                    {job.salary}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <i className="fas fa-map-marker-alt"></i>
-                    {job.location}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <i className="fas fa-clock"></i>
-                    {job.workType}
-                  </span>
-                  <span className="font-medium">{job.type}</span>
+            <div key={job.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200 overflow-hidden m-4">
+              <div className="flex">
+                {/* Company Logo Section - Left Side Full Height */}
+                <div className={`${job.background} w-48 flex flex-col items-center justify-center p-6 relative`}>
+                  <img
+                    src={job.logo}
+                    alt={`${job.company} logo`}
+                    className="w-16 h-16 rounded object-cover mb-2"
+                  />
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-gray-700 dark:text-gray-300">{job.company.split(' ')[0]}</div>
+                  </div>
                 </div>
 
-                {/* Job Tags */}
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-sm">
-                    Open Positions ~ 2
-                  </span>
-                  <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-sm">
-                    Product
-                  </span>
-                  <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-sm">
-                    B2B
-                  </span>
-                  <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-sm">
-                    Full Time
-                  </span>
-                </div>
-
-                {/* Skills */}
-                <div className="flex items-center gap-2 mb-4">
-                  {job.skills.map((skill, index) => (
-                    <span key={index} className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-3 py-1 rounded-full text-sm font-medium">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500 dark:text-gray-400">Posted: {job.postedDays} days ago</span>
-                  <Button 
-                    onClick={() => handleViewMore(job)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium" 
-                    size="sm" 
-                    data-testid={`button-view-more-${job.id}`}
+                {/* Job Details - Right Side */}
+                <div className="flex-1 p-6 relative">
+                  {/* Save Job Button - Top Right */}
+                  <button
+                    onClick={() => toggleSaveJob(job.id)}
+                    className="absolute top-4 right-4 p-2 rounded-full bg-orange-500 hover:bg-orange-600 transition-colors"
+                    data-testid={`button-save-${job.id}`}
                   >
-                    View More
-                  </Button>
+                    <i className={`fas fa-bookmark text-white`}></i>
+                  </button>
+
+                  <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-1">{job.company}</h3>
+                  <h4 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+                    {job.title}
+                    {job.isHot && <i className="fas fa-fire text-red-500 text-lg"></i>}
+                  </h4>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">{job.description}</p>
+                  
+                  <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    <span className="flex items-center gap-1">
+                      <i className="fas fa-briefcase"></i>
+                      {job.experience}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <i className="fas fa-rupee-sign"></i>
+                      {job.salary}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <i className="fas fa-map-marker-alt"></i>
+                      {job.location}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <i className="fas fa-clock"></i>
+                      {job.workType}
+                    </span>
+                    <span className="font-medium">{job.type}</span>
+                  </div>
+
+                  {/* Job Tags */}
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-xs">
+                      Open Positions ~ 2
+                    </span>
+                    <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-xs">
+                      Product
+                    </span>
+                    <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-xs">
+                      B2B
+                    </span>
+                    <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-xs">
+                      Full Time
+                    </span>
+                  </div>
+
+                  {/* Skills */}
+                  <div className="flex items-center gap-2 mb-4">
+                    {job.skills.map((skill, index) => (
+                      <span key={index} className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full text-xs font-medium">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Posted: {job.postedDays} days ago</span>
+                    <Button 
+                      onClick={() => handleViewMore(job)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium" 
+                      size="sm" 
+                      data-testid={`button-view-more-${job.id}`}
+                    >
+                      View More
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
