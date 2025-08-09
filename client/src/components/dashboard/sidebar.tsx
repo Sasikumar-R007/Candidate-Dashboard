@@ -12,10 +12,10 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   ];
 
   return (
-    <div className="w-64 bg-blue-900 dark:bg-gray-800 text-white flex-shrink-0">
-      <div className="p-6">
+    <div className="w-64 bg-blue-900 dark:bg-gray-800 text-white flex-shrink-0 h-screen overflow-hidden">
+      <div className="p-6 h-full flex flex-col">
         <h1 className="text-xl font-bold mb-8">Job Portal</h1>
-        <nav className="space-y-2">
+        <nav className="space-y-2 flex-1">
           {menuItems.map((item) => (
             <button
               key={item.id}
