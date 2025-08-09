@@ -14,9 +14,28 @@ export function useUpdateProfile() {
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: api.updateProfile,
+    mutationFn: async (data: any) => {
+      const result = await api.updateProfile(data);
+      
+      // Log activity for profile update
+      try {
+        await fetch('/api/activities', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            description: 'Profile information updated',
+            type: 'profile_update'
+          }),
+        });
+      } catch (error) {
+        console.warn('Failed to log activity:', error);
+      }
+      
+      return result;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/profile'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
       toast({
         title: "Success",
         description: "Profile updated successfully",
@@ -112,9 +131,28 @@ export function useUploadProfile() {
   const { toast } = useToast();
   
   return useMutation({
-    mutationFn: api.uploadProfile,
+    mutationFn: async (file: File) => {
+      const result = await api.uploadProfile(file);
+      
+      // Log activity for profile picture upload
+      try {
+        await fetch('/api/activities', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            description: 'Profile picture updated',
+            type: 'profile_picture_update'
+          }),
+        });
+      } catch (error) {
+        console.warn('Failed to log activity:', error);
+      }
+      
+      return result;
+    },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/profile'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/activities'] });
       toast({
         title: "Success",
         description: "Profile picture uploaded successfully",

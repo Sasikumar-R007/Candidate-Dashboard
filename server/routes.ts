@@ -136,6 +136,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create activity
+  app.post("/api/activities", async (req, res) => {
+    try {
+      const users = await storage.getUserByUsername("mathew.anderson");
+      if (!users) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const profile = await storage.getProfile(users.id);
+      if (!profile) {
+        return res.status(404).json({ message: "Profile not found" });
+      }
+      
+      const activityData = {
+        ...req.body,
+        profileId: profile.id,
+        date: new Date().toLocaleDateString()
+      };
+      
+      const activity = await storage.createActivity(activityData);
+      res.json(activity);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get job applications
   app.get("/api/job-applications", async (req, res) => {
     try {

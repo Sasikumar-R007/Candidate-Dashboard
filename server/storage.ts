@@ -91,7 +91,8 @@ export class MemStorage implements IStorage {
       linkedinUrl: "https://www.linkedin.com/in/Mathew Anderson",
       profilePicture: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=150&h=150",
       bannerImage: null,
-      appliedJobsCount: "12"
+      appliedJobsCount: "12",
+      resumeFile: null
     };
     this.profiles.set(userId, profile);
 
@@ -209,7 +210,8 @@ export class MemStorage implements IStorage {
       linkedinUrl: insertProfile.linkedinUrl || null,
       profilePicture: insertProfile.profilePicture || null,
       bannerImage: insertProfile.bannerImage || null,
-      appliedJobsCount: insertProfile.appliedJobsCount || null
+      appliedJobsCount: insertProfile.appliedJobsCount || null,
+      resumeFile: insertProfile.resumeFile || null
     };
     this.profiles.set(profile.userId, profile);
     return profile;
@@ -275,6 +277,13 @@ export class MemStorage implements IStorage {
 
   async getActivitiesByProfile(profileId: string): Promise<Activity[]> {
     return Array.from(this.activities.values()).filter(activity => activity.profileId === profileId);
+  }
+
+  async createActivity(insertActivity: InsertActivity): Promise<Activity> {
+    const id = randomUUID();
+    const activity: Activity = { ...insertActivity, id };
+    this.activities.set(id, activity);
+    return activity;
   }
 
   async createActivity(insertActivity: InsertActivity): Promise<Activity> {

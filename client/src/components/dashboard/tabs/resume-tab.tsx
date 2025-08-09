@@ -22,6 +22,21 @@ export default function ResumeTab() {
       if (response.ok) {
         const result = await response.json();
         await updateProfile.mutateAsync({ resumeFile: result.url });
+        
+        // Log activity for resume upload
+        try {
+          await fetch('/api/activities', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              description: 'Resume updated',
+              type: 'resume_upload'
+            }),
+          });
+        } catch (error) {
+          console.warn('Failed to log activity:', error);
+        }
+        
         setShowResumeModal(false);
       }
     } catch (error) {
@@ -53,36 +68,30 @@ export default function ResumeTab() {
                 </Button>
               </div>
               
-              {/* Resume Display */}
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 min-h-96 flex items-center justify-center">
+              {/* Resume Display - A4 Size */}
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4" style={{width: '210mm', height: '297mm', aspectRatio: '210/297'}}>
                 {profile?.resumeFile ? (
                   <div className="w-full h-full">
-                    {profile.resumeFile.endsWith('.pdf') ? (
-                      <iframe
-                        src={profile.resumeFile}
-                        className="w-full h-full min-h-96 border rounded"
-                        title="Resume PDF"
-                      />
-                    ) : (
-                      <img
-                        src={profile.resumeFile}
-                        alt="Resume"
-                        className="w-full h-auto max-h-96 object-contain rounded shadow-md"
-                      />
-                    )}
+                    <img
+                      src={profile.resumeFile}
+                      alt="Resume"
+                      className="w-full h-full object-contain rounded shadow-md"
+                    />
                   </div>
                 ) : (
-                  <div className="text-center">
-                    <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <i className="fas fa-file-alt text-2xl text-gray-400"></i>
+                  <div className="flex items-center justify-center h-full">
+                    <div className="text-center">
+                      <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i className="fas fa-file-image text-2xl text-gray-400"></i>
+                      </div>
+                      <p className="text-gray-500 mb-4">No resume image uploaded yet</p>
+                      <Button
+                        onClick={() => setShowResumeModal(true)}
+                        className="bg-blue-600 text-white hover:bg-blue-700"
+                      >
+                        Upload Resume Image
+                      </Button>
                     </div>
-                    <p className="text-gray-500 mb-4">No resume uploaded yet</p>
-                    <Button
-                      onClick={() => setShowResumeModal(true)}
-                      className="bg-blue-600 text-white hover:bg-blue-700"
-                    >
-                      Upload Resume
-                    </Button>
                   </div>
                 )}
               </div>
@@ -141,8 +150,8 @@ export default function ResumeTab() {
         open={showResumeModal}
         onOpenChange={setShowResumeModal}
         onUpload={handleResumeUpload}
-        title="Upload Resume"
-        accept=".pdf,.doc,.docx,image/*"
+        title="Upload Resume Image"
+        accept="image/*"
         isUploading={updateProfile.isPending}
       />
     </>

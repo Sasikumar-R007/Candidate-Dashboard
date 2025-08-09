@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import EditAboutModal from '../modals/edit-about-modal';
+import EditProfileModal from '../modals/edit-profile-modal';
 import EditOnlinePresenceModal from '../modals/edit-online-presence-modal';
 import type { Profile } from '@shared/schema';
 
@@ -22,7 +22,7 @@ export default function MyProfileTab({ profile }: MyProfileTabProps) {
               <h3 className="text-xl font-semibold text-gray-900">About you</h3>
               <Button
                 onClick={() => setShowAboutModal(true)}
-                className="bg-primary-blue text-white hover:bg-blue-800"
+                className="bg-blue-600 text-white hover:bg-blue-700"
                 size="sm"
               >
                 <i className="fas fa-edit mr-2"></i>Edit
@@ -107,7 +107,7 @@ export default function MyProfileTab({ profile }: MyProfileTabProps) {
       </div>
 
       {/* Modals */}
-      <EditAboutModal
+      <EditProfileModal
         open={showAboutModal}
         onOpenChange={setShowAboutModal}
         profile={profile}

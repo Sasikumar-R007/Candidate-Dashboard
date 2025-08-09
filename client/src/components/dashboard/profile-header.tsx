@@ -7,12 +7,14 @@ import type { Profile } from '@shared/schema';
 
 interface ProfileHeaderProps {
   profile: Profile;
+  showFullHeader?: boolean;
 }
 
-export default function ProfileHeader({ profile }: ProfileHeaderProps) {
+export default function ProfileHeader({ profile, showFullHeader = true }: ProfileHeaderProps) {
   const [showBannerModal, setShowBannerModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   
   const updateProfile = useUpdateProfile();
   const uploadBanner = useUploadBanner();
@@ -45,6 +47,10 @@ export default function ProfileHeader({ profile }: ProfileHeaderProps) {
       console.error('Banner deletion failed:', error);
     }
   };
+
+  if (!showFullHeader) {
+    return null;
+  }
 
   return (
     <>
@@ -85,19 +91,10 @@ export default function ProfileHeader({ profile }: ProfileHeaderProps) {
               </Button>
             )}
           </div>
-        </div>
 
-        {/* Profile Information Card */}
-        <div className="bg-white mx-6 -mt-20 rounded-xl shadow-lg p-6 relative z-10">
-          <div className="flex items-center justify-between mb-6">
-            {/* Left side - Applied Jobs */}
-            <div className="text-center">
-              <p className="text-sm text-gray-600 font-medium">Applied Jobs</p>
-              <p className="text-2xl font-bold text-gray-900">{profile.appliedJobsCount}</p>
-            </div>
-
-            {/* Center - Profile Picture */}
-            <div className="relative flex-shrink-0">
+          {/* Profile Picture - Centered on Banner Edge */}
+          <div className="absolute left-1/2 transform -translate-x-1/2 bottom-0 translate-y-1/2">
+            <div className="relative">
               <img 
                 src={profile.profilePicture || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=150&h=150"} 
                 alt="Profile picture" 
@@ -105,19 +102,36 @@ export default function ProfileHeader({ profile }: ProfileHeaderProps) {
               />
               <button 
                 onClick={() => setShowProfileModal(true)}
-                className="absolute -bottom-2 -right-2 bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors"
+                className="absolute -bottom-1 -right-1 bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors"
               >
                 <i className="fas fa-camera text-xs"></i>
               </button>
             </div>
+          </div>
+        </div>
 
-            {/* Right side - Social Icons and Edit */}
+        {/* Profile Information Card */}
+        <div className="bg-white mx-6 pt-20 pb-6 px-6 shadow-lg rounded-b-xl relative z-10">
+          <div className="flex items-start justify-between mb-6">
+            {/* Left side - Applied Jobs */}
+            <div className="text-center">
+              <p className="text-sm text-gray-600 font-medium">Applied Jobs</p>
+              <p className="text-2xl font-bold text-gray-900">{profile.appliedJobsCount}</p>
+            </div>
+
+            {/* Right side - Social Icons and Theme Toggle */}
             <div className="flex items-center gap-4">
+              {/* Theme Toggle */}
+              <button 
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className="text-gray-400 hover:text-gray-800 transition-colors p-2"
+                title="Toggle theme"
+              >
+                <i className={`fas ${isDarkMode ? 'fa-sun' : 'fa-moon'} text-xl`}></i>
+              </button>
+              
               {/* Social Media Icons */}
               <div className="flex gap-3">
-                <button className="text-gray-400 hover:text-gray-800 transition-colors">
-                  <i className="fas fa-times text-xl"></i>
-                </button>
                 <a href={profile.linkedinUrl || '#'} className="text-gray-400 hover:text-blue-600 transition-colors">
                   <i className="fab fa-linkedin text-xl"></i>
                 </a>
@@ -128,14 +142,6 @@ export default function ProfileHeader({ profile }: ProfileHeaderProps) {
                   <i className="fab fa-facebook text-xl"></i>
                 </a>
               </div>
-              
-              {/* Edit Profile Button */}
-              <Button
-                onClick={() => setShowEditModal(true)}
-                className="bg-blue-600 text-white hover:bg-blue-700 px-6"
-              >
-                Edit profile
-              </Button>
             </div>
           </div>
 
