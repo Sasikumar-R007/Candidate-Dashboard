@@ -1,25 +1,35 @@
-export default function Sidebar() {
+interface SidebarProps {
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+}
+
+export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
+  const menuItems = [
+    { id: 'my-profile', label: 'Dashboard', icon: 'fas fa-tachometer-alt' },
+    { id: 'job-board', label: 'Job Board', icon: 'fas fa-briefcase' },
+    { id: 'settings', label: 'Settings', icon: 'fas fa-cog' },
+    { id: 'sign-out', label: 'Sign Out', icon: 'fas fa-sign-out-alt' }
+  ];
+
   return (
-    <div className="w-64 bg-primary-blue text-white flex-shrink-0">
+    <div className="w-64 bg-blue-900 text-white flex-shrink-0">
       <div className="p-6">
         <h1 className="text-xl font-bold mb-8">Job Portal</h1>
         <nav className="space-y-2">
-          <a href="#" className="flex items-center px-4 py-3 rounded-lg bg-blue-700 font-medium">
-            <i className="fas fa-tachometer-alt mr-3"></i>
-            Dashboard
-          </a>
-          <a href="#" className="flex items-center px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors">
-            <i className="fas fa-briefcase mr-3"></i>
-            Job Board
-          </a>
-          <a href="#" className="flex items-center px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors">
-            <i className="fas fa-sign-out-alt mr-3"></i>
-            Sign Out
-          </a>
-          <a href="#" className="flex items-center px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors">
-            <i className="fas fa-cog mr-3"></i>
-            Settings
-          </a>
+          {menuItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => onTabChange(item.id)}
+              className={`w-full flex items-center px-4 py-3 rounded-lg transition-colors text-left ${
+                activeTab === item.id 
+                  ? 'bg-blue-700 font-medium' 
+                  : 'hover:bg-blue-700'
+              }`}
+            >
+              <i className={`${item.icon} mr-3`}></i>
+              {item.label}
+            </button>
+          ))}
         </nav>
       </div>
     </div>

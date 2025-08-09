@@ -40,6 +40,33 @@ export default function Dashboard() {
         return <JobPreferencesTab />;
       case 'activity':
         return <ActivityTab />;
+      case 'job-board':
+        return (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Job Board</h2>
+              <p className="text-gray-600">Browse and search for job opportunities</p>
+            </div>
+          </div>
+        );
+      case 'settings':
+        return (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Settings</h2>
+              <p className="text-gray-600">Manage your account preferences and privacy settings</p>
+            </div>
+          </div>
+        );
+      case 'sign-out':
+        return (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Sign Out</h2>
+              <p className="text-gray-600">You have been signed out successfully</p>
+            </div>
+          </div>
+        );
       default:
         return <MyProfileTab profile={profile} />;
     }
@@ -48,7 +75,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50 font-inter">
       <div className="flex min-h-screen">
-        <Sidebar />
+        <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
         <div className="flex-1 flex flex-col overflow-hidden">
           <ProfileHeader profile={profile} />
           <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />

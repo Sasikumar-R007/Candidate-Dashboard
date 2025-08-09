@@ -32,6 +32,7 @@ export const profiles = pgTable("profiles", {
   linkedinUrl: text("linkedin_url"),
   profilePicture: text("profile_picture"),
   bannerImage: text("banner_image"),
+  resumeFile: text("resume_file"),
   appliedJobsCount: text("applied_jobs_count").default("0"),
 });
 

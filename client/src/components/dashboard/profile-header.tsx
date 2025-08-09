@@ -50,7 +50,7 @@ export default function ProfileHeader({ profile }: ProfileHeaderProps) {
     <>
       <div className="relative">
         {/* Banner Background */}
-        <div className="h-48 bg-gradient-to-r from-golden via-golden-light to-golden relative overflow-hidden">
+        <div className="h-48 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-400 relative overflow-hidden">
           {profile.bannerImage && (
             <img 
               src={profile.bannerImage} 
@@ -89,82 +89,84 @@ export default function ProfileHeader({ profile }: ProfileHeaderProps) {
 
         {/* Profile Information Card */}
         <div className="bg-white mx-6 -mt-20 rounded-xl shadow-lg p-6 relative z-10">
-          <div className="flex flex-col lg:flex-row items-start lg:items-center gap-6">
-            {/* Profile Picture Section */}
+          <div className="flex items-center justify-between mb-6">
+            {/* Left side - Applied Jobs */}
+            <div className="text-center">
+              <p className="text-sm text-gray-600 font-medium">Applied Jobs</p>
+              <p className="text-2xl font-bold text-gray-900">{profile.appliedJobsCount}</p>
+            </div>
+
+            {/* Center - Profile Picture */}
             <div className="relative flex-shrink-0">
               <img 
                 src={profile.profilePicture || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=150&h=150"} 
                 alt="Profile picture" 
-                className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+                className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
               />
               <button 
                 onClick={() => setShowProfileModal(true)}
-                className="absolute -bottom-2 -right-2 bg-secondary-blue text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors"
+                className="absolute -bottom-2 -right-2 bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors"
               >
                 <i className="fas fa-camera text-xs"></i>
               </button>
             </div>
 
-            {/* Profile Info */}
-            <div className="flex-1">
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">{profile.firstName} {profile.lastName}</h2>
-                  <p className="text-lg text-gray-600">{profile.title}</p>
-                  <p className="text-gray-500 flex items-center mt-1">
-                    <i className="fas fa-map-marker-alt mr-2"></i>
-                    <span>{profile.location}</span>
-                  </p>
-                </div>
-                
-                {/* Applied Jobs Counter */}
-                <div className="text-center lg:text-right mt-4 lg:mt-0">
-                  <div className="bg-gray-100 rounded-lg p-3">
-                    <p className="text-sm text-gray-600">Applied Jobs</p>
-                    <p className="text-2xl font-bold text-gray-900">{profile.appliedJobsCount}</p>
-                  </div>
-                </div>
+            {/* Right side - Social Icons and Edit */}
+            <div className="flex items-center gap-4">
+              {/* Social Media Icons */}
+              <div className="flex gap-3">
+                <button className="text-gray-400 hover:text-gray-800 transition-colors">
+                  <i className="fas fa-times text-xl"></i>
+                </button>
+                <a href={profile.linkedinUrl || '#'} className="text-gray-400 hover:text-blue-600 transition-colors">
+                  <i className="fab fa-linkedin text-xl"></i>
+                </a>
+                <a href="#" className="text-gray-400 hover:text-gray-800 transition-colors">
+                  <i className="fab fa-github text-xl"></i>
+                </a>
+                <a href="#" className="text-gray-400 hover:text-blue-500 transition-colors">
+                  <i className="fab fa-facebook text-xl"></i>
+                </a>
               </div>
+              
+              {/* Edit Profile Button */}
+              <Button
+                onClick={() => setShowEditModal(true)}
+                className="bg-blue-600 text-white hover:bg-blue-700 px-6"
+              >
+                Edit profile
+              </Button>
+            </div>
+          </div>
 
-              {/* Contact Information */}
-              <div className="flex flex-wrap gap-4 mb-4 text-sm text-gray-600">
-                <span className="flex items-center">
-                  <i className="fas fa-phone mr-2"></i>
-                  <span>{profile.phone}</span>
-                </span>
-                <span className="flex items-center">
-                  <i className="fas fa-envelope mr-2"></i>
-                  <span>{profile.email}</span>
-                </span>
-              </div>
+          {/* Profile Info - Centered */}
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">{profile.firstName} {profile.lastName}</h2>
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <p className="text-lg text-gray-700">{profile.title}</p>
+              <span className="text-gray-400">•</span>
+              <p className="text-lg text-gray-600 flex items-center">
+                <i className="fas fa-map-marker-alt mr-1"></i>
+                {profile.location}
+              </p>
+            </div>
+            
+            {/* Contact Information */}
+            <div className="flex items-center justify-center gap-6 mb-4 text-gray-600">
+              <span className="flex items-center">
+                <i className="fas fa-phone mr-2"></i>
+                <span>{profile.phone}</span>
+              </span>
+              <span className="flex items-center">
+                <i className="fas fa-envelope mr-2"></i>
+                <span>{profile.email}</span>
+              </span>
+            </div>
 
-              {/* Education & Portfolio */}
-              <div className="text-sm text-gray-600 mb-4">
-                <p>{profile.education}</p>
-                <p>Portfolio - <a href={profile.portfolio || '#'} className="text-secondary-blue hover:underline">{profile.portfolio}</a></p>
-              </div>
-
-              {/* Social Media & Actions */}
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex gap-3">
-                  <a href={profile.linkedinUrl || '#'} className="text-gray-400 hover:text-blue-600 transition-colors">
-                    <i className="fab fa-linkedin text-xl"></i>
-                  </a>
-                  <a href="#" className="text-gray-400 hover:text-gray-800 transition-colors">
-                    <i className="fab fa-github text-xl"></i>
-                  </a>
-                  <a href="#" className="text-gray-400 hover:text-blue-500 transition-colors">
-                    <i className="fab fa-facebook text-xl"></i>
-                  </a>
-                </div>
-                <Button
-                  onClick={() => setShowEditModal(true)}
-                  className="bg-secondary-blue text-white hover:bg-blue-600"
-                  size="sm"
-                >
-                  Edit Profile
-                </Button>
-              </div>
+            {/* Education & Portfolio */}
+            <div className="text-gray-600 mb-4">
+              <p className="mb-1">{profile.education}</p>
+              <p>Portfolio - <a href={profile.portfolio || '#'} className="text-blue-600 hover:underline">{profile.portfolio}</a></p>
             </div>
           </div>
         </div>

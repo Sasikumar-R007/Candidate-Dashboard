@@ -1,17 +1,29 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import FileUploadModal from '../modals/file-upload-modal';
-import { useSkills, useUploadResume } from '@/hooks/use-profile';
+import { useSkills, useProfile, useUpdateProfile } from '@/hooks/use-profile';
 
 export default function ResumeTab() {
   const [showResumeModal, setShowResumeModal] = useState(false);
   const { data: skills = [] } = useSkills();
-  const uploadResume = useUploadResume();
+  const { data: profile } = useProfile();
+  const updateProfile = useUpdateProfile();
 
   const handleResumeUpload = async (file: File) => {
     try {
-      await uploadResume.mutateAsync(file);
-      setShowResumeModal(false);
+      const formData = new FormData();
+      formData.append('resume', file);
+      
+      const response = await fetch('/api/upload/resume', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        await updateProfile.mutateAsync({ resumeFile: result.url });
+        setShowResumeModal(false);
+      }
     } catch (error) {
       console.error('Resume upload failed:', error);
     }
@@ -34,43 +46,45 @@ export default function ResumeTab() {
                 <h3 className="text-xl font-semibold text-gray-900">Resume Preview</h3>
                 <Button
                   onClick={() => setShowResumeModal(true)}
-                  className="bg-primary-blue text-white hover:bg-blue-800"
+                  className="bg-blue-600 text-white hover:bg-blue-700"
                   size="sm"
                 >
                   Edit Resume
                 </Button>
               </div>
               
-              {/* Resume Visual Preview */}
-              <div className="bg-purple-100 rounded-lg p-6 min-h-96">
-                <div className="flex items-center mb-4">
-                  <img 
-                    src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&h=100" 
-                    alt="Resume profile" 
-                    className="w-16 h-16 rounded-full object-cover mr-4"
-                  />
-                  <div>
-                    <h4 className="font-bold text-lg">Wade Calhoun</h4>
-                    <p className="text-gray-600">Digital Content Creator</p>
+              {/* Resume Display */}
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 min-h-96 flex items-center justify-center">
+                {profile?.resumeFile ? (
+                  <div className="w-full h-full">
+                    {profile.resumeFile.endsWith('.pdf') ? (
+                      <iframe
+                        src={profile.resumeFile}
+                        className="w-full h-full min-h-96 border rounded"
+                        title="Resume PDF"
+                      />
+                    ) : (
+                      <img
+                        src={profile.resumeFile}
+                        alt="Resume"
+                        className="w-full h-auto max-h-96 object-contain rounded shadow-md"
+                      />
+                    )}
                   </div>
-                </div>
-                
-                <div className="space-y-4 text-sm">
-                  <div>
-                    <h5 className="font-semibold mb-2 text-white bg-gray-700 px-2 py-1 rounded">CONTACT</h5>
-                    <p>+1 555-0123</p>
-                    <p>wade.calhoun@email.com</p>
-                    <p>Richmond, VA</p>
+                ) : (
+                  <div className="text-center">
+                    <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <i className="fas fa-file-alt text-2xl text-gray-400"></i>
+                    </div>
+                    <p className="text-gray-500 mb-4">No resume uploaded yet</p>
+                    <Button
+                      onClick={() => setShowResumeModal(true)}
+                      className="bg-blue-600 text-white hover:bg-blue-700"
+                    >
+                      Upload Resume
+                    </Button>
                   </div>
-                  
-                  <div>
-                    <h5 className="font-semibold mb-2 text-white bg-gray-700 px-2 py-1 rounded">EDUCATION</h5>
-                    <p><strong>2018 - 2022</strong></p>
-                    <p>Bachelor of Arts in Film and Media</p>
-                    <p>Virginia Commonwealth University</p>
-                    <p>University of Richmond<br />GPA: 3.75</p>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -128,8 +142,8 @@ export default function ResumeTab() {
         onOpenChange={setShowResumeModal}
         onUpload={handleResumeUpload}
         title="Upload Resume"
-        accept=".pdf,.doc,.docx"
-        isUploading={uploadResume.isPending}
+        accept=".pdf,.doc,.docx,image/*"
+        isUploading={updateProfile.isPending}
       />
     </>
   );
