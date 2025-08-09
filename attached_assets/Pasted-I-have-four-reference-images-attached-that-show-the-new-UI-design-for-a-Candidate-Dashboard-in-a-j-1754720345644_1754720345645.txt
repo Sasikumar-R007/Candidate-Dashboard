@@ -1,0 +1,82 @@
+I have four reference images (attached) that show the new UI design for a Candidate Dashboard in a job portal web app.
+I want you to fully implement this dashboard in React.js (functional components, hooks, TailwindCSS for styling).
+
+Requirements & Features:
+Layout & Navigation:
+
+Left sidebar with menu: Dashboard, Job Board, Sign Out, Settings.
+
+Top section: Banner image (customizable by the user), profile picture, basic candidate info (name, designation, location, contact details, portfolio link), and social media icons.
+
+Tabs under profile: My Jobs, My Profile, Resume, Job Preferences, Activity.
+
+Page Designs:
+(Reference to each image)
+
+Image 1 – My Profile Tab:
+
+"About You" section with personal info in card layout.
+
+"Online Presence" section with portfolio, website, LinkedIn.
+
+Edit buttons → Clicking opens a modal form to update details.
+
+Image 2 – Resume Tab:
+
+Left section shows visual resume preview.
+
+Right section lists primary skills, secondary skills, knowledge-only skills.
+
+Edit Resume button → Clicking opens upload/select resume modal (PDF/doc).
+
+Image 3 – Job Preferences Tab:
+
+Displays job title, work mode, employment type, locations, start date, and recruiter instructions.
+
+Edit button → Opens modal for updating preferences.
+
+Image 4 – Activity Tab:
+
+Recent activities (resume updates, last applied job date).
+
+Archives list with applied jobs (title, type, company, days ago).
+
+Functional Requirements:
+
+Banner image:
+
+User can upload a new banner or delete it.
+
+Uploaded image should display immediately (preview).
+
+Profile picture:
+
+User can upload/change or delete.
+
+Updated image displays instantly.
+
+Edit buttons open modal forms with current info pre-filled.
+
+Resume upload accepts PDF/DOCX and updates preview.
+
+All changes should be stored in a mock API or local state for now (no backend needed).
+
+Tech Stack:
+
+React.js (functional components)
+
+TailwindCSS for styling (match the reference images’ design closely)
+
+React Icons for social icons
+
+State management with useState and useEffect
+
+Use modals for edit actions (can be Tailwind + Headless UI)
+
+General Notes:
+
+Make UI fully responsive.
+
+All colors, fonts, spacing, and layouts should match the reference images.
+
+Use placeholder data initially, but code should allow replacing with API data later.
