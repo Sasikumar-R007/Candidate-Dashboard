@@ -117,7 +117,7 @@ export default function ProfileHeader({ profile, showFullHeader = true }: Profil
         </div>
 
         {/* Profile Information Card */}
-        <div className="bg-white dark:bg-gray-800 mx-6 pt-20 pb-8 px-6 shadow-lg rounded-b-xl relative z-10">
+        <div className="bg-white dark:bg-gray-800 mx-6 pt-24 pb-8 px-6 shadow-lg rounded-b-xl relative z-10">
           <div className="flex items-start justify-between mb-6">
             {/* Left side - Applied Jobs */}
             <div className="text-center">
