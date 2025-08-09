@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import FileUploadModal from './modals/file-upload-modal';
 import EditProfileModal from './modals/edit-profile-modal';
+import EditBasicInfoModal from './modals/edit-basic-info-modal';
+import EditContactModal from './modals/edit-contact-modal';
 import { useUpdateProfile, useUploadBanner, useUploadProfile } from '@/hooks/use-profile';
+import { useTheme } from '@/contexts/theme-context';
 import type { Profile } from '@shared/schema';
 
 interface ProfileHeaderProps {
@@ -14,7 +17,10 @@ export default function ProfileHeader({ profile, showFullHeader = true }: Profil
   const [showBannerModal, setShowBannerModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [showBasicInfoModal, setShowBasicInfoModal] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
+  
+  const { isDarkMode, toggleTheme } = useTheme();
   
   const updateProfile = useUpdateProfile();
   const uploadBanner = useUploadBanner();
@@ -123,7 +129,7 @@ export default function ProfileHeader({ profile, showFullHeader = true }: Profil
             <div className="flex items-center gap-4">
               {/* Theme Toggle */}
               <button 
-                onClick={() => setIsDarkMode(!isDarkMode)}
+                onClick={toggleTheme}
                 className="text-gray-400 hover:text-gray-800 transition-colors p-2"
                 title="Toggle theme"
               >
@@ -200,6 +206,18 @@ export default function ProfileHeader({ profile, showFullHeader = true }: Profil
       <EditProfileModal
         open={showEditModal}
         onOpenChange={setShowEditModal}
+        profile={profile}
+      />
+
+      <EditBasicInfoModal
+        open={showBasicInfoModal}
+        onOpenChange={setShowBasicInfoModal}
+        profile={profile}
+      />
+
+      <EditContactModal
+        open={showContactModal}
+        onOpenChange={setShowContactModal}
         profile={profile}
       />
     </>
