@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import EditProfileModal from '../modals/edit-profile-modal';
 import EditOnlinePresenceModal from '../modals/edit-online-presence-modal';
+import EditBasicInfoModal from '../modals/edit-basic-info-modal';
+import EditContactModal from '../modals/edit-contact-modal';
 import type { Profile } from '@shared/schema';
 
 interface MyProfileTabProps {
@@ -11,6 +13,8 @@ interface MyProfileTabProps {
 export default function MyProfileTab({ profile }: MyProfileTabProps) {
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showOnlineModal, setShowOnlineModal] = useState(false);
+  const [showBasicInfoModal, setShowBasicInfoModal] = useState(false);
+  const [showContactModal, setShowContactModal] = useState(false);
 
   return (
     <>
@@ -20,13 +24,22 @@ export default function MyProfileTab({ profile }: MyProfileTabProps) {
           <div className="bg-white rounded-xl shadow-sm p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-semibold text-gray-900">About you</h3>
-              <Button
-                onClick={() => setShowAboutModal(true)}
-                className="bg-blue-600 text-white hover:bg-blue-700"
-                size="sm"
-              >
-                <i className="fas fa-edit mr-2"></i>Edit
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => setShowBasicInfoModal(true)}
+                  className="bg-blue-600 text-white hover:bg-blue-700"
+                  size="sm"
+                >
+                  <i className="fas fa-user mr-2"></i>Basic Info
+                </Button>
+                <Button
+                  onClick={() => setShowContactModal(true)}
+                  className="bg-green-600 text-white hover:bg-green-700"
+                  size="sm"
+                >
+                  <i className="fas fa-phone mr-2"></i>Contact
+                </Button>
+              </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -116,6 +129,18 @@ export default function MyProfileTab({ profile }: MyProfileTabProps) {
       <EditOnlinePresenceModal
         open={showOnlineModal}
         onOpenChange={setShowOnlineModal}
+        profile={profile}
+      />
+
+      <EditBasicInfoModal
+        open={showBasicInfoModal}
+        onOpenChange={setShowBasicInfoModal}
+        profile={profile}
+      />
+
+      <EditContactModal
+        open={showContactModal}
+        onOpenChange={setShowContactModal}
         profile={profile}
       />
     </>
