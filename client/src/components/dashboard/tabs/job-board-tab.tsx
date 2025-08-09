@@ -372,11 +372,11 @@ export default function JobBoardTab() {
               <div className="flex">
                 {/* Company Logo Section - Left Side Full Height */}
                 <div className="w-48 flex flex-col items-center justify-center p-3 relative">
-                  <div className={`${job.background} rounded-xl p-6 flex flex-col items-center justify-center mx-2 my-4 h-32`} style={{width: '80%'}}>
+                  <div className={`${job.background} rounded-xl p-6 flex flex-col items-center justify-center mx-2 my-4 h-40`} style={{width: '80%'}}>
                     <img
                       src={job.logo}
                       alt={`${job.company} logo`}
-                      className="w-12 h-12 rounded object-cover mb-2"
+                      className="w-16 h-16 rounded object-cover mb-2"
                     />
                     <div className="text-center">
                       <div className="text-sm font-bold text-gray-700 dark:text-gray-300">{job.company.split(' ')[0]}</div>
@@ -412,7 +412,7 @@ export default function JobBoardTab() {
                       {job.experience}
                     </span>
                     <span className="flex items-center gap-1">
-                      <i className="fas fa-rupee-sign"></i>
+                      <span className="font-semibold">₹</span>
                       {job.salary}
                     </span>
                     <span className="flex items-center gap-1">
@@ -528,11 +528,12 @@ export default function JobBoardTab() {
             <>
               <DialogHeader>
                 <div className="flex items-start gap-4 mb-4">
-                  <div className={`w-32 h-20 ${selectedJob.background} rounded-xl flex items-center justify-center`} style={{width: '80%', maxWidth: '160px'}}>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-gray-700 dark:text-gray-300">G</div>
-                      <div className="text-xs font-medium text-gray-600 dark:text-gray-400">Google</div>
-                    </div>
+                  <div className={`w-32 h-24 ${selectedJob.background} rounded-xl flex items-center justify-center p-3`} style={{width: '80%', maxWidth: '160px'}}>
+                    <img
+                      src={selectedJob.logo}
+                      alt={`${selectedJob.company} logo`}
+                      className="w-16 h-16 rounded object-cover"
+                    />
                   </div>
                   <div className="flex-1">
                     <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">{selectedJob.company}</h3>
@@ -550,7 +551,7 @@ export default function JobBoardTab() {
                     {selectedJob.experience}
                   </span>
                   <span className="flex items-center gap-1">
-                    <i className="fas fa-rupee-sign"></i>
+                    <span className="font-semibold">₹</span>
                     {selectedJob.salary}
                   </span>
                   <span className="flex items-center gap-1">
