@@ -371,8 +371,8 @@ export default function JobBoardTab() {
             <div key={job.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200 overflow-hidden m-4">
               <div className="flex">
                 {/* Company Logo Section - Left Side Full Height */}
-                <div className="w-48 flex flex-col items-center justify-center p-6 relative">
-                  <div className={`${job.background} rounded-xl p-6 flex flex-col items-center justify-center mx-4 my-4 h-32 w-32`}>
+                <div className="w-48 flex flex-col items-center justify-center p-3 relative">
+                  <div className={`${job.background} rounded-xl p-6 flex flex-col items-center justify-center mx-2 my-4 h-32`} style={{width: '80%'}}>
                     <img
                       src={job.logo}
                       alt={`${job.company} logo`}
