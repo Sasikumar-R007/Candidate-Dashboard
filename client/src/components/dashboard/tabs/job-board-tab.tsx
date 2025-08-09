@@ -371,14 +371,16 @@ export default function JobBoardTab() {
             <div key={job.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200 overflow-hidden m-4">
               <div className="flex">
                 {/* Company Logo Section - Left Side Full Height */}
-                <div className={`${job.background} w-48 flex flex-col items-center justify-center p-6 relative`}>
-                  <img
-                    src={job.logo}
-                    alt={`${job.company} logo`}
-                    className="w-16 h-16 rounded object-cover mb-2"
-                  />
-                  <div className="text-center">
-                    <div className="text-lg font-bold text-gray-700 dark:text-gray-300">{job.company.split(' ')[0]}</div>
+                <div className="w-48 flex flex-col items-center justify-center p-6 relative">
+                  <div className={`${job.background} rounded-xl p-6 flex flex-col items-center justify-center mx-4 my-4 h-32 w-32`}>
+                    <img
+                      src={job.logo}
+                      alt={`${job.company} logo`}
+                      className="w-12 h-12 rounded object-cover mb-2"
+                    />
+                    <div className="text-center">
+                      <div className="text-sm font-bold text-gray-700 dark:text-gray-300">{job.company.split(' ')[0]}</div>
+                    </div>
                   </div>
                 </div>
 
@@ -387,10 +389,14 @@ export default function JobBoardTab() {
                   {/* Save Job Button - Top Right */}
                   <button
                     onClick={() => toggleSaveJob(job.id)}
-                    className="absolute top-4 right-4 p-2 rounded-full bg-orange-500 hover:bg-orange-600 transition-colors"
+                    className={`absolute top-4 right-4 p-2 rounded-full transition-all duration-200 ${
+                      savedJobs.has(job.id) 
+                        ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg' 
+                        : 'bg-orange-500 hover:bg-orange-600 text-white'
+                    }`}
                     data-testid={`button-save-${job.id}`}
                   >
-                    <i className={`fas fa-bookmark text-white`}></i>
+                    <i className={`${savedJobs.has(job.id) ? 'fas fa-bookmark' : 'far fa-bookmark'} text-white`}></i>
                   </button>
 
                   <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-1">{job.company}</h3>
