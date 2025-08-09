@@ -12,7 +12,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   ];
 
   return (
-    <div className="w-64 bg-blue-900 text-white flex-shrink-0">
+    <div className="w-64 bg-blue-900 dark:bg-gray-800 text-white flex-shrink-0">
       <div className="p-6">
         <h1 className="text-xl font-bold mb-8">Job Portal</h1>
         <nav className="space-y-2">
@@ -22,9 +22,10 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
               onClick={() => onTabChange(item.id)}
               className={`w-full flex items-center px-4 py-3 rounded-lg transition-colors text-left ${
                 activeTab === item.id 
-                  ? 'bg-blue-700 font-medium' 
-                  : 'hover:bg-blue-700'
+                  ? 'bg-blue-700 dark:bg-gray-700 font-medium' 
+                  : 'hover:bg-blue-700 dark:hover:bg-gray-700'
               }`}
+              data-testid={`button-nav-${item.id}`}
             >
               <i className={`${item.icon} mr-3`}></i>
               {item.label}

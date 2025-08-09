@@ -18,6 +18,13 @@ export default function EditBasicInfoModal({ open, onOpenChange, profile }: Edit
     lastName: profile.lastName || '',
     title: profile.title || '',
     location: profile.location || '',
+    mobile: profile.mobile || '',
+    whatsapp: profile.whatsapp || '',
+    primaryEmail: profile.primaryEmail || '',
+    secondaryEmail: profile.secondaryEmail || '',
+    currentLocation: profile.currentLocation || '',
+    preferredLocation: profile.preferredLocation || '',
+    dateOfBirth: profile.dateOfBirth || '',
   });
 
   const updateProfile = useUpdateProfile();
@@ -34,9 +41,9 @@ export default function EditBasicInfoModal({ open, onOpenChange, profile }: Edit
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit Basic Information</DialogTitle>
+          <DialogTitle>Edit Profile Information</DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -78,6 +85,75 @@ export default function EditBasicInfoModal({ open, onOpenChange, profile }: Edit
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="mobile">Mobile Number</Label>
+              <Input
+                id="mobile"
+                value={formData.mobile}
+                onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="whatsapp">WhatsApp No</Label>
+              <Input
+                id="whatsapp"
+                value={formData.whatsapp}
+                onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="primaryEmail">Primary Email</Label>
+              <Input
+                id="primaryEmail"
+                type="email"
+                value={formData.primaryEmail}
+                onChange={(e) => setFormData({ ...formData, primaryEmail: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="secondaryEmail">Secondary Email</Label>
+              <Input
+                id="secondaryEmail"
+                type="email"
+                value={formData.secondaryEmail}
+                onChange={(e) => setFormData({ ...formData, secondaryEmail: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="currentLocation">Current Location</Label>
+              <Input
+                id="currentLocation"
+                value={formData.currentLocation}
+                onChange={(e) => setFormData({ ...formData, currentLocation: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="preferredLocation">Preferred Location</Label>
+              <Input
+                id="preferredLocation"
+                value={formData.preferredLocation}
+                onChange={(e) => setFormData({ ...formData, preferredLocation: e.target.value })}
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label htmlFor="dateOfBirth">Date of Birth</Label>
+            <Input
+              id="dateOfBirth"
+              type="date"
+              value={formData.dateOfBirth}
+              onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
             />
           </div>
 

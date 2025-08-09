@@ -117,12 +117,12 @@ export default function ProfileHeader({ profile, showFullHeader = true }: Profil
         </div>
 
         {/* Profile Information Card */}
-        <div className="bg-white mx-6 pt-20 pb-6 px-6 shadow-lg rounded-b-xl relative z-10">
+        <div className="bg-white dark:bg-gray-800 mx-6 pt-20 pb-8 px-6 shadow-lg rounded-b-xl relative z-10">
           <div className="flex items-start justify-between mb-6">
             {/* Left side - Applied Jobs */}
             <div className="text-center">
-              <p className="text-sm text-gray-600 font-medium">Applied Jobs</p>
-              <p className="text-2xl font-bold text-gray-900">{profile.appliedJobsCount}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300 font-medium">Applied Jobs</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{profile.appliedJobsCount}</p>
             </div>
 
             {/* Right side - Social Icons and Theme Toggle */}
@@ -153,18 +153,18 @@ export default function ProfileHeader({ profile, showFullHeader = true }: Profil
 
           {/* Profile Info - Centered */}
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">{profile.firstName} {profile.lastName}</h2>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">{profile.firstName} {profile.lastName}</h2>
             <div className="flex items-center justify-center gap-2 mb-3">
-              <p className="text-lg text-gray-700">{profile.title}</p>
-              <span className="text-gray-400">•</span>
-              <p className="text-lg text-gray-600 flex items-center">
+              <p className="text-lg text-gray-700 dark:text-gray-300">{profile.title}</p>
+              <span className="text-gray-400 dark:text-gray-500">•</span>
+              <p className="text-lg text-gray-600 dark:text-gray-400 flex items-center">
                 <i className="fas fa-map-marker-alt mr-1"></i>
                 {profile.location}
               </p>
             </div>
             
             {/* Contact Information */}
-            <div className="flex items-center justify-center gap-6 mb-4 text-gray-600">
+            <div className="flex items-center justify-center gap-6 mb-4 text-gray-600 dark:text-gray-400">
               <span className="flex items-center">
                 <i className="fas fa-phone mr-2"></i>
                 <span>{profile.phone}</span>
@@ -176,9 +176,9 @@ export default function ProfileHeader({ profile, showFullHeader = true }: Profil
             </div>
 
             {/* Education & Portfolio */}
-            <div className="text-gray-600 mb-4">
+            <div className="text-gray-600 dark:text-gray-400 mb-4">
               <p className="mb-1">{profile.education}</p>
-              <p>Portfolio - <a href={profile.portfolio || '#'} className="text-blue-600 hover:underline">{profile.portfolio}</a></p>
+              <p>Portfolio - <a href={profile.portfolio || '#'} className="text-blue-600 dark:text-blue-400 hover:underline">{profile.portfolio}</a></p>
             </div>
           </div>
         </div>

@@ -69,7 +69,7 @@ export default function ResumeTab() {
               </div>
               
               {/* Resume Display - Screen Height Optimized */}
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 max-h-96 overflow-hidden flex items-center justify-center">
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 min-h-[600px] max-h-[700px] overflow-hidden flex items-center justify-center bg-white dark:bg-gray-800">
                 {profile?.resumeFile ? (
                   <div className="w-full h-full">
                     <img

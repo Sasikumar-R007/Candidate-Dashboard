@@ -6,6 +6,7 @@ import MyProfileTab from '@/components/dashboard/tabs/my-profile-tab';
 import ResumeTab from '@/components/dashboard/tabs/resume-tab';
 import JobPreferencesTab from '@/components/dashboard/tabs/job-preferences-tab';
 import ActivityTab from '@/components/dashboard/tabs/activity-tab';
+import JobBoardTab from '@/components/dashboard/tabs/job-board-tab';
 import { useProfile } from '@/hooks/use-profile';
 
 export default function Dashboard() {
@@ -41,14 +42,7 @@ export default function Dashboard() {
       case 'activity':
         return <ActivityTab />;
       case 'job-board':
-        return (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Job Board</h2>
-              <p className="text-gray-600">Browse and search for job opportunities</p>
-            </div>
-          </div>
-        );
+        return <JobBoardTab />;
       case 'settings':
         return (
           <div className="flex items-center justify-center h-full">
@@ -73,7 +67,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 font-inter">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-inter">
       <div className="flex min-h-screen">
         <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
         <div className="flex-1 flex flex-col overflow-hidden">
