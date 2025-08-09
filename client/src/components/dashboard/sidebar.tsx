@@ -12,7 +12,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   ];
 
   return (
-    <div className="w-64 bg-blue-900 dark:bg-gray-800 text-white flex-shrink-0 h-screen overflow-hidden">
+    <div className="w-64 bg-blue-900 dark:bg-gray-800 text-white flex-shrink-0 h-screen overflow-hidden fixed left-0 top-0 z-10">
       <div className="p-6 h-full flex flex-col">
         <h1 className="text-xl font-bold mb-8">Job Portal</h1>
         <nav className="space-y-2 flex-1">

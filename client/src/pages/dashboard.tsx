@@ -70,7 +70,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-inter">
       <div className="flex min-h-screen">
         <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden ml-64">
           {/* Show profile header and tabs only for profile-related sections */}
           {['my-profile', 'resume', 'job-preferences', 'activity', 'my-jobs'].includes(activeTab) ? (
             <>
