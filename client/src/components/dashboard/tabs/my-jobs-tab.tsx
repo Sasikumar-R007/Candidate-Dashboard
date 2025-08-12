@@ -104,7 +104,7 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
   return (
     <div className={`space-y-8 ${className}`}>
       {/* Applied Jobs Section */}
-      <div className="bg-white rounded-lg p-6 shadow-sm">
+      <div className="bg-white rounded-lg p-6 m-3 shadow-sm">
         <h2 className="text-xl font-semibold text-gray-800 mb-6">Applied Jobs</h2>
         
         <div className="overflow-x-auto">
@@ -167,7 +167,7 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
       </div>
 
       {/* Job Suggestions Section */}
-      <div className="bg-white rounded-lg p-6 shadow-sm">
+      <div className="bg-white rounded-lg p-6 m-3 shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-gray-800">Job Suggestions</h2>
         </div>
@@ -179,6 +179,7 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
             <Card key={job.id} className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow rounded-xl overflow-hidden">
               <CardContent className="p-0">
                 {/* Company Logo Section */}
+                <div className="flex items-center justify-between p-4 border-b border-gray-200">
                 <div className={`${job.bgColor} p-6 text-center`}>
                   <div className="w-16 h-12 bg-white rounded-lg flex items-center justify-center mx-auto mb-3">
                     <img 
@@ -188,6 +189,7 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
                     />
                   </div>
                   <h3 className="font-semibold text-gray-900 text-lg">{job.company}</h3>
+                </div>
                 </div>
 
                 {/* Job Details Section */}
