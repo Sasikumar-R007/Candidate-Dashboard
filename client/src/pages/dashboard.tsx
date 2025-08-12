@@ -11,6 +11,7 @@ import MyJobsTab from '@/components/dashboard/tabs/my-jobs-tab';
 import { useProfile } from '@/hooks/use-profile';
 
 export default function Dashboard() {
+  const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [activeTab, setActiveTab] = useState('my-jobs');
   const { data: profile, isLoading } = useProfile();
 
@@ -33,18 +34,19 @@ export default function Dashboard() {
     );
   }
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'my-jobs':
-        return <MyJobsTab />;
-      case 'my-profile':
-        return <MyProfileTab profile={profile} />;
-      case 'resume':
-        return <ResumeTab />;
-      case 'job-preferences':
-        return <JobPreferencesTab />;
-      case 'activity':
-        return <ActivityTab />;
+  const renderSidebarContent = () => {
+    switch (sidebarTab) {
+      case 'dashboard':
+        // Render dashboard with tab navigation
+        return (
+          <>
+            <ProfileHeader profile={profile} />
+            <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+            <div className="flex-1 overflow-y-auto">
+              {renderDashboardTabContent()}
+            </div>
+          </>
+        );
       case 'job-board':
         return <JobBoardTab />;
       case 'settings':
@@ -66,26 +68,41 @@ export default function Dashboard() {
           </div>
         );
       default:
+        return (
+          <>
+            <ProfileHeader profile={profile} />
+            <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+            <div className="flex-1 overflow-y-auto">
+              {renderDashboardTabContent()}
+            </div>
+          </>
+        );
+    }
+  };
+
+  const renderDashboardTabContent = () => {
+    switch (activeTab) {
+      case 'my-jobs':
+        return <MyJobsTab />;
+      case 'my-profile':
         return <MyProfileTab profile={profile} />;
+      case 'resume':
+        return <ResumeTab />;
+      case 'job-preferences':
+        return <JobPreferencesTab />;
+      case 'activity':
+        return <ActivityTab />;
+      default:
+        return <MyJobsTab />;
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-inter">
       <div className="flex min-h-screen">
-        <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+        <Sidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
         <div className="flex-1 flex flex-col overflow-hidden ml-64">
-          {/* Show profile header and tabs only for profile-related sections */}
-          {['my-profile', 'resume', 'job-preferences', 'activity', 'my-jobs'].includes(activeTab) ? (
-            <>
-              <ProfileHeader profile={profile} />
-              <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-            </>
-          ) : null}
-          
-          <div className="flex-1 overflow-y-auto">
-            {renderTabContent()}
-          </div>
+          {renderSidebarContent()}
         </div>
       </div>
     </div>

@@ -5,7 +5,7 @@ interface SidebarProps {
 
 export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   const menuItems = [
-    { id: 'my-profile', label: 'Dashboard', icon: 'fas fa-tachometer-alt' },
+    { id: 'dashboard', label: 'Dashboard', icon: 'fas fa-tachometer-alt' },
     { id: 'job-board', label: 'Job Board', icon: 'fas fa-briefcase' },
     { id: 'settings', label: 'Settings', icon: 'fas fa-cog' },
     { id: 'sign-out', label: 'Sign Out', icon: 'fas fa-sign-out-alt' }
