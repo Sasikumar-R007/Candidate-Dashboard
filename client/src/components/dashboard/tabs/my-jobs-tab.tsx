@@ -21,7 +21,7 @@ const jobSuggestions = [
     location: 'Bengaluru',
     workMode: 'Work from office',
     skills: ['CI/CD', 'Docker', 'Azure'],
-    bgColor: 'bg-blue-50'
+    bgColor: 'bg-blue-200'
   },
   {
     id: '2',
@@ -32,7 +32,7 @@ const jobSuggestions = [
     location: 'Bengaluru',
     workMode: 'Work from office',
     skills: ['CI/CD', 'Docker', 'Azure'],
-    bgColor: 'bg-green-50'
+    bgColor: 'bg-green-200'
   },
   {
     id: '3',
@@ -43,7 +43,7 @@ const jobSuggestions = [
     location: 'Mumbai',
     workMode: 'Work from office',
     skills: ['React', 'TypeScript', 'Next.js'],
-    bgColor: 'bg-red-50'
+    bgColor: 'bg-red-200'
   },
   {
     id: '4',
@@ -54,7 +54,7 @@ const jobSuggestions = [
     location: 'Hyderabad',
     workMode: 'Hybrid',
     skills: ['Kubernetes', 'AWS', 'Terraform'],
-    bgColor: 'bg-purple-50'
+    bgColor: 'bg-purple-200'
   },
   {
     id: '5',
@@ -65,7 +65,7 @@ const jobSuggestions = [
     location: 'Pune',
     workMode: 'Remote',
     skills: ['Node.js', 'Python', 'MongoDB'],
-    bgColor: 'bg-yellow-50'
+    bgColor: 'bg-yellow-200'
   },
   {
     id: '6',
@@ -76,7 +76,7 @@ const jobSuggestions = [
     location: 'Bangalore',
     workMode: 'Work from office',
     skills: ['Python', 'Machine Learning', 'SQL'],
-    bgColor: 'bg-red-100'
+    bgColor: 'bg-red-200'
   }
 ];
 
@@ -98,7 +98,12 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
   };
 
   if (isLoading) {
-    return <div className="p-6">Loading...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center p-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600 mb-3"></div>
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    );
   }
 
   return (
@@ -152,15 +157,15 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
           </div>
         )}
 
-        {/* See all button for Applied Jobs */}
+        {/* See all button for Applied Jobs - moved below the table */}
         {(jobApplications as JobApplication[]).length > 5 && !showAllJobs && (
-          <div className="mt-4 text-right">
+          <div className="mt-6 pt-4 border-t border-gray-200 text-center">
             <Button 
               variant="link" 
               className="text-blue-600 hover:text-blue-700 p-0"
               onClick={() => setShowAllJobs(true)}
             >
-              See all
+              See all applied jobs
             </Button>
           </div>
         )}
@@ -179,8 +184,8 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
             <Card key={job.id} className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow rounded-xl overflow-hidden">
               <CardContent className="p-0">
                 {/* Company Logo Section */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                <div className={`${job.bgColor} p-6 text-center`}>
+                <div className="flex items-center justify-between p-4">
+                <div className={`${job.bgColor} p-6 text-center rounded w-full`}>
                   <div className="w-16 h-12 bg-white rounded-lg flex items-center justify-center mx-auto mb-3">
                     <img 
                       src={job.logo} 
@@ -193,10 +198,10 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
                 </div>
 
                 {/* Job Details Section */}
-                <div className="p-6">
+                <div className="pt-2 p-6">
                   {/* Product Badge */}
                   <div className="flex items-center gap-2 mb-3">
-                    <Badge className="bg-gray-100 text-gray-700 border-gray-200 text-xs px-2 py-1">
+                    <Badge className="bg-gray-100 text-gray-700 border-gray-200 text-xs px-2 py-1 rounded">
                       Product
                     </Badge>
                     <div className="w-4 h-4 text-orange-500">
@@ -208,7 +213,7 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
                   <h4 className="text-xl font-semibold text-gray-900 mb-3">{job.title}</h4>
 
                   {/* Salary and Location - Same Row */}
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-7 mb-1">
                     <span className="text-gray-900 font-medium">{job.salary}</span>
                     <div className="flex items-center gap-1 text-gray-600">
                       <MapPin className="w-4 h-4" />
@@ -230,7 +235,7 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
                   </div>
 
                   {/* View Job Button */}
-                  <Button className="w-full bg-slate-700 hover:bg-slate-800 text-white py-3 rounded-lg">
+                  <Button className="w-full bg-slate-700 hover:bg-slate-800 text-white py-3 rounded">
                     View Job
                   </Button>
                 </div>
@@ -261,17 +266,7 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
           </Button>
         </div>
 
-        {/* See all button for Applied Jobs at bottom */}
-        <div className="mt-8 pt-6 border-t border-gray-200">
-          <div className="text-right">
-            <Button 
-              variant="link" 
-              className="text-blue-600 hover:text-blue-700 p-0"
-            >
-              See all Applied Jobs
-            </Button>
-          </div>
-        </div>
+
       </div>
     </div>
   );

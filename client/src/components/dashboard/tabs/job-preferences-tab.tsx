@@ -10,7 +10,10 @@ export default function JobPreferencesTab() {
   if (isLoading) {
     return (
       <div className="px-6 py-6">
-        <div className="text-center">Loading preferences...</div>
+        <div className="flex flex-col items-center justify-center p-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600 mb-3"></div>
+          <div className="text-gray-600">Loading preferences...</div>
+        </div>
       </div>
     );
   }
@@ -81,7 +84,6 @@ export default function JobPreferencesTab() {
       <EditJobPreferencesModal
         open={showEditModal}
         onOpenChange={setShowEditModal}
-        preferences={preferences}
       />
     </>
   );

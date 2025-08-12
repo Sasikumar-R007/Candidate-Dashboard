@@ -5,9 +5,11 @@ import { useSkills, useProfile, useUpdateProfile } from '@/hooks/use-profile';
 
 export default function ResumeTab() {
   const [showResumeModal, setShowResumeModal] = useState(false);
-  const { data: skills = [] } = useSkills();
-  const { data: profile } = useProfile();
+  const { data: skills = [], isLoading: skillsLoading } = useSkills();
+  const { data: profile, isLoading: profileLoading } = useProfile();
   const updateProfile = useUpdateProfile();
+  
+  const isLoading = skillsLoading || profileLoading;
 
   const handleResumeUpload = async (file: File) => {
     try {
@@ -49,6 +51,17 @@ export default function ResumeTab() {
     secondary: skills.filter((skill: any) => skill.category === 'secondary'),
     knowledge: skills.filter((skill: any) => skill.category === 'knowledge'),
   };
+
+  if (isLoading) {
+    return (
+      <div className="px-6 py-6">
+        <div className="flex flex-col items-center justify-center p-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600 mb-3"></div>
+          <div className="text-gray-600">Loading resume...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

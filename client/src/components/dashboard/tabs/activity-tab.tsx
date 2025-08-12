@@ -1,8 +1,21 @@
 import { useActivities, useJobApplications } from '@/hooks/use-profile';
 
 export default function ActivityTab() {
-  const { data: activities = [] } = useActivities();
-  const { data: jobApplications = [] } = useJobApplications();
+  const { data: activities = [], isLoading: activitiesLoading } = useActivities();
+  const { data: jobApplications = [], isLoading: jobApplicationsLoading } = useJobApplications();
+  
+  const isLoading = activitiesLoading || jobApplicationsLoading;
+
+  if (isLoading) {
+    return (
+      <div className="px-6 py-6">
+        <div className="flex flex-col items-center justify-center p-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600 mb-3"></div>
+          <div className="text-gray-600">Loading activities...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-6 py-6">

@@ -11,13 +11,16 @@ import MyJobsTab from '@/components/dashboard/tabs/my-jobs-tab';
 import { useProfile } from '@/hooks/use-profile';
 
 export default function Dashboard() {
-  const [activeTab, setActiveTab] = useState('my-profile');
+  const [activeTab, setActiveTab] = useState('my-jobs');
   const { data: profile, isLoading } = useProfile();
 
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+        <div className="flex flex-col items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600 mb-3"></div>
+          <div className="text-lg text-gray-600">Loading...</div>
+        </div>
       </div>
     );
   }
