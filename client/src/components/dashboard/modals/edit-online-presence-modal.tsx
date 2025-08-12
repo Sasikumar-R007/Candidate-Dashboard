@@ -26,10 +26,9 @@ export default function EditOnlinePresenceModal({
   
   const form = useForm({
     defaultValues: {
-      linkedin: profile.linkedin || '',
-      github: profile.github || '',
-      twitter: profile.twitter || '',
-      website: profile.website || '',
+      portfolioUrl: profile.portfolioUrl || '',
+      websiteUrl: profile.websiteUrl || '',
+      linkedinUrl: profile.linkedinUrl || '',
     }
   });
 
@@ -51,38 +50,29 @@ export default function EditOnlinePresenceModal({
         
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <Label htmlFor="linkedin">LinkedIn</Label>
+            <Label htmlFor="portfolioUrl">Portfolio 1</Label>
             <Input
-              id="linkedin"
-              {...form.register('linkedin')}
-              placeholder="https://linkedin.com/in/yourprofile"
+              id="portfolioUrl"
+              {...form.register('portfolioUrl')}
+              placeholder="https://yourportfolio.com"
             />
           </div>
           
           <div>
-            <Label htmlFor="github">GitHub</Label>
+            <Label htmlFor="websiteUrl">Portfolio 2 (Optional)</Label>
             <Input
-              id="github"
-              {...form.register('github')}
-              placeholder="https://github.com/yourusername"
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="twitter">Twitter</Label>
-            <Input
-              id="twitter"
-              {...form.register('twitter')}
-              placeholder="https://twitter.com/yourusername"
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="website">Website</Label>
-            <Input
-              id="website"
-              {...form.register('website')}
+              id="websiteUrl"
+              {...form.register('websiteUrl')}
               placeholder="https://yourwebsite.com"
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="linkedinUrl">LinkedIn</Label>
+            <Input
+              id="linkedinUrl"
+              {...form.register('linkedinUrl')}
+              placeholder="https://linkedin.com/in/yourprofile"
             />
           </div>
           
@@ -96,7 +86,7 @@ export default function EditOnlinePresenceModal({
             </Button>
             <Button 
               type="submit" 
-              className="bg-secondary-blue hover:bg-blue-600"
+              className="bg-blue-600 text-white hover:bg-blue-700"
               disabled={updateProfile.isPending}
             >
               {updateProfile.isPending ? 'Saving...' : 'Save Changes'}

@@ -98,8 +98,8 @@ export default function ProfileHeader({ profile, showFullHeader = true }: Profil
             )}
           </div>
 
-          {/* Profile Picture - Centered on Banner Edge */}
-          <div className="absolute left-1/2 transform -translate-x-1/2 bottom-0 translate-y-1/2">
+          {/* Profile Picture - Fully visible on banner */}
+          <div className="absolute left-1/2 transform -translate-x-1/2 bottom-4">
             <div className="relative">
               <img 
                 src={profile.profilePicture || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=150&h=150"} 
@@ -117,7 +117,7 @@ export default function ProfileHeader({ profile, showFullHeader = true }: Profil
         </div>
 
         {/* Profile Information Card */}
-        <div className="bg-white dark:bg-gray-800 mx-6 pt-24 pb-8 px-6 shadow-lg rounded-b-xl relative z-10">
+        <div className="bg-white dark:bg-gray-800 mx-6 pt-8 pb-8 px-6 shadow-lg rounded-b-xl relative z-10 mt-8">
           <div className="flex items-start justify-between mb-6">
             {/* Left side - Applied Jobs */}
             <div className="text-center">

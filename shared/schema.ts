@@ -34,6 +34,18 @@ export const profiles = pgTable("profiles", {
   bannerImage: text("banner_image"),
   resumeFile: text("resume_file"),
   appliedJobsCount: text("applied_jobs_count").default("0"),
+  // Education fields
+  highestQualification: text("highest_qualification"),
+  collegeName: text("college_name"),
+  skills: text("skills"),
+  // Job details fields
+  pedigreeLevel: text("pedigree_level"),
+  noticePeriod: text("notice_period"),
+  currentCompany: text("current_company"),
+  currentRole: text("current_role"),
+  currentDomain: text("current_domain"),
+  companyLevel: text("company_level"),
+  productService: text("product_service"),
 });
 
 export const jobPreferences = pgTable("job_preferences", {
