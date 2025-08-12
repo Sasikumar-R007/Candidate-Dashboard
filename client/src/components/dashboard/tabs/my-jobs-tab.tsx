@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { MoreHorizontal, MapPin, TrendingUp } from 'lucide-react';
+import { MoreHorizontal, MapPin, Flame } from 'lucide-react';
 import type { JobApplication } from '@shared/schema';
 
 interface MyJobsTabProps {
@@ -36,19 +36,54 @@ const jobSuggestions = [
   },
   {
     id: '3',
-    company: 'Google',
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/480px-Google_%22G%22_logo.svg.png',
-    title: 'Cloud Engineer',
-    salary: '₹ 12 LPA',
-    location: 'Bengaluru',
+    company: 'Meta',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Meta_Platforms_Inc._logo.svg/480px-Meta_Platforms_Inc._logo.svg.png',
+    title: 'Frontend Developer',
+    salary: '₹ 15 LPA',
+    location: 'Mumbai',
     workMode: 'Work from office',
-    skills: ['CI/CD', 'Docker', 'Azure'],
+    skills: ['React', 'TypeScript', 'Next.js'],
     bgColor: 'bg-red-50'
+  },
+  {
+    id: '4',
+    company: 'Microsoft',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Microsoft_logo_%282012%29.svg/480px-Microsoft_logo_%282012%29.svg.png',
+    title: 'DevOps Engineer',
+    salary: '₹ 18 LPA',
+    location: 'Hyderabad',
+    workMode: 'Hybrid',
+    skills: ['Kubernetes', 'AWS', 'Terraform'],
+    bgColor: 'bg-purple-50'
+  },
+  {
+    id: '5',
+    company: 'Amazon',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Amazon_logo.svg/480px-Amazon_logo.svg.png',
+    title: 'Full Stack Developer',
+    salary: '₹ 20 LPA',
+    location: 'Pune',
+    workMode: 'Remote',
+    skills: ['Node.js', 'Python', 'MongoDB'],
+    bgColor: 'bg-yellow-50'
+  },
+  {
+    id: '6',
+    company: 'Netflix',
+    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Netflix_2015_logo.svg/480px-Netflix_2015_logo.svg.png',
+    title: 'Data Scientist',
+    salary: '₹ 25 LPA',
+    location: 'Bangalore',
+    workMode: 'Work from office',
+    skills: ['Python', 'Machine Learning', 'SQL'],
+    bgColor: 'bg-red-100'
   }
 ];
 
 export default function MyJobsTab({ className }: MyJobsTabProps) {
   const [showAllJobs, setShowAllJobs] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const jobsPerPage = 3;
   const { data: jobApplications = [], isLoading } = useQuery({
     queryKey: ['/api/job-applications'],
   });
@@ -135,22 +170,21 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
       <div className="bg-white rounded-lg p-6 shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-gray-800">Job Suggestions</h2>
-          <Button variant="link" className="text-blue-600 hover:text-blue-700 p-0">
-            See all
-          </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {jobSuggestions.map((job) => (
+          {jobSuggestions
+            .slice((currentPage - 1) * jobsPerPage, currentPage * jobsPerPage)
+            .map((job) => (
             <Card key={job.id} className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow rounded-xl overflow-hidden">
               <CardContent className="p-0">
                 {/* Company Logo Section */}
                 <div className={`${job.bgColor} p-6 text-center`}>
-                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-3">
+                  <div className="w-16 h-12 bg-white rounded-lg flex items-center justify-center mx-auto mb-3">
                     <img 
                       src={job.logo} 
                       alt={`${job.company} logo`}
-                      className="w-10 h-10 object-contain"
+                      className="w-10 h-8 object-contain"
                     />
                   </div>
                   <h3 className="font-semibold text-gray-900 text-lg">{job.company}</h3>
@@ -164,24 +198,22 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
                       Product
                     </Badge>
                     <div className="w-4 h-4 text-orange-500">
-                      <TrendingUp className="w-full h-full" />
+                      <Flame className="w-full h-full" />
                     </div>
                   </div>
 
                   {/* Job Title */}
                   <h4 className="text-xl font-semibold text-gray-900 mb-3">{job.title}</h4>
 
-                  {/* Salary and Location */}
-                  <div className="space-y-1 mb-3">
-                    <div className="flex items-center gap-2 text-gray-900 font-medium">
-                      <span>{job.salary}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-600">
+                  {/* Salary and Location - Same Row */}
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-gray-900 font-medium">{job.salary}</span>
+                    <div className="flex items-center gap-1 text-gray-600">
                       <MapPin className="w-4 h-4" />
                       <span>{job.location}</span>
                     </div>
-                    <div className="text-gray-600">{job.workMode}</div>
                   </div>
+                  <div className="text-gray-600 text-sm mb-3">{job.workMode}</div>
 
                   {/* Skills */}
                   <div className="flex flex-wrap gap-2 mb-4">
@@ -207,24 +239,36 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
 
         {/* Pagination */}
         <div className="flex items-center justify-center gap-2 mt-8">
-          <Button variant="ghost" size="sm" className="w-8 h-8 p-0 bg-blue-600 text-white hover:bg-blue-700">
-            1
-          </Button>
-          <Button variant="ghost" size="sm" className="w-8 h-8 p-0 hover:bg-gray-100">
-            2
-          </Button>
-          <Button variant="ghost" size="sm" className="w-8 h-8 p-0 hover:bg-gray-100">
-            3
-          </Button>
-          <Button variant="ghost" size="sm" className="w-8 h-8 p-0 hover:bg-gray-100">
-            4
-          </Button>
-          <Button variant="ghost" size="sm" className="w-8 h-8 p-0 hover:bg-gray-100">
-            5
-          </Button>
+          {Array.from({ length: Math.ceil(jobSuggestions.length / jobsPerPage) }, (_, i) => (
+            <Button 
+              key={i + 1}
+              variant="ghost" 
+              size="sm" 
+              className={`w-8 h-8 p-0 ${
+                currentPage === i + 1 
+                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                  : 'hover:bg-gray-100'
+              }`}
+              onClick={() => setCurrentPage(i + 1)}
+            >
+              {i + 1}
+            </Button>
+          ))}
           <Button variant="link" className="text-blue-600 hover:text-blue-700 p-0 ml-2">
             See all
           </Button>
+        </div>
+
+        {/* See all button for Applied Jobs at bottom */}
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <div className="text-right">
+            <Button 
+              variant="link" 
+              className="text-blue-600 hover:text-blue-700 p-0"
+            >
+              See all Applied Jobs
+            </Button>
+          </div>
         </div>
       </div>
     </div>
