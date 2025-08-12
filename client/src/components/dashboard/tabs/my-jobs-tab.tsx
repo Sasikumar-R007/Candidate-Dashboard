@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { MoreHorizontal, MapPin, Briefcase, TrendingUp } from 'lucide-react';
+import { MoreHorizontal, MapPin, TrendingUp } from 'lucide-react';
 import type { JobApplication } from '@shared/schema';
 
 interface MyJobsTabProps {
@@ -47,6 +48,7 @@ const jobSuggestions = [
 ];
 
 export default function MyJobsTab({ className }: MyJobsTabProps) {
+  const [showAllJobs, setShowAllJobs] = useState(false);
   const { data: jobApplications = [], isLoading } = useQuery({
     queryKey: ['/api/job-applications'],
   });
@@ -84,7 +86,9 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
               </tr>
             </thead>
             <tbody>
-              {(jobApplications as JobApplication[]).map((job: JobApplication) => (
+              {(jobApplications as JobApplication[])
+                .slice(0, showAllJobs ? undefined : 5)
+                .map((job: JobApplication) => (
                 <tr key={job.id} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="py-4 px-4 font-medium text-gray-900">{job.jobTitle}</td>
                   <td className="py-4 px-4 text-gray-700">{job.company}</td>
@@ -112,6 +116,19 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
             No job applications found. Start applying to jobs to see them here.
           </div>
         )}
+
+        {/* See all button for Applied Jobs */}
+        {(jobApplications as JobApplication[]).length > 5 && !showAllJobs && (
+          <div className="mt-4 text-right">
+            <Button 
+              variant="link" 
+              className="text-blue-600 hover:text-blue-700 p-0"
+              onClick={() => setShowAllJobs(true)}
+            >
+              See all
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Job Suggestions Section */}
@@ -125,60 +142,64 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {jobSuggestions.map((job) => (
-            <Card key={job.id} className={`${job.bgColor} border-0 shadow-sm hover:shadow-md transition-shadow`}>
-              <CardContent className="p-6">
-                {/* Company Logo and Badge */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center p-2">
-                      <img 
-                        src={job.logo} 
-                        alt={`${job.company} logo`}
-                        className="w-8 h-8 object-contain"
-                      />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">{job.company}</h3>
-                    </div>
+            <Card key={job.id} className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow rounded-xl overflow-hidden">
+              <CardContent className="p-0">
+                {/* Company Logo Section */}
+                <div className={`${job.bgColor} p-6 text-center`}>
+                  <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-3">
+                    <img 
+                      src={job.logo} 
+                      alt={`${job.company} logo`}
+                      className="w-10 h-10 object-contain"
+                    />
                   </div>
-                  <Badge className="bg-orange-100 text-orange-700 border-orange-200">
-                    <TrendingUp className="w-3 h-3 mr-1" />
-                    Product
-                  </Badge>
+                  <h3 className="font-semibold text-gray-900 text-lg">{job.company}</h3>
                 </div>
 
-                {/* Job Title */}
-                <h4 className="text-lg font-semibold text-gray-900 mb-2">{job.title}</h4>
-
-                {/* Salary and Location */}
-                <div className="space-y-1 mb-4">
-                  <div className="flex items-center gap-2 text-gray-700">
-                    <span className="font-medium">{job.salary}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <MapPin className="w-4 h-4" />
-                    <span>{job.location}</span>
-                  </div>
-                  <div className="text-gray-600 text-sm">{job.workMode}</div>
-                </div>
-
-                {/* Skills */}
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {job.skills.map((skill) => (
-                    <Badge 
-                      key={skill} 
-                      variant="secondary" 
-                      className="bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    >
-                      {skill}
+                {/* Job Details Section */}
+                <div className="p-6">
+                  {/* Product Badge */}
+                  <div className="flex items-center gap-2 mb-3">
+                    <Badge className="bg-gray-100 text-gray-700 border-gray-200 text-xs px-2 py-1">
+                      Product
                     </Badge>
-                  ))}
-                </div>
+                    <div className="w-4 h-4 text-orange-500">
+                      <TrendingUp className="w-full h-full" />
+                    </div>
+                  </div>
 
-                {/* View Job Button */}
-                <Button className="w-full bg-slate-700 hover:bg-slate-800 text-white">
-                  View Job
-                </Button>
+                  {/* Job Title */}
+                  <h4 className="text-xl font-semibold text-gray-900 mb-3">{job.title}</h4>
+
+                  {/* Salary and Location */}
+                  <div className="space-y-1 mb-3">
+                    <div className="flex items-center gap-2 text-gray-900 font-medium">
+                      <span>{job.salary}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <MapPin className="w-4 h-4" />
+                      <span>{job.location}</span>
+                    </div>
+                    <div className="text-gray-600">{job.workMode}</div>
+                  </div>
+
+                  {/* Skills */}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {job.skills.map((skill) => (
+                      <Badge 
+                        key={skill} 
+                        className="bg-green-100 text-green-700 border-green-200 text-xs px-2 py-1"
+                      >
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+
+                  {/* View Job Button */}
+                  <Button className="w-full bg-slate-700 hover:bg-slate-800 text-white py-3 rounded-lg">
+                    View Job
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
