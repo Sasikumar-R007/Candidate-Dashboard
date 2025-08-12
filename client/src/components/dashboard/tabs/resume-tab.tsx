@@ -53,15 +53,15 @@ export default function ResumeTab() {
   return (
     <>
       <div className="px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Resume Preview */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-1">
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold text-gray-900">Resume Preview</h3>
                 <Button
                   onClick={() => setShowResumeModal(true)}
-                  className="bg-blue-600 text-white hover:bg-blue-700"
+                  className="bg-blue-600 text-white hover:bg-blue-700 rounded"
                   size="sm"
                 >
                   Edit Resume
@@ -75,7 +75,7 @@ export default function ResumeTab() {
                     <img
                       src={profile.resumeFile}
                       alt="Resume"
-                      className="w-full h-auto rounded shadow-md max-h-80 object-contain"
+                      className="w-full h-auto rounded shadow-md max-h-96 object-contain"
                     />
                   </div>
                 ) : (

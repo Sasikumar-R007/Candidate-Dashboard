@@ -7,6 +7,7 @@ import ResumeTab from '@/components/dashboard/tabs/resume-tab';
 import JobPreferencesTab from '@/components/dashboard/tabs/job-preferences-tab';
 import ActivityTab from '@/components/dashboard/tabs/activity-tab';
 import JobBoardTab from '@/components/dashboard/tabs/job-board-tab';
+import MyJobsTab from '@/components/dashboard/tabs/my-jobs-tab';
 import { useProfile } from '@/hooks/use-profile';
 
 export default function Dashboard() {
@@ -32,7 +33,7 @@ export default function Dashboard() {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'my-jobs':
-        return <div className="p-6">My Jobs content coming soon...</div>;
+        return <MyJobsTab />;
       case 'my-profile':
         return <MyProfileTab profile={profile} />;
       case 'resume':

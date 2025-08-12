@@ -62,7 +62,7 @@ export default function ProfileHeader({ profile, showFullHeader = true }: Profil
     <>
       <div className="relative">
         {/* Banner Background */}
-        <div className="h-48 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-400 relative overflow-hidden">
+        <div className="h-56 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-400 relative">
           {profile.bannerImage && (
             <img 
               src={profile.bannerImage} 
@@ -70,16 +70,20 @@ export default function ProfileHeader({ profile, showFullHeader = true }: Profil
               className="w-full h-full object-cover"
             />
           )}
-          
+
           {/* Golden Pattern Background */}
           <div className="absolute inset-0 opacity-30">
-            <div className="h-full w-full" style={{
-              backgroundImage: 'repeating-linear-gradient(90deg, rgba(255,255,255,0.1) 0px, rgba(255,255,255,0.1) 2px, transparent 2px, transparent 12px)'
-            }}></div>
+            <div 
+              className="h-full w-full"
+              style={{
+                backgroundImage:
+                  'repeating-linear-gradient(90deg, rgba(255,255,255,0.1) 0px, rgba(255,255,255,0.1) 2px, transparent 2px, transparent 12px)'
+              }}
+            ></div>
           </div>
-          
+
           {/* Banner Upload Controls */}
-          <div className="absolute top-4 right-4 flex gap-2">
+          <div className="absolute top-4 right-4 flex gap-2 z-20">
             <Button
               onClick={() => setShowBannerModal(true)}
               className="bg-white/20 backdrop-blur-sm text-white hover:bg-white/30"
@@ -98,11 +102,14 @@ export default function ProfileHeader({ profile, showFullHeader = true }: Profil
             )}
           </div>
 
-          {/* Profile Picture - Fully visible on banner */}
-          <div className="absolute left-1/2 transform -translate-x-1/2 bottom-4">
+          {/* Profile Picture */}
+          <div className="absolute left-1/2 transform -translate-x-1/2 -bottom-16 z-30">
             <div className="relative">
               <img 
-                src={profile.profilePicture || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=150&h=150"} 
+                src={
+                  profile.profilePicture ||
+                  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150"
+                } 
                 alt="Profile picture" 
                 className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
               />
@@ -117,7 +124,7 @@ export default function ProfileHeader({ profile, showFullHeader = true }: Profil
         </div>
 
         {/* Profile Information Card */}
-        <div className="bg-white dark:bg-gray-800 mx-6 pt-8 pb-8 px-6 shadow-lg rounded-b-xl relative z-10 mt-8">
+        <div className="bg-white dark:bg-gray-800 mx-6 pt-6 pb-8 px-6 shadow-lg rounded-b-xl relative z-10 mt-0">
           <div className="flex items-start justify-between mb-6">
             {/* Left side - Applied Jobs */}
             <div className="text-center">
@@ -127,7 +134,6 @@ export default function ProfileHeader({ profile, showFullHeader = true }: Profil
 
             {/* Right side - Social Icons and Theme Toggle */}
             <div className="flex items-center gap-4">
-              {/* Theme Toggle */}
               <button 
                 onClick={toggleTheme}
                 className="text-gray-400 hover:text-gray-800 transition-colors p-2"
@@ -135,8 +141,7 @@ export default function ProfileHeader({ profile, showFullHeader = true }: Profil
               >
                 <i className={`fas ${isDarkMode ? 'fa-sun' : 'fa-moon'} text-xl`}></i>
               </button>
-              
-              {/* Social Media Icons */}
+
               <div className="flex gap-3">
                 <a href={profile.linkedinUrl || '#'} className="text-gray-400 hover:text-blue-600 transition-colors">
                   <i className="fab fa-linkedin text-xl"></i>
@@ -153,8 +158,10 @@ export default function ProfileHeader({ profile, showFullHeader = true }: Profil
 
           {/* Profile Info - Centered */}
           <div className="text-center">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">{profile.firstName} {profile.lastName}</h2>
-            <div className="flex items-center justify-center gap-2 mb-3">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+              {profile.firstName} {profile.lastName}
+            </h2>
+            <div className="flex items-center justify-center gap-2 mb-2">
               <p className="text-lg text-gray-700 dark:text-gray-300">{profile.title}</p>
               <span className="text-gray-400 dark:text-gray-500">•</span>
               <p className="text-lg text-gray-600 dark:text-gray-400 flex items-center">
@@ -162,9 +169,9 @@ export default function ProfileHeader({ profile, showFullHeader = true }: Profil
                 {profile.location}
               </p>
             </div>
-            
+
             {/* Contact Information */}
-            <div className="flex items-center justify-center gap-6 mb-4 text-gray-600 dark:text-gray-400">
+            <div className="flex items-center justify-center gap-6 mb-2 text-gray-600 dark:text-gray-400">
               <span className="flex items-center">
                 <i className="fas fa-phone mr-2"></i>
                 <span>{profile.phone}</span>
@@ -178,7 +185,15 @@ export default function ProfileHeader({ profile, showFullHeader = true }: Profil
             {/* Education & Portfolio */}
             <div className="text-gray-600 dark:text-gray-400 mb-4">
               <p className="mb-1">{profile.education}</p>
-              <p>Portfolio - <a href={profile.portfolio || '#'} className="text-blue-600 dark:text-blue-400 hover:underline">{profile.portfolio}</a></p>
+              <p>
+                Portfolio -{" "}
+                <a
+                  href={profile.portfolio || '#'}
+                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  {profile.portfolio}
+                </a>
+              </p>
             </div>
           </div>
         </div>
