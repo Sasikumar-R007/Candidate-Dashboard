@@ -1,18 +1,15 @@
 import { useState } from 'react';
 import Sidebar from '@/components/dashboard/sidebar';
+import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
+import AdminTabNavigation from '@/components/dashboard/admin-tab-navigation';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon, EditIcon, Settings, Moon, Sun } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { CalendarIcon, EditIcon } from "lucide-react";
 import { format } from "date-fns";
-import { useTheme } from "@/contexts/theme-context";
 
 // Mock data for admin dashboard
 const adminProfile = {
@@ -83,128 +80,6 @@ export default function AdminDashboard() {
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [activeTab, setActiveTab] = useState('team');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const { isDarkMode, toggleTheme } = useTheme();
-
-  const renderProfileHeader = () => (
-    <div 
-      className="relative h-48 bg-gradient-to-r from-amber-800 to-amber-600 dark:from-amber-900 dark:to-amber-700"
-      style={{
-        backgroundImage: 'url("data:image/svg+xml,%3Csvg width="100" height="100" xmlns="http://www.w3.org/2000/svg"%3E%3Cdefs%3E%3Cpattern id="grain" patternUnits="userSpaceOnUse" width="4" height="4"%3E%3Crect width="4" height="4" fill="%23000" fill-opacity="0.1"/%3E%3C/pattern%3E%3C/defs%3E%3Crect width="100" height="100" fill="url(%23grain)"/%3E%3C/svg%3E")',
-        backgroundSize: '4px 4px'
-      }}
-    >
-      {/* Theme toggle button */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={toggleTheme}
-        className="absolute top-4 right-16 text-white hover:bg-white/20"
-      >
-        {isDarkMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-      </Button>
-
-      {/* Edit button */}
-      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-4 right-4 text-white hover:bg-white/20"
-          >
-            <EditIcon className="h-5 w-5" />
-          </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Admin Profile</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">Name</Label>
-              <Input id="name" defaultValue={adminProfile.name} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="role" className="text-right">Role</Label>
-              <Input id="role" defaultValue={adminProfile.role} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="email" className="text-right">Email</Label>
-              <Input id="email" defaultValue={adminProfile.email} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="phone" className="text-right">Phone</Label>
-              <Input id="phone" defaultValue={adminProfile.phone} className="col-span-3" />
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <Button onClick={() => setIsEditModalOpen(false)}>Save Changes</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2">
-        <div className="relative">
-          <img
-            src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face&auto=format"
-            alt="Profile"
-            className="w-24 h-24 rounded-full border-4 border-white shadow-lg object-cover"
-          />
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderAdminInfo = () => (
-    <div className="mt-16 text-center pb-6 border-b border-gray-200 dark:border-gray-700">
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-        {adminProfile.name}
-      </h2>
-      <div className="flex items-center justify-center mt-2 mb-4">
-        <span className="text-sm font-medium text-gray-600 dark:text-gray-300 bg-yellow-100 dark:bg-yellow-900 px-2 py-1 rounded">
-          👑 {adminProfile.role}
-        </span>
-      </div>
-      <div className="flex items-center justify-center space-x-6 text-sm text-gray-600 dark:text-gray-300">
-        <div className="flex items-center">
-          <span className="mr-1">📞</span>
-          {adminProfile.phone}
-        </div>
-        <div className="flex items-center">
-          <span className="mr-1">✉️</span>
-          {adminProfile.email}
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderTabNavigation = () => (
-    <div className="border-b border-gray-200 dark:border-gray-700 px-6">
-      <nav className="flex space-x-8" aria-label="Tabs">
-        {[
-          { id: 'team', label: 'Team' },
-          { id: 'requirements', label: 'Requirements' },
-          { id: 'pipeline', label: 'Pipeline' },
-          { id: 'metrics', label: 'Metrics' },
-          { id: 'master-data', label: 'Master data' },
-          { id: 'performance', label: 'Performance' },
-          { id: 'user-management', label: 'User Management' }
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`${
-              activeTab === tab.id
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
-            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </nav>
-    </div>
-  );
 
   const renderTeamSection = () => (
     <div className="px-6 py-6 space-y-8">
@@ -590,9 +465,8 @@ export default function AdminDashboard() {
       case 'dashboard':
         return (
           <>
-            {renderProfileHeader()}
-            {renderAdminInfo()}
-            {renderTabNavigation()}
+            <AdminProfileHeader profile={adminProfile} />
+            <AdminTabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
             <div className="flex-1 overflow-y-auto">
               {renderTabContent()}
             </div>
@@ -619,9 +493,8 @@ export default function AdminDashboard() {
       default:
         return (
           <>
-            {renderProfileHeader()}
-            {renderAdminInfo()}
-            {renderTabNavigation()}
+            <AdminProfileHeader profile={adminProfile} />
+            <AdminTabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
             <div className="flex-1 overflow-y-auto">
               {renderTabContent()}
             </div>
