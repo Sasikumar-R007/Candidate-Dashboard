@@ -824,7 +824,7 @@ export default function TeamLeaderDashboard() {
                         <td className="p-3 text-gray-900 dark:text-gray-100">Malathi</td>
                         <td className="p-3 text-gray-900 dark:text-gray-100">NDA, 2025</td>
                         <td className="p-3 text-gray-900 dark:text-gray-100">18-07-2025</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">10-10-1-2025</td>
+                        <td className="p-3 text-gray-900 dark:text-gray-100">10-10-2025</td>
                       </tr>
                     </tbody>
                   </table>
