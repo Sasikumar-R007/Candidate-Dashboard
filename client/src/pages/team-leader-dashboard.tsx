@@ -4,12 +4,16 @@ import TeamLeaderProfileHeader from '@/components/dashboard/team-leader-profile-
 import TeamLeaderTabNavigation from '@/components/dashboard/team-leader-tab-navigation';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, EditIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { format } from "date-fns";
 
 export default function TeamLeaderDashboard() {
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [activeTab, setActiveTab] = useState('team');
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
 
   // Use API data
   const { data: teamLeaderProfile } = useQuery({
@@ -117,7 +121,7 @@ export default function TeamLeaderDashboard() {
                           </p>
                         </div>
                         <div className="text-right">
-                          <span className="text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid={`text-member-profiles-${index}`}>
+                          <span className="text-5xl font-bold text-blue-600 dark:text-blue-400" data-testid={`text-member-profiles-${index}`}>
                             {member.profilesCount}
                           </span>
                         </div>
@@ -134,7 +138,7 @@ export default function TeamLeaderDashboard() {
                 <CardTitle data-testid="text-target-section-title">Target</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-4 gap-0 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-gray-800 dark:to-gray-700 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600">
+                <div className="grid grid-cols-4 gap-0 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-gray-800 dark:to-gray-700 rounded overflow-hidden border border-gray-200 dark:border-gray-600">
                   <div className="bg-blue-100 dark:bg-gray-700 text-center py-6 px-4 border-r border-blue-200 dark:border-gray-600">
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Current Quarter</p>
                     <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-current-quarter">{targetMetrics?.currentQuarter}</p>
@@ -159,67 +163,90 @@ export default function TeamLeaderDashboard() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle data-testid="text-daily-metrics-title">Daily Metrics</CardTitle>
-                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                  <CalendarIcon className="h-4 w-4" />
-                  <span data-testid="text-daily-metrics-date">{dailyMetrics?.date}</span>
-                  <EditIcon className="h-4 w-4 cursor-pointer" />
+                <div className="flex items-center gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="text-sm text-gray-500 dark:text-gray-400 border-none p-2">
+                        <CalendarIcon className="h-4 w-4 mr-2" />
+                        <span data-testid="text-daily-metrics-date">{format(selectedDate, "dd-MMM-yyyy")}</span>
+                        <EditIcon className="h-4 w-4 ml-2" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(date) => date && setSelectedDate(date)}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div className="flex justify-between">
-                      <span>Total Requirements</span>
-                      <span className="font-bold text-blue-600" data-testid="text-total-requirements">
-                        {dailyMetrics?.totalRequirements}
-                      </span>
+                <div className="grid grid-cols-3 gap-6">
+                  {/* Left side - 2x2 Grid */}
+                  <div className="col-span-2 grid grid-cols-2 gap-4">
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Total Requirements</p>
+                      <div className="text-right">
+                        <span className="text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-total-requirements">
+                          {dailyMetrics?.totalRequirements || "20"}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Completed Requirements</span>
-                      <span className="font-bold text-blue-600" data-testid="text-completed-requirements">
-                        {dailyMetrics?.completedRequirements}
-                      </span>
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Completed Requirements</p>
+                      <div className="text-right">
+                        <span className="text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-completed-requirements">
+                          {dailyMetrics?.completedRequirements || "12"}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Avg. Resumes per Requirement</span>
-                      <span className="font-bold text-blue-600" data-testid="text-avg-resumes">
-                        {dailyMetrics?.avgResumesPerRequirement}
-                      </span>
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Avg. Resumes per Requirement</p>
+                      <div className="text-right">
+                        <span className="text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-avg-resumes">
+                          {dailyMetrics?.avgResumesPerRequirement || "02"}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Requirements per Recruiter</span>
-                      <span className="font-bold text-blue-600" data-testid="text-requirements-per-recruiter">
-                        {dailyMetrics?.requirementsPerRecruiter}
-                      </span>
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Requirements per Recruiter</p>
+                      <div className="text-right">
+                        <span className="text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-requirements-per-recruiter">
+                          {dailyMetrics?.requirementsPerRecruiter || "05"}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className="space-y-4">
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Daily Delivery</p>
-                      <div className="flex gap-4">
-                        <div className="text-center">
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Delivered</p>
-                          <p className="font-bold text-green-600" data-testid="text-daily-delivered">
-                            {dailyMetrics?.dailyDeliveryDelivered}
-                          </p>
-                          <Button variant="outline" size="sm" className="mt-1" data-testid="button-view-delivered">
-                            View
-                          </Button>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-sm text-gray-500 dark:text-gray-400">Defaulted</p>
-                          <p className="font-bold text-red-600" data-testid="text-daily-defaulted">
-                            {dailyMetrics?.dailyDeliveryDefaulted}
-                          </p>
-                          <Button variant="outline" size="sm" className="mt-1" data-testid="button-view-defaulted">
-                            View
-                          </Button>
-                        </div>
+                  
+                  {/* Right side - Daily Delivery */}
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg shadow-sm p-6 border border-yellow-200 dark:border-yellow-800">
+                    <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Daily Delivery</h3>
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                      <div className="text-center">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Delivered</p>
+                        <p className="text-3xl font-bold text-gray-900 dark:text-white mb-3" data-testid="text-daily-delivered">
+                          {dailyMetrics?.dailyDeliveryDelivered || "3"}
+                        </p>
+                        <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 text-white px-4" data-testid="button-view-delivered">
+                          View
+                        </Button>
                       </div>
-                      <Button variant="outline" size="sm" className="mt-2 w-full" data-testid="button-view-more">
-                        View More
-                      </Button>
+                      <div className="text-center">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Defaulted</p>
+                        <p className="text-3xl font-bold text-gray-900 dark:text-white mb-3" data-testid="text-daily-defaulted">
+                          {dailyMetrics?.dailyDeliveryDefaulted || "1"}
+                        </p>
+                        <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 text-white px-4" data-testid="button-view-defaulted">
+                          View
+                        </Button>
+                      </div>
                     </div>
+                    <Button variant="outline" size="sm" className="w-full" data-testid="button-view-more">
+                      View More
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -251,14 +278,14 @@ export default function TeamLeaderDashboard() {
                   <CardTitle data-testid="text-pending-meetings-title">Pending Meetings</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
                     {meetings?.map((meeting: any, index: number) => (
                       <div key={index} className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded text-center">
-                        <h3 className="font-semibold" data-testid={`text-meeting-type-${index}`}>{meeting.type}</h3>
-                        <p className="text-2xl font-bold text-blue-600" data-testid={`text-meeting-count-${index}`}>
+                        <h3 className="font-semibold text-sm" data-testid={`text-meeting-type-${index}`}>{meeting.type}</h3>
+                        <p className="text-2xl font-bold text-blue-600 my-2" data-testid={`text-meeting-count-${index}`}>
                           {meeting.count}
                         </p>
-                        <Button variant="outline" size="sm" className="mt-2" data-testid={`button-view-meeting-${index}`}>
+                        <Button variant="outline" size="sm" data-testid={`button-view-meeting-${index}`}>
                           View
                         </Button>
                       </div>
