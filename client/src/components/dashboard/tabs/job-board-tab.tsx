@@ -455,7 +455,7 @@ export default function JobBoardTab() {
                     <span className="text-sm text-gray-500 dark:text-gray-400">Posted: {job.postedDays} days ago</span>
                     <Button 
                       onClick={() => handleViewMore(job)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium" 
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-medium" 
                       size="sm" 
                       data-testid={`button-view-more-${job.id}`}
                     >
@@ -541,8 +541,8 @@ export default function JobBoardTab() {
               <div className="bg-white dark:bg-gray-800 p-4 mb-4 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
                 <div className="flex">
                     {/* Company Logo Section */}
-                    <div className="w-24 flex items-center justify-center">
-                      <div className={`${selectedJob.background} rounded-xl p-3 flex flex-col items-center justify-center w-20 h-16`}>
+                    <div className="w-32 flex items-center justify-center">
+                      <div className={`${selectedJob.background} rounded-xl p-3 flex flex-col items-center justify-center w-full h-full min-h-[100px]`}>
                         <img
                           src={selectedJob.logo}
                           alt={`${selectedJob.company} logo`}
@@ -625,7 +625,7 @@ export default function JobBoardTab() {
                 </div>
 
                 {/* Content Sections - Separate Boxes */}
-                <div className="px-4 pb-4 space-y-4">
+                <div className=" pb-4 space-y-4">
                   {/* About Company Box */}
                   <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm w-full">
                     <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">About Company</h5>
@@ -729,7 +729,7 @@ export default function JobBoardTab() {
 
             {/* Apply Button Footer */}
             <div className="p-4 flex justify-center">
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium border-0 text-sm">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-medium border-0 text-sm">
                 Apply
               </Button>
             </div>
