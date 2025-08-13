@@ -2,6 +2,9 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Search, MapPin, Filter, X, Heart, Clock, Bookmark } from "lucide-react";
+import { useSavedJobs, useSaveJob, useRemoveSavedJob } from "@/hooks/use-saved-jobs";
+import { useToast } from "@/hooks/use-toast";
 
 interface JobListing {
   id: string;
@@ -201,7 +204,6 @@ export default function JobBoardTab() {
   const [showJobModal, setShowJobModal] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [jobFilter, setJobFilter] = useState<'all' | 'hot' | 'saved'>('all');
-  const [savedJobs, setSavedJobs] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState({
     company: '',
     role: '',
@@ -211,6 +213,14 @@ export default function JobBoardTab() {
     skills: ''
   });
   const itemsPerPage = 5;
+
+  const { data: savedJobsData = [] } = useSavedJobs();
+  const saveJobMutation = useSaveJob();
+  const removeSavedJobMutation = useRemoveSavedJob();
+  const { toast } = useToast();
+
+  // Convert saved jobs array to Set for quick lookup
+  const savedJobs = new Set(savedJobsData.map(job => `${job.jobTitle}-${job.company}`));
 
   const handleViewMore = (job: JobListing) => {
     setSelectedJob(job);
@@ -233,22 +243,46 @@ export default function JobBoardTab() {
     });
   };
 
-  const toggleSaveJob = (jobId: string) => {
-    setSavedJobs(prev => {
-      const newSavedJobs = new Set(prev);
-      if (newSavedJobs.has(jobId)) {
-        newSavedJobs.delete(jobId);
+  const toggleSaveJob = async (job: JobListing) => {
+    const jobKey = `${job.title}-${job.company}`;
+    const isCurrentlySaved = savedJobs.has(jobKey);
+
+    try {
+      if (isCurrentlySaved) {
+        await removeSavedJobMutation.mutateAsync({
+          jobTitle: job.title,
+          company: job.company
+        });
+        toast({
+          title: "Job removed",
+          description: `${job.title} at ${job.company} removed from saved jobs.`,
+        });
       } else {
-        newSavedJobs.add(jobId);
+        await saveJobMutation.mutateAsync({
+          jobTitle: job.title,
+          company: job.company,
+          location: job.location,
+          salary: job.salary,
+          jobType: job.type,
+        });
+        toast({
+          title: "Job saved",
+          description: `${job.title} at ${job.company} saved successfully.`,
+        });
       }
-      return newSavedJobs;
-    });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save/remove job. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const filteredJobs = jobListings.filter(job => {
     // Filter by job type
     if (jobFilter === 'hot' && !job.isHot) return false;
-    if (jobFilter === 'saved' && !savedJobs.has(job.id)) return false;
+    if (jobFilter === 'saved' && !savedJobs.has(`${job.title}-${job.company}`)) return false;
     
     // Filter by search query
     const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -388,15 +422,15 @@ export default function JobBoardTab() {
                 <div className="flex-1 p-6 relative">
                   {/* Save Job Button - Top Right */}
                   <button
-                    onClick={() => toggleSaveJob(job.id)}
+                    onClick={() => toggleSaveJob(job)}
                     className={`absolute top-4 right-4 p-2 rounded-full transition-all duration-200 ${
-                      savedJobs.has(job.id) 
+                      savedJobs.has(`${job.title}-${job.company}`) 
                         ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg' 
                         : 'bg-orange-500 hover:bg-orange-600 text-white'
                     }`}
                     data-testid={`button-save-${job.id}`}
                   >
-                    <i className={`${savedJobs.has(job.id) ? 'fas fa-bookmark' : 'far fa-bookmark'} text-white`}></i>
+                    <i className={`${savedJobs.has(`${job.title}-${job.company}`) ? 'fas fa-bookmark' : 'far fa-bookmark'} text-white`}></i>
                   </button>
 
                   <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-1">{job.company}</h3>
@@ -727,8 +761,29 @@ export default function JobBoardTab() {
                 </div>
               </div>
 
-            {/* Apply Button Footer */}
-            <div className="p-4 flex justify-center">
+            {/* Apply and Save Buttons Footer */}
+            <div className="p-4 flex justify-center gap-3">
+              <Button 
+                onClick={() => toggleSaveJob(selectedJob!)}
+                className={`px-6 py-2 rounded font-medium border-0 text-sm transition-all ${
+                  savedJobs.has(`${selectedJob?.title}-${selectedJob?.company}`)
+                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    : 'bg-orange-500 hover:bg-orange-600 text-white'
+                }`}
+                disabled={saveJobMutation.isPending || removeSavedJobMutation.isPending}
+              >
+                {saveJobMutation.isPending || removeSavedJobMutation.isPending ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Saving...
+                  </span>
+                ) : (
+                  <>
+                    <Bookmark className="w-4 h-4 mr-1" />
+                    {savedJobs.has(`${selectedJob?.title}-${selectedJob?.company}`) ? 'Saved' : 'Save'}
+                  </>
+                )}
+              </Button>
               <Button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-medium border-0 text-sm">
                 Apply
               </Button>

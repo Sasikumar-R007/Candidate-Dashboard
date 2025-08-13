@@ -84,6 +84,17 @@ export const jobApplications = pgTable("job_applications", {
   daysAgo: text("days_ago").notNull(),
 });
 
+export const savedJobs = pgTable("saved_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  profileId: varchar("profile_id").notNull(),
+  jobTitle: text("job_title").notNull(),
+  company: text("company").notNull(),
+  location: text("location").notNull(),
+  salary: text("salary"),
+  jobType: text("job_type").notNull(),
+  savedDate: text("saved_date").notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
 });
@@ -108,6 +119,10 @@ export const insertJobApplicationSchema = createInsertSchema(jobApplications).om
   id: true,
 });
 
+export const insertSavedJobSchema = createInsertSchema(savedJobs).omit({
+  id: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
@@ -120,3 +135,5 @@ export type InsertActivity = z.infer<typeof insertActivitySchema>;
 export type Activity = typeof activities.$inferSelect;
 export type InsertJobApplication = z.infer<typeof insertJobApplicationSchema>;
 export type JobApplication = typeof jobApplications.$inferSelect;
+export type InsertSavedJob = z.infer<typeof insertSavedJobSchema>;
+export type SavedJob = typeof savedJobs.$inferSelect;

@@ -1,7 +1,7 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema } from "@shared/schema";
+import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema } from "@shared/schema";
 import multer from "multer";
 import path from "path";
 
@@ -245,6 +245,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Serve uploaded files
   app.use('/uploads', express.static('uploads'));
+
+  // Get saved jobs
+  app.get("/api/saved-jobs", async (req, res) => {
+    try {
+      const users = await storage.getUserByUsername("mathew.anderson");
+      if (!users) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const profile = await storage.getProfile(users.id);
+      if (!profile) {
+        return res.status(404).json({ message: "Profile not found" });
+      }
+      
+      const savedJobs = await storage.getSavedJobsByProfile(profile.id);
+      res.json(savedJobs);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Save a job
+  app.post("/api/saved-jobs", async (req, res) => {
+    try {
+      const users = await storage.getUserByUsername("mathew.anderson");
+      if (!users) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const profile = await storage.getProfile(users.id);
+      if (!profile) {
+        return res.status(404).json({ message: "Profile not found" });
+      }
+
+      const validatedData = insertSavedJobSchema.parse({
+        ...req.body,
+        profileId: profile.id,
+        savedDate: new Date().toISOString()
+      });
+      
+      const savedJob = await storage.createSavedJob(validatedData);
+      res.json(savedJob);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Remove saved job
+  app.delete("/api/saved-jobs", async (req, res) => {
+    try {
+      const { jobTitle, company } = req.body;
+      
+      const users = await storage.getUserByUsername("mathew.anderson");
+      if (!users) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const profile = await storage.getProfile(users.id);
+      if (!profile) {
+        return res.status(404).json({ message: "Profile not found" });
+      }
+      
+      const removed = await storage.removeSavedJob(profile.id, jobTitle, company);
+      if (removed) {
+        res.json({ message: "Job removed from saved jobs" });
+      } else {
+        res.status(404).json({ message: "Saved job not found" });
+      }
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

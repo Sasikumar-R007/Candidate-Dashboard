@@ -10,7 +10,9 @@ import {
   type Activity,
   type InsertActivity,
   type JobApplication,
-  type InsertJobApplication
+  type InsertJobApplication,
+  type SavedJob,
+  type InsertSavedJob
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -36,6 +38,10 @@ export interface IStorage {
   
   getJobApplicationsByProfile(profileId: string): Promise<JobApplication[]>;
   createJobApplication(application: InsertJobApplication): Promise<JobApplication>;
+  
+  getSavedJobsByProfile(profileId: string): Promise<SavedJob[]>;
+  createSavedJob(savedJob: InsertSavedJob): Promise<SavedJob>;
+  removeSavedJob(profileId: string, jobTitle: string, company: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -45,6 +51,7 @@ export class MemStorage implements IStorage {
   private skills: Map<string, Skill>;
   private activities: Map<string, Activity>;
   private jobApplications: Map<string, JobApplication>;
+  private savedJobs: Map<string, SavedJob>;
 
   constructor() {
     this.users = new Map();
@@ -53,6 +60,7 @@ export class MemStorage implements IStorage {
     this.skills = new Map();
     this.activities = new Map();
     this.jobApplications = new Map();
+    this.savedJobs = new Map();
     
     // Initialize with sample data
     this.initSampleData();
@@ -286,13 +294,6 @@ export class MemStorage implements IStorage {
     return activity;
   }
 
-  async createActivity(insertActivity: InsertActivity): Promise<Activity> {
-    const id = randomUUID();
-    const activity: Activity = { ...insertActivity, id };
-    this.activities.set(id, activity);
-    return activity;
-  }
-
   async getJobApplicationsByProfile(profileId: string): Promise<JobApplication[]> {
     return Array.from(this.jobApplications.values()).filter(app => app.profileId === profileId);
   }
@@ -302,6 +303,38 @@ export class MemStorage implements IStorage {
     const application: JobApplication = { ...insertApplication, id };
     this.jobApplications.set(id, application);
     return application;
+  }
+
+  async getSavedJobsByProfile(profileId: string): Promise<SavedJob[]> {
+    return Array.from(this.savedJobs.values()).filter(
+      job => job.profileId === profileId
+    );
+  }
+
+  async createSavedJob(savedJob: InsertSavedJob): Promise<SavedJob> {
+    const id = randomUUID();
+    const newSavedJob: SavedJob = {
+      ...savedJob,
+      id,
+      salary: savedJob.salary || null,
+    };
+    this.savedJobs.set(id, newSavedJob);
+    return newSavedJob;
+  }
+
+  async removeSavedJob(profileId: string, jobTitle: string, company: string): Promise<boolean> {
+    const savedJobsArray = Array.from(this.savedJobs.entries());
+    const jobToRemove = savedJobsArray.find(([, job]) => 
+      job.profileId === profileId && 
+      job.jobTitle === jobTitle && 
+      job.company === company
+    );
+    
+    if (jobToRemove) {
+      this.savedJobs.delete(jobToRemove[0]);
+      return true;
+    }
+    return false;
   }
 }
 
