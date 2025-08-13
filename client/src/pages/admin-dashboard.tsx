@@ -98,7 +98,6 @@ export default function AdminDashboard() {
                 <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Team Members</div>
                   <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{team.teamMembers}</div>
-                  <div className="text-lg font-semibold text-gray-900 dark:text-white mt-2">{team.name}</div>
                 </div>
                 
                 <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border-l-2 border-blue-500">
