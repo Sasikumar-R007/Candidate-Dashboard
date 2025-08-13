@@ -222,6 +222,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Placeholder image generator
+  app.get('/api/placeholder/:width/:height', (req, res) => {
+    const { width, height } = req.params;
+    const size = Math.min(parseInt(width) || 60, parseInt(height) || 60);
+    
+    // Generate a simple SVG placeholder
+    const svg = `
+      <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
+        <rect width="100%" height="100%" fill="#f0f0f0" stroke="#ddd" stroke-width="1"/>
+        <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" 
+              font-family="Arial, sans-serif" font-size="12" fill="#666">
+          Logo
+        </text>
+      </svg>
+    `;
+    
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.send(svg);
+  });
+
   // Serve uploaded files
   app.use('/uploads', express.static('uploads'));
 
