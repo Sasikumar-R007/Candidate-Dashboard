@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/theme-context';
+import FileUploadModal from './modals/file-upload-modal';
+import TeamLeaderEditProfileModal from './modals/team-leader-edit-profile-modal';
 
 interface TeamLeaderProfile {
   name: string;
@@ -19,7 +21,46 @@ interface TeamLeaderProfileHeaderProps {
 }
 
 export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHeaderProps) {
+  const [showBannerModal, setShowBannerModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [currentProfile, setCurrentProfile] = useState(profile);
+  
   const { isDarkMode, toggleTheme } = useTheme();
+
+  const handleBannerUpload = async (file: File) => {
+    try {
+      // TODO: Implement banner upload API for team leader
+      console.log('Banner upload:', file);
+      setShowBannerModal(false);
+    } catch (error) {
+      console.error('Banner upload failed:', error);
+    }
+  };
+
+  const handleProfileUpload = async (file: File) => {
+    try {
+      // TODO: Implement profile picture upload API for team leader
+      console.log('Profile upload:', file);
+      setShowProfileModal(false);
+    } catch (error) {
+      console.error('Profile upload failed:', error);
+    }
+  };
+
+  const handleDeleteBanner = async () => {
+    try {
+      // TODO: Implement banner deletion API for team leader
+      console.log('Delete banner');
+    } catch (error) {
+      console.error('Banner deletion failed:', error);
+    }
+  };
+
+  const handleProfileSave = (updatedProfile: any) => {
+    setCurrentProfile(updatedProfile);
+    // TODO: Send updated profile to API
+  };
 
   return (
     <div className="relative">
@@ -39,11 +80,20 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
         {/* Banner Upload Controls */}
         <div className="absolute top-4 right-4 flex gap-2 z-20">
           <Button
+            onClick={() => setShowBannerModal(true)}
             className="bg-white/20 backdrop-blur-sm text-white hover:bg-white/30"
             size="sm"
             data-testid="button-change-banner"
           >
             <i className="fas fa-camera mr-2"></i>Change Banner
+          </Button>
+          <Button
+            onClick={handleDeleteBanner}
+            className="bg-red-500/80 backdrop-blur-sm text-white hover:bg-red-600/80"
+            size="sm"
+            data-testid="button-delete-banner"
+          >
+            <i className="fas fa-trash mr-2"></i>Delete
           </Button>
         </div>
 
@@ -56,6 +106,7 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
               className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
             />
             <button 
+              onClick={() => setShowProfileModal(true)}
               className="absolute -bottom-1 -right-1 bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-blue-700 transition-colors"
               data-testid="button-change-profile-pic"
             >
@@ -72,11 +123,11 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
           <div className="text-center">
             <p className="text-sm text-gray-600 dark:text-gray-300 font-medium">Total Contribution</p>
             <p className="text-2xl font-bold text-gray-900 dark:text-gray-100" data-testid="text-total-contribution-display">
-              {profile.totalContribution}
+              {currentProfile.totalContribution}
             </p>
           </div>
 
-          {/* Right side - Theme Toggle and Edit Button */}
+          {/* Right side - Social Icons, Theme Toggle and Edit Button */}
           <div className="flex items-center gap-4">
             <button 
               onClick={toggleTheme}
@@ -87,7 +138,18 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
               <i className={`fas ${isDarkMode ? 'fa-sun' : 'fa-moon'} text-xl`}></i>
             </button>
 
-            <Button variant="outline" size="sm" data-testid="button-edit-profile-header">
+            <div className="flex gap-3">
+              <a href="#" className="text-gray-400 hover:text-blue-600 transition-colors" data-testid="link-linkedin">
+                <i className="fab fa-linkedin text-xl"></i>
+              </a>
+            </div>
+
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowEditModal(true)}
+              data-testid="button-edit-profile-header"
+            >
               <i className="fas fa-edit mr-2"></i>
               Edit profile
             </Button>
@@ -97,15 +159,15 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
         {/* Profile Info - Centered */}
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2" data-testid="text-profile-name-header">
-            {profile.name}
+            {currentProfile.name}
           </h2>
           <div className="flex items-center justify-center gap-2 mb-2">
             <p className="text-lg text-gray-700 dark:text-gray-300" data-testid="text-profile-role-header">
-              {profile.role}
+              {currentProfile.role}
             </p>
             <span className="text-gray-400 dark:text-gray-500">•</span>
             <p className="text-lg text-gray-600 dark:text-gray-400" data-testid="text-profile-employee-id">
-              {profile.employeeId}
+              {currentProfile.employeeId}
             </p>
           </div>
 
@@ -113,33 +175,58 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
           <div className="flex items-center justify-center gap-6 mb-2 text-gray-600 dark:text-gray-400">
             <span className="flex items-center" data-testid="text-profile-phone-header">
               <i className="fas fa-phone mr-2"></i>
-              <span>{profile.phone}</span>
+              <span>{currentProfile.phone}</span>
             </span>
             <span className="flex items-center" data-testid="text-profile-email-header">
               <i className="fas fa-envelope mr-2"></i>
-              <span>{profile.email}</span>
+              <span>{currentProfile.email}</span>
             </span>
           </div>
 
           {/* Work Details */}
           <div className="text-gray-600 dark:text-gray-400 mb-4">
-            <div className="flex items-center justify-center gap-4 text-sm">
+            <div className="flex items-center justify-center gap-4 text-sm mb-1">
               <span data-testid="text-joining-date-header">
-                <i className="fas fa-calendar mr-1"></i>
-                Joined: {profile.joiningDate}
+                Joined: {currentProfile.joiningDate}
               </span>
               <span data-testid="text-department-header">
-                <i className="fas fa-building mr-1"></i>
-                {profile.department}
+                Department: {currentProfile.department}
               </span>
+            </div>
+            <div className="text-sm">
               <span data-testid="text-reporting-to-header">
-                <i className="fas fa-user-tie mr-1"></i>
-                Reports to: {profile.reportingTo}
+                Reports to: {currentProfile.reportingTo}
               </span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      <FileUploadModal
+        open={showBannerModal}
+        onOpenChange={setShowBannerModal}
+        onUpload={handleBannerUpload}
+        title="Upload Banner Image"
+        accept="image/*"
+        isUploading={false}
+      />
+      
+      <FileUploadModal
+        open={showProfileModal}
+        onOpenChange={setShowProfileModal}
+        onUpload={handleProfileUpload}
+        title="Upload Profile Picture"
+        accept="image/*"
+        isUploading={false}
+      />
+
+      <TeamLeaderEditProfileModal
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        profile={currentProfile}
+        onSave={handleProfileSave}
+      />
     </div>
   );
 }

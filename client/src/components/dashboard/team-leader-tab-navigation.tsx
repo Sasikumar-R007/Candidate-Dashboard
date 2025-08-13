@@ -35,7 +35,7 @@ export default function TeamLeaderTabNavigation({ activeTab, onTabChange }: Team
       </div>
       
       {/* Action Buttons */}
-      <div className="mt-4 flex gap-2">
+      <div className="mt-4 flex justify-end gap-2">
         <Button variant="outline" size="sm" data-testid="button-upload-resume">
           <i className="fas fa-upload mr-2"></i>
           Upload Resume
