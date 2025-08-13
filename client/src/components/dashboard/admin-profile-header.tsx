@@ -229,21 +229,19 @@ export default function AdminProfileHeader({ profile }: AdminProfileHeaderProps)
 
       {/* File Upload Modals */}
       <FileUploadModal
-        isOpen={showBannerModal}
-        onClose={() => setShowBannerModal(false)}
+        open={showBannerModal}
+        onOpenChange={setShowBannerModal}
         onUpload={handleBannerUpload}
         title="Change Banner Image"
         accept="image/*"
-        maxSize={5}
       />
 
       <FileUploadModal
-        isOpen={showProfileModal}
-        onClose={() => setShowProfileModal(false)}
+        open={showProfileModal}
+        onOpenChange={setShowProfileModal}
         onUpload={handleProfileUpload}
         title="Change Profile Picture"
         accept="image/*"
-        maxSize={2}
       />
     </div>
   );

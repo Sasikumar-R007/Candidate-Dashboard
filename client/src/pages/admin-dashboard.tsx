@@ -506,7 +506,7 @@ export default function AdminDashboard() {
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
       <Sidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col ml-64 min-h-screen overflow-hidden">
         {renderSidebarContent()}
       </div>
     </div>
