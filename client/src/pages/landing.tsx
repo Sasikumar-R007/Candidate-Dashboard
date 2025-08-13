@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserIcon, UsersIcon } from "lucide-react";
+import { UserIcon, UsersIcon, ShieldIcon } from "lucide-react";
 
 export default function Landing() {
   return (
@@ -16,7 +16,7 @@ export default function Landing() {
           </p>
         </div>
         
-        <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
           {/* Candidate Dashboard Card */}
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="text-center pb-4">
@@ -57,6 +57,30 @@ export default function Landing() {
                   data-testid="button-team-leader-dashboard"
                 >
                   Enter Team Leader Dashboard
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* Admin Dashboard Card */}
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="text-center pb-4">
+              <div className="mx-auto mb-4 p-4 bg-purple-100 dark:bg-purple-900 rounded-full w-16 h-16 flex items-center justify-center">
+                <ShieldIcon className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+              </div>
+              <CardTitle className="text-xl">Admin Dashboard</CardTitle>
+              <CardDescription>
+                Manage teams, view analytics, track performance, and oversee operations
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/admin" data-testid="link-admin-dashboard">
+                <Button 
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white" 
+                  size="lg"
+                  data-testid="button-admin-dashboard"
+                >
+                  Enter Admin Dashboard
                 </Button>
               </Link>
             </CardContent>

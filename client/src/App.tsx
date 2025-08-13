@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/contexts/theme-context";
 import Landing from "@/pages/landing";
 import Dashboard from "@/pages/dashboard";
 import TeamLeaderDashboard from "@/pages/team-leader-dashboard";
+import AdminDashboard from "@/pages/admin-dashboard";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -15,6 +16,7 @@ function Router() {
       <Route path="/" component={Landing} />
       <Route path="/candidate" component={Dashboard} />
       <Route path="/team-leader" component={TeamLeaderDashboard} />
+      <Route path="/admin" component={AdminDashboard} />
       <Route component={NotFound} />
     </Switch>
   );
