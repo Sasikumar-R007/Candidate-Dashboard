@@ -122,20 +122,18 @@ export default function AdminDashboard() {
           {/* Team Members Grid */}
           <div className="grid grid-cols-3 gap-4">
             {team.members.map((member, memberIndex) => (
-              <Card key={memberIndex} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h4 className="font-semibold text-gray-900 dark:text-white">{member.name}</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">{member.salary}</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-500">{member.year}</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{member.count}</div>
-                    </div>
+              <div key={memberIndex} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-1">{member.name}</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{member.salary}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-500">{member.year}</p>
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="text-right">
+                    <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">{member.count}</span>
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -220,55 +218,80 @@ export default function AdminDashboard() {
         </CardHeader>
         
         <CardContent>
-          <div className="grid grid-cols-3 gap-6 mb-6">
-            <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Requirements</div>
-              <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{dailyMetricsData.totalRequirements}</div>
+          <div className="grid grid-cols-3 gap-6">
+            {/* Left side - 2x2 Grid */}
+            <div className="col-span-2 grid grid-cols-2 gap-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Total Requirements</p>
+                <div className="text-right">
+                  <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
+                    {dailyMetricsData.totalRequirements}
+                  </span>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Completed Requirements</p>
+                <div className="text-right">
+                  <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
+                    {dailyMetricsData.completedRequirements}
+                  </span>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Avg. Resumes per Requirement</p>
+                <div className="text-right">
+                  <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
+                    {dailyMetricsData.avgResumesPerRequirement}
+                  </span>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Requirements per Recruiter</p>
+                <div className="text-right">
+                  <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
+                    {dailyMetricsData.requirementsPerRecruiter}
+                  </span>
+                </div>
+              </div>
             </div>
             
-            <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Completed Requirements</div>
-              <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{dailyMetricsData.completedRequirements}</div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Daily Delivery</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Delivered</div>
-                <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{dailyMetricsData.dailyDeliveryDelivered}</div>
-                <Button size="sm" className="mt-2 text-xs px-2 py-1 h-6">View</Button>
+            {/* Right side - Daily Delivery */}
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg shadow-sm p-6 border border-yellow-200 dark:border-yellow-800">
+              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Daily Delivery</h3>
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="text-center">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Delivered</p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
+                    {dailyMetricsData.dailyDeliveryDelivered}
+                  </p>
+                  <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 text-white px-4">
+                    View
+                  </Button>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Defaulted</p>
+                  <p className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
+                    {dailyMetricsData.dailyDeliveryDefaulted}
+                  </p>
+                  <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 text-white px-4">
+                    View
+                  </Button>
+                </div>
               </div>
-              
-              <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Daily Delivery</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Defaulted</div>
-                <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{dailyMetricsData.dailyDeliveryDefaulted}</div>
-                <Button size="sm" variant="outline" className="mt-2 text-xs px-2 py-1 h-6">View</Button>
-              </div>
+              <Button variant="outline" size="sm" className="w-full">
+                View More
+              </Button>
             </div>
           </div>
           
-          <div className="grid grid-cols-3 gap-6 mb-6">
-            <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Overall Performance</div>
-              <div className="text-3xl font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900 w-12 h-12 rounded-full flex items-center justify-center mx-auto">
+          {/* Overall Performance - Separate section below */}
+          <div className="mt-6 flex justify-center">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700 text-center min-w-48">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-3">Overall Performance</div>
+              <div className="text-4xl font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
                 {dailyMetricsData.overallPerformance}
               </div>
             </div>
-            
-            <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Avg. Resumes per Requirement</div>
-              <div className="text-3xl font-bold text-gray-900 dark:text-white">{dailyMetricsData.avgResumesPerRequirement}</div>
-            </div>
-            
-            <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Requirements per Recruiter</div>
-              <div className="text-3xl font-bold text-gray-900 dark:text-white">{dailyMetricsData.requirementsPerRecruiter}</div>
-            </div>
-          </div>
-          
-          <div className="flex justify-end">
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white">View More</Button>
           </div>
         </CardContent>
       </Card>
@@ -467,7 +490,7 @@ export default function AdminDashboard() {
           <>
             <AdminProfileHeader profile={adminProfile} />
             <AdminTabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-            <div className="flex-1 overflow-y-auto">
+            <div className="pb-6">
               {renderTabContent()}
             </div>
           </>
@@ -495,7 +518,7 @@ export default function AdminDashboard() {
           <>
             <AdminProfileHeader profile={adminProfile} />
             <AdminTabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-            <div className="flex-1 overflow-y-auto">
+            <div className="pb-6">
               {renderTabContent()}
             </div>
           </>
@@ -504,9 +527,9 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="flex bg-gray-50 dark:bg-gray-900 min-h-screen">
       <Sidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
-      <div className="flex-1 flex flex-col ml-64 min-h-screen overflow-hidden">
+      <div className="flex-1 ml-64 overflow-auto">
         {renderSidebarContent()}
       </div>
     </div>
