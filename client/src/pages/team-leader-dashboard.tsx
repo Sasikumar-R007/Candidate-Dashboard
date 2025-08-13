@@ -502,38 +502,38 @@ export default function TeamLeaderDashboard() {
                       {/* Row 1 */}
                       <tr className="border-b border-gray-100 dark:border-gray-800">
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Keerthana']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Keerthana']}`}>
                             Keerthana
                           </span>
                         </td>
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Keerthana']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Keerthana']}`}>
                             Keerthana
                           </span>
                         </td>
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Keerthana']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Keerthana']}`}>
                             Keerthana
                           </span>
                         </td>
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Keerthana']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Keerthana']}`}>
                             Keerthana
                           </span>
                         </td>
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Keerthana']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Keerthana']}`}>
                             Keerthana
                           </span>
                         </td>
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Keerthana']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Keerthana']}`}>
                             Keerthana
                           </span>
                         </td>
                         <td className="p-3 w-32">
                           <div className="flex items-center justify-between">
-                            <span className={`inline-block flex-1 text-center px-3 py-1 rounded text-sm ${candidateColors['Keerthana']}`}>
+                            <span className={`inline-block flex-1 text-center px-3 py-2 rounded text-sm ${candidateColors['Keerthana']}`}>
                               Keerthana
                             </span>
                             <Dialog open={isClosureModalOpen} onOpenChange={setIsClosureModalOpen}>
@@ -549,35 +549,35 @@ export default function TeamLeaderDashboard() {
                                 <div className="grid grid-cols-2 gap-4 py-4">
                                   <div className="space-y-2">
                                     <Label htmlFor="candidate-name">Candidate Name</Label>
-                                    <Input id="candidate-name" placeholder="Enter name" />
+                                    <Input id="candidate-name" placeholder="Enter name" className="bg-gray-50 dark:bg-gray-700 border rounded" />
                                   </div>
                                   <div className="space-y-2">
                                     <Label htmlFor="fixed-ctc">Fixed CTC</Label>
-                                    <Input id="fixed-ctc" placeholder="Enter CTC" />
+                                    <Input id="fixed-ctc" placeholder="Enter CTC" className="bg-gray-50 dark:bg-gray-700 border rounded" />
                                   </div>
                                   <div className="space-y-2">
                                     <Label htmlFor="client">Client</Label>
-                                    <Input id="client" placeholder="Enter client" />
+                                    <Input id="client" placeholder="Enter client" className="bg-gray-50 dark:bg-gray-700 border rounded" />
                                   </div>
                                   <div className="space-y-2">
                                     <Label htmlFor="talent-advisor">Talent Advisor</Label>
-                                    <Input id="talent-advisor" placeholder="Enter advisor" />
+                                    <Input id="talent-advisor" placeholder="Enter advisor" className="bg-gray-50 dark:bg-gray-700 border rounded" />
                                   </div>
                                   <div className="space-y-2">
                                     <Label htmlFor="position">Position</Label>
-                                    <Input id="position" placeholder="Enter position" />
+                                    <Input id="position" placeholder="Enter position" className="bg-gray-50 dark:bg-gray-700 border rounded" />
                                   </div>
                                   <div className="space-y-2">
                                     <Label htmlFor="offered-date">Offered Date</Label>
-                                    <Input id="offered-date" type="date" />
+                                    <Input id="offered-date" type="date" className="bg-gray-50 dark:bg-gray-700 border rounded" />
                                   </div>
                                   <div className="space-y-2">
                                     <Label htmlFor="joining-date">Joining Date</Label>
-                                    <Input id="joining-date" type="date" />
+                                    <Input id="joining-date" type="date" className="bg-gray-50 dark:bg-gray-700 border rounded" />
                                   </div>
                                   <div className="space-y-2">
                                     <Label htmlFor="comments">Comments</Label>
-                                    <Input id="comments" placeholder="Enter comments" />
+                                    <Input id="comments" placeholder="Enter comments" className="bg-gray-50 dark:bg-gray-700 border rounded" />
                                   </div>
                                 </div>
                                 <div className="flex justify-center">
@@ -591,38 +591,38 @@ export default function TeamLeaderDashboard() {
                       {/* Row 2 */}
                       <tr className="border-b border-gray-100 dark:border-gray-800">
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Vishnu Purana']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Vishnu Purana']}`}>
                             Vishnu Purana
                           </span>
                         </td>
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Vishnu Purana']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Vishnu Purana']}`}>
                             Vishnu Purana
                           </span>
                         </td>
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Vishnu Purana']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Vishnu Purana']}`}>
                             Vishnu Purana
                           </span>
                         </td>
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Vishnu Purana']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Vishnu Purana']}`}>
                             Vishnu Purana
                           </span>
                         </td>
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Vishnu Purana']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Vishnu Purana']}`}>
                             Vishnu Purana
                           </span>
                         </td>
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Vishnu Purana']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Vishnu Purana']}`}>
                             Vishnu Purana
                           </span>
                         </td>
                         <td className="p-3 w-32">
                           <div className="flex items-center justify-between">
-                            <span className={`inline-block flex-1 text-center px-3 py-1 rounded text-sm ${candidateColors['Vishnu Purana']}`}>
+                            <span className={`inline-block flex-1 text-center px-3 py-2 rounded text-sm ${candidateColors['Vishnu Purana']}`}>
                               Vishnu Purana
                             </span>
                             <Button variant="ghost" size="sm" className="ml-2 p-1">
@@ -634,27 +634,27 @@ export default function TeamLeaderDashboard() {
                       {/* Row 3 */}
                       <tr className="border-b border-gray-100 dark:border-gray-800">
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Chanakya']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Chanakya']}`}>
                             Chanakya
                           </span>
                         </td>
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Chanakya']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Chanakya']}`}>
                             Chanakya
                           </span>
                         </td>
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Chanakya']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Chanakya']}`}>
                             Chanakya
                           </span>
                         </td>
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Chanakya']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Chanakya']}`}>
                             Chanakya
                           </span>
                         </td>
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Chanakya']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Chanakya']}`}>
                             Chanakya
                           </span>
                         </td>
@@ -664,22 +664,22 @@ export default function TeamLeaderDashboard() {
                       {/* Row 4 */}
                       <tr className="border-b border-gray-100 dark:border-gray-800">
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Adhya']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Adhya']}`}>
                             Adhya
                           </span>
                         </td>
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Adhya']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Adhya']}`}>
                             Adhya
                           </span>
                         </td>
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Adhya']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Adhya']}`}>
                             Adhya
                           </span>
                         </td>
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Adhya']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Adhya']}`}>
                             Adhya
                           </span>
                         </td>
@@ -690,17 +690,17 @@ export default function TeamLeaderDashboard() {
                       {/* Row 5 */}
                       <tr className="border-b border-gray-100 dark:border-gray-800">
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Vanshika']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Vanshika']}`}>
                             Vanshika
                           </span>
                         </td>
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Vanshika']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Vanshika']}`}>
                             Vanshika
                           </span>
                         </td>
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Vanshika']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Vanshika']}`}>
                             Vanshika
                           </span>
                         </td>
@@ -712,12 +712,12 @@ export default function TeamLeaderDashboard() {
                       {/* Row 6 */}
                       <tr className="border-b border-gray-100 dark:border-gray-800">
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Reyansh']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Reyansh']}`}>
                             Reyansh
                           </span>
                         </td>
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Reyansh']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Reyansh']}`}>
                             Reyansh
                           </span>
                         </td>
@@ -730,7 +730,7 @@ export default function TeamLeaderDashboard() {
                       {/* Row 7 */}
                       <tr className="border-b border-gray-100 dark:border-gray-800">
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Saurang']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Saurang']}`}>
                             Saurang
                           </span>
                         </td>
@@ -744,7 +744,7 @@ export default function TeamLeaderDashboard() {
                       {/* Row 8 */}
                       <tr className="border-b border-gray-100 dark:border-gray-800">
                         <td className="p-3 w-32">
-                          <span className={`inline-block w-full text-center px-3 py-1 rounded text-sm ${candidateColors['Vihana']}`}>
+                          <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Vihana']}`}>
                             Vihana
                           </span>
                         </td>
