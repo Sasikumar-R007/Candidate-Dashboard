@@ -1,6 +1,6 @@
 # Overview
 
-This is a React-based candidate dashboard for a job portal web application. The system provides a comprehensive interface for job seekers to manage their profiles, resumes, job preferences, and track their application activities. The application features a modern, responsive design with tabbed navigation and modal-based editing capabilities.
+This is a dual-dashboard job portal web application featuring both candidate and team leader interfaces. The system provides comprehensive dashboards for job seekers to manage their profiles and for team leaders to monitor recruitment metrics, team performance, and targets. The application features a modern, responsive design with consistent styling across both dashboards and a landing page for role selection.
 
 # User Preferences
 
@@ -35,10 +35,12 @@ Preferred communication style: Simple, everyday language.
 - **Authorization**: Profile-based access control where users can only access their own data
 
 ## Component Organization
-- **Dashboard Layout**: Sidebar navigation with main content area and tabbed interface
+- **Dashboard Layout**: Sidebar navigation with main content area and tabbed interface (shared across both dashboards)
 - **Modal System**: Reusable modal components for editing different sections (profile, preferences, etc.)
 - **File Management**: Drag-and-drop file upload components with preview capabilities
 - **Form Components**: Modular form sections with validation and error handling
+- **Landing Page**: Role selection interface for choosing between candidate and team leader dashboards
+- **Team Leader Components**: Specialized components for team metrics, target tracking, and performance monitoring
 
 ## Development Tools
 - **Build System**: Vite for fast development server and optimized production builds
