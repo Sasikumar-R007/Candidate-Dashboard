@@ -80,13 +80,80 @@ export default function TeamLeaderEditProfileModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" data-testid="modal-edit-team-leader-profile">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto scrollbar-hide" data-testid="modal-edit-team-leader-profile">
         <DialogHeader>
           <DialogTitle>Edit Profile</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Basic Information */}
+          {/* View-Only Work Information - Top Section */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Work Information (View Only)</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="role-readonly">Role</Label>
+                <Input
+                  id="role-readonly"
+                  value={formData.role}
+                  readOnly
+                  className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
+                  data-testid="input-role-readonly"
+                />
+              </div>
+              <div>
+                <Label htmlFor="employeeId-readonly">Employee ID</Label>
+                <Input
+                  id="employeeId-readonly"
+                  value={formData.employeeId}
+                  readOnly
+                  className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
+                  data-testid="input-employee-id-readonly"
+                />
+              </div>
+              <div>
+                <Label htmlFor="joiningDate-readonly">Joining Date</Label>
+                <Input
+                  id="joiningDate-readonly"
+                  value={formData.joiningDate}
+                  readOnly
+                  className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
+                  data-testid="input-joining-date-readonly"
+                />
+              </div>
+              <div>
+                <Label htmlFor="department-readonly">Department</Label>
+                <Input
+                  id="department-readonly"
+                  value={formData.department}
+                  readOnly
+                  className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
+                  data-testid="input-department-readonly"
+                />
+              </div>
+              <div>
+                <Label htmlFor="reportingTo-readonly">Reporting To</Label>
+                <Input
+                  id="reportingTo-readonly"
+                  value={formData.reportingTo}
+                  readOnly
+                  className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
+                  data-testid="input-reporting-to-readonly"
+                />
+              </div>
+              <div>
+                <Label htmlFor="totalContribution-readonly">Total Contribution</Label>
+                <Input
+                  id="totalContribution-readonly"
+                  value={formData.totalContribution}
+                  readOnly
+                  className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
+                  data-testid="input-total-contribution-readonly"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Editable Basic Information */}
           <div>
             <h3 className="text-lg font-semibold mb-4">Basic Information</h3>
             <div className="grid grid-cols-2 gap-4">
@@ -108,28 +175,10 @@ export default function TeamLeaderEditProfileModal({
                   data-testid="input-last-name"
                 />
               </div>
-              <div>
-                <Label htmlFor="role">Role</Label>
-                <Input
-                  id="role"
-                  value={formData.role}
-                  onChange={(e) => handleInputChange('role', e.target.value)}
-                  data-testid="input-role"
-                />
-              </div>
-              <div>
-                <Label htmlFor="employeeId">Employee ID</Label>
-                <Input
-                  id="employeeId"
-                  value={formData.employeeId}
-                  onChange={(e) => handleInputChange('employeeId', e.target.value)}
-                  data-testid="input-employee-id"
-                />
-              </div>
             </div>
           </div>
 
-          {/* Contact Information */}
+          {/* Editable Contact Information */}
           <div>
             <h3 className="text-lg font-semibold mb-4">Contact Information</h3>
             <div className="grid grid-cols-2 gap-4">
@@ -150,50 +199,6 @@ export default function TeamLeaderEditProfileModal({
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
                   data-testid="input-email"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Work Information */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Work Information</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="joiningDate">Joining Date</Label>
-                <Input
-                  id="joiningDate"
-                  value={formData.joiningDate}
-                  onChange={(e) => handleInputChange('joiningDate', e.target.value)}
-                  placeholder="DD-Month-YYYY"
-                  data-testid="input-joining-date"
-                />
-              </div>
-              <div>
-                <Label htmlFor="department">Department</Label>
-                <Input
-                  id="department"
-                  value={formData.department}
-                  onChange={(e) => handleInputChange('department', e.target.value)}
-                  data-testid="input-department"
-                />
-              </div>
-              <div>
-                <Label htmlFor="reportingTo">Reporting To</Label>
-                <Input
-                  id="reportingTo"
-                  value={formData.reportingTo}
-                  onChange={(e) => handleInputChange('reportingTo', e.target.value)}
-                  data-testid="input-reporting-to"
-                />
-              </div>
-              <div>
-                <Label htmlFor="totalContribution">Total Contribution</Label>
-                <Input
-                  id="totalContribution"
-                  value={formData.totalContribution}
-                  onChange={(e) => handleInputChange('totalContribution', e.target.value)}
-                  data-testid="input-total-contribution"
                 />
               </div>
             </div>

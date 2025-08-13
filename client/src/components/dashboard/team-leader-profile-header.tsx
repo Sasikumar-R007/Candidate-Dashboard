@@ -101,7 +101,7 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
         <div className="absolute left-1/2 transform -translate-x-1/2 -bottom-16 z-30">
           <div className="relative">
             <img 
-              src="/api/placeholder/128/128"
+              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150"
               alt="Profile picture" 
               className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
             />
