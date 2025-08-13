@@ -95,6 +95,58 @@ export const savedJobs = pgTable("saved_jobs", {
   savedDate: text("saved_date").notNull(),
 });
 
+export const teamMembers = pgTable("team_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  salary: text("salary").notNull(),
+  year: text("year").notNull(),
+  profilesCount: text("profiles_count").notNull().default("0"),
+});
+
+export const teamLeaderProfile = pgTable("team_leader_profile", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  role: text("role").notNull(),
+  employeeId: text("employee_id").notNull(),
+  phone: text("phone").notNull(),
+  email: text("email").notNull(),
+  joiningDate: text("joining_date").notNull(),
+  department: text("department").notNull(),
+  reportingTo: text("reporting_to").notNull(),
+  totalContribution: text("total_contribution").notNull().default("2,50,000"),
+});
+
+export const targetMetrics = pgTable("target_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  currentQuarter: text("current_quarter").notNull(),
+  minimumTarget: text("minimum_target").notNull(),
+  targetAchieved: text("target_achieved").notNull(),
+  incentiveEarned: text("incentive_earned").notNull(),
+});
+
+export const dailyMetrics = pgTable("daily_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  date: text("date").notNull(),
+  totalRequirements: text("total_requirements").notNull(),
+  completedRequirements: text("completed_requirements").notNull(),
+  avgResumesPerRequirement: text("avg_resumes_per_requirement").notNull(),
+  requirementsPerRecruiter: text("requirements_per_recruiter").notNull(),
+  dailyDeliveryDelivered: text("daily_delivery_delivered").notNull(),
+  dailyDeliveryDefaulted: text("daily_delivery_defaulted").notNull(),
+});
+
+export const meetings = pgTable("meetings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: text("type").notNull(), // TL's Meeting, CEO's Meeting
+  count: text("count").notNull(),
+});
+
+export const ceoComments = pgTable("ceo_comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  comment: text("comment").notNull(),
+  date: text("date").notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
 });
@@ -123,6 +175,30 @@ export const insertSavedJobSchema = createInsertSchema(savedJobs).omit({
   id: true,
 });
 
+export const insertTeamMemberSchema = createInsertSchema(teamMembers).omit({
+  id: true,
+});
+
+export const insertTeamLeaderProfileSchema = createInsertSchema(teamLeaderProfile).omit({
+  id: true,
+});
+
+export const insertTargetMetricsSchema = createInsertSchema(targetMetrics).omit({
+  id: true,
+});
+
+export const insertDailyMetricsSchema = createInsertSchema(dailyMetrics).omit({
+  id: true,
+});
+
+export const insertMeetingSchema = createInsertSchema(meetings).omit({
+  id: true,
+});
+
+export const insertCeoCommentSchema = createInsertSchema(ceoComments).omit({
+  id: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
@@ -137,3 +213,15 @@ export type InsertJobApplication = z.infer<typeof insertJobApplicationSchema>;
 export type JobApplication = typeof jobApplications.$inferSelect;
 export type InsertSavedJob = z.infer<typeof insertSavedJobSchema>;
 export type SavedJob = typeof savedJobs.$inferSelect;
+export type InsertTeamMember = z.infer<typeof insertTeamMemberSchema>;
+export type TeamMember = typeof teamMembers.$inferSelect;
+export type InsertTeamLeaderProfile = z.infer<typeof insertTeamLeaderProfileSchema>;
+export type TeamLeaderProfile = typeof teamLeaderProfile.$inferSelect;
+export type InsertTargetMetrics = z.infer<typeof insertTargetMetricsSchema>;
+export type TargetMetrics = typeof targetMetrics.$inferSelect;
+export type InsertDailyMetrics = z.infer<typeof insertDailyMetricsSchema>;
+export type DailyMetrics = typeof dailyMetrics.$inferSelect;
+export type InsertMeeting = z.infer<typeof insertMeetingSchema>;
+export type Meeting = typeof meetings.$inferSelect;
+export type InsertCeoComment = z.infer<typeof insertCeoCommentSchema>;
+export type CeoComment = typeof ceoComments.$inferSelect;

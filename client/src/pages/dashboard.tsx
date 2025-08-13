@@ -58,15 +58,7 @@ export default function Dashboard() {
             </div>
           </div>
         );
-      case 'sign-out':
-        return (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Sign Out</h2>
-              <p className="text-gray-600">You have been signed out successfully</p>
-            </div>
-          </div>
-        );
+
       default:
         return (
           <>

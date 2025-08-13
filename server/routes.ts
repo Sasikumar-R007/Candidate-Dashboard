@@ -318,6 +318,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Team Leader Dashboard API routes
+  app.get("/api/team-leader/profile", (req, res) => {
+    const teamLeaderProfile = {
+      id: "tl-001",
+      name: "John Mathew",
+      role: "Team Leader",
+      employeeId: "STL01",
+      phone: "90347 59092",
+      email: "john@scalingtheory.com",
+      joiningDate: "03-March-2021",
+      department: "Talent Advisory",
+      reportingTo: "Yatna Prakash",
+      totalContribution: "2,50,000"
+    };
+    res.json(teamLeaderProfile);
+  });
+
+  app.get("/api/team-leader/team-members", (req, res) => {
+    const teamMembers = [
+      { id: "tm-001", name: "Sudharshan", salary: "2,95,000 INR", year: "2024-2025", profilesCount: "10" },
+      { id: "tm-002", name: "Deepika", salary: "1,95,000 INR", year: "2024-2025", profilesCount: "5" },
+      { id: "tm-003", name: "Dharshan", salary: "1,80,000 INR", year: "2024-2025", profilesCount: "4" },
+      { id: "tm-004", name: "Kavya", salary: "2,30,000 INR", year: "2024-2025", profilesCount: "2" },
+      { id: "tm-005", name: "Thamarai Selvi", salary: "2,50,000 INR", year: "2024-2025", profilesCount: "3" },
+      { id: "tm-006", name: "Karthikayan", salary: "2,50,000 INR", year: "2024-2025", profilesCount: "2" }
+    ];
+    res.json(teamMembers);
+  });
+
+  app.get("/api/team-leader/target-metrics", (req, res) => {
+    const targetMetrics = {
+      id: "target-001",
+      currentQuarter: "ASO-2025",
+      minimumTarget: "15,00,000",
+      targetAchieved: "10,00,000",
+      incentiveEarned: "50,000"
+    };
+    res.json(targetMetrics);
+  });
+
+  app.get("/api/team-leader/daily-metrics", (req, res) => {
+    const dailyMetrics = {
+      id: "daily-001",
+      date: "12-Aug-2025",
+      totalRequirements: "20",
+      completedRequirements: "12",
+      avgResumesPerRequirement: "02",
+      requirementsPerRecruiter: "03",
+      dailyDeliveryDelivered: "3",
+      dailyDeliveryDefaulted: "1"
+    };
+    res.json(dailyMetrics);
+  });
+
+  app.get("/api/team-leader/meetings", (req, res) => {
+    const meetings = [
+      { id: "meeting-001", type: "TL's Meeting", count: "3" },
+      { id: "meeting-002", type: "CEO's Meeting", count: "1" }
+    ];
+    res.json(meetings);
+  });
+
+  app.get("/api/team-leader/ceo-comments", (req, res) => {
+    const comments = [
+      { id: "comment-001", comment: "Discuss with Shri Ragavi on her production", date: "12-Aug-2025" },
+      { id: "comment-002", comment: "Discuss with Kavya about her leaves", date: "12-Aug-2025" },
+      { id: "comment-003", comment: "Discuss with Umar for data", date: "12-Aug-2025" }
+    ];
+    res.json(comments);
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

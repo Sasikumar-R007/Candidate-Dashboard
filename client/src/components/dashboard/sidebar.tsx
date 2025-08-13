@@ -1,3 +1,5 @@
+import { Link } from "wouter";
+
 interface SidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
@@ -7,8 +9,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'fas fa-tachometer-alt' },
     { id: 'job-board', label: 'Job Board', icon: 'fas fa-briefcase' },
-    { id: 'settings', label: 'Settings', icon: 'fas fa-cog' },
-    { id: 'sign-out', label: 'Sign Out', icon: 'fas fa-sign-out-alt' }
+    { id: 'settings', label: 'Settings', icon: 'fas fa-cog' }
   ];
 
   return (
@@ -31,6 +32,17 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
               {item.label}
             </button>
           ))}
+          
+          {/* Sign Out Link */}
+          <Link href="/" data-testid="link-sign-out-candidate">
+            <button
+              className="w-full flex items-center px-4 py-3 rounded-lg transition-colors text-left hover:bg-blue-700 dark:hover:bg-gray-700"
+              data-testid="button-nav-sign-out"
+            >
+              <i className="fas fa-sign-out-alt mr-3"></i>
+              Sign Out
+            </button>
+          </Link>
         </nav>
       </div>
     </div>
