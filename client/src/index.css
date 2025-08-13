@@ -58,6 +58,16 @@
   --golden-light: hsl(45 93% 58%);
 }
 
+/* Hide scrollbars */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 .dark {
   --background: hsl(222 84% 5%);
   --foreground: hsl(210 40% 98%);

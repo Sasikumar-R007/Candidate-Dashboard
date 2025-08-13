@@ -521,176 +521,204 @@ export default function JobBoardTab() {
         </div>
       </div>
 
-      {/* Job Details Modal - Redesigned to Match Image */}
+      {/* Job Details Modal - Exact Match to Design */}
       <Dialog open={showJobModal} onOpenChange={setShowJobModal}>
-        <DialogContent className="max-w-lg max-h-[95vh] p-0 overflow-hidden">
+        <DialogContent className="max-w-md max-h-[95vh] p-0 overflow-hidden">
           {selectedJob && (
-            <div className="h-full flex flex-col bg-blue-50 dark:bg-blue-900/20">
-              {/* Header with Company Logo and Basic Info */}
-              <div className="bg-white dark:bg-gray-800 p-6 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-start gap-4 mb-4">
-                  <div className={`w-20 h-16 ${selectedJob.background} rounded-xl flex items-center justify-center p-2`}>
-                    <img
-                      src={selectedJob.logo}
-                      alt={`${selectedJob.company} logo`}
-                      className="w-12 h-12 rounded object-cover"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300">{selectedJob.company}</h3>
-                    <h4 className="text-xl font-bold text-gray-900 dark:text-gray-100">{selectedJob.title}</h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">{selectedJob.description}</p>
-                  </div>
-                  <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
-                    <i className="fas fa-bookmark text-white text-sm"></i>
-                  </div>
-                </div>
+            <div className="h-full flex flex-col">
+              {/* Scrollable Content with Hidden Scrollbar */}
+              <div className="flex-1 overflow-y-auto scrollbar-hide">
+                
+                {/* Job Card Header - Same as List */}
+                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 m-4 rounded-2xl border border-gray-200 dark:border-gray-700">
+                  <div className="flex">
+                    {/* Company Logo Section */}
+                    <div className="w-24 flex items-center justify-center">
+                      <div className={`${selectedJob.background} rounded-xl p-3 flex flex-col items-center justify-center w-20 h-16`}>
+                        <img
+                          src={selectedJob.logo}
+                          alt={`${selectedJob.company} logo`}
+                          className="w-12 h-12 rounded object-cover mb-1"
+                        />
+                        <div className="text-xs font-bold text-gray-700 dark:text-gray-300">{selectedJob.company.split(' ')[0]}</div>
+                      </div>
+                    </div>
 
-                <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  <span className="flex items-center gap-1">
-                    <i className="fas fa-briefcase"></i>
-                    {selectedJob.experience}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span className="font-semibold">₹</span>
-                    {selectedJob.salary}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <i className="fas fa-map-marker-alt"></i>
-                    {selectedJob.location}
-                  </span>
-                  <span className="font-medium">{selectedJob.workType}</span>
-                  <span className="font-medium">{selectedJob.type}</span>
-                </div>
+                    {/* Job Details */}
+                    <div className="flex-1 pl-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{selectedJob.company}</h3>
+                          <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                            {selectedJob.title}
+                            {selectedJob.isHot && <i className="fas fa-fire text-red-500 text-sm"></i>}
+                          </h4>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{selectedJob.description}</p>
+                        </div>
+                        <div className="w-6 h-6 bg-red-500 rounded flex items-center justify-center ml-2">
+                          <i className="fas fa-bookmark text-white text-xs"></i>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400 mb-2">
+                        <span className="flex items-center gap-1">
+                          <i className="fas fa-briefcase"></i>
+                          {selectedJob.experience}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="font-semibold">₹</span>
+                          {selectedJob.salary}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <i className="fas fa-map-marker-alt"></i>
+                          {selectedJob.location}
+                        </span>
+                        <span className="font-medium">{selectedJob.workType}</span>
+                        <span className="font-medium">{selectedJob.type}</span>
+                      </div>
 
-                {/* Job Tags */}
-                <div className="flex items-center gap-2 mb-4">
-                  <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs">
-                    Open Positions ~ 2
-                  </span>
-                  <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs">
-                    Product
-                  </span>
-                  <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs">
-                    B2B
-                  </span>
-                  <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs">
-                    Full Time
-                  </span>
-                </div>
+                      {/* Job Tags */}
+                      <div className="flex items-center gap-1 mb-2">
+                        <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs">
+                          Open Positions ~ 2
+                        </span>
+                        <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs">
+                          Product
+                        </span>
+                        <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs">
+                          B2B
+                        </span>
+                        <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs">
+                          Full Time
+                        </span>
+                      </div>
 
-                {/* Skills */}
-                <div className="flex items-center gap-2">
-                  {selectedJob.skills.map((skill, index) => (
-                    <span key={index} className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full text-xs font-medium">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
+                      {/* Skills */}
+                      <div className="flex items-center gap-1">
+                        {selectedJob.skills.map((skill, index) => (
+                          <span key={index} className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full text-xs font-medium">
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
 
-              {/* Content Sections - No Scroll */}
-              <div className="flex-1 p-6 space-y-6">
-                {/* About Company */}
-                <div>
-                  <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">About Company</h5>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-                    Google, now a subsidiary of Alphabet Inc., is a multinational technology company known for 
-                    its Internet search engine, online advertising technologies, cloud computing, and other 
-                    software services. Originally founded in 1998 by Larry Page and Sergey Brin, initially as a research project 
-                    at Stanford University. Google's core mission is to organize the world's information and 
-                    make it universally accessible and useful.
-                  </p>
-                </div>
-
-                {/* Role Definition */}
-                <div>
-                  <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Role Definition:</h5>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-3">
-                    We are looking for a Cloud Engineer to join our team and work with our engineering team to 
-                    optimize, implement, and maintain our organization's cloud-based systems.
-                  </p>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-                    A Cloud Engineer's responsibilities include deploying and debugging systems, as well as 
-                    executing new cloud initiatives.
-                  </p>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-                    Ultimately, you will work with different IT professionals and teams to ensure our cloud 
-                    computing systems meet the needs of our organization and customers.
-                  </p>
-                </div>
-
-                {/* Key Responsibilities */}
-                <div>
-                  <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Key Responsibilities</h5>
-                  <ul className="space-y-2 text-gray-600 dark:text-gray-400 text-sm">
-                    <li className="flex items-start gap-2">
-                      <span className="text-green-600 mt-1 text-xs">•</span>
-                      <span>Design, develop, and deploy modular cloud-based systems</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-green-600 mt-1 text-xs">•</span>
-                      <span>Develop and maintain cloud solutions in accordance with best practices</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-green-600 mt-1 text-xs">•</span>
-                      <span>Ensure efficient functioning of data storage and process functions in accordance with 
-                      company security policies and best practices in cloud security</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-green-600 mt-1 text-xs">•</span>
-                      <span>Identify, analyse, and resolve infrastructure vulnerabilities and application deployment 
-                      issues</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-green-600 mt-1 text-xs">•</span>
-                      <span>Regularly review existing systems and make recommendations for improvements</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                      <span className="text-green-600 mt-1 text-xs">•</span>
-                      <span>Interact with clients, provide cloud support, and make recommendations based on client 
-                      needs</span>
-                    </li>
-                  </ul>
-                </div>
-
-                {/* Skills Required */}
-                <div className="grid grid-cols-3 gap-6">
-                  <div className="bg-green-100 dark:bg-green-900/30 p-4 rounded-lg">
-                    <h6 className="font-medium text-gray-900 dark:text-gray-100 mb-3">Primary Skills</h6>
-                    <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                      <div>Business Development</div>
-                      <div>Marketing Analysis</div>
-                      <div>Lead Generation</div>
-                      <div>International Sales</div>
-                      <div>Digital Marketing</div>
-                      <div>SEO</div>
+                      {/* View Less Button */}
+                      <div className="flex justify-end mt-2">
+                        <Button 
+                          onClick={() => setShowJobModal(false)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded text-xs" 
+                          size="sm"
+                        >
+                          View Less
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                  <div className="bg-blue-100 dark:bg-blue-900/30 p-4 rounded-lg">
-                    <h6 className="font-medium text-gray-900 dark:text-gray-100 mb-3">Secondary Skills</h6>
-                    <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                      <div>Corporate Sales</div>
-                      <div>Resource Manager</div>
-                      <div>Customer Interaction</div>
-                      <div>Customer Service</div>
-                      <div>Direct sales</div>
-                    </div>
+                </div>
+
+                {/* Content Sections - Separate Boxes */}
+                <div className="px-4 pb-4 space-y-4">
+                  {/* About Company Box */}
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-700">
+                    <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">About Company</h5>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                      Google, now a subsidiary of Alphabet Inc., is a multinational technology company known for 
+                      its Internet search engine, online advertising technologies, cloud computing, and other 
+                      software services. Originally founded in 1998 by Larry Page and Sergey Brin, initially as a research project 
+                      at Stanford University. Google's core mission is to organize the world's information and 
+                      make it universally accessible and useful.
+                    </p>
                   </div>
-                  <div className="bg-yellow-100 dark:bg-yellow-900/30 p-4 rounded-lg">
-                    <h6 className="font-medium text-gray-900 dark:text-gray-100 mb-3">Knowledge Only</h6>
-                    <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                      <div>Telecalling</div>
-                      <div>English communication</div>
-                      <div>Sales requirement</div>
+
+                  {/* Role Definition Box */}
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-700">
+                    <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Role Definition:</h5>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-3">
+                      We are looking for a Cloud Engineer to join our team and work with our engineering team to 
+                      optimize, implement, and maintain our organization's cloud-based systems.
+                    </p>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-3">
+                      A Cloud Engineer's responsibilities include deploying and debugging systems, as well as 
+                      executing new cloud initiatives.
+                    </p>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                      Ultimately, you will work with different IT professionals and teams to ensure our cloud 
+                      computing systems meet the needs of our organization and customers.
+                    </p>
+                  </div>
+
+                  {/* Key Responsibilities Box */}
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-700">
+                    <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Key Responsibilities</h5>
+                    <ul className="space-y-2 text-gray-600 dark:text-gray-400 text-sm">
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600 mt-1 text-xs">•</span>
+                        <span>Design, develop, and deploy modular cloud-based systems</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600 mt-1 text-xs">•</span>
+                        <span>Develop and maintain cloud solutions in accordance with best practices</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600 mt-1 text-xs">•</span>
+                        <span>Ensure efficient functioning of data storage and process functions in accordance with 
+                        company security policies and best practices in cloud security</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600 mt-1 text-xs">•</span>
+                        <span>Identify, analyse, and resolve infrastructure vulnerabilities and application deployment 
+                        issues</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600 mt-1 text-xs">•</span>
+                        <span>Regularly review existing systems and make recommendations for improvements</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600 mt-1 text-xs">•</span>
+                        <span>Interact with clients, provide cloud support, and make recommendations based on client 
+                        needs</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Skills Required - Three Colored Boxes */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-lg border border-green-200 dark:border-green-700">
+                      <h6 className="font-medium text-gray-900 dark:text-gray-100 mb-2 text-sm">Primary Skills</h6>
+                      <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                        <div>Business Development</div>
+                        <div>Marketing Analysis</div>
+                        <div>Lead Generation</div>
+                        <div>International Sales</div>
+                        <div>Digital Marketing</div>
+                        <div>SEO</div>
+                      </div>
+                    </div>
+                    <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-lg border border-blue-200 dark:border-blue-700">
+                      <h6 className="font-medium text-gray-900 dark:text-gray-100 mb-2 text-sm">Secondary Skills</h6>
+                      <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                        <div>Corporate Sales</div>
+                        <div>Resource Manager</div>
+                        <div>Customer Interaction</div>
+                        <div>Customer Service</div>
+                        <div>Direct sales</div>
+                      </div>
+                    </div>
+                    <div className="bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded-lg border border-yellow-200 dark:border-yellow-700">
+                      <h6 className="font-medium text-gray-900 dark:text-gray-100 mb-2 text-sm">Knowledge Only</h6>
+                      <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                        <div>Telecalling</div>
+                        <div>English communication</div>
+                        <div>Sales requirement</div>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Apply Button Footer */}
-              <div className="bg-white dark:bg-gray-800 p-6 border-t border-gray-200 dark:border-gray-700">
-                <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium">
+              <div className="bg-blue-600 p-4 flex justify-center">
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded-lg font-medium border-0">
                   Apply
                 </Button>
               </div>
