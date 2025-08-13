@@ -101,20 +101,28 @@ export default function TeamLeaderDashboard() {
                 <CardTitle data-testid="text-team-section-title">Team</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-3 gap-6">
                   {teamMembers?.map((member: any, index: number) => (
-                    <Card key={index} className="p-4">
-                      <div className="text-center">
-                        <h3 className="font-semibold" data-testid={`text-member-name-${index}`}>{member.name}</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400" data-testid={`text-member-salary-${index}`}>{member.salary}</p>
-                        <p className="text-xs text-gray-400" data-testid={`text-member-year-${index}`}>{member.year}</p>
-                        <div className="mt-2">
-                          <span className="text-2xl font-bold text-blue-600" data-testid={`text-member-profiles-${index}`}>
+                    <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1" data-testid={`text-member-name-${index}`}>
+                            {member.name}
+                          </h3>
+                          <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1" data-testid={`text-member-salary-${index}`}>
+                            {member.salary}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400" data-testid={`text-member-year-${index}`}>
+                            {member.year}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid={`text-member-profiles-${index}`}>
                             {member.profilesCount}
                           </span>
                         </div>
                       </div>
-                    </Card>
+                    </div>
                   ))}
                 </div>
               </CardContent>
@@ -126,22 +134,22 @@ export default function TeamLeaderDashboard() {
                 <CardTitle data-testid="text-target-section-title">Target</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="text-center">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Current Quarter</p>
-                    <p className="font-semibold" data-testid="text-current-quarter">{targetMetrics?.currentQuarter}</p>
+                <div className="grid grid-cols-4 gap-0 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-gray-800 dark:to-gray-700 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600">
+                  <div className="bg-blue-100 dark:bg-gray-700 text-center py-6 px-4 border-r border-blue-200 dark:border-gray-600">
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Current Quarter</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-current-quarter">{targetMetrics?.currentQuarter}</p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Minimum Target</p>
-                    <p className="font-semibold" data-testid="text-minimum-target">{targetMetrics?.minimumTarget}</p>
+                  <div className="bg-blue-50 dark:bg-gray-750 text-center py-6 px-4 border-r border-blue-200 dark:border-gray-600">
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Minimum Target</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-minimum-target">{targetMetrics?.minimumTarget}</p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Target Achieved</p>
-                    <p className="font-semibold" data-testid="text-target-achieved">{targetMetrics?.targetAchieved}</p>
+                  <div className="bg-blue-100 dark:bg-gray-700 text-center py-6 px-4 border-r border-blue-200 dark:border-gray-600">
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Target Achieved</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-target-achieved">{targetMetrics?.targetAchieved}</p>
                   </div>
-                  <div className="text-center">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Incentive Earned</p>
-                    <p className="font-semibold" data-testid="text-incentive-earned">{targetMetrics?.incentiveEarned}</p>
+                  <div className="bg-blue-50 dark:bg-gray-750 text-center py-6 px-4">
+                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Incentive Earned</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-incentive-earned">{targetMetrics?.incentiveEarned}</p>
                   </div>
                 </div>
               </CardContent>
