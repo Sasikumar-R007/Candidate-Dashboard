@@ -100,7 +100,19 @@ export class MemStorage implements IStorage {
       profilePicture: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=150&h=150",
       bannerImage: null,
       appliedJobsCount: "12",
-      resumeFile: null
+      resumeFile: null,
+      // Education fields
+      highestQualification: "Master's Degree",
+      collegeName: "Indian Institute of Science (IISc)",
+      skills: "Cloud Architecture, DevOps, AWS, Docker, Kubernetes",
+      // Job details fields
+      pedigreeLevel: "Tier 1",
+      noticePeriod: "30 days",
+      currentCompany: "TechCorp Solutions",
+      currentRole: "Senior Cloud Engineer",
+      currentDomain: "Cloud Infrastructure",
+      companyLevel: "Mid-size",
+      productService: "Cloud Services"
     };
     this.profiles.set(userId, profile);
 
@@ -219,7 +231,19 @@ export class MemStorage implements IStorage {
       profilePicture: insertProfile.profilePicture || null,
       bannerImage: insertProfile.bannerImage || null,
       appliedJobsCount: insertProfile.appliedJobsCount || null,
-      resumeFile: insertProfile.resumeFile || null
+      resumeFile: insertProfile.resumeFile || null,
+      // Education fields
+      highestQualification: insertProfile.highestQualification || null,
+      collegeName: insertProfile.collegeName || null,
+      skills: insertProfile.skills || null,
+      // Job details fields
+      pedigreeLevel: insertProfile.pedigreeLevel || null,
+      noticePeriod: insertProfile.noticePeriod || null,
+      currentCompany: insertProfile.currentCompany || null,
+      currentRole: insertProfile.currentRole || null,
+      currentDomain: insertProfile.currentDomain || null,
+      companyLevel: insertProfile.companyLevel || null,
+      productService: insertProfile.productService || null
     };
     this.profiles.set(profile.userId, profile);
     return profile;
