@@ -389,6 +389,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(comments);
   });
 
+  // Team Leader file upload endpoints
+  app.post("/api/team-leader/upload/banner", upload.single('file'), (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+    
+    const url = `/uploads/${req.file.filename}`;
+    res.json({ url });
+  });
+
+  app.post("/api/team-leader/upload/profile", upload.single('file'), (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+    
+    const url = `/uploads/${req.file.filename}`;
+    res.json({ url });
+  });
+
+  // Team Leader profile update endpoint
+  app.patch("/api/team-leader/profile", (req, res) => {
+    const updates = req.body;
+    
+    // In a real app, you would update the team leader profile in the database
+    // For now, we'll just return the updated profile
+    const updatedProfile = {
+      id: "tl-001",
+      name: updates.name || "John Mathew",
+      role: "Team Leader",
+      employeeId: "STL01",
+      phone: updates.phone || "90347 59092",
+      email: updates.email || "john@scalingtheory.com",
+      joiningDate: "03-March-2021",
+      department: "Talent Advisory",
+      reportingTo: "Yatna Prakash",
+      totalContribution: "2,50,000",
+      bannerImage: updates.bannerImage || null,
+      profilePicture: updates.profilePicture || null
+    };
+    
+    res.json(updatedProfile);
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

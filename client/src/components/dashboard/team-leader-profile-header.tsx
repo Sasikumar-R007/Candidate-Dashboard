@@ -14,6 +14,8 @@ interface TeamLeaderProfile {
   department: string;
   reportingTo: string;
   totalContribution: string;
+  bannerImage?: string | null;
+  profilePicture?: string | null;
 }
 
 interface TeamLeaderProfileHeaderProps {
@@ -30,8 +32,34 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
 
   const handleBannerUpload = async (file: File) => {
     try {
-      // TODO: Implement banner upload API for team leader
-      console.log('Banner upload:', file);
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch('/api/team-leader/upload/banner', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+      
+      const result = await response.json();
+      
+      // Update profile with new banner image
+      const profileResponse = await fetch('/api/team-leader/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ bannerImage: result.url }),
+      });
+      
+      if (profileResponse.ok) {
+        const updatedProfile = await profileResponse.json();
+        setCurrentProfile(updatedProfile);
+      }
+      
       setShowBannerModal(false);
     } catch (error) {
       console.error('Banner upload failed:', error);
@@ -40,8 +68,34 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
 
   const handleProfileUpload = async (file: File) => {
     try {
-      // TODO: Implement profile picture upload API for team leader
-      console.log('Profile upload:', file);
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch('/api/team-leader/upload/profile', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+      
+      const result = await response.json();
+      
+      // Update profile with new profile picture
+      const profileResponse = await fetch('/api/team-leader/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ profilePicture: result.url }),
+      });
+      
+      if (profileResponse.ok) {
+        const updatedProfile = await profileResponse.json();
+        setCurrentProfile(updatedProfile);
+      }
+      
       setShowProfileModal(false);
     } catch (error) {
       console.error('Profile upload failed:', error);
@@ -50,8 +104,18 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
 
   const handleDeleteBanner = async () => {
     try {
-      // TODO: Implement banner deletion API for team leader
-      console.log('Delete banner');
+      const response = await fetch('/api/team-leader/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ bannerImage: null }),
+      });
+      
+      if (response.ok) {
+        const updatedProfile = await response.json();
+        setCurrentProfile(updatedProfile);
+      }
     } catch (error) {
       console.error('Banner deletion failed:', error);
     }
@@ -66,6 +130,14 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
     <div className="relative">
       {/* Banner Background */}
       <div className="h-56 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-400 relative">
+        {currentProfile.bannerImage && (
+          <img 
+            src={currentProfile.bannerImage} 
+            alt="Banner" 
+            className="w-full h-full object-cover"
+          />
+        )}
+
         {/* Golden Pattern Background */}
         <div className="absolute inset-0 opacity-30">
           <div 
@@ -87,21 +159,26 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
           >
             <i className="fas fa-camera mr-2"></i>Change Banner
           </Button>
-          <Button
-            onClick={handleDeleteBanner}
-            className="bg-red-500/80 backdrop-blur-sm text-white hover:bg-red-600/80"
-            size="sm"
-            data-testid="button-delete-banner"
-          >
-            <i className="fas fa-trash mr-2"></i>Delete
-          </Button>
+          {currentProfile.bannerImage && (
+            <Button
+              onClick={handleDeleteBanner}
+              className="bg-red-500/80 backdrop-blur-sm text-white hover:bg-red-600/80"
+              size="sm"
+              data-testid="button-delete-banner"
+            >
+              <i className="fas fa-trash mr-2"></i>Delete
+            </Button>
+          )}
         </div>
 
         {/* Profile Picture */}
         <div className="absolute left-1/2 transform -translate-x-1/2 -bottom-16 z-30">
           <div className="relative">
             <img 
-              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150"
+              src={
+                currentProfile.profilePicture ||
+                "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150"
+              }
               alt="Profile picture" 
               className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
             />

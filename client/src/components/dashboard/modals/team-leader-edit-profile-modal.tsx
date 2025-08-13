@@ -15,6 +15,8 @@ interface TeamLeaderProfile {
   department: string;
   reportingTo: string;
   totalContribution: string;
+  bannerImage?: string | null;
+  profilePicture?: string | null;
 }
 
 interface TeamLeaderEditProfileModalProps {
