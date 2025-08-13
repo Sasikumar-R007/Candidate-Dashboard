@@ -521,28 +521,26 @@ export default function JobBoardTab() {
         </div>
       </div>
 
-      {/* Job Details Modal - Custom Positioned */}
+      {/* Job Details Modal - Full Width Right Side */}
       {showJobModal && selectedJob && (
-        <div className="fixed inset-0 z-50 flex items-start justify-end bg-black/50">
-          <div className="w-full max-w-md h-screen bg-white dark:bg-gray-800 shadow-2xl animate-in slide-in-from-right duration-300 mr-0">
-            <div className="h-full flex flex-col">
-              {/* Close Button */}
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Job Details</h2>
-                <button
-                  onClick={() => setShowJobModal(false)}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-                >
-                  <i className="fas fa-times text-gray-500 dark:text-gray-400"></i>
-                </button>
-              </div>
-              
-              {/* Scrollable Content */}
-              <div className="flex-1 overflow-y-auto scrollbar-hide p-1">
-                
-                {/* Job Card Header - Same as List */}
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 m-4 rounded-2xl border border-gray-200 dark:border-gray-700">
-                  <div className="flex">
+        <div className="fixed top-0 left-64 right-0 bottom-0 z-50 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 shadow-2xl">
+          <div className="h-full flex flex-col">
+            {/* Close Button */}
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Job Details</h2>
+              <button
+                onClick={() => setShowJobModal(false)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+              >
+                <i className="fas fa-times text-gray-500 dark:text-gray-400"></i>
+              </button>
+            </div>
+            
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto scrollbar-hide p-1">
+              {/* Job Card Header - Same as List */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 m-4 rounded-2xl border border-gray-200 dark:border-gray-700">
+                <div className="flex">
                     {/* Company Logo Section */}
                     <div className="w-24 flex items-center justify-center">
                       <div className={`${selectedJob.background} rounded-xl p-3 flex flex-col items-center justify-center w-20 h-16`}>
@@ -727,12 +725,11 @@ export default function JobBoardTab() {
                 </div>
               </div>
 
-              {/* Apply Button Footer */}
-              <div className="bg-blue-600 p-4 flex justify-center border-t border-gray-200 dark:border-gray-700">
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded-lg font-medium border-0">
-                  Apply
-                </Button>
-              </div>
+            {/* Apply Button Footer */}
+            <div className="bg-blue-600 p-4 flex justify-center border-t border-gray-200 dark:border-gray-700">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded-lg font-medium border-0">
+                Apply
+              </Button>
             </div>
           </div>
         </div>
