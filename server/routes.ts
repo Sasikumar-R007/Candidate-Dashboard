@@ -320,18 +320,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Team Leader Dashboard API routes
   app.get("/api/team-leader/profile", (req, res) => {
-    const teamLeaderProfile = {
-      id: "tl-001",
-      name: "John Mathew",
-      role: "Team Leader",
-      employeeId: "STL01",
-      phone: "90347 59092",
-      email: "john@scalingtheory.com",
-      joiningDate: "03-March-2021",
-      department: "Talent Advisory",
-      reportingTo: "Yatna Prakash",
-      totalContribution: "2,50,000"
-    };
     res.json(teamLeaderProfile);
   });
 
@@ -408,28 +396,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ url });
   });
 
+  // In-memory storage for team leader profile to persist changes
+  let teamLeaderProfile = {
+    id: "tl-001",
+    name: "John Mathew",
+    role: "Team Leader",
+    employeeId: "STL01",
+    phone: "90347 59092",
+    email: "john@scalingtheory.com",
+    joiningDate: "03-March-2021",
+    department: "Talent Advisory",
+    reportingTo: "Yatna Prakash",
+    totalContribution: "2,50,000",
+    bannerImage: null,
+    profilePicture: null
+  };
+
+  // Update the existing GET endpoint to use stored profile
+  app.get("/api/team-leader/profile", (req, res) => {
+    res.json(teamLeaderProfile);
+  });
+
   // Team Leader profile update endpoint
   app.patch("/api/team-leader/profile", (req, res) => {
     const updates = req.body;
     
-    // In a real app, you would update the team leader profile in the database
-    // For now, we'll just return the updated profile
-    const updatedProfile = {
-      id: "tl-001",
-      name: updates.name || "John Mathew",
-      role: "Team Leader",
-      employeeId: "STL01",
-      phone: updates.phone || "90347 59092",
-      email: updates.email || "john@scalingtheory.com",
-      joiningDate: "03-March-2021",
-      department: "Talent Advisory",
-      reportingTo: "Yatna Prakash",
-      totalContribution: "2,50,000",
-      bannerImage: updates.bannerImage || null,
-      profilePicture: updates.profilePicture || null
+    // Merge updates with existing profile to preserve other fields
+    teamLeaderProfile = {
+      ...teamLeaderProfile,
+      ...updates
     };
     
-    res.json(updatedProfile);
+    res.json(teamLeaderProfile);
   });
 
   const httpServer = createServer(app);

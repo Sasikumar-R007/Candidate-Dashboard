@@ -100,6 +100,8 @@ export default function TeamLeaderEditProfileModal({
                   readOnly
                   className="bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
                   data-testid="input-role-readonly"
+                  tabIndex={-1}
+                  onFocus={(e) => e.target.blur()}
                 />
               </div>
               <div>
