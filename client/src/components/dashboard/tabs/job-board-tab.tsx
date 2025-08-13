@@ -521,25 +521,24 @@ export default function JobBoardTab() {
         </div>
       </div>
 
-      {/* Job Details Modal - Full Width Right Side */}
+      {/* Job Details Modal - Popup Style */}
       {showJobModal && selectedJob && (
-        <div className="fixed top-0 left-64 right-0 bottom-0 z-50 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 shadow-2xl">
-          <div className="h-full flex flex-col">
-            {/* Close Button */}
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Job Details</h2>
-              <button
-                onClick={() => setShowJobModal(false)}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-              >
-                <i className="fas fa-times text-gray-500 dark:text-gray-400"></i>
-              </button>
-            </div>
-            
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="bg-blue-50 dark:bg-blue-900/30 rounded-2xl shadow-2xl max-w-md w-full mx-4 max-h-[85vh] flex flex-col">
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto scrollbar-hide p-1">
-              {/* Job Card Header - Same as List */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 m-4 rounded-2xl border border-gray-200 dark:border-gray-700">
+            <div className="flex-1 overflow-y-auto scrollbar-hide p-4">
+              {/* Close Button - Top Right */}
+              <div className="flex justify-end mb-4">
+                <button
+                  onClick={() => setShowJobModal(false)}
+                  className="p-2 hover:bg-blue-100 dark:hover:bg-blue-800 rounded-full transition-colors"
+                >
+                  <i className="fas fa-times text-gray-500 dark:text-gray-400"></i>
+                </button>
+              </div>
+
+              {/* Job Card Header */}
+              <div className="bg-white dark:bg-gray-800 p-4 mb-4 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
                 <div className="flex">
                     {/* Company Logo Section */}
                     <div className="w-24 flex items-center justify-center">
@@ -628,70 +627,77 @@ export default function JobBoardTab() {
                 {/* Content Sections - Separate Boxes */}
                 <div className="px-4 pb-4 space-y-4">
                   {/* About Company Box */}
-                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-700">
-                    <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">About Company</h5>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-                      Google, now a subsidiary of Alphabet Inc., is a multinational technology company known for 
-                      its Internet search engine, online advertising technologies, cloud computing, and other 
-                      software services. Originally founded in 1998 by Larry Page and Sergey Brin, initially as a research project 
-                      at Stanford University. Google's core mission is to organize the world's information and 
-                      make it universally accessible and useful.
-                    </p>
+                  <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
+                    <div className="bg-orange-100 dark:bg-orange-900/30 p-3 rounded-lg border border-orange-200 dark:border-orange-700">
+                      <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">About Company</h5>
+                      <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                        Google, now a subsidiary of Alphabet Inc., is a multinational technology company known for 
+                        its Internet search engine, online advertising technologies, cloud computing, and other 
+                        software services. Originally founded in 1998 by Larry Page and Sergey Brin, initially as a research project 
+                        at Stanford University. Google's core mission is to organize the world's information and 
+                        make it universally accessible and useful.
+                      </p>
+                    </div>
                   </div>
 
                   {/* Role Definition Box */}
-                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-700">
-                    <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Role Definition:</h5>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-3">
-                      We are looking for a Cloud Engineer to join our team and work with our engineering team to 
-                      optimize, implement, and maintain our organization's cloud-based systems.
-                    </p>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-3">
-                      A Cloud Engineer's responsibilities include deploying and debugging systems, as well as 
-                      executing new cloud initiatives.
-                    </p>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-                      Ultimately, you will work with different IT professionals and teams to ensure our cloud 
-                      computing systems meet the needs of our organization and customers.
-                    </p>
+                  <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
+                    <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-lg border border-blue-200 dark:border-blue-700">
+                      <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Role Definition:</h5>
+                      <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-3">
+                        We are looking for a Cloud Engineer to join our team and work with our engineering team to 
+                        optimize, implement, and maintain our organization's cloud-based systems.
+                      </p>
+                      <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-3">
+                        A Cloud Engineer's responsibilities include deploying and debugging systems, as well as 
+                        executing new cloud initiatives.
+                      </p>
+                      <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                        Ultimately, you will work with different IT professionals and teams to ensure our cloud 
+                        computing systems meet the needs of our organization and customers.
+                      </p>
+                    </div>
                   </div>
 
                   {/* Key Responsibilities Box */}
-                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-200 dark:border-blue-700">
-                    <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Key Responsibilities</h5>
-                    <ul className="space-y-2 text-gray-600 dark:text-gray-400 text-sm">
-                      <li className="flex items-start gap-2">
-                        <span className="text-green-600 mt-1 text-xs">•</span>
-                        <span>Design, develop, and deploy modular cloud-based systems</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-green-600 mt-1 text-xs">•</span>
-                        <span>Develop and maintain cloud solutions in accordance with best practices</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-green-600 mt-1 text-xs">•</span>
-                        <span>Ensure efficient functioning of data storage and process functions in accordance with 
-                        company security policies and best practices in cloud security</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-green-600 mt-1 text-xs">•</span>
-                        <span>Identify, analyse, and resolve infrastructure vulnerabilities and application deployment 
-                        issues</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-green-600 mt-1 text-xs">•</span>
-                        <span>Regularly review existing systems and make recommendations for improvements</span>
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <span className="text-green-600 mt-1 text-xs">•</span>
-                        <span>Interact with clients, provide cloud support, and make recommendations based on client 
-                        needs</span>
-                      </li>
-                    </ul>
+                  <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
+                    <div className="bg-purple-100 dark:bg-purple-900/30 p-3 rounded-lg border border-purple-200 dark:border-purple-700">
+                      <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Key Responsibilities</h5>
+                      <ul className="space-y-2 text-gray-600 dark:text-gray-400 text-sm">
+                        <li className="flex items-start gap-2">
+                          <span className="text-green-600 mt-1 text-xs">•</span>
+                          <span>Design, develop, and deploy modular cloud-based systems</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-green-600 mt-1 text-xs">•</span>
+                          <span>Develop and maintain cloud solutions in accordance with best practices</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-green-600 mt-1 text-xs">•</span>
+                          <span>Ensure efficient functioning of data storage and process functions in accordance with 
+                          company security policies and best practices in cloud security</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-green-600 mt-1 text-xs">•</span>
+                          <span>Identify, analyse, and resolve infrastructure vulnerabilities and application deployment 
+                          issues</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-green-600 mt-1 text-xs">•</span>
+                          <span>Regularly review existing systems and make recommendations for improvements</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-green-600 mt-1 text-xs">•</span>
+                          <span>Interact with clients, provide cloud support, and make recommendations based on client 
+                          needs</span>
+                        </li>
+                      </ul>
+                    </div>
                   </div>
 
                   {/* Skills Required - Three Colored Boxes */}
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-blue-200 dark:border-blue-700 shadow-sm">
+                    <div className="grid grid-cols-3 gap-2">
                     <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-lg border border-green-200 dark:border-green-700">
                       <h6 className="font-medium text-gray-900 dark:text-gray-100 mb-2 text-sm">Primary Skills</h6>
                       <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
@@ -721,13 +727,14 @@ export default function JobBoardTab() {
                         <div>Sales requirement</div>
                       </div>
                     </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
             {/* Apply Button Footer */}
-            <div className="bg-blue-600 p-4 flex justify-center border-t border-gray-200 dark:border-gray-700">
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded-lg font-medium border-0">
+            <div className="p-4 flex justify-center">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium border-0 text-sm">
                 Apply
               </Button>
             </div>
