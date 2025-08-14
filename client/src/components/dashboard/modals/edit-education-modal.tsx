@@ -102,13 +102,18 @@ export default function EditEducationModal({
               type="button" 
               variant="outline" 
               onClick={() => onOpenChange(false)}
+              className="rounded"
             >
               Cancel
             </Button>
             <Button 
               type="submit" 
-              className="bg-blue-600 text-white hover:bg-blue-700"
-              disabled={updateEducationMutation.isPending}
+              className="bg-blue-600 text-white hover:bg-blue-700 rounded"
+              disabled={updateEducationMutation.isPending || (
+                formData.highestQualification === (profile.highestQualification || '') &&
+                formData.collegeName === (profile.collegeName || '') &&
+                formData.skills === (profile.skills || '')
+              )}
             >
               {updateEducationMutation.isPending ? 'Saving...' : 'Save Changes'}
             </Button>

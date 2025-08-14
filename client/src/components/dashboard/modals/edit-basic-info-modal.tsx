@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useUpdateProfile } from '@/hooks/use-profile';
+import { useToast } from '@/hooks/use-toast';
 import type { Profile } from '@shared/schema';
 
 interface EditBasicInfoModalProps {
@@ -28,14 +29,41 @@ export default function EditBasicInfoModal({ open, onOpenChange, profile }: Edit
   });
 
   const updateProfile = useUpdateProfile();
+  const { toast } = useToast();
+
+  // Check if form data has changed
+  const hasChanges = useMemo(() => {
+    return (
+      formData.firstName !== (profile.firstName || '') ||
+      formData.lastName !== (profile.lastName || '') ||
+      formData.title !== (profile.title || '') ||
+      formData.location !== (profile.location || '') ||
+      formData.mobile !== (profile.mobile || '') ||
+      formData.whatsapp !== (profile.whatsapp || '') ||
+      formData.primaryEmail !== (profile.primaryEmail || '') ||
+      formData.secondaryEmail !== (profile.secondaryEmail || '') ||
+      formData.currentLocation !== (profile.currentLocation || '') ||
+      formData.preferredLocation !== (profile.preferredLocation || '') ||
+      formData.dateOfBirth !== (profile.dateOfBirth || '')
+    );
+  }, [formData, profile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await updateProfile.mutateAsync(formData);
+      toast({
+        title: "Profile Updated",
+        description: "Your profile information has been updated successfully.",
+      });
       onOpenChange(false);
     } catch (error) {
       console.error('Failed to update basic info:', error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update profile information. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -158,10 +186,14 @@ export default function EditBasicInfoModal({ open, onOpenChange, profile }: Edit
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded">
               Cancel
             </Button>
-            <Button type="submit" disabled={updateProfile.isPending}>
+            <Button 
+              type="submit" 
+              disabled={updateProfile.isPending || !hasChanges}
+              className="bg-blue-600 text-white hover:bg-blue-700 rounded"
+            >
               {updateProfile.isPending ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>

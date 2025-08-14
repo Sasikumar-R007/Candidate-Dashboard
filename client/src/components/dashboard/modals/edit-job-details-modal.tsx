@@ -163,13 +163,22 @@ export default function EditJobDetailsModal({
               type="button" 
               variant="outline" 
               onClick={() => onOpenChange(false)}
+              className="rounded"
             >
               Cancel
             </Button>
             <Button 
               type="submit" 
-              className="bg-blue-600 text-white hover:bg-blue-700"
-              disabled={updateJobDetailsMutation.isPending}
+              className="bg-blue-600 text-white hover:bg-blue-700 rounded"
+              disabled={updateJobDetailsMutation.isPending || (
+                formData.pedigreeLevel === (profile.pedigreeLevel || '') &&
+                formData.noticePeriod === (profile.noticePeriod || '') &&
+                formData.currentCompany === (profile.currentCompany || '') &&
+                formData.currentRole === (profile.currentRole || '') &&
+                formData.currentDomain === (profile.currentDomain || '') &&
+                formData.companyLevel === (profile.companyLevel || '') &&
+                formData.productService === (profile.productService || '')
+              )}
             >
               {updateJobDetailsMutation.isPending ? 'Saving...' : 'Save Changes'}
             </Button>

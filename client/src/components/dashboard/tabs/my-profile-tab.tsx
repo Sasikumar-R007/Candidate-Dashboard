@@ -33,7 +33,7 @@ export default function MyProfileTab({ profile }: MyProfileTabProps) {
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">About you</h3>
                 <Button
                   onClick={() => setShowBasicInfoModal(true)}
-                  className="bg-blue-600 text-white hover:bg-blue-700"
+                  className="bg-blue-600 text-white hover:bg-blue-700 rounded"
                   size="sm"
                   data-testid="button-edit-profile"
                 >
@@ -87,7 +87,7 @@ export default function MyProfileTab({ profile }: MyProfileTabProps) {
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Online Presence</h3>
                 <Button
                   onClick={() => setShowOnlineModal(true)}
-                  className="bg-blue-600 text-white hover:bg-blue-700"
+                  className="bg-blue-600 text-white hover:bg-blue-700 rounded"
                   size="sm"
                 >
                   <i className="fas fa-edit mr-2"></i>Edit
@@ -119,7 +119,7 @@ export default function MyProfileTab({ profile }: MyProfileTabProps) {
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Education</h3>
                 <Button
                   onClick={() => setShowEducationModal(true)}
-                  className="bg-blue-600 text-white hover:bg-blue-700"
+                  className="bg-blue-600 text-white hover:bg-blue-700 rounded"
                   size="sm"
                 >
                   <i className="fas fa-edit mr-2"></i>Edit
@@ -148,7 +148,7 @@ export default function MyProfileTab({ profile }: MyProfileTabProps) {
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Job Details</h3>
                 <Button
                   onClick={() => setShowJobDetailsModal(true)}
-                  className="bg-blue-600 text-white hover:bg-blue-700"
+                  className="bg-blue-600 text-white hover:bg-blue-700 rounded"
                   size="sm"
                 >
                   <i className="fas fa-edit mr-2"></i>Edit
@@ -193,22 +193,18 @@ export default function MyProfileTab({ profile }: MyProfileTabProps) {
           {currentSection === 'advanced' && (
             <Button 
               onClick={() => setCurrentSection('basic')}
-              className="bg-gray-600 text-white hover:bg-gray-700"
+              className="bg-gray-600 text-white hover:bg-gray-700 rounded"
             >
               <i className="fas fa-arrow-left mr-2"></i>Back
             </Button>
           )}
           <div className="ml-auto">
-            {currentSection === 'basic' ? (
+            {currentSection === 'basic' && (
               <Button 
                 onClick={() => setCurrentSection('advanced')}
-                className="bg-green-600 text-white hover:bg-green-700"
+                className="bg-green-600 text-white hover:bg-green-700 rounded"
               >
                 Next <i className="fas fa-arrow-right ml-2"></i>
-              </Button>
-            ) : (
-              <Button className="bg-green-600 text-white hover:bg-green-700">
-                Complete <i className="fas fa-check ml-2"></i>
               </Button>
             )}
           </div>

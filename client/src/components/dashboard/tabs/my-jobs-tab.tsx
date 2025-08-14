@@ -370,7 +370,7 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
         <div className="fixed top-0 left-64 right-0 bottom-0 z-50 flex items-center justify-center bg-black/30">
           <div className="bg-blue-50 dark:bg-blue-900/30 rounded-2xl shadow-2xl max-w-2xl w-full mx-8 max-h-[85vh] flex flex-col">
             {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto scrollbar-hide p-4">
+            <div className="flex-1 overflow-y-auto p-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}>
               {/* Job Card Header */}
               <div className="bg-white dark:bg-gray-800 p-4 mb-4 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
                 <div className="flex">
@@ -397,9 +397,13 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
                           </h4>
                           <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{selectedJob.description}</p>
                         </div>
-                        <div className="w-6 h-6 bg-red-500 rounded flex items-center justify-center ml-2">
-                          <i className="fas fa-bookmark text-white text-xs"></i>
-                        </div>
+                        <button
+                          onClick={() => setShowJobModal(false)}
+                          className="w-6 h-6 bg-red-500 hover:bg-red-600 rounded flex items-center justify-center ml-2 transition-colors"
+                          data-testid="button-close-modal"
+                        >
+                          <i className="fas fa-times text-white text-xs"></i>
+                        </button>
                       </div>
                       
                       <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400 mb-2">

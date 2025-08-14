@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useForm } from 'react-hook-form';
 import { useUpdateProfile } from '@/hooks/use-profile';
+import { useToast } from '@/hooks/use-toast';
 import type { Profile } from '@shared/schema';
 
 interface EditOnlinePresenceModalProps {
@@ -32,12 +33,23 @@ export default function EditOnlinePresenceModal({
     }
   });
 
+  const { toast } = useToast();
+
   const onSubmit = async (data: any) => {
     try {
       await updateProfile.mutateAsync(data);
+      toast({
+        title: "Online Presence Updated",
+        description: "Your online presence information has been updated successfully.",
+      });
       onOpenChange(false);
     } catch (error) {
       console.error('Failed to update online presence:', error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update online presence. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -81,13 +93,14 @@ export default function EditOnlinePresenceModal({
               type="button" 
               variant="outline" 
               onClick={() => onOpenChange(false)}
+              className="rounded"
             >
               Cancel
             </Button>
             <Button 
               type="submit" 
-              className="bg-blue-600 text-white hover:bg-blue-700"
-              disabled={updateProfile.isPending}
+              className="bg-blue-600 text-white hover:bg-blue-700 rounded"
+              disabled={updateProfile.isPending || !form.formState.isDirty}
             >
               {updateProfile.isPending ? 'Saving...' : 'Save Changes'}
             </Button>
