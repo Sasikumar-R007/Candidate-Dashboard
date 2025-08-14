@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +11,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, MapPin, Flame, Eye, Archive } from 'lucide-react';
+import { useSavedJobs, useSaveJob, useRemoveSavedJob } from "@/hooks/use-saved-jobs";
+import { useToast } from "@/hooks/use-toast";
 import type { JobApplication } from '@shared/schema';
 
 interface MyJobsTabProps {
@@ -134,10 +137,23 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedJob, setSelectedJob] = useState<JobSuggestion | null>(null);
   const [showJobModal, setShowJobModal] = useState(false);
+  const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set());
+  const [showApplyConfirmation, setShowApplyConfirmation] = useState(false);
+  const [pendingApplyJob, setPendingApplyJob] = useState<JobSuggestion | null>(null);
   const jobsPerPage = 3;
   const { data: jobApplications = [], isLoading } = useQuery({
     queryKey: ['/api/job-applications'],
   });
+  
+  const { data: savedJobsData } = useSavedJobs();
+  const saveJobMutation = useSaveJob();
+  const removeSavedJobMutation = useRemoveSavedJob();
+  const { toast } = useToast();
+
+  // Create a Set of saved job keys for fast lookup
+  const savedJobs = new Set(
+    savedJobsData?.map(job => `${job.jobTitle}-${job.company}`) || []
+  );
 
   const getStatusBadge = (status: string) => {
     const statusStyles = {
@@ -166,6 +182,61 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
   const handleSeeAllJobs = () => {
     if (onNavigateToJobBoard) {
       onNavigateToJobBoard();
+    }
+  };
+
+  const toggleSaveJob = async (job: JobSuggestion) => {
+    const jobKey = `${job.title}-${job.company}`;
+    const isCurrentlySaved = savedJobs.has(jobKey);
+
+    try {
+      if (isCurrentlySaved) {
+        await removeSavedJobMutation.mutateAsync({
+          jobTitle: job.title,
+          company: job.company
+        });
+        toast({
+          title: "Job removed",
+          description: `${job.title} at ${job.company} removed from saved jobs.`,
+        });
+      } else {
+        await saveJobMutation.mutateAsync({
+          jobTitle: job.title,
+          company: job.company,
+          location: job.location,
+          salary: job.salary,
+          jobType: job.type,
+        });
+        toast({
+          title: "Job saved",
+          description: `${job.title} at ${job.company} saved successfully.`,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save/remove job. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleApplyJob = (job: JobSuggestion) => {
+    setPendingApplyJob(job);
+    setShowApplyConfirmation(true);
+  };
+
+  const confirmApplyJob = () => {
+    if (pendingApplyJob) {
+      const jobKey = `${pendingApplyJob.title}-${pendingApplyJob.company}`;
+      setAppliedJobs(prev => new Set(Array.from(prev).concat(jobKey)));
+      toast({
+        title: "Application submitted",
+        description: "Recruiters will be contacting you shortly regarding your application.",
+      });
+      setShowApplyConfirmation(false);
+      setPendingApplyJob(null);
+      if (selectedJob) setShowJobModal(false);
     }
   };
 
@@ -268,16 +339,29 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
           {jobSuggestions
             .slice((currentPage - 1) * jobsPerPage, currentPage * jobsPerPage)
             .map((job) => (
-            <Card key={job.id} className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow rounded-xl overflow-hidden">
+            <Card key={job.id} className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow rounded-xl overflow-hidden relative">
               <CardContent className="p-0">
+                {/* Save Button */}
+                <button
+                  onClick={() => toggleSaveJob(job)}
+                  className={`absolute top-4 right-4 p-2 rounded-full transition-all duration-200 z-10 ${
+                    savedJobs.has(`${job.title}-${job.company}`) 
+                      ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg' 
+                      : 'bg-orange-500 hover:bg-orange-600 text-white'
+                  }`}
+                  data-testid={`button-save-${job.id}`}
+                >
+                  <i className={`${savedJobs.has(`${job.title}-${job.company}`) ? 'fas fa-bookmark' : 'far fa-bookmark'} text-white`}></i>
+                </button>
+
                 {/* Company Logo Section */}
                 <div className="flex items-center justify-between p-4">
                 <div className={`${job.bgColor} p-6 text-center rounded w-full`}>
-                  <div className="w-16 h-12 bg-white rounded-lg flex items-center justify-center mx-auto mb-3">
+                  <div className="w-20 h-14 bg-white rounded-lg flex items-center justify-center mx-auto mb-3">
                     <img 
                       src={job.logo} 
                       alt={`${job.company} logo`}
-                      className="w-10 h-8 object-contain"
+                      className="w-12 h-10 object-contain"
                     />
                   </div>
                   <h3 className="font-semibold text-gray-900 text-lg">{job.company}</h3>
@@ -321,14 +405,28 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
                     ))}
                   </div>
 
-                  {/* View More Button */}
-                  <Button 
-                    className="w-full bg-slate-700 hover:bg-slate-800 text-white py-3 rounded"
-                    onClick={() => handleViewMore(job)}
-                    data-testid={`button-view-more-${job.id}`}
-                  >
-                    View More
-                  </Button>
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
+                    <Button 
+                      className="flex-1 bg-slate-700 hover:bg-slate-800 text-white py-3 rounded"
+                      onClick={() => handleViewMore(job)}
+                      data-testid={`button-view-more-${job.id}`}
+                    >
+                      View More
+                    </Button>
+                    <Button 
+                      className={`flex-1 py-3 rounded ${
+                        appliedJobs.has(`${job.title}-${job.company}`)
+                          ? 'bg-green-600 hover:bg-green-700 text-white'
+                          : 'bg-blue-600 hover:bg-blue-700 text-white'
+                      }`}
+                      onClick={() => handleApplyJob(job)}
+                      disabled={appliedJobs.has(`${job.title}-${job.company}`)}
+                      data-testid={`button-apply-${job.id}`}
+                    >
+                      {appliedJobs.has(`${job.title}-${job.company}`) ? 'Applied' : 'Apply'}
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -569,19 +667,67 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
             {/* Apply and Save Buttons Footer */}
             <div className="p-4 flex justify-center gap-3">
               <Button 
-                className="px-6 py-2 rounded font-medium border-0 text-sm transition-all bg-orange-500 hover:bg-orange-600 text-white"
+                onClick={() => selectedJob && toggleSaveJob(selectedJob)}
+                className={`px-6 py-2 rounded font-medium border-0 text-sm transition-all ${
+                  selectedJob && savedJobs.has(`${selectedJob.title}-${selectedJob.company}`)
+                    ? 'bg-green-500 hover:bg-green-600 text-white'
+                    : 'bg-orange-500 hover:bg-orange-600 text-white'
+                }`}
                 data-testid="button-save-job-modal"
               >
-                <i className="far fa-bookmark mr-1"></i>
-                Save
+                <i className={`${selectedJob && savedJobs.has(`${selectedJob.title}-${selectedJob.company}`) ? 'fas fa-bookmark' : 'far fa-bookmark'} mr-1`}></i>
+                {selectedJob && savedJobs.has(`${selectedJob.title}-${selectedJob.company}`) ? 'Saved' : 'Save'}
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-medium border-0 text-sm" data-testid="button-apply-job-modal">
-                Apply
+              <Button 
+                onClick={() => selectedJob && handleApplyJob(selectedJob)}
+                disabled={selectedJob && appliedJobs.has(`${selectedJob.title}-${selectedJob.company}`)}
+                className={`px-6 py-2 rounded font-medium border-0 text-sm ${
+                  selectedJob && appliedJobs.has(`${selectedJob.title}-${selectedJob.company}`)
+                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+                data-testid="button-apply-job-modal"
+              >
+                {selectedJob && appliedJobs.has(`${selectedJob.title}-${selectedJob.company}`) ? 'Applied' : 'Apply'}
               </Button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Apply Confirmation Dialog */}
+      <Dialog open={showApplyConfirmation} onOpenChange={setShowApplyConfirmation}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">Confirm Application</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to apply for <span className="font-medium">{pendingApplyJob?.title}</span> at <span className="font-medium">{pendingApplyJob?.company}</span>?
+            </p>
+            <p className="text-sm text-gray-500">
+              Recruiters will be contacting you shortly regarding your application.
+            </p>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowApplyConfirmation(false)}
+              className="px-4 py-2 rounded"
+              data-testid="button-cancel-apply"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmApplyJob}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+              data-testid="button-confirm-apply"
+            >
+              Confirm Application
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
