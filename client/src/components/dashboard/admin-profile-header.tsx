@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/theme-context';
+import { useToast } from '@/hooks/use-toast';
 import FileUploadModal from './modals/file-upload-modal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -25,10 +26,14 @@ export default function AdminProfileHeader({ profile }: AdminProfileHeaderProps)
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentProfile, setCurrentProfile] = useState(profile);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
+  const [isUploadingProfile, setIsUploadingProfile] = useState(false);
   
   const { isDarkMode, toggleTheme } = useTheme();
+  const { toast } = useToast();
 
   const handleBannerUpload = async (file: File) => {
+    setIsUploadingBanner(true);
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -56,15 +61,27 @@ export default function AdminProfileHeader({ profile }: AdminProfileHeaderProps)
       if (profileResponse.ok) {
         const updatedProfile = await profileResponse.json();
         setCurrentProfile(updatedProfile);
+        toast({
+          title: "Success",
+          description: "Banner uploaded successfully",
+        });
       }
       
       setShowBannerModal(false);
     } catch (error) {
       console.error('Banner upload failed:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload banner",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingBanner(false);
     }
   };
 
   const handleProfileUpload = async (file: File) => {
+    setIsUploadingProfile(true);
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -92,11 +109,22 @@ export default function AdminProfileHeader({ profile }: AdminProfileHeaderProps)
       if (profileResponse.ok) {
         const updatedProfile = await profileResponse.json();
         setCurrentProfile(updatedProfile);
+        toast({
+          title: "Success",
+          description: "Profile picture uploaded successfully",
+        });
       }
       
       setShowProfileModal(false);
     } catch (error) {
       console.error('Profile upload failed:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload profile picture",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingProfile(false);
     }
   };
 
@@ -114,9 +142,18 @@ export default function AdminProfileHeader({ profile }: AdminProfileHeaderProps)
       if (profileResponse.ok) {
         const updatedProfile = await profileResponse.json();
         setCurrentProfile(updatedProfile);
+        toast({
+          title: "Success",
+          description: "Banner removed successfully",
+        });
       }
     } catch (error) {
       console.error('Banner deletion failed:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove banner",
+        variant: "destructive",
+      });
     }
   };
 
@@ -270,6 +307,7 @@ export default function AdminProfileHeader({ profile }: AdminProfileHeaderProps)
         onUpload={handleBannerUpload}
         title="Change Banner Image"
         accept="image/*"
+        isUploading={isUploadingBanner}
       />
 
       <FileUploadModal
@@ -278,6 +316,7 @@ export default function AdminProfileHeader({ profile }: AdminProfileHeaderProps)
         onUpload={handleProfileUpload}
         title="Change Profile Picture"
         accept="image/*"
+        isUploading={isUploadingProfile}
       />
     </div>
   );
