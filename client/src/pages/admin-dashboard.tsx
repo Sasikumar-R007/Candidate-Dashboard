@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import Sidebar from '@/components/dashboard/sidebar';
+import AdminSidebar from '@/components/dashboard/admin-sidebar';
 import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
 import AdminTabNavigation from '@/components/dashboard/admin-tab-navigation';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -523,6 +523,15 @@ export default function AdminDashboard() {
             </div>
           </div>
         );
+      case 'report':
+        return (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Report</h2>
+              <p className="text-gray-600 dark:text-gray-400">Generate and view comprehensive reports and analytics</p>
+            </div>
+          </div>
+        );
       case 'settings':
         return (
           <div className="flex items-center justify-center h-full">
@@ -547,7 +556,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex bg-gray-50 dark:bg-gray-900 min-h-screen">
-      <Sidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
+      <AdminSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
       <div className="flex-1 ml-64 overflow-auto">
         {renderSidebarContent()}
       </div>

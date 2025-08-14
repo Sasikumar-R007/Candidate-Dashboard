@@ -2,7 +2,7 @@
 
 This is a dual-dashboard job portal web application featuring both candidate and team leader interfaces. The system provides comprehensive dashboards for job seekers to manage their profiles and for team leaders to monitor recruitment metrics, team performance, and targets. The application features a modern, responsive design with consistent styling across both dashboards and a landing page for role selection.
 
-**Migration Status**: Successfully migrated from Replit Agent to standard Replit environment on August 14, 2025. All functionality preserved with enhanced UI design for team leader dashboard components. Migration completed with working Admin dashboard implementation. All image upload features fully functional across all dashboards.
+**Migration Status**: Successfully migrated from Replit Agent to standard Replit environment on August 14, 2025. All functionality preserved with enhanced UI design for team leader dashboard components. Migration completed with working Admin dashboard implementation. All image upload features fully functional across all dashboards. Added admin-specific sidebar with "Report" option and replaced shield icons with crown icons for CEO role display.
 
 **Recent Updates (August 13, 2025)**: Added Admin dashboard with comprehensive team management features, target tracking, daily metrics with calendar picker, messaging system, and meeting scheduler. Fixed layout issues and properly implemented profile header with banner/profile image upload capabilities matching team leader dashboard pattern. All three dashboards (Candidate, Team Leader, Admin) now fully functional.
 

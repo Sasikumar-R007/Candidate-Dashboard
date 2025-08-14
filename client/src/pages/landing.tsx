@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserIcon, UsersIcon, ShieldIcon } from "lucide-react";
+import { UserIcon, UsersIcon, Crown } from "lucide-react";
 
 export default function Landing() {
   return (
@@ -66,7 +66,7 @@ export default function Landing() {
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="text-center pb-4">
               <div className="mx-auto mb-4 p-4 bg-purple-100 dark:bg-purple-900 rounded-full w-16 h-16 flex items-center justify-center">
-                <ShieldIcon className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+                <Crown className="h-8 w-8 text-purple-600 dark:text-purple-400" />
               </div>
               <CardTitle className="text-xl">Admin Dashboard</CardTitle>
               <CardDescription>

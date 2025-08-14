@@ -6,7 +6,7 @@ import FileUploadModal from './modals/file-upload-modal';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ShieldIcon } from "lucide-react";
+import { Crown } from "lucide-react";
 
 interface AdminProfile {
   name: string;
@@ -289,7 +289,7 @@ export default function AdminProfileHeader({ profile, onProfileUpdate }: AdminPr
             {currentProfile.name}
           </h2>
           <div className="flex items-center justify-center gap-2 mb-4">
-            <ShieldIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            <Crown className="h-5 w-5 text-purple-600 dark:text-purple-400" />
             <p className="text-lg text-purple-600 dark:text-purple-400 font-semibold">
               {currentProfile.role}
             </p>
