@@ -365,7 +365,7 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
 
       </div>
 
-      {/* Job Details Modal - Similar to JobBoardTab */}
+      {/* Job Details Modal - Same as JobBoardTab */}
       {showJobModal && selectedJob && (
         <div className="fixed top-0 left-64 right-0 bottom-0 z-50 flex items-center justify-center bg-black/30">
           <div className="bg-blue-50 dark:bg-blue-900/30 rounded-2xl shadow-2xl max-w-2xl w-full mx-8 max-h-[85vh] flex flex-col">
@@ -374,115 +374,213 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
               {/* Job Card Header */}
               <div className="bg-white dark:bg-gray-800 p-4 mb-4 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
                 <div className="flex">
-                  {/* Company Logo Section */}
-                  <div className="w-32 flex items-center justify-center">
-                    <div className={`${selectedJob.background} rounded-xl p-3 flex flex-col items-center justify-center w-full h-full min-h-[100px]`}>
-                      <img
-                        src={selectedJob.logo}
-                        alt={`${selectedJob.company} logo`}
-                        className="w-12 h-12 rounded object-cover mb-1"
-                      />
-                      <div className="text-xs font-bold text-gray-700 dark:text-gray-300">{selectedJob.company.split(' ')[0]}</div>
-                    </div>
-                  </div>
-
-                  {/* Job Details */}
-                  <div className="flex-1 pl-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{selectedJob.company}</h3>
-                        <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                          {selectedJob.title}
-                          {selectedJob.isHot && <i className="fas fa-fire text-red-500 text-sm"></i>}
-                        </h4>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{selectedJob.description}</p>
+                    {/* Company Logo Section */}
+                    <div className="w-32 flex items-center justify-center">
+                      <div className={`${selectedJob.background} rounded-xl p-3 flex flex-col items-center justify-center w-full h-full min-h-[100px]`}>
+                        <img
+                          src={selectedJob.logo}
+                          alt={`${selectedJob.company} logo`}
+                          className="w-12 h-12 rounded object-cover mb-1"
+                        />
+                        <div className="text-xs font-bold text-gray-700 dark:text-gray-300">{selectedJob.company.split(' ')[0]}</div>
                       </div>
-                      <div className="w-6 h-6 bg-red-500 rounded flex items-center justify-center ml-2">
-                        <button
+                    </div>
+
+                    {/* Job Details */}
+                    <div className="flex-1 pl-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{selectedJob.company}</h3>
+                          <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                            {selectedJob.title}
+                            {selectedJob.isHot && <i className="fas fa-fire text-red-500 text-sm"></i>}
+                          </h4>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{selectedJob.description}</p>
+                        </div>
+                        <div className="w-6 h-6 bg-red-500 rounded flex items-center justify-center ml-2">
+                          <i className="fas fa-bookmark text-white text-xs"></i>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400 mb-2">
+                        <span className="flex items-center gap-1">
+                          <i className="fas fa-briefcase"></i>
+                          {selectedJob.experience}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="font-semibold">₹</span>
+                          {selectedJob.salary}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <i className="fas fa-map-marker-alt"></i>
+                          {selectedJob.location}
+                        </span>
+                        <span className="font-medium">{selectedJob.workMode}</span>
+                        <span className="font-medium">{selectedJob.type}</span>
+                      </div>
+
+                      {/* Job Tags */}
+                      <div className="flex items-center gap-1 mb-2">
+                        <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs">
+                          Open Positions ~ 2
+                        </span>
+                        <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs">
+                          Product
+                        </span>
+                        <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs">
+                          B2B
+                        </span>
+                        <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs">
+                          Full Time
+                        </span>
+                      </div>
+
+                      {/* Skills */}
+                      <div className="flex items-center gap-1">
+                        {selectedJob.skills.map((skill, index) => (
+                          <span key={index} className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full text-xs font-medium">
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+
+                      {/* View Less Button */}
+                      <div className="flex justify-end mt-2">
+                        <Button 
                           onClick={() => setShowJobModal(false)}
-                          className="text-white text-xs hover:bg-red-600 w-full h-full rounded flex items-center justify-center"
-                          data-testid="button-close-modal"
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded text-xs" 
+                          size="sm"
+                          data-testid="button-view-less"
                         >
-                          ×
-                        </button>
+                          View Less
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content Sections - Separate Boxes */}
+                <div className=" pb-4 space-y-4">
+                  {/* About Company Box */}
+                  <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm w-full">
+                    <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">About Company</h5>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                      {selectedJob.company === 'Google Technologies Inc.' && 
+                        "Google, now a subsidiary of Alphabet Inc., is a multinational technology company known for its Internet search engine, online advertising technologies, cloud computing, and other software services. Originally founded in 1998 by Larry Page and Sergey Brin, initially as a research project at Stanford University. Google's core mission is to organize the world's information and make it universally accessible and useful."
+                      }
+                      {selectedJob.company === 'Microsoft Corp.' && 
+                        "Microsoft Corporation is an American multinational technology corporation which produces computer software, consumer electronics, personal computers, and related services. Microsoft is known for its Windows operating systems, Office productivity suite, and Azure cloud computing platform. Founded in 1975, Microsoft has been at the forefront of the personal computer revolution."
+                      }
+                      {selectedJob.company === 'Amazon Web Services' && 
+                        "Amazon Web Services (AWS) is a subsidiary of Amazon providing on-demand cloud computing platforms and APIs to individuals, companies, and governments. AWS offers a broad set of global compute, storage, database, analytics, application, and deployment services that help organizations move faster, lower IT costs, and scale applications."
+                      }
+                      {!['Google Technologies Inc.', 'Microsoft Corp.', 'Amazon Web Services'].includes(selectedJob.company) &&
+                        `${selectedJob.company} is a technology-focused organization committed to innovation and excellence. We work with cutting-edge technologies to deliver exceptional solutions to our clients and maintain a collaborative work environment that fosters growth and creativity.`
+                      }
+                    </p>
+                  </div>
+
+                  {/* Role Definition Box */}
+                  <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm w-full">
+                    <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Role Definition</h5>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-3">
+                      We are looking for a {selectedJob.title} to join our team and work with our engineering team to 
+                      optimize, implement, and maintain our organization's systems and processes.
+                    </p>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-3">
+                      The {selectedJob.title}'s responsibilities include developing and deploying solutions, as well as 
+                      executing new initiatives and maintaining high-quality standards.
+                    </p>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                      Ultimately, you will work with different teams and professionals to ensure our systems 
+                      meet the needs of our organization and customers while driving innovation and efficiency.
+                    </p>
+                  </div>
+
+                  {/* Key Responsibilities Box */}
+                  <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm w-full">
+                    <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Key Responsibilities</h5>
+                    <ul className="space-y-2 text-gray-600 dark:text-gray-400 text-sm">
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600 mt-1 text-xs">•</span>
+                        <span>Design, develop, and deploy scalable systems and solutions</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600 mt-1 text-xs">•</span>
+                        <span>Develop and maintain solutions in accordance with best practices</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600 mt-1 text-xs">•</span>
+                        <span>Ensure efficient functioning of systems and processes in accordance with 
+                        company security policies and best practices</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600 mt-1 text-xs">•</span>
+                        <span>Identify, analyze, and resolve technical challenges and deployment 
+                        issues</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600 mt-1 text-xs">•</span>
+                        <span>Regularly review existing systems and make recommendations for improvements</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600 mt-1 text-xs">•</span>
+                        <span>Collaborate with stakeholders, provide technical support, and make recommendations based on 
+                        business needs</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Skills Required Box */}
+                  <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm w-full">
+                    <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Skills Required</h5>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded border border-green-200 dark:border-green-700">
+                        <h6 className="font-medium text-gray-900 dark:text-gray-100 mb-2 text-sm">Primary Skills</h6>
+                        <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                          {selectedJob.skills.slice(0, 3).map((skill, index) => (
+                            <div key={index}>{skill}</div>
+                          ))}
+                          <div>Problem Solving</div>
+                          <div>System Design</div>
+                          <div>Code Review</div>
+                        </div>
+                      </div>
+                      <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded border border-blue-200 dark:border-blue-700">
+                        <h6 className="font-medium text-gray-900 dark:text-gray-100 mb-2 text-sm">Secondary Skills</h6>
+                        <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                          <div>Project Management</div>
+                          <div>Team Collaboration</div>
+                          <div>Client Communication</div>
+                          <div>Documentation</div>
+                          <div>Testing & QA</div>
+                        </div>
+                      </div>
+                      <div className="bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded border border-yellow-200 dark:border-yellow-700">
+                        <h6 className="font-medium text-gray-900 dark:text-gray-100 mb-2 text-sm">Knowledge Only</h6>
+                        <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                          <div>Agile Methodologies</div>
+                          <div>Version Control</div>
+                          <div>Performance Optimization</div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Job Details Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                {/* Experience Card */}
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center gap-2 mb-2">
-                    <i className="fas fa-briefcase text-blue-600"></i>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Experience</span>
-                  </div>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedJob.experience}</p>
-                </div>
-
-                {/* Salary Card */}
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center gap-2 mb-2">
-                    <i className="fas fa-dollar-sign text-green-600"></i>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Salary</span>
-                  </div>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedJob.salary}</p>
-                </div>
-
-                {/* Location Card */}
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center gap-2 mb-2">
-                    <i className="fas fa-map-marker-alt text-red-600"></i>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Location</span>
-                  </div>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedJob.location}</p>
-                </div>
-
-                {/* Work Type Card */}
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center gap-2 mb-2">
-                    <i className="fas fa-laptop text-purple-600"></i>
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Work Mode</span>
-                  </div>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedJob.workMode}</p>
-                </div>
-              </div>
-
-              {/* Skills Section */}
-              <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 mb-4">
-                <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Required Skills</h5>
-                <div className="flex flex-wrap gap-2">
-                  {selectedJob.skills.map((skill) => (
-                    <Badge
-                      key={skill}
-                      className="bg-blue-100 text-blue-800 border-blue-200 px-3 py-1"
-                    >
-                      {skill}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Action Buttons - Fixed at Bottom */}
-            <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 rounded-b-2xl">
-              <div className="flex gap-3">
-                <Button
-                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded"
-                  data-testid="button-save-job-modal"
-                >
-                  <i className="far fa-bookmark mr-2"></i>
-                  Save
-                </Button>
-                <Button
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded"
-                  data-testid="button-apply-job-modal"
-                >
-                  Apply
-                </Button>
-              </div>
+            {/* Apply and Save Buttons Footer */}
+            <div className="p-4 flex justify-center gap-3">
+              <Button 
+                className="px-6 py-2 rounded font-medium border-0 text-sm transition-all bg-orange-500 hover:bg-orange-600 text-white"
+                data-testid="button-save-job-modal"
+              >
+                <i className="far fa-bookmark mr-1"></i>
+                Save
+              </Button>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-medium border-0 text-sm" data-testid="button-apply-job-modal">
+                Apply
+              </Button>
             </div>
           </div>
         </div>

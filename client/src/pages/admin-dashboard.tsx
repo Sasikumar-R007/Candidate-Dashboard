@@ -427,7 +427,7 @@ export default function AdminDashboard() {
             </div>
             
             {/* Right side - Daily Delivery */}
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg shadow-sm p-6 border border-yellow-200 dark:border-yellow-800">
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded shadow-sm p-6 border border-yellow-200 dark:border-yellow-800">
               <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Daily Delivery</h3>
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="text-center">
