@@ -507,7 +507,7 @@ export default function AdminDashboard() {
       case 'dashboard':
         return (
           <>
-            <AdminProfileHeader profile={adminProfile} />
+            <AdminProfileHeader profile={adminProfile} onProfileUpdate={setAdminProfile} />
             <AdminTabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
             <div className="pb-6">
               {renderTabContent()}
@@ -535,7 +535,7 @@ export default function AdminDashboard() {
       default:
         return (
           <>
-            <AdminProfileHeader profile={adminProfile} />
+            <AdminProfileHeader profile={adminProfile} onProfileUpdate={setAdminProfile} />
             <AdminTabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
             <div className="pb-6">
               {renderTabContent()}

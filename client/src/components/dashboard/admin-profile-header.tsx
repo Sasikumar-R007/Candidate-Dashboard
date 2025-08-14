@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/theme-context';
 import { useToast } from '@/hooks/use-toast';
@@ -19,9 +19,10 @@ interface AdminProfile {
 
 interface AdminProfileHeaderProps {
   profile: AdminProfile;
+  onProfileUpdate?: (profile: AdminProfile) => void;
 }
 
-export default function AdminProfileHeader({ profile }: AdminProfileHeaderProps) {
+export default function AdminProfileHeader({ profile, onProfileUpdate }: AdminProfileHeaderProps) {
   const [showBannerModal, setShowBannerModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -31,6 +32,11 @@ export default function AdminProfileHeader({ profile }: AdminProfileHeaderProps)
   
   const { isDarkMode, toggleTheme } = useTheme();
   const { toast } = useToast();
+
+  // Sync with parent profile changes
+  useEffect(() => {
+    setCurrentProfile(profile);
+  }, [profile]);
 
   const handleBannerUpload = async (file: File) => {
     setIsUploadingBanner(true);
@@ -61,6 +67,7 @@ export default function AdminProfileHeader({ profile }: AdminProfileHeaderProps)
       if (profileResponse.ok) {
         const updatedProfile = await profileResponse.json();
         setCurrentProfile(updatedProfile);
+        onProfileUpdate?.(updatedProfile);
         toast({
           title: "Success",
           description: "Banner uploaded successfully",
@@ -109,6 +116,7 @@ export default function AdminProfileHeader({ profile }: AdminProfileHeaderProps)
       if (profileResponse.ok) {
         const updatedProfile = await profileResponse.json();
         setCurrentProfile(updatedProfile);
+        onProfileUpdate?.(updatedProfile);
         toast({
           title: "Success",
           description: "Profile picture uploaded successfully",
@@ -142,6 +150,7 @@ export default function AdminProfileHeader({ profile }: AdminProfileHeaderProps)
       if (profileResponse.ok) {
         const updatedProfile = await profileResponse.json();
         setCurrentProfile(updatedProfile);
+        onProfileUpdate?.(updatedProfile);
         toast({
           title: "Success",
           description: "Banner removed successfully",
