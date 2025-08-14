@@ -434,14 +434,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // In-memory storage for admin profile to persist changes
   let adminProfile = {
     id: "admin-001",
-    name: "Admin User",
-    role: "Administrator",
+    name: "John Mathew",
+    role: "CEO",
     employeeId: "ADM01",
-    phone: "90000 00000",
-    email: "admin@scalingtheory.com",
+    phone: "90347 59099",
+    email: "john@scalingtheory.com",
     joiningDate: "01-Jan-2020",
     department: "Administration",
-    reportingTo: "CEO",
+    reportingTo: "Board of Directors",
     totalContribution: "5,00,000",
     bannerImage: null,
     profilePicture: null

@@ -11,14 +11,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { CalendarIcon, EditIcon } from "lucide-react";
 import { format } from "date-fns";
 
-// Admin profile will be fetched from API
+// Admin profile will be fetched from API - fallback data matching server
 const initialAdminProfile = {
   name: "John Mathew",
   role: "CEO",
   email: "john@scalingtheory.com",
   phone: "90347 59099",
-  bannerImage: null,
-  profilePicture: null
+  bannerImage: null as string | null,
+  profilePicture: null as string | null
 };
 
 const teamsData = [

@@ -13,8 +13,8 @@ interface AdminProfile {
   role: string;
   email: string;
   phone: string;
-  bannerImage?: string | null;
-  profilePicture?: string | null;
+  bannerImage: string | null;
+  profilePicture: string | null;
 }
 
 interface AdminProfileHeaderProps {
