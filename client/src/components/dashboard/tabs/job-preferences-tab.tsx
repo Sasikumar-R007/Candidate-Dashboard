@@ -29,12 +29,12 @@ export default function JobPreferencesTab() {
   return (
     <>
       <div className="px-6 py-6 flex justify-center">
-        <div className="bg-white rounded-xl shadow-sm p-6 max-w-4xl w-full">
+        <div className="bg-white rounded shadow-lg p-6 max-w-4xl w-full">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-semibold text-gray-900">View Job Preferences</h3>
             <Button
               onClick={() => setShowEditModal(true)}
-              className="bg-primary-blue text-white hover:bg-blue-800 rounded-md"
+              className="bg-primary-blue text-white hover:bg-blue-800 rounded"
               size="sm"
             >
               <i className="fas fa-edit mr-2"></i>Edit

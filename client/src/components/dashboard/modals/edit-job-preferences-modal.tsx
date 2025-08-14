@@ -48,7 +48,7 @@ export default function EditJobPreferencesModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-2xl max-h-[80vh] overflow-visible">
+      <DialogContent className="w-full max-w-2xl h-auto min-h-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Job Preferences</DialogTitle>
         </DialogHeader>
@@ -60,7 +60,7 @@ export default function EditJobPreferencesModal({
               id="jobTypes"
               {...form.register('jobTypes')}
               placeholder="Full-time, Part-time, Contract"
-              className="bg-gray-50 rounded-md border border-gray-200"
+              className="bg-gray-50 rounded border border-gray-200"
             />
           </div>
           
@@ -70,7 +70,7 @@ export default function EditJobPreferencesModal({
               id="salaryRange"
               {...form.register('salaryRange')}
               placeholder="$60,000 - $100,000"
-              className="bg-gray-50 rounded-md border border-gray-200"
+              className="bg-gray-50 rounded border border-gray-200"
             />
           </div>
           
@@ -80,7 +80,7 @@ export default function EditJobPreferencesModal({
               id="preferredLocations"
               {...form.register('preferredLocations')}
               placeholder="Remote, New York, San Francisco"
-              className="bg-gray-50 rounded-md border border-gray-200"
+              className="bg-gray-50 rounded border border-gray-200"
             />
           </div>
           
@@ -90,7 +90,7 @@ export default function EditJobPreferencesModal({
               id="availabilityDate"
               type="date"
               {...form.register('availabilityDate')}
-              className="bg-gray-50 rounded-md border border-gray-200"
+              className="bg-gray-50 rounded border border-gray-200"
             />
           </div>
           
@@ -101,7 +101,7 @@ export default function EditJobPreferencesModal({
               {...form.register('instructions')}
               rows={4}
               placeholder="Additional information for recruiters..."
-              className="bg-gray-50 rounded-md border border-gray-200"
+              className="bg-gray-50 rounded border border-gray-200"
             />
           </div>
           
@@ -110,13 +110,13 @@ export default function EditJobPreferencesModal({
               type="button" 
               variant="outline" 
               onClick={() => onOpenChange(false)}
-              className="rounded-md"
+              className="rounded"
             >
               Cancel
             </Button>
             <Button 
               type="submit" 
-              className="bg-secondary-blue hover:bg-blue-600 rounded-md"
+              className="bg-secondary-blue hover:bg-blue-600 rounded"
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Saving...' : 'Save Changes'}

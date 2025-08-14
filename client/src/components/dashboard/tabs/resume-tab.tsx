@@ -82,7 +82,7 @@ export default function ResumeTab() {
               </div>
               
               {/* Resume Display - Matched Height */}
-              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-white dark:bg-gray-800 h-[500px] overflow-y-auto">
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-white dark:bg-gray-800 h-[600px] overflow-y-auto">
                 {profile?.resumeFile ? (
                   <div className="w-full h-full">
                     <img
