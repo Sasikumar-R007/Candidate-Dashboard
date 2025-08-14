@@ -1431,19 +1431,281 @@ export default function AdminDashboard() {
         );
       case 'performance':
         return (
-          <div className="px-6 py-6">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Performance</h2>
-              <p className="text-gray-600 dark:text-gray-400">Performance analytics and reports will be implemented here</p>
-            </div>
+          <div className="px-6 py-6 space-y-8">
+            {/* Team Performance */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Team Performance</CardTitle>
+                <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">Revenue Mapping</Button>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Talent Advisor</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Joining Date</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Tenure</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Closures</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Last Closure</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Qtrs Achieved</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">David Wilson</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">23-04-2023</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">2 yrs 3 months</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">4</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">23-04-2023</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">3</td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">Tom Anderson</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">28-04-2023</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">2 yrs 3 months</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">8</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">29-04-2023</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">6</td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">Robert Kim</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">04-05-2023</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">2 yrs 2 months</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">9</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">02-05-2023</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">11</td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">Kevin Brown</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">12-05-2023</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">2 yrs 2 months</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">13</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">18-05-2023</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">5</td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">Mel Gibson</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">03-06-2023</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">2 yrs</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">5</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">01-06-2023</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">13</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                
+                <div className="flex justify-end mt-4">
+                  <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">View Full List</Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* List of Closures */}
+            <Card>
+              <CardHeader>
+                <CardTitle>List Of Closures</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Candidate</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Positions</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Client</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Quarter</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Talent Advisor</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">CTC</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">David Wilson</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Frontend Developer</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">TechCorp</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">MJJ, 2025</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Kavitha</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">15,00,000</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">1,92,455</td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">Tom Anderson</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">UI/UX Designer</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Designify</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">ASO, 2025</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Rajesh</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">25,00,000</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">1,87,425</td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">Robert Kim</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Backend Developer</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">CodeLabs</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">MJJ, 2025</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Sowmiya</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">18,00,000</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">1,34,846</td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">Kevin Brown</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">QA Tester</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">AppLogic</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">FMA, 2025</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Kalaiselvi</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">30,00,000</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">2,24,910</td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">Mel Gibson</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Mobile App Developer</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Tesco</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">NDJ, 2025</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Malathi</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">60,00,000</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">4,49,850</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                
+                <div className="flex justify-end mt-4">
+                  <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">View Full List</Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         );
       case 'user-management':
         return (
-          <div className="px-6 py-6">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">User Management</h2>
-              <p className="text-gray-600 dark:text-gray-400">User management and permissions will be implemented here</p>
+          <div className="px-6 py-6 space-y-6">
+            {/* User Management Header */}
+            <div className="flex gap-4 mb-6">
+              <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">+ Add Recruiter</Button>
+              <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">+ Add Team Leader</Button>
+            </div>
+
+            {/* User Management Table */}
+            <Card>
+              <CardContent className="p-6">
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">ID</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Name</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Email</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Role</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Last Login</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTA001</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Sundhar Raj</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">raj@gmail.com</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Team Leader</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Active</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">N/A</td>
+                        <td className="py-3 px-3">
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Edit</Button>
+                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">Delete</Button>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTA002</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">kavitha</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">kavi@gmail.com</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Team Leader</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Active</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">N/A</td>
+                        <td className="py-3 px-3">
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Edit</Button>
+                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">Delete</Button>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTA003</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Vignesh</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">vignesh@gmail.com</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Team Leader</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Active</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">N/A</td>
+                        <td className="py-3 px-3">
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Edit</Button>
+                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">Delete</Button>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTA004</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Saran</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">saran@gmail.com</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Team Leader</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Active</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">N/A</td>
+                        <td className="py-3 px-3">
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Edit</Button>
+                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">Delete</Button>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTL005</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Helen</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">helen@gmail.com</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Team Leader</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Active</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">N/A</td>
+                        <td className="py-3 px-3">
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Edit</Button>
+                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">Delete</Button>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Online Activity Section */}
+            <div className="grid grid-cols-2 gap-6 max-w-md">
+              <Card className="bg-yellow-50 dark:bg-yellow-900/20 text-center">
+                <CardContent className="p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Online Activity</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Online</div>
+                      <div className="text-4xl font-bold text-gray-900 dark:text-white">3</div>
+                      <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white text-sm mt-2">View</Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-yellow-50 dark:bg-yellow-900/20 text-center">
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Offline</div>
+                      <div className="text-4xl font-bold text-gray-900 dark:text-white">1</div>
+                      <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white text-sm mt-2">View</Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         );

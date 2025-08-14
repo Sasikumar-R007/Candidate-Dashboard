@@ -9,6 +9,8 @@ This is a dual-dashboard job portal web application featuring both candidate and
 - Pipeline section: Multi-stage candidate tracking with closure reports matching team leader design  
 - Metrics section: Overall performance gauge, growth/financial metrics, cash outflow tracking with input forms
 - Master Data section: Resume Database, Employees Master, and Client Master with status indicators
+- Performance section: Team Performance table with talent advisor metrics and List of Closures with revenue tracking
+- User Management section: Complete user table with roles, status, and online activity tracking cards
 - Applied global styling: rounded borders for buttons/inputs, shaded input backgrounds, consistent design patterns
 All admin dashboard sections now fully functional with proper data visualization and management capabilities.
 
