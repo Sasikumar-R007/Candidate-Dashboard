@@ -365,7 +365,7 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
 
       </div>
 
-      {/* Job Details Modal - Same as JobBoardTab */}
+      {/* Job Details Modal - Exact copy of JobBoardTab modal */}
       {showJobModal && selectedJob && (
         <div className="fixed top-0 left-64 right-0 bottom-0 z-50 flex items-center justify-center bg-black/30">
           <div className="bg-blue-50 dark:bg-blue-900/30 rounded-2xl shadow-2xl max-w-2xl w-full mx-8 max-h-[85vh] flex flex-col">
@@ -465,18 +465,11 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
                   <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm w-full">
                     <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">About Company</h5>
                     <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-                      {selectedJob.company === 'Google Technologies Inc.' && 
-                        "Google, now a subsidiary of Alphabet Inc., is a multinational technology company known for its Internet search engine, online advertising technologies, cloud computing, and other software services. Originally founded in 1998 by Larry Page and Sergey Brin, initially as a research project at Stanford University. Google's core mission is to organize the world's information and make it universally accessible and useful."
-                      }
-                      {selectedJob.company === 'Microsoft Corp.' && 
-                        "Microsoft Corporation is an American multinational technology corporation which produces computer software, consumer electronics, personal computers, and related services. Microsoft is known for its Windows operating systems, Office productivity suite, and Azure cloud computing platform. Founded in 1975, Microsoft has been at the forefront of the personal computer revolution."
-                      }
-                      {selectedJob.company === 'Amazon Web Services' && 
-                        "Amazon Web Services (AWS) is a subsidiary of Amazon providing on-demand cloud computing platforms and APIs to individuals, companies, and governments. AWS offers a broad set of global compute, storage, database, analytics, application, and deployment services that help organizations move faster, lower IT costs, and scale applications."
-                      }
-                      {!['Google Technologies Inc.', 'Microsoft Corp.', 'Amazon Web Services'].includes(selectedJob.company) &&
-                        `${selectedJob.company} is a technology-focused organization committed to innovation and excellence. We work with cutting-edge technologies to deliver exceptional solutions to our clients and maintain a collaborative work environment that fosters growth and creativity.`
-                      }
+                      Google, now a subsidiary of Alphabet Inc., is a multinational technology company known for 
+                      its Internet search engine, online advertising technologies, cloud computing, and other 
+                      software services. Originally founded in 1998 by Larry Page and Sergey Brin, initially as a research project 
+                      at Stanford University. Google's core mission is to organize the world's information and 
+                      make it universally accessible and useful.
                     </p>
                   </div>
 
@@ -484,16 +477,16 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
                   <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm w-full">
                     <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Role Definition</h5>
                     <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-3">
-                      We are looking for a {selectedJob.title} to join our team and work with our engineering team to 
-                      optimize, implement, and maintain our organization's systems and processes.
+                      We are looking for a Cloud Engineer to join our team and work with our engineering team to 
+                      optimize, implement, and maintain our organization's cloud-based systems.
                     </p>
                     <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-3">
-                      The {selectedJob.title}'s responsibilities include developing and deploying solutions, as well as 
-                      executing new initiatives and maintaining high-quality standards.
+                      A Cloud Engineer's responsibilities include deploying and debugging systems, as well as 
+                      executing new cloud initiatives.
                     </p>
                     <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
-                      Ultimately, you will work with different teams and professionals to ensure our systems 
-                      meet the needs of our organization and customers while driving innovation and efficiency.
+                      Ultimately, you will work with different IT professionals and teams to ensure our cloud 
+                      computing systems meet the needs of our organization and customers.
                     </p>
                   </div>
 
@@ -503,20 +496,20 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
                     <ul className="space-y-2 text-gray-600 dark:text-gray-400 text-sm">
                       <li className="flex items-start gap-2">
                         <span className="text-green-600 mt-1 text-xs">•</span>
-                        <span>Design, develop, and deploy scalable systems and solutions</span>
+                        <span>Design, develop, and deploy modular cloud-based systems</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-green-600 mt-1 text-xs">•</span>
-                        <span>Develop and maintain solutions in accordance with best practices</span>
+                        <span>Develop and maintain cloud solutions in accordance with best practices</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-green-600 mt-1 text-xs">•</span>
-                        <span>Ensure efficient functioning of systems and processes in accordance with 
-                        company security policies and best practices</span>
+                        <span>Ensure efficient functioning of data storage and process functions in accordance with 
+                        company security policies and best practices in cloud security</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-green-600 mt-1 text-xs">•</span>
-                        <span>Identify, analyze, and resolve technical challenges and deployment 
+                        <span>Identify, analyse, and resolve infrastructure vulnerabilities and application deployment 
                         issues</span>
                       </li>
                       <li className="flex items-start gap-2">
@@ -525,8 +518,8 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-green-600 mt-1 text-xs">•</span>
-                        <span>Collaborate with stakeholders, provide technical support, and make recommendations based on 
-                        business needs</span>
+                        <span>Interact with clients, provide cloud support, and make recommendations based on client 
+                        needs</span>
                       </li>
                     </ul>
                   </div>
@@ -538,30 +531,30 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
                       <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded border border-green-200 dark:border-green-700">
                         <h6 className="font-medium text-gray-900 dark:text-gray-100 mb-2 text-sm">Primary Skills</h6>
                         <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
-                          {selectedJob.skills.slice(0, 3).map((skill, index) => (
-                            <div key={index}>{skill}</div>
-                          ))}
-                          <div>Problem Solving</div>
-                          <div>System Design</div>
-                          <div>Code Review</div>
+                          <div>Business Development</div>
+                          <div>Marketing Analysis</div>
+                          <div>Lead Generation</div>
+                          <div>International Sales</div>
+                          <div>Digital Marketing</div>
+                          <div>SEO</div>
                         </div>
                       </div>
                       <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded border border-blue-200 dark:border-blue-700">
                         <h6 className="font-medium text-gray-900 dark:text-gray-100 mb-2 text-sm">Secondary Skills</h6>
                         <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
-                          <div>Project Management</div>
-                          <div>Team Collaboration</div>
-                          <div>Client Communication</div>
-                          <div>Documentation</div>
-                          <div>Testing & QA</div>
+                          <div>Corporate Sales</div>
+                          <div>Resource Manager</div>
+                          <div>Customer Interaction</div>
+                          <div>Customer Service</div>
+                          <div>Direct sales</div>
                         </div>
                       </div>
                       <div className="bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded border border-yellow-200 dark:border-yellow-700">
                         <h6 className="font-medium text-gray-900 dark:text-gray-100 mb-2 text-sm">Knowledge Only</h6>
                         <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
-                          <div>Agile Methodologies</div>
-                          <div>Version Control</div>
-                          <div>Performance Optimization</div>
+                          <div>Telecalling</div>
+                          <div>English communication</div>
+                          <div>Sales requirement</div>
                         </div>
                       </div>
                     </div>
