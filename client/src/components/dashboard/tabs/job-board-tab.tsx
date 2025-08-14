@@ -204,6 +204,9 @@ export default function JobBoardTab() {
   const [showJobModal, setShowJobModal] = useState(false);
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [jobFilter, setJobFilter] = useState<'all' | 'hot' | 'saved'>('all');
+  const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set());
+  const [showApplyConfirmation, setShowApplyConfirmation] = useState(false);
+  const [pendingApplyJob, setPendingApplyJob] = useState<JobListing | null>(null);
   const [filters, setFilters] = useState({
     company: '',
     role: '',
@@ -279,6 +282,25 @@ export default function JobBoardTab() {
     }
   };
 
+  const handleApplyJob = (job: JobListing) => {
+    setPendingApplyJob(job);
+    setShowApplyConfirmation(true);
+  };
+
+  const confirmApplyJob = () => {
+    if (pendingApplyJob) {
+      const jobKey = `${pendingApplyJob.title}-${pendingApplyJob.company}`;
+      setAppliedJobs(prev => new Set(Array.from(prev).concat(jobKey)));
+      toast({
+        title: "Application submitted",
+        description: "Recruiters will be contacting you shortly regarding your application.",
+      });
+      setShowApplyConfirmation(false);
+      setPendingApplyJob(null);
+      if (selectedJob) setShowJobModal(false);
+    }
+  };
+
   const filteredJobs = jobListings.filter(job => {
     // Filter by job type
     if (jobFilter === 'hot' && !job.isHot) return false;
@@ -302,10 +324,43 @@ export default function JobBoardTab() {
            matchesLocation && matchesWorkType && matchesSkills;
   });
 
-  const totalJobs = filteredJobs.length;
+  // Create saved job cards from saved jobs data
+  const savedJobCards = savedJobsData.map(savedJob => {
+    // Find matching job from jobListings or create a simplified card
+    const matchingJob = jobListings.find(job => 
+      job.title === savedJob.jobTitle && job.company === savedJob.company
+    );
+    
+    if (matchingJob) {
+      return matchingJob;
+    } else {
+      // Create a simplified job card for saved jobs not in current listings
+      return {
+        id: `saved-${savedJob.jobTitle}-${savedJob.company}`,
+        company: savedJob.company,
+        title: savedJob.jobTitle,
+        description: `Saved job from ${savedJob.company}`,
+        experience: 'N/A',
+        salary: savedJob.salary || 'Not specified',
+        location: savedJob.location || 'Not specified',
+        type: savedJob.jobType || 'Full Time',
+        workType: 'Not specified',
+        skills: [],
+        logo: '/api/placeholder/60/60',
+        isRemote: false,
+        postedDays: 0,
+        background: 'bg-gradient-to-br from-gray-100 to-gray-200',
+        isHot: false
+      };
+    }
+  });
+
+  // Determine which jobs to display based on filter
+  const jobsToDisplay = jobFilter === 'saved' ? savedJobCards : filteredJobs;
+  const totalJobs = jobsToDisplay.length;
   const totalPages = Math.ceil(totalJobs / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentJobs = filteredJobs.slice(startIndex, startIndex + itemsPerPage);
+  const currentJobs = jobsToDisplay.slice(startIndex, startIndex + itemsPerPage);
   
   const goToNextPage = () => {
     if (currentPage < totalPages) {
@@ -423,7 +478,7 @@ export default function JobBoardTab() {
                   {/* Save Job Button - Top Right */}
                   <button
                     onClick={() => toggleSaveJob(job)}
-                    className={`absolute top-4 right-4 p-2 rounded-full transition-all duration-200 ${
+                    className={`absolute top-6 right-6 p-3 rounded-full transition-all duration-200 ${
                       savedJobs.has(`${job.title}-${job.company}`) 
                         ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg' 
                         : 'bg-orange-500 hover:bg-orange-600 text-white'
@@ -487,14 +542,29 @@ export default function JobBoardTab() {
 
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-500 dark:text-gray-400">Posted: {job.postedDays} days ago</span>
-                    <Button 
-                      onClick={() => handleViewMore(job)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-medium" 
-                      size="sm" 
-                      data-testid={`button-view-more-${job.id}`}
-                    >
-                      View More
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={() => handleViewMore(job)}
+                        className="bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 rounded font-medium" 
+                        size="sm" 
+                        data-testid={`button-view-more-${job.id}`}
+                      >
+                        View More
+                      </Button>
+                      <Button 
+                        onClick={() => handleApplyJob(job)}
+                        disabled={appliedJobs.has(`${job.title}-${job.company}`)}
+                        className={`px-4 py-2 rounded font-medium ${
+                          appliedJobs.has(`${job.title}-${job.company}`)
+                            ? 'bg-green-600 hover:bg-green-700 text-white'
+                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                        }`}
+                        size="sm"
+                        data-testid={`button-apply-${job.id}`}
+                      >
+                        {appliedJobs.has(`${job.title}-${job.company}`) ? 'Applied' : 'Apply'}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -788,8 +858,16 @@ export default function JobBoardTab() {
                   </>
                 )}
               </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-medium border-0 text-sm">
-                Apply
+              <Button 
+                onClick={() => selectedJob && handleApplyJob(selectedJob)}
+                disabled={selectedJob && appliedJobs.has(`${selectedJob.title}-${selectedJob.company}`)}
+                className={`px-6 py-2 rounded font-medium border-0 text-sm ${
+                  selectedJob && appliedJobs.has(`${selectedJob.title}-${selectedJob.company}`)
+                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+              >
+                {selectedJob && appliedJobs.has(`${selectedJob.title}-${selectedJob.company}`) ? 'Applied' : 'Apply'}
               </Button>
             </div>
           </div>
@@ -881,6 +959,40 @@ export default function JobBoardTab() {
                 Search
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Apply Confirmation Dialog */}
+      <Dialog open={showApplyConfirmation} onOpenChange={setShowApplyConfirmation}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">Confirm Application</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to apply for <span className="font-medium">{pendingApplyJob?.title}</span> at <span className="font-medium">{pendingApplyJob?.company}</span>?
+            </p>
+            <p className="text-sm text-gray-500">
+              Recruiters will be contacting you shortly regarding your application.
+            </p>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowApplyConfirmation(false)}
+              className="px-4 py-2 rounded"
+              data-testid="button-cancel-apply"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmApplyJob}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+              data-testid="button-confirm-apply"
+            >
+              Confirm Application
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

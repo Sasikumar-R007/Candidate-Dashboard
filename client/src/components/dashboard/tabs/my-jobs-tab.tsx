@@ -344,7 +344,7 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
                 {/* Save Button */}
                 <button
                   onClick={() => toggleSaveJob(job)}
-                  className={`absolute top-4 right-4 p-2 rounded-full transition-all duration-200 z-10 ${
+                  className={`absolute top-6 right-6 p-3 rounded-full transition-all duration-200 z-10 ${
                     savedJobs.has(`${job.title}-${job.company}`) 
                       ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg' 
                       : 'bg-orange-500 hover:bg-orange-600 text-white'
