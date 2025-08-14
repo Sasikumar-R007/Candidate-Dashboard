@@ -445,20 +445,506 @@ export default function AdminDashboard() {
         return renderTeamSection();
       case 'requirements':
         return (
-          <div className="px-6 py-6">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Requirements</h2>
-              <p className="text-gray-600 dark:text-gray-400">Requirements management functionality will be implemented here</p>
+          <div className="px-6 py-6 space-y-6">
+            {/* Priority Distribution Cards */}
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Priority Distribution</h2>
+              <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">
+                + Add Requirements
+              </Button>
             </div>
+            
+            <div className="grid grid-cols-4 gap-4 mb-8">
+              <Card className="text-center p-4">
+                <CardContent className="p-0">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">HIGH</div>
+                  <div className="text-3xl font-bold text-red-600 dark:text-red-400">10</div>
+                </CardContent>
+              </Card>
+              
+              <Card className="text-center p-4">
+                <CardContent className="p-0">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">MEDIUM</div>
+                  <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">5</div>
+                </CardContent>
+              </Card>
+              
+              <Card className="text-center p-4">
+                <CardContent className="p-0">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">LOW</div>
+                  <div className="text-3xl font-bold text-gray-600 dark:text-gray-400">4</div>
+                </CardContent>
+              </Card>
+              
+              <Card className="text-center p-4">
+                <CardContent className="p-0">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total</div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white">19</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Requirements Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Requirements</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Positions</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Criticality</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Company</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Contact</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Talent Advisor</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Team Lead</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-4 px-3 text-gray-900 dark:text-white">Frontend Developer</td>
+                        <td className="py-4 px-3">
+                          <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded-full">HIGH</span>
+                        </td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">TechCorp</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">David Wilson</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Unassigned</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Arun</td>
+                        <td className="py-4 px-3">
+                          <Button variant="ghost" size="sm">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                            </svg>
+                          </Button>
+                        </td>
+                      </tr>
+                      
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-4 px-3 text-gray-900 dark:text-white">UI/UX Designer</td>
+                        <td className="py-4 px-3">
+                          <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full">MEDIUM</span>
+                        </td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Designify</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Tom Anderson</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Unassigned</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Anusha</td>
+                        <td className="py-4 px-3">
+                          <Button variant="ghost" size="sm">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                            </svg>
+                          </Button>
+                        </td>
+                      </tr>
+                      
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-4 px-3 text-gray-900 dark:text-white">Backend Developer</td>
+                        <td className="py-4 px-3">
+                          <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-3 py-1 rounded-full">LOW</span>
+                        </td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">CodeLabs</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Robert Kim</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Robert Kim</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Arun</td>
+                        <td className="py-4 px-3">
+                          <Button variant="ghost" size="sm">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                            </svg>
+                          </Button>
+                        </td>
+                      </tr>
+                      
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-4 px-3 text-gray-900 dark:text-white">QA Tester</td>
+                        <td className="py-4 px-3">
+                          <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full">MEDIUM</span>
+                        </td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">AppLogic</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Kevin Brown</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Unassigned</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Unassigned</td>
+                        <td className="py-4 px-3">
+                          <Button variant="ghost" size="sm">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                            </svg>
+                          </Button>
+                        </td>
+                      </tr>
+                      
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-4 px-3 text-gray-900 dark:text-white">Mobile App Developer</td>
+                        <td className="py-4 px-3">
+                          <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded-full">HIGH</span>
+                        </td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Tesco</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Mel Gibson</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Mel Gibson</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Arun</td>
+                        <td className="py-4 px-3">
+                          <Button variant="ghost" size="sm">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                            </svg>
+                          </Button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                
+                <div className="flex justify-end gap-2 mt-4">
+                  <Button variant="outline" className="btn-rounded">Archives</Button>
+                  <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">View More</Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         );
       case 'pipeline':
         return (
-          <div className="px-6 py-6">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Pipeline</h2>
-              <p className="text-gray-600 dark:text-gray-400">Pipeline management functionality will be implemented here</p>
+          <div className="px-6 py-6 space-y-6">
+            {/* Pipeline Header */}
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Pipeline</h2>
+              <div className="flex items-center gap-4">
+                <Select>
+                  <SelectTrigger className="w-48 input-styled btn-rounded">
+                    <SelectValue placeholder="Arun/Anusha/All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="arun">Arun</SelectItem>
+                    <SelectItem value="anusha">Anusha</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="btn-rounded input-styled">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {format(selectedDate, "dd-MMM-yyyy")}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => date && setSelectedDate(date)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
+
+            {/* Pipeline Stages */}
+            <Card>
+              <CardContent className="p-6">
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Level 1</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Level 2</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Level 3</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Final Round</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">HR Round</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Offer Stage</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Closure</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {/* Row 1 */}
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                            Keerthana
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                            Keerthana
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                            Keerthana
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                            Keerthana
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                            Keerthana
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                            Keerthana
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                            Keerthana
+                          </span>
+                        </td>
+                      </tr>
+                      
+                      {/* Row 2 */}
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Vishnu Purana
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Vishnu Purana
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Vishnu Purana
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Vishnu Purana
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Vishnu Purana
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Vishnu Purana
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Vishnu Purana
+                          </span>
+                        </td>
+                      </tr>
+                      
+                      {/* Row 3 */}
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                            Chanakya
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                            Chanakya
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                            Chanakya
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                            Chanakya
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                            Chanakya
+                          </span>
+                        </td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                      </tr>
+                      
+                      {/* Row 4 */}
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                            Adhya
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                            Adhya
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                            Adhya
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">
+                            Adhya
+                          </span>
+                        </td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                      </tr>
+                      
+                      {/* Row 5 */}
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
+                            Vanshika
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
+                            Vanshika
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
+                            Vanshika
+                          </span>
+                        </td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                      </tr>
+                      
+                      {/* Row 6 */}
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200">
+                            Reyansh
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200">
+                            Reyansh
+                          </span>
+                        </td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                      </tr>
+                      
+                      {/* Row 7 */}
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200">
+                            Shaurya
+                          </span>
+                        </td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                      </tr>
+                      
+                      {/* Row 8 */}
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
+                            Vihana
+                          </span>
+                        </td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Closure Reports */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Closure Reports</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Candidate</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Positions</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Client</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Talent Advisor</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Fixed CTC</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Offered Date</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Joined Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-4 px-3 text-gray-900 dark:text-white">David Wilson</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Frontend Developer</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">TechCorp</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Kavitha</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">MLJ, 2025</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">12-06-2025</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">12-04-2025</td>
+                      </tr>
+                      
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-4 px-3 text-gray-900 dark:text-white">Tom Anderson</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">UI/UX Designer</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Designify</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Rajesh</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">ASO, 2025</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">18-06-2025</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">05-05-2025</td>
+                      </tr>
+                      
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-4 px-3 text-gray-900 dark:text-white">Robert Kim</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Backend Developer</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">CodeLabs</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Sowmya</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">MLJ, 2025</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">28-06-2025</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">19-08-2025</td>
+                      </tr>
+                      
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-4 px-3 text-gray-900 dark:text-white">Kevin Brown</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">QA Tester</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">AppLogic</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Kalaiselvi</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">FMA, 2025</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">03-07-2025</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">03-09-2025</td>
+                      </tr>
+                      
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-4 px-3 text-gray-900 dark:text-white">Mel Gibson</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Mobile App Developer</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Tesco</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Malathi</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">NDJ, 2025</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">18-07-2025</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">10-10-2025</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         );
       case 'metrics':

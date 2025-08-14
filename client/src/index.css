@@ -58,6 +58,22 @@
   --golden-light: hsl(45 93% 58%);
 }
 
+/* Global Styling Updates */
+/* All buttons with small rounded borders */
+.btn-rounded {
+  border-radius: 0.375rem !important; /* small radius, not lg */
+}
+
+/* Input fields with shaded background and small rounded borders */
+.input-styled {
+  background-color: hsl(210 40% 96%) !important;
+  border-radius: 0.375rem !important;
+}
+
+.dark .input-styled {
+  background-color: hsl(220 13% 18%) !important;
+}
+
 /* Hide scrollbars */
 .scrollbar-hide {
   -ms-overflow-style: none;
