@@ -21,7 +21,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
             <button
               key={item.id}
               onClick={() => onTabChange(item.id)}
-              className={`w-full flex items-center px-4 py-3 rounded-lg transition-colors text-left ${
+              className={`w-full flex items-center px-4 py-3 rounded transition-colors text-left ${
                 activeTab === item.id 
                   ? 'bg-blue-700 dark:bg-gray-700 font-medium' 
                   : 'hover:bg-blue-700 dark:hover:bg-gray-700'

@@ -263,22 +263,22 @@ export default function AdminDashboard() {
               </div>
               
               <div className="grid grid-cols-4 gap-6">
-                <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                <div className="text-center p-4 bg-white dark:bg-gray-800 rounded shadow-sm">
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Team Members</div>
                   <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{team.teamMembers}</div>
                 </div>
                 
-                <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border-l-2 border-blue-500">
+                <div className="text-center p-4 bg-white dark:bg-gray-800 rounded shadow-sm border-l-2 border-blue-500">
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Tenure</div>
                   <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{team.tenure}</div>
                 </div>
                 
-                <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border-l-2 border-blue-500">
+                <div className="text-center p-4 bg-white dark:bg-gray-800 rounded shadow-sm border-l-2 border-blue-500">
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Quarters Achieved</div>
                   <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{team.quartersAchieved}</div>
                 </div>
                 
-                <div className="text-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border-l-2 border-blue-500">
+                <div className="text-center p-4 bg-white dark:bg-gray-800 rounded shadow-sm border-l-2 border-blue-500">
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Next Milestone</div>
                   <div className="text-2xl font-bold text-green-600 dark:text-green-400">{team.nextMilestone}</div>
                 </div>
@@ -392,7 +392,7 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-3 gap-6">
             {/* Left side - 2x2 Grid */}
             <div className="col-span-2 grid grid-cols-2 gap-4">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-6 border border-gray-200 dark:border-gray-700">
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Total Requirements</p>
                 <div className="text-right">
                   <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
@@ -400,7 +400,7 @@ export default function AdminDashboard() {
                   </span>
                 </div>
               </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-6 border border-gray-200 dark:border-gray-700">
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Completed Requirements</p>
                 <div className="text-right">
                   <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
@@ -408,7 +408,7 @@ export default function AdminDashboard() {
                   </span>
                 </div>
               </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-6 border border-gray-200 dark:border-gray-700">
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Avg. Resumes per Requirement</p>
                 <div className="text-right">
                   <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
@@ -416,7 +416,7 @@ export default function AdminDashboard() {
                   </span>
                 </div>
               </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-6 border border-gray-200 dark:border-gray-700">
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Requirements per Recruiter</p>
                 <div className="text-right">
                   <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">

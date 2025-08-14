@@ -203,7 +203,7 @@ export default function TeamLeaderDashboard() {
                 <div className="grid grid-cols-3 gap-6">
                   {/* Left side - 2x2 Grid */}
                   <div className="col-span-2 grid grid-cols-2 gap-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                    <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-6 border border-gray-200 dark:border-gray-700">
                       <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Total Requirements</p>
                       <div className="text-right">
                         <span className="text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-total-requirements">
@@ -211,7 +211,7 @@ export default function TeamLeaderDashboard() {
                         </span>
                       </div>
                     </div>
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                    <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-6 border border-gray-200 dark:border-gray-700">
                       <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Completed Requirements</p>
                       <div className="text-right">
                         <span className="text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-completed-requirements">
@@ -219,7 +219,7 @@ export default function TeamLeaderDashboard() {
                         </span>
                       </div>
                     </div>
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                    <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-6 border border-gray-200 dark:border-gray-700">
                       <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Avg. Resumes per Requirement</p>
                       <div className="text-right">
                         <span className="text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-avg-resumes">
@@ -227,7 +227,7 @@ export default function TeamLeaderDashboard() {
                         </span>
                       </div>
                     </div>
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                    <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-6 border border-gray-200 dark:border-gray-700">
                       <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Requirements per Recruiter</p>
                       <div className="text-right">
                         <span className="text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-requirements-per-recruiter">
@@ -238,7 +238,7 @@ export default function TeamLeaderDashboard() {
                   </div>
                   
                   {/* Right side - Daily Delivery */}
-                  <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg shadow-sm p-6 border border-yellow-200 dark:border-yellow-800">
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded shadow-sm p-6 border border-yellow-200 dark:border-yellow-800">
                     <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Daily Delivery</h3>
                     <div className="grid grid-cols-2 gap-4 mb-6">
                       <div className="text-center">

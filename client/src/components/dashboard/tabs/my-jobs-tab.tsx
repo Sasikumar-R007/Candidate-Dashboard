@@ -3,15 +3,39 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { MoreHorizontal, MapPin, Flame } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, MapPin, Flame, Eye, Archive } from 'lucide-react';
 import type { JobApplication } from '@shared/schema';
 
 interface MyJobsTabProps {
   className?: string;
+  onNavigateToJobBoard?: () => void;
+}
+
+interface JobSuggestion {
+  id: string;
+  company: string;
+  logo: string;
+  title: string;
+  salary: string;
+  location: string;
+  workMode: string;
+  skills: string[];
+  bgColor: string;
+  description: string;
+  experience: string;
+  type: string;
+  background: string;
+  isHot?: boolean;
 }
 
 // Mock job suggestions data based on the design
-const jobSuggestions = [
+const jobSuggestions: JobSuggestion[] = [
   {
     id: '1',
     company: 'Google',
@@ -21,7 +45,12 @@ const jobSuggestions = [
     location: 'Bengaluru',
     workMode: 'Work from office',
     skills: ['CI/CD', 'Docker', 'Azure'],
-    bgColor: 'bg-blue-200'
+    bgColor: 'bg-blue-200',
+    description: 'We are looking for a skilled Cloud Engineer to join our team and help build scalable cloud infrastructure.',
+    experience: '3-5 years',
+    type: 'Full-time',
+    background: 'bg-blue-50',
+    isHot: true
   },
   {
     id: '2',
@@ -32,7 +61,11 @@ const jobSuggestions = [
     location: 'Bengaluru',
     workMode: 'Work from office',
     skills: ['CI/CD', 'Docker', 'Azure'],
-    bgColor: 'bg-green-200'
+    bgColor: 'bg-green-200',
+    description: 'Join our backend team to develop robust and scalable server-side applications.',
+    experience: '2-4 years',
+    type: 'Full-time',
+    background: 'bg-green-50'
   },
   {
     id: '3',
@@ -43,7 +76,11 @@ const jobSuggestions = [
     location: 'Mumbai',
     workMode: 'Work from office',
     skills: ['React', 'TypeScript', 'Next.js'],
-    bgColor: 'bg-red-200'
+    bgColor: 'bg-red-200',
+    description: 'Build amazing user experiences for billions of users worldwide.',
+    experience: '1-3 years',
+    type: 'Full-time',
+    background: 'bg-red-50'
   },
   {
     id: '4',
@@ -54,7 +91,11 @@ const jobSuggestions = [
     location: 'Hyderabad',
     workMode: 'Hybrid',
     skills: ['Kubernetes', 'AWS', 'Terraform'],
-    bgColor: 'bg-purple-200'
+    bgColor: 'bg-purple-200',
+    description: 'Help us build and maintain robust infrastructure for cloud-based applications.',
+    experience: '4-6 years',
+    type: 'Full-time',
+    background: 'bg-purple-50'
   },
   {
     id: '5',
@@ -65,7 +106,11 @@ const jobSuggestions = [
     location: 'Pune',
     workMode: 'Remote',
     skills: ['Node.js', 'Python', 'MongoDB'],
-    bgColor: 'bg-yellow-200'
+    bgColor: 'bg-yellow-200',
+    description: 'Build end-to-end solutions for our e-commerce platform.',
+    experience: '3-5 years',
+    type: 'Full-time',
+    background: 'bg-yellow-50'
   },
   {
     id: '6',
@@ -76,13 +121,19 @@ const jobSuggestions = [
     location: 'Bangalore',
     workMode: 'Work from office',
     skills: ['Python', 'Machine Learning', 'SQL'],
-    bgColor: 'bg-red-200'
+    bgColor: 'bg-red-200',
+    description: 'Analyze user behavior and content performance to improve our platform.',
+    experience: '2-4 years',
+    type: 'Full-time',
+    background: 'bg-red-50'
   }
 ];
 
-export default function MyJobsTab({ className }: MyJobsTabProps) {
+export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTabProps) {
   const [showAllJobs, setShowAllJobs] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedJob, setSelectedJob] = useState<JobSuggestion | null>(null);
+  const [showJobModal, setShowJobModal] = useState(false);
   const jobsPerPage = 3;
   const { data: jobApplications = [], isLoading } = useQuery({
     queryKey: ['/api/job-applications'],
@@ -95,6 +146,27 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
       'Applied': 'bg-blue-100 text-blue-800 border-blue-200'
     };
     return statusStyles[status as keyof typeof statusStyles] || 'bg-gray-100 text-gray-800 border-gray-200';
+  };
+
+  const handleViewMore = (job: JobSuggestion) => {
+    setSelectedJob(job);
+    setShowJobModal(true);
+  };
+
+  const handleViewJob = (job: JobApplication) => {
+    console.log('View job:', job);
+    // Navigate to job details or open in new window
+  };
+
+  const handleArchiveJob = (job: JobApplication) => {
+    console.log('Archive job:', job);
+    // Archive job logic
+  };
+
+  const handleSeeAllJobs = () => {
+    if (onNavigateToJobBoard) {
+      onNavigateToJobBoard();
+    }
   };
 
   if (isLoading) {
@@ -141,9 +213,23 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
                   <td className="py-4 px-4 text-gray-700">{job.appliedDate}</td>
                   <td className="py-4 px-4 text-gray-600">{job.daysAgo}</td>
                   <td className="py-4 px-4">
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" data-testid={`button-menu-${job.id}`}>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleViewJob(job)} data-testid={`menu-view-${job.id}`}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Job
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleArchiveJob(job)} data-testid={`menu-archive-${job.id}`}>
+                          <Archive className="mr-2 h-4 w-4" />
+                          Archive
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </td>
                 </tr>
               ))}
@@ -162,8 +248,9 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
           <div className="mt-6 pt-4 border-t border-gray-200 text-center">
             <Button 
               variant="link" 
-              className="text-blue-600 hover:text-blue-700 p-0"
+              className="text-blue-600 hover:text-blue-700 p-0 rounded"
               onClick={() => setShowAllJobs(true)}
+              data-testid="button-see-all-applied"
             >
               See all applied jobs
             </Button>
@@ -234,9 +321,13 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
                     ))}
                   </div>
 
-                  {/* View Job Button */}
-                  <Button className="w-full bg-slate-700 hover:bg-slate-800 text-white py-3 rounded">
-                    View Job
+                  {/* View More Button */}
+                  <Button 
+                    className="w-full bg-slate-700 hover:bg-slate-800 text-white py-3 rounded"
+                    onClick={() => handleViewMore(job)}
+                    data-testid={`button-view-more-${job.id}`}
+                  >
+                    View More
                   </Button>
                 </div>
               </CardContent>
@@ -251,7 +342,7 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
               key={i + 1}
               variant="ghost" 
               size="sm" 
-              className={`w-8 h-8 p-0 ${
+              className={`w-8 h-8 p-0 rounded ${
                 currentPage === i + 1 
                   ? 'bg-blue-600 text-white hover:bg-blue-700' 
                   : 'hover:bg-gray-100'
@@ -261,13 +352,141 @@ export default function MyJobsTab({ className }: MyJobsTabProps) {
               {i + 1}
             </Button>
           ))}
-          <Button variant="link" className="text-blue-600 hover:text-blue-700 p-0 ml-2">
+          <Button 
+            variant="link" 
+            className="text-blue-600 hover:text-blue-700 p-0 ml-2 rounded"
+            onClick={handleSeeAllJobs}
+            data-testid="button-see-all-suggestions"
+          >
             See all
           </Button>
         </div>
 
 
       </div>
+
+      {/* Job Details Modal - Similar to JobBoardTab */}
+      {showJobModal && selectedJob && (
+        <div className="fixed top-0 left-64 right-0 bottom-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="bg-blue-50 dark:bg-blue-900/30 rounded-2xl shadow-2xl max-w-2xl w-full mx-8 max-h-[85vh] flex flex-col">
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto scrollbar-hide p-4">
+              {/* Job Card Header */}
+              <div className="bg-white dark:bg-gray-800 p-4 mb-4 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                <div className="flex">
+                  {/* Company Logo Section */}
+                  <div className="w-32 flex items-center justify-center">
+                    <div className={`${selectedJob.background} rounded-xl p-3 flex flex-col items-center justify-center w-full h-full min-h-[100px]`}>
+                      <img
+                        src={selectedJob.logo}
+                        alt={`${selectedJob.company} logo`}
+                        className="w-12 h-12 rounded object-cover mb-1"
+                      />
+                      <div className="text-xs font-bold text-gray-700 dark:text-gray-300">{selectedJob.company.split(' ')[0]}</div>
+                    </div>
+                  </div>
+
+                  {/* Job Details */}
+                  <div className="flex-1 pl-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{selectedJob.company}</h3>
+                        <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                          {selectedJob.title}
+                          {selectedJob.isHot && <i className="fas fa-fire text-red-500 text-sm"></i>}
+                        </h4>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{selectedJob.description}</p>
+                      </div>
+                      <div className="w-6 h-6 bg-red-500 rounded flex items-center justify-center ml-2">
+                        <button
+                          onClick={() => setShowJobModal(false)}
+                          className="text-white text-xs hover:bg-red-600 w-full h-full rounded flex items-center justify-center"
+                          data-testid="button-close-modal"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Job Details Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                {/* Experience Card */}
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-2 mb-2">
+                    <i className="fas fa-briefcase text-blue-600"></i>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Experience</span>
+                  </div>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedJob.experience}</p>
+                </div>
+
+                {/* Salary Card */}
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-2 mb-2">
+                    <i className="fas fa-dollar-sign text-green-600"></i>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Salary</span>
+                  </div>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedJob.salary}</p>
+                </div>
+
+                {/* Location Card */}
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-2 mb-2">
+                    <i className="fas fa-map-marker-alt text-red-600"></i>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Location</span>
+                  </div>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedJob.location}</p>
+                </div>
+
+                {/* Work Type Card */}
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-2 mb-2">
+                    <i className="fas fa-laptop text-purple-600"></i>
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Work Mode</span>
+                  </div>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{selectedJob.workMode}</p>
+                </div>
+              </div>
+
+              {/* Skills Section */}
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 mb-4">
+                <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Required Skills</h5>
+                <div className="flex flex-wrap gap-2">
+                  {selectedJob.skills.map((skill) => (
+                    <Badge
+                      key={skill}
+                      className="bg-blue-100 text-blue-800 border-blue-200 px-3 py-1"
+                    >
+                      {skill}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons - Fixed at Bottom */}
+            <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800 rounded-b-2xl">
+              <div className="flex gap-3">
+                <Button
+                  className="flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded"
+                  data-testid="button-save-job-modal"
+                >
+                  <i className="far fa-bookmark mr-2"></i>
+                  Save
+                </Button>
+                <Button
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded"
+                  data-testid="button-apply-job-modal"
+                >
+                  Apply
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

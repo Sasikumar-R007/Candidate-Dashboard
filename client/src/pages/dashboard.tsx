@@ -75,7 +75,7 @@ export default function Dashboard() {
   const renderDashboardTabContent = () => {
     switch (activeTab) {
       case 'my-jobs':
-        return <MyJobsTab />;
+        return <MyJobsTab onNavigateToJobBoard={() => setSidebarTab('job-board')} />;
       case 'my-profile':
         return <MyProfileTab profile={profile} />;
       case 'resume':
@@ -85,7 +85,7 @@ export default function Dashboard() {
       case 'activity':
         return <ActivityTab />;
       default:
-        return <MyJobsTab />;
+        return <MyJobsTab onNavigateToJobBoard={() => setSidebarTab('job-board')} />;
     }
   };
 
