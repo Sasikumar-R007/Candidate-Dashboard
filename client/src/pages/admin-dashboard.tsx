@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Sidebar from '@/components/dashboard/sidebar';
 import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
 import AdminTabNavigation from '@/components/dashboard/admin-tab-navigation';
@@ -11,12 +11,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { CalendarIcon, EditIcon } from "lucide-react";
 import { format } from "date-fns";
 
-// Mock data for admin dashboard
-const adminProfile = {
+// Admin profile will be fetched from API
+const initialAdminProfile = {
   name: "John Mathew",
   role: "CEO",
   email: "john@scalingtheory.com",
-  phone: "90347 59099"
+  phone: "90347 59099",
+  bannerImage: null,
+  profilePicture: null
 };
 
 const teamsData = [
@@ -79,7 +81,25 @@ const messagesData = [
 export default function AdminDashboard() {
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [activeTab, setActiveTab] = useState('team');
+  const [adminProfile, setAdminProfile] = useState(initialAdminProfile);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+
+  // Fetch admin profile on component mount
+  useEffect(() => {
+    const fetchAdminProfile = async () => {
+      try {
+        const response = await fetch('/api/admin/profile');
+        if (response.ok) {
+          const profile = await response.json();
+          setAdminProfile(profile);
+        }
+      } catch (error) {
+        console.error('Failed to fetch admin profile:', error);
+      }
+    };
+
+    fetchAdminProfile();
+  }, []);
 
   const renderTeamSection = () => (
     <div className="px-6 py-6 space-y-8">

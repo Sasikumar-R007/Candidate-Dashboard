@@ -45,7 +45,19 @@ export default function AdminProfileHeader({ profile }: AdminProfileHeaderProps)
       const result = await response.json();
       
       // Update profile with new banner image
-      setCurrentProfile(prev => ({ ...prev, bannerImage: result.url }));
+      const profileResponse = await fetch('/api/admin/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ bannerImage: result.url }),
+      });
+      
+      if (profileResponse.ok) {
+        const updatedProfile = await profileResponse.json();
+        setCurrentProfile(updatedProfile);
+      }
+      
       setShowBannerModal(false);
     } catch (error) {
       console.error('Banner upload failed:', error);
@@ -69,7 +81,19 @@ export default function AdminProfileHeader({ profile }: AdminProfileHeaderProps)
       const result = await response.json();
       
       // Update profile with new profile picture
-      setCurrentProfile(prev => ({ ...prev, profilePicture: result.url }));
+      const profileResponse = await fetch('/api/admin/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ profilePicture: result.url }),
+      });
+      
+      if (profileResponse.ok) {
+        const updatedProfile = await profileResponse.json();
+        setCurrentProfile(updatedProfile);
+      }
+      
       setShowProfileModal(false);
     } catch (error) {
       console.error('Profile upload failed:', error);
@@ -78,7 +102,19 @@ export default function AdminProfileHeader({ profile }: AdminProfileHeaderProps)
 
   const handleDeleteBanner = async () => {
     try {
-      setCurrentProfile(prev => ({ ...prev, bannerImage: null }));
+      // Update profile to remove banner image
+      const profileResponse = await fetch('/api/admin/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ bannerImage: null }),
+      });
+      
+      if (profileResponse.ok) {
+        const updatedProfile = await profileResponse.json();
+        setCurrentProfile(updatedProfile);
+      }
     } catch (error) {
       console.error('Banner deletion failed:', error);
     }
