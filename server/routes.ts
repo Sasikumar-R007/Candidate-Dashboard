@@ -430,6 +430,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(teamLeaderProfile);
   });
 
+  // Admin Dashboard API routes and file uploads
+  // In-memory storage for admin profile to persist changes
+  let adminProfile = {
+    id: "admin-001",
+    name: "Admin User",
+    role: "Administrator",
+    employeeId: "ADM01",
+    phone: "90000 00000",
+    email: "admin@scalingtheory.com",
+    joiningDate: "01-Jan-2020",
+    department: "Administration",
+    reportingTo: "CEO",
+    totalContribution: "5,00,000",
+    bannerImage: null,
+    profilePicture: null
+  };
+
+  app.get("/api/admin/profile", (req, res) => {
+    res.json(adminProfile);
+  });
+
+  app.patch("/api/admin/profile", (req, res) => {
+    const updates = req.body;
+    
+    // Merge updates with existing profile to preserve other fields
+    adminProfile = {
+      ...adminProfile,
+      ...updates
+    };
+    
+    res.json(adminProfile);
+  });
+
+  // Admin file upload endpoints
+  app.post("/api/admin/upload/banner", upload.single('file'), (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+    
+    const url = `/uploads/${req.file.filename}`;
+    res.json({ url });
+  });
+
+  app.post("/api/admin/upload/profile", upload.single('file'), (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+    
+    const url = `/uploads/${req.file.filename}`;
+    res.json({ url });
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
