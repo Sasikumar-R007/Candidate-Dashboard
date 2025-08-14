@@ -8,7 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon, EditIcon } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CalendarIcon, EditIcon, Mail, Phone } from "lucide-react";
 import { format } from "date-fns";
 
 // Admin profile will be fetched from API - fallback data matching server
@@ -30,12 +31,78 @@ const teamsData = [
     quartersAchieved: 6,
     nextMilestone: "+3",
     members: [
-      { name: "Sudharshan", salary: "3,50,000 INR", year: "2024-2025", count: 10 },
-      { name: "Deepika", salary: "4,50,000 INR", year: "2024-2025", count: 5 },
-      { name: "Dharshan", salary: "1,00,000 INR", year: "2024-2025", count: 4 },
-      { name: "Kavya", salary: "2,20,000 INR", year: "2024-2025", count: 2 },
-      { name: "Thamarai Selvi", salary: "7,50,000 INR", year: "2024-2025", count: 3 },
-      { name: "Karthikayan", salary: "2,90,000 INR", year: "2024-2025", count: 2 }
+      { 
+        name: "Sudharshan", 
+        salary: "3,50,000 INR", 
+        year: "2024-2025", 
+        count: 10,
+        id: "STTA001",
+        role: "Recruitment Executive",
+        email: "sudharshan@scaling.com",
+        mobile: "9876543210",
+        joined: "1/4/2023",
+        closures: "3 this month"
+      },
+      { 
+        name: "Deepika", 
+        salary: "4,50,000 INR", 
+        year: "2024-2025", 
+        count: 5,
+        id: "STTA002",
+        role: "Senior Recruiter",
+        email: "deepika@scaling.com",
+        mobile: "9876543211",
+        joined: "15/2/2023",
+        closures: "2 this month"
+      },
+      { 
+        name: "Dharshan", 
+        salary: "1,00,000 INR", 
+        year: "2024-2025", 
+        count: 4,
+        id: "STTA003",
+        role: "Junior Recruiter",
+        email: "dharshan@scaling.com",
+        mobile: "9876543212",
+        joined: "10/3/2023",
+        closures: "1 this month"
+      },
+      { 
+        name: "Kavya", 
+        salary: "2,20,000 INR", 
+        year: "2024-2025", 
+        count: 2,
+        id: "STTA004",
+        role: "Recruitment Executive",
+        email: "kavya@scaling.com",
+        mobile: "9876543213",
+        joined: "5/1/2023",
+        closures: "4 this month"
+      },
+      { 
+        name: "Thamarai Selvi", 
+        salary: "7,50,000 INR", 
+        year: "2024-2025", 
+        count: 3,
+        id: "STTA005",
+        role: "Lead Recruiter",
+        email: "thamarai@scaling.com",
+        mobile: "9876543214",
+        joined: "20/6/2022",
+        closures: "5 this month"
+      },
+      { 
+        name: "Karthikayan", 
+        salary: "2,90,000 INR", 
+        year: "2024-2025", 
+        count: 2,
+        id: "STTA006",
+        role: "Recruitment Executive",
+        email: "karthik@scaling.com",
+        mobile: "9876543215",
+        joined: "12/5/2023",
+        closures: "2 this month"
+      }
     ]
   },
   {
@@ -46,12 +113,78 @@ const teamsData = [
     quartersAchieved: 6,
     nextMilestone: "+3",
     members: [
-      { name: "Sudharshan", salary: "3,50,000 INR", year: "2024-2025", count: 10 },
-      { name: "Deepika", salary: "4,50,000 INR", year: "2024-2025", count: 5 },
-      { name: "Dharshan", salary: "1,00,000 INR", year: "2024-2025", count: 4 },
-      { name: "Kavya", salary: "2,20,000 INR", year: "2024-2025", count: 2 },
-      { name: "Thamarai Selvi", salary: "7,50,000 INR", year: "2024-2025", count: 3 },
-      { name: "Karthikayan", salary: "2,90,000 INR", year: "2024-2025", count: 2 }
+      { 
+        name: "Sudharshan", 
+        salary: "3,50,000 INR", 
+        year: "2024-2025", 
+        count: 10,
+        id: "STTA007",
+        role: "Recruitment Executive",
+        email: "sudharshan2@scaling.com",
+        mobile: "9876543216",
+        joined: "1/4/2023",
+        closures: "3 this month"
+      },
+      { 
+        name: "Deepika", 
+        salary: "4,50,000 INR", 
+        year: "2024-2025", 
+        count: 5,
+        id: "STTA008",
+        role: "Senior Recruiter",
+        email: "deepika2@scaling.com",
+        mobile: "9876543217",
+        joined: "15/2/2023",
+        closures: "2 this month"
+      },
+      { 
+        name: "Dharshan", 
+        salary: "1,00,000 INR", 
+        year: "2024-2025", 
+        count: 4,
+        id: "STTA009",
+        role: "Junior Recruiter",
+        email: "dharshan2@scaling.com",
+        mobile: "9876543218",
+        joined: "10/3/2023",
+        closures: "1 this month"
+      },
+      { 
+        name: "Kavya", 
+        salary: "2,20,000 INR", 
+        year: "2024-2025", 
+        count: 2,
+        id: "STTA010",
+        role: "Recruitment Executive",
+        email: "kavya2@scaling.com",
+        mobile: "9876543219",
+        joined: "5/1/2023",
+        closures: "4 this month"
+      },
+      { 
+        name: "Thamarai Selvi", 
+        salary: "7,50,000 INR", 
+        year: "2024-2025", 
+        count: 3,
+        id: "STTA011",
+        role: "Lead Recruiter",
+        email: "thamarai2@scaling.com",
+        mobile: "9876543220",
+        joined: "20/6/2022",
+        closures: "5 this month"
+      },
+      { 
+        name: "Karthikayan", 
+        salary: "2,90,000 INR", 
+        year: "2024-2025", 
+        count: 2,
+        id: "STTA012",
+        role: "Recruitment Executive",
+        email: "karthik2@scaling.com",
+        mobile: "9876543221",
+        joined: "12/5/2023",
+        closures: "2 this month"
+      }
     ]
   }
 ];
@@ -83,6 +216,21 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('team');
   const [adminProfile, setAdminProfile] = useState(initialAdminProfile);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedMember, setSelectedMember] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleMemberClick = (member: any) => {
+    setSelectedMember(member);
+    setIsModalOpen(true);
+  };
+
+  const handleEmailClick = (email: string) => {
+    window.open(`mailto:${email}`, '_blank');
+  };
+
+  const handleCallClick = (phone: string) => {
+    window.open(`tel:${phone}`, '_blank');
+  };
 
   // Fetch admin profile on component mount
   useEffect(() => {
@@ -141,7 +289,11 @@ export default function AdminDashboard() {
           {/* Team Members Grid */}
           <div className="grid grid-cols-3 gap-4">
             {team.members.map((member, memberIndex) => (
-              <div key={memberIndex} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow">
+              <div 
+                key={memberIndex} 
+                onClick={() => handleMemberClick(member)}
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer hover:border-blue-300 dark:hover:border-blue-600"
+              >
                 <div className="flex justify-between items-start">
                   <div>
                     <h4 className="font-semibold text-gray-900 dark:text-white mb-1">{member.name}</h4>
@@ -1772,6 +1924,76 @@ export default function AdminDashboard() {
       <div className="flex-1 ml-64 overflow-auto">
         {renderSidebarContent()}
       </div>
+
+      {/* Recruiter Details Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-md mx-auto">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Recruiter Details</DialogTitle>
+          </DialogHeader>
+          {selectedMember && (
+            <div className="p-6 space-y-4">
+              {/* Header with name and ID */}
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    R. {selectedMember.name}
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">
+                    {selectedMember.role}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    ID: {selectedMember.id}
+                  </p>
+                </div>
+              </div>
+
+              {/* Details */}
+              <div className="space-y-3">
+                <div className="flex">
+                  <span className="text-gray-700 dark:text-gray-300 font-medium w-20">Email:</span>
+                  <span className="text-gray-600 dark:text-gray-400">{selectedMember.email}</span>
+                </div>
+                
+                <div className="flex">
+                  <span className="text-gray-700 dark:text-gray-300 font-medium w-20">Mobile:</span>
+                  <span className="text-gray-600 dark:text-gray-400">{selectedMember.mobile}</span>
+                </div>
+                
+                <div className="flex">
+                  <span className="text-gray-700 dark:text-gray-300 font-medium w-20">Joined:</span>
+                  <span className="text-gray-600 dark:text-gray-400">{selectedMember.joined}</span>
+                </div>
+                
+                <div className="flex">
+                  <span className="text-gray-700 dark:text-gray-300 font-medium w-20">Closures:</span>
+                  <span className="text-green-600 dark:text-green-400 font-medium">{selectedMember.closures}</span>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-3 mt-6">
+                <Button
+                  onClick={() => handleEmailClick(selectedMember.email)}
+                  className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 flex-1"
+                >
+                  <Mail size={16} />
+                  Email
+                </Button>
+                <Button
+                  onClick={() => handleCallClick(selectedMember.mobile)}
+                  className="btn-rounded bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 flex-1"
+                >
+                  <Phone size={16} />
+                  Call
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
