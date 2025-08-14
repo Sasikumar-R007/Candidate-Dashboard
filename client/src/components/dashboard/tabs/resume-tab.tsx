@@ -81,14 +81,14 @@ export default function ResumeTab() {
                 </Button>
               </div>
               
-              {/* Resume Display - Controlled Height */}
-              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-white dark:bg-gray-800 max-h-96 overflow-y-auto">
+              {/* Resume Display - Matched Height */}
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-white dark:bg-gray-800 h-[500px] overflow-y-auto">
                 {profile?.resumeFile ? (
-                  <div className="w-full">
+                  <div className="w-full h-full">
                     <img
                       src={profile.resumeFile}
                       alt="Resume"
-                      className="w-full h-auto rounded shadow-md max-h-96 object-contain"
+                      className="w-full h-full rounded shadow-md object-contain"
                     />
                   </div>
                 ) : (
@@ -100,7 +100,7 @@ export default function ResumeTab() {
                       <p className="text-gray-500 mb-4">No resume image uploaded yet</p>
                       <Button
                         onClick={() => setShowResumeModal(true)}
-                        className="bg-blue-600 text-white hover:bg-blue-700"
+                        className="bg-blue-600 text-white hover:bg-blue-700 rounded-md"
                       >
                         Upload Resume Image
                       </Button>

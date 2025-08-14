@@ -48,18 +48,19 @@ export default function EditJobPreferencesModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-2xl max-h-96 overflow-y-auto">
+      <DialogContent className="w-full max-w-2xl max-h-[80vh] overflow-visible">
         <DialogHeader>
           <DialogTitle>Edit Job Preferences</DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div>
             <Label htmlFor="jobTypes">Job Types</Label>
             <Input
               id="jobTypes"
               {...form.register('jobTypes')}
               placeholder="Full-time, Part-time, Contract"
+              className="bg-gray-50 rounded-md border border-gray-200"
             />
           </div>
           
@@ -69,6 +70,7 @@ export default function EditJobPreferencesModal({
               id="salaryRange"
               {...form.register('salaryRange')}
               placeholder="$60,000 - $100,000"
+              className="bg-gray-50 rounded-md border border-gray-200"
             />
           </div>
           
@@ -78,6 +80,7 @@ export default function EditJobPreferencesModal({
               id="preferredLocations"
               {...form.register('preferredLocations')}
               placeholder="Remote, New York, San Francisco"
+              className="bg-gray-50 rounded-md border border-gray-200"
             />
           </div>
           
@@ -87,6 +90,7 @@ export default function EditJobPreferencesModal({
               id="availabilityDate"
               type="date"
               {...form.register('availabilityDate')}
+              className="bg-gray-50 rounded-md border border-gray-200"
             />
           </div>
           
@@ -97,6 +101,7 @@ export default function EditJobPreferencesModal({
               {...form.register('instructions')}
               rows={4}
               placeholder="Additional information for recruiters..."
+              className="bg-gray-50 rounded-md border border-gray-200"
             />
           </div>
           
@@ -105,12 +110,13 @@ export default function EditJobPreferencesModal({
               type="button" 
               variant="outline" 
               onClick={() => onOpenChange(false)}
+              className="rounded-md"
             >
               Cancel
             </Button>
             <Button 
               type="submit" 
-              className="bg-secondary-blue hover:bg-blue-600"
+              className="bg-secondary-blue hover:bg-blue-600 rounded-md"
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Saving...' : 'Save Changes'}

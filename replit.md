@@ -4,6 +4,8 @@ This is a dual-dashboard job portal web application featuring both candidate and
 
 **Migration Status**: Successfully migrated from Replit Agent to standard Replit environment on August 14, 2025. All functionality preserved with enhanced UI design for team leader dashboard components. Migration completed with working Admin dashboard implementation. All image upload features fully functional across all dashboards. Added admin-specific sidebar with "Report" option and replaced shield icons with crown icons for CEO role display.
 
+**Latest Migration Update (August 14, 2025)**: Successfully completed project migration from Replit Agent to standard Replit environment. All systems operational with Node.js backend, React frontend, and in-memory storage. Enhanced candidate dashboard UI with improved resume preview height matching and job preferences section centering with rounded borders and styled input fields.
+
 **Recent Updates (August 14, 2025)**: Completed comprehensive Admin dashboard implementation with all major sections:
 - Requirements section: Priority Distribution cards, detailed requirements table with criticality levels
 - Pipeline section: Multi-stage candidate tracking with closure reports matching team leader design  
