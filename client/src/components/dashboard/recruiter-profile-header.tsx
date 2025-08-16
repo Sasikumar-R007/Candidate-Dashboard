@@ -134,9 +134,9 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
   const displayProfile = currentProfile || profile;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
-      {/* Banner Section */}
-      <div className="relative h-32 bg-gradient-to-r from-orange-400 to-orange-600 rounded-t-lg overflow-hidden">
+    <div className="relative">
+      {/* Banner Background */}
+      <div className="h-56 bg-gradient-to-r from-orange-600 via-orange-500 to-orange-400 relative">
         {displayProfile.bannerImage && (
           <img 
             src={displayProfile.bannerImage} 
@@ -144,111 +144,133 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
             className="w-full h-full object-cover"
           />
         )}
-        <div className="absolute top-4 right-4 flex gap-2">
+
+        {/* Orange Pattern Background */}
+        <div className="absolute inset-0 opacity-30">
+          <div 
+            className="h-full w-full"
+            style={{
+              backgroundImage:
+                'repeating-linear-gradient(90deg, rgba(255,255,255,0.1) 0px, rgba(255,255,255,0.1) 2px, transparent 2px, transparent 12px)'
+            }}
+          ></div>
+        </div>
+
+        {/* Banner Upload Controls */}
+        <div className="absolute top-4 right-4 flex gap-2 z-20">
           <Button
-            variant="secondary"
-            size="sm"
-            className="bg-white/90 hover:bg-white text-gray-700 text-xs px-3 py-1"
             onClick={() => setShowBannerModal(true)}
+            className="bg-white/20 backdrop-blur-sm text-white hover:bg-white/30"
+            size="sm"
+            data-testid="button-change-banner"
           >
-            <i className="fas fa-camera mr-1"></i>
-            Change Banner
+            <i className="fas fa-camera mr-2"></i>Change Banner
           </Button>
+        </div>
+
+        {/* Profile Picture */}
+        <div className="absolute left-1/2 transform -translate-x-1/2 -bottom-16 z-30">
+          <div className="relative">
+            <img 
+              src={
+                displayProfile.profilePicture ||
+                "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150"
+              }
+              alt="Profile picture" 
+              className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
+            />
+            <button 
+              onClick={() => setShowProfileModal(true)}
+              className="absolute -bottom-1 -right-1 bg-orange-600 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-orange-700 transition-colors"
+              data-testid="button-change-profile-pic"
+            >
+              <i className="fas fa-camera text-xs"></i>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Profile Section */}
-      <div className="px-6 pb-6">
-        <div className="flex items-end justify-between -mt-12 mb-4">
-          {/* Profile Picture */}
-          <div className="relative">
-            <div className="w-24 h-24 rounded-full border-4 border-white dark:border-gray-800 overflow-hidden bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
-              {displayProfile.profilePicture ? (
-                <img 
-                  src={displayProfile.profilePicture} 
-                  alt="Profile" 
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <i className="fas fa-user text-gray-400 text-2xl"></i>
-              )}
-            </div>
-            <button
-              onClick={() => setShowProfileModal(true)}
-              className="absolute -bottom-1 -right-1 w-8 h-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full flex items-center justify-center hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              <i className="fas fa-camera text-xs text-gray-600 dark:text-gray-400"></i>
-            </button>
+      {/* Profile Information Card */}
+      <div className="bg-white dark:bg-gray-800 mx-6 pt-6 pb-8 px-6 shadow-lg rounded-b-xl relative z-10 mt-0">
+        <div className="flex items-start justify-between mb-6">
+          {/* Left side - Total Contribution */}
+          <div className="text-center">
+            <p className="text-sm text-gray-600 dark:text-gray-300 font-medium">Total Contribution</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-gray-100" data-testid="text-total-contribution-display">
+              ₹{displayProfile.totalContribution}
+            </p>
           </div>
 
-          {/* Actions */}
-          <div className="flex gap-2 items-center">
-            <button
+          {/* Right side - Social Icons, Theme Toggle and Edit Button */}
+          <div className="flex items-center gap-4">
+            <button 
               onClick={toggleTheme}
-              className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-              title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              className="text-gray-400 hover:text-gray-800 transition-colors p-2"
+              title="Toggle theme"
+              data-testid="button-toggle-theme"
             >
-              {isDarkMode ? (
-                <i className="fas fa-sun text-yellow-500"></i>
-              ) : (
-                <i className="fas fa-moon text-gray-600"></i>
-              )}
+              <i className={`fas ${isDarkMode ? 'fa-sun' : 'fa-moon'} text-xl`}></i>
             </button>
-            <button className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-              <i className="fab fa-linkedin text-blue-600"></i>
-            </button>
-            <Button
-              variant="outline"
-              size="sm"
+
+            <div className="flex gap-3">
+              <a href="#" className="text-gray-400 hover:text-blue-600 transition-colors" data-testid="link-linkedin">
+                <i className="fab fa-linkedin text-xl"></i>
+              </a>
+            </div>
+
+            <Button 
+              variant="outline" 
+              size="sm" 
               onClick={() => setShowEditModal(true)}
-              className="text-xs"
+              data-testid="button-edit-profile-header"
             >
-              Edit Profile
+              <i className="fas fa-edit mr-2"></i>
+              Edit profile
             </Button>
           </div>
         </div>
 
-        {/* Profile Info */}
-        <div className="space-y-4">
-          {/* Name and Role */}
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {displayProfile.name}
-            </h1>
-            <div className="flex items-center justify-center gap-2 mt-1">
-              <span className="text-gray-600 dark:text-gray-400 text-sm">
-                {displayProfile.role}
-              </span>
-              <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded font-medium">
-                {displayProfile.employeeId}
-              </span>
-            </div>
+        {/* Profile Info - Centered */}
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2" data-testid="text-profile-name-header">
+            {displayProfile.name}
+          </h2>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <p className="text-lg text-gray-700 dark:text-gray-300" data-testid="text-profile-role-header">
+              {displayProfile.role}
+            </p>
+            <span className="bg-blue-600 text-white text-sm px-3 py-1 rounded font-medium">
+              {displayProfile.employeeId}
+            </span>
           </div>
 
-          {/* Contact Info */}
-          <div className="flex justify-center items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-            <div className="flex items-center gap-1">
-              <i className="fas fa-phone text-red-500"></i>
+          {/* Contact Information */}
+          <div className="flex items-center justify-center gap-6 mb-2 text-gray-600 dark:text-gray-400">
+            <span className="flex items-center" data-testid="text-profile-phone-header">
+              <i className="fas fa-phone mr-2"></i>
               <span>{displayProfile.phone}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <i className="fas fa-envelope text-gray-500"></i>
+            </span>
+            <span className="flex items-center" data-testid="text-profile-email-header">
+              <i className="fas fa-envelope mr-2"></i>
               <span>{displayProfile.email}</span>
+            </span>
+          </div>
+
+          {/* Work Details */}
+          <div className="text-gray-600 dark:text-gray-400 mb-4">
+            <div className="flex items-center justify-center gap-4 text-sm mb-1">
+              <span data-testid="text-joining-date-header">
+                Joined: {displayProfile.joiningDate}
+              </span>
+              <span data-testid="text-department-header">
+                Department: {displayProfile.department}
+              </span>
             </div>
-          </div>
-
-          {/* Additional Details */}
-          <div className="text-center text-sm text-gray-500 dark:text-gray-400">
-            <div>Joining Date: {displayProfile.joiningDate}</div>
-            <div>Reporting to: {displayProfile.reportingTo}</div>
-          </div>
-        </div>
-
-        {/* Total Contribution */}
-        <div className="mt-4 text-center">
-          <div className="text-xs text-gray-500 dark:text-gray-400">Total Contribution</div>
-          <div className="text-lg font-bold text-gray-900 dark:text-white">
-            ₹{displayProfile.totalContribution}
+            <div className="text-sm">
+              <span data-testid="text-reporting-to-header">
+                Reports to: {displayProfile.reportingTo}
+              </span>
+            </div>
           </div>
         </div>
       </div>
