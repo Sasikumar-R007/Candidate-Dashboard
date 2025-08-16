@@ -7,10 +7,10 @@ interface RecruiterTabNavigationProps {
 
 export default function RecruiterTabNavigation({ activeTab, onTabChange }: RecruiterTabNavigationProps) {
   const tabs = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'candidates', label: 'Candidates' },
-    { id: 'interviews', label: 'Interviews' },
+    { id: 'updates', label: 'Updates' },
+    { id: 'requirements', label: 'Requirements' },
     { id: 'pipeline', label: 'Pipeline' },
+    { id: 'performance', label: 'Performance' },
   ];
 
   return (
@@ -23,7 +23,7 @@ export default function RecruiterTabNavigation({ activeTab, onTabChange }: Recru
               onClick={() => onTabChange(tab.id)}
               className={`py-3 px-1 border-b-2 font-medium transition-colors ${
                 activeTab === tab.id
-                  ? 'border-orange-500 text-orange-600 dark:text-orange-400'
+                  ? 'border-secondary-blue text-secondary-blue'
                   : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
               }`}
               data-testid={`tab-${tab.id}`}
@@ -38,7 +38,7 @@ export default function RecruiterTabNavigation({ activeTab, onTabChange }: Recru
       <div className="mt-4 flex justify-end gap-2">
         <Button 
           size="sm" 
-          className="bg-orange-600 hover:bg-orange-700 text-white rounded" 
+          className="bg-blue-600 hover:bg-blue-700 text-white rounded" 
           data-testid="button-upload-resume"
         >
           <i className="fas fa-upload mr-2"></i>
@@ -46,7 +46,7 @@ export default function RecruiterTabNavigation({ activeTab, onTabChange }: Recru
         </Button>
         <Button 
           size="sm" 
-          className="bg-orange-600 hover:bg-orange-700 text-white rounded" 
+          className="bg-blue-600 hover:bg-blue-700 text-white rounded" 
           data-testid="button-source-resume"
         >
           <i className="fas fa-download mr-2"></i>
