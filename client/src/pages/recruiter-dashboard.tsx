@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Sidebar from '@/components/dashboard/sidebar';
-import TeamLeaderProfileHeader from '@/components/dashboard/team-leader-profile-header';
+import RecruiterProfileHeader from '@/components/dashboard/recruiter-profile-header';
 import RecruiterTabNavigation from '@/components/dashboard/recruiter-tab-navigation';
 import { useQuery } from "@tanstack/react-query";
 
@@ -8,21 +8,21 @@ export default function RecruiterDashboard() {
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [activeTab, setActiveTab] = useState('updates');
 
-  // Mock recruiter profile data based on the image provided
-  const recruiterProfile = {
-    id: "rec-001",
-    name: "Kumaravel R",
-    role: "Talent Advisor",
-    employeeId: "STTA005",
-    phone: "9998887770",
-    email: "kumaravel@scaling.com",
-    joiningDate: "5/11/2023",
-    department: "Talent Advisory",
-    reportingTo: "Prakash Raj Raja",
-    totalContribution: "0",
-    bannerImage: null,
-    profilePicture: null
-  };
+  // Use API data for recruiter profile
+  const { data: recruiterProfile } = useQuery({
+    queryKey: ['/api/recruiter/profile'],
+  });
+
+  if (!recruiterProfile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600 mb-3"></div>
+          <div className="text-lg text-gray-600">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   const renderDashboardTabContent = () => {
     switch (activeTab) {
@@ -76,7 +76,7 @@ export default function RecruiterDashboard() {
       case 'dashboard':
         return (
           <>
-            <TeamLeaderProfileHeader profile={recruiterProfile} />
+            <RecruiterProfileHeader profile={recruiterProfile} />
             <RecruiterTabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
             <div className="flex-1 overflow-y-auto">
               {renderDashboardTabContent()}

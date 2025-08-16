@@ -482,6 +482,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ url });
   });
 
+  // Recruiter Dashboard API routes
+  // In-memory storage for recruiter profile to persist changes
+  let recruiterProfile = {
+    id: "rec-001",
+    name: "Kumaravel R",
+    role: "Talent Advisor",
+    employeeId: "STTA005",
+    phone: "9998887770",
+    email: "kumaravel@scaling.com",
+    joiningDate: "5/11/2023",
+    department: "Talent Advisory",
+    reportingTo: "Prakash Raj Raja",
+    totalContribution: "0",
+    bannerImage: null,
+    profilePicture: null
+  };
+
+  app.get("/api/recruiter/profile", (req, res) => {
+    res.json(recruiterProfile);
+  });
+
+  app.patch("/api/recruiter/profile", (req, res) => {
+    const updates = req.body;
+    
+    // Merge updates with existing profile to preserve other fields
+    recruiterProfile = {
+      ...recruiterProfile,
+      ...updates
+    };
+    
+    res.json(recruiterProfile);
+  });
+
+  // Recruiter file upload endpoints
+  app.post("/api/recruiter/upload/banner", upload.single('file'), (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+    
+    const url = `/uploads/${req.file.filename}`;
+    res.json({ url });
+  });
+
+  app.post("/api/recruiter/upload/profile", upload.single('file'), (req, res) => {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+    
+    const url = `/uploads/${req.file.filename}`;
+    res.json({ url });
+  });
+
 
   const httpServer = createServer(app);
   return httpServer;
