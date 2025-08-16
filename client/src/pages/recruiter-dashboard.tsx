@@ -4,12 +4,27 @@ import RecruiterProfileHeader from '@/components/dashboard/recruiter-profile-hea
 import RecruiterTabNavigation from '@/components/dashboard/recruiter-tab-navigation';
 import { useQuery } from "@tanstack/react-query";
 
+interface RecruiterProfile {
+  id: string;
+  name: string;
+  role: string;
+  employeeId: string;
+  phone: string;
+  email: string;
+  joiningDate: string;
+  department: string;
+  reportingTo: string;
+  totalContribution: string;
+  bannerImage?: string | null;
+  profilePicture?: string | null;
+}
+
 export default function RecruiterDashboard() {
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [activeTab, setActiveTab] = useState('updates');
 
   // Use API data for recruiter profile
-  const { data: recruiterProfile } = useQuery({
+  const { data: recruiterProfile } = useQuery<RecruiterProfile>({
     queryKey: ['/api/recruiter/profile'],
   });
 

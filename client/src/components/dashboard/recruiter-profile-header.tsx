@@ -6,6 +6,7 @@ import FileUploadModal from './modals/file-upload-modal';
 import TeamLeaderEditProfileModal from './modals/team-leader-edit-profile-modal';
 
 interface RecruiterProfile {
+  id: string;
   name: string;
   role: string;
   employeeId: string;
@@ -254,24 +255,24 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
 
       {/* Modals */}
       <FileUploadModal
-        isOpen={showBannerModal}
-        onClose={() => setShowBannerModal(false)}
+        open={showBannerModal}
+        onOpenChange={setShowBannerModal}
         onUpload={handleBannerUpload}
         title="Upload Banner Image"
-        acceptedTypes="image/*"
+        accept="image/*"
       />
 
       <FileUploadModal
-        isOpen={showProfileModal}
-        onClose={() => setShowProfileModal(false)}
+        open={showProfileModal}
+        onOpenChange={setShowProfileModal}
         onUpload={handleProfilePictureUpload}
         title="Upload Profile Picture"
-        acceptedTypes="image/*"
+        accept="image/*"
       />
 
       <TeamLeaderEditProfileModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
         profile={displayProfile}
         onUpdate={setCurrentProfile}
         apiEndpoint="/api/recruiter/profile"
