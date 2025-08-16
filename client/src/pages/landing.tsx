@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserIcon, UsersIcon, Crown } from "lucide-react";
+import { UserIcon, UsersIcon, Crown, UserSearchIcon } from "lucide-react";
 
 export default function Landing() {
   return (
@@ -16,7 +16,7 @@ export default function Landing() {
           </p>
         </div>
         
-        <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
           {/* Candidate Dashboard Card */}
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="text-center pb-4">
@@ -81,6 +81,30 @@ export default function Landing() {
                   data-testid="button-admin-dashboard"
                 >
                   Enter Admin Dashboard
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* Recruiter Dashboard Card */}
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="text-center pb-4">
+              <div className="mx-auto mb-4 p-4 bg-orange-100 dark:bg-orange-900 rounded-full w-16 h-16 flex items-center justify-center">
+                <UserSearchIcon className="h-8 w-8 text-orange-600 dark:text-orange-400" />
+              </div>
+              <CardTitle className="text-xl">Recruiter Dashboard</CardTitle>
+              <CardDescription>
+                Manage candidates, schedule interviews, and track recruitment pipeline
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/recruiter" data-testid="link-recruiter-dashboard">
+                <Button 
+                  className="w-full bg-orange-600 hover:bg-orange-700 text-white" 
+                  size="lg"
+                  data-testid="button-recruiter-dashboard"
+                >
+                  Enter Recruiter Dashboard
                 </Button>
               </Link>
             </CardContent>
