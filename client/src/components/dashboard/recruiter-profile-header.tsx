@@ -221,7 +221,7 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
           <div className="flex items-center gap-4">
             <button 
               onClick={toggleTheme}
-              className="text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors p-3 bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
+              className="text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center"
               title="Toggle theme"
               data-testid="button-toggle-theme"
             >
@@ -229,7 +229,7 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
             </button>
 
             <div className="flex gap-3">
-              <a href="#" className="text-gray-400 hover:text-blue-600 transition-colors p-3 bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600" data-testid="link-linkedin">
+              <a href="#" className="text-gray-400 hover:text-blue-600 transition-colors w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center justify-center" data-testid="link-linkedin">
                 <i className="fab fa-linkedin text-lg"></i>
               </a>
             </div>
@@ -238,7 +238,7 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
               variant="outline" 
               size="sm" 
               onClick={() => setShowEditModal(true)}
-              className="rounded-full px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 border-gray-300 dark:border-gray-600"
+              className="rounded-full px-4 py-2 h-10 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 border-gray-300 dark:border-gray-600"
               data-testid="button-edit-profile-header"
             >
               <i className="fas fa-edit mr-2"></i>
@@ -253,16 +253,16 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
             {displayProfile.name}
           </h2>
           <div className="flex items-center justify-center gap-2 mb-2">
-            <p className="text-sm font-bold text-gray-700 dark:text-gray-300" data-testid="text-profile-role-header">
+            <p className="text-base font-bold text-gray-700 dark:text-gray-300" data-testid="text-profile-role-header">
               {displayProfile.role}
             </p>
-            <span className="bg-gray-100 dark:bg-gray-200 text-blue-800 dark:text-blue-900 text-sm px-3 py-1 rounded font-bold">
+            <span className="bg-gray-100 dark:bg-gray-200 text-blue-800 dark:text-blue-900 text-base px-3 py-1 rounded font-bold">
               {displayProfile.employeeId}
             </span>
           </div>
 
           {/* Contact Information */}
-          <div className="flex items-center justify-center gap-6 mb-2 text-gray-600 dark:text-gray-400 text-sm">
+          <div className="flex items-center justify-center gap-6 mb-2 text-gray-600 dark:text-gray-400 text-base">
             <span className="flex items-center" data-testid="text-profile-phone-header">
               <i className="fas fa-phone mr-2"></i>
               <span>{displayProfile.phone}</span>
@@ -274,7 +274,7 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
           </div>
 
           {/* Work Details */}
-          <div className="text-gray-600 dark:text-gray-400 mb-4 text-xs">
+          <div className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
             <div className="flex items-center justify-center gap-4 mb-1">
               <span data-testid="text-joining-date-header">
                 Joined: {displayProfile.joiningDate}
