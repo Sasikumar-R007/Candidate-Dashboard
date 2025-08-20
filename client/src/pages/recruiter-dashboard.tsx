@@ -143,6 +143,25 @@ export default function RecruiterDashboard() {
   const [showReasonModal, setShowReasonModal] = useState(false);
   const [reason, setReason] = useState('');
   
+  // Requirements modal states
+  const [showModal, setShowModal] = useState(false);
+  const [requirementCounts, setRequirementCounts] = useState<{[reqId: string]: {[date: string]: string}}>({});
+  const [openCalendarId, setOpenCalendarId] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState('');
+  const [inputCount, setInputCount] = useState('');
+  const [calendarStep, setCalendarStep] = useState<'calendar' | 'input'>('calendar');
+  
+  const getTotalCountForReq = (reqId: string) => {
+    const counts = requirementCounts[reqId] || {};
+    return Object.values(counts).reduce((total, count) => total + parseInt(count || '0'), 0);
+  };
+  
+  const getMostRecentDateForReq = (reqId: string) => {
+    const counts = requirementCounts[reqId] || {};
+    const dates = Object.keys(counts).sort().reverse();
+    return dates[0] || null;
+  };
+  
   const statuses = ['Shortlisted', 'In-Process', 'Interview Scheduled', 'Interview On-Going', 'Final Round', 'HR Round', 'Selected', 'Screened Out'];
   const rejectionReasons = ['Skill mismatch', 'Lack of communication', 'Inadequate experience', 'Unprofessional behavior', 'Other'];
 
@@ -151,7 +170,6 @@ export default function RecruiterDashboard() {
     queryKey: ['/api/recruiter/profile'],
   });
   
-  // Helper functions
   const getToday = () => {
     const today = new Date();
     return today.toISOString().split('T')[0];
@@ -426,8 +444,18 @@ export default function RecruiterDashboard() {
                         <td className="p-3 text-gray-900 dark:text-gray-200">{req.contactPerson}</td>
                         <td className="p-3 text-gray-900 dark:text-gray-200">{req.contactPersonEmail}</td>
                         <td className="p-3">
-                          <button className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
-                            Set
+                          <button 
+                            className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                            onClick={() => {
+                              setOpenCalendarId(req.id.toString());
+                              const mostRecentDate = getMostRecentDateForReq(req.id.toString());
+                              setSelectedDate(mostRecentDate || getToday());
+                              setInputCount('');
+                              setCalendarStep('calendar');
+                              setShowModal(true);
+                            }}
+                          >
+                            {getTotalCountForReq(req.id.toString()) === 0 ? 'Set' : getTotalCountForReq(req.id.toString())}
                           </button>
                         </td>
                       </tr>
@@ -448,6 +476,109 @@ export default function RecruiterDashboard() {
                 </button>
               </div>
             </div>
+            
+            {/* Count Modal */}
+            {showModal && (
+              <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-lg max-w-md w-full mx-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-200">
+                      Set Requirements Count
+                    </h2>
+                    <button
+                      onClick={() => setShowModal(false)}
+                      className="text-red-500 hover:text-red-700 font-bold text-lg"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  
+                  {calendarStep === 'calendar' && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-200">
+                        Select Date
+                      </h3>
+                      <div className="mb-4">
+                        <input
+                          type="date"
+                          value={selectedDate}
+                          onChange={(e) => setSelectedDate(e.target.value)}
+                          className="w-full border border-gray-300 dark:border-gray-600 px-3 py-2 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200"
+                        />
+                      </div>
+                      <div className="flex gap-4 justify-end">
+                        <button
+                          className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+                          onClick={() => setShowModal(false)}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                          onClick={() => setCalendarStep('input')}
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {calendarStep === 'input' && (
+                    <div>
+                      <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-200">
+                        Add Count for {selectedDate}
+                      </h3>
+                      <div className="mb-4">
+                        <input
+                          type="number"
+                          value={inputCount}
+                          onChange={(e) => setInputCount(e.target.value)}
+                          placeholder="Enter count to add"
+                          className="w-full border border-gray-300 dark:border-gray-600 px-3 py-2 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-200"
+                          min="0"
+                          autoFocus
+                        />
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                        This will be added to the existing count for this date.
+                      </div>
+                      <div className="flex gap-4 justify-end">
+                        <button
+                          className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+                          onClick={() => setCalendarStep('calendar')}
+                        >
+                          Back
+                        </button>
+                        <button
+                          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                          onClick={() => {
+                            if (openCalendarId && inputCount) {
+                              const currentCount = parseInt(requirementCounts[openCalendarId]?.[selectedDate] || '0');
+                              const newCount = parseInt(inputCount) || 0;
+                              const totalCount = currentCount + newCount;
+
+                              setRequirementCounts(prev => ({
+                                ...prev,
+                                [openCalendarId]: {
+                                  ...(prev[openCalendarId] || {}),
+                                  [selectedDate]: totalCount.toString()
+                                }
+                              }));
+                              setShowModal(false);
+                              setOpenCalendarId(null);
+                              setCalendarStep('calendar');
+                              setInputCount('');
+                            }
+                          }}
+                        >
+                          Save
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         );
       case 'pipeline':
