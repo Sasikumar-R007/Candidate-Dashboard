@@ -225,22 +225,13 @@ export default function RecruiterDashboard() {
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Updates</h2>
               <div className="flex gap-2">
-                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0H8m8 0v6l-3-3-3 3V6" />
-                  </svg>
+                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors">
                   Post Jobs
                 </button>
-                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
+                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors">
                   Upload Resume
                 </button>
-                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors flex items-center gap-2">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors">
                   Source Resume
                 </button>
               </div>
@@ -279,35 +270,31 @@ export default function RecruiterDashboard() {
               {/* Interview Tracker Card */}
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
                 <div className="text-center mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Interview Tracker</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Interview Tracker</h3>
                 </div>
-                <div className="flex justify-between items-center mb-2">
-                  <div className="text-center">
+                <div className="flex justify-between items-center">
+                  <div className="text-center flex-1">
                     <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Today's Schedule</div>
-                    <div className="text-3xl font-bold text-gray-900 dark:text-white">{todaysInterviews.length}</div>
-                    <div className="flex justify-center">
-                      <button 
-                        onClick={() => setShowInterviewModal(true)}
-                        className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded font-medium transition-colors"
-                      >
-                        Add
-                      </button>
-                    </div>
+                    <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{todaysInterviews.length}</div>
+                    <button 
+                      onClick={() => setShowInterviewModal(true)}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded font-medium transition-colors"
+                    >
+                      Add
+                    </button>
                   </div>
-                  <div className="flex items-center px-2">
-                    <div className="h-16 w-px bg-gray-300 dark:bg-gray-600"></div>
+                  <div className="flex items-center px-4">
+                    <div className="h-20 w-px bg-gray-300 dark:bg-gray-600"></div>
                   </div>
-                  <div className="text-center">
+                  <div className="text-center flex-1">
                     <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Pending cases</div>
-                    <div className="text-3xl font-bold text-gray-900 dark:text-white">9</div>
-                    <div className="flex justify-center">
-                      <button 
-                        onClick={() => setShowTodayInterviewsModal(true)}
-                        className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded font-medium transition-colors"
-                      >
-                        View
-                      </button>
-                    </div>
+                    <div className="text-3xl font-bold text-gray-900 dark:text-white mb-2">9</div>
+                    <button 
+                      onClick={() => setShowTodayInterviewsModal(true)}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded font-medium transition-colors"
+                    >
+                      View
+                    </button>
                   </div>
                 </div>
               </div>
@@ -382,78 +369,83 @@ export default function RecruiterDashboard() {
           <div className="p-6">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Requirements</h2>
             
-            {/* Priority Distribution Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                <div className="text-center">
-                  <div className="text-red-600 text-3xl font-bold mb-2">
-                    {activeRequirements.filter(r => r.criticality === 'High').length}
-                  </div>
-                  <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">HIGH PRIORITY</h3>
+            {/* Requirements Boxes */}
+            <div className="grid grid-cols-3 gap-4 mb-8">
+              {[
+                { title: "Total Requirements", count: 10 },
+                { title: "High Priority", count: 3 },
+                { title: "Robust Requirements", count: 4 },
+                { title: "Idle Requirements", count: 2 },
+                { title: "Delivery Pending", count: 3 },
+                { title: "Easy Requirements", count: 2 },
+              ].map((box, index) => (
+                <div
+                  key={index}
+                  className="bg-white dark:bg-gray-800 shadow-sm rounded-lg p-4 border border-gray-200 dark:border-gray-700 flex flex-col justify-between h-24 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+                >
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    {box.title}
+                  </h3>
+                  <p className="text-4xl font-bold text-blue-700 dark:text-blue-400 self-end">
+                    {box.count}
+                  </p>
                 </div>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                <div className="text-center">
-                  <div className="text-blue-600 text-3xl font-bold mb-2">
-                    {activeRequirements.filter(r => r.criticality === 'Medium').length}
-                  </div>
-                  <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">MEDIUM PRIORITY</h3>
-                </div>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-                <div className="text-center">
-                  <div className="text-gray-600 text-3xl font-bold mb-2">
-                    {activeRequirements.filter(r => r.criticality === 'Low').length}
-                  </div>
-                  <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">LOW PRIORITY</h3>
-                </div>
-              </div>
+              ))}
             </div>
             
-            {/* Requirements Table */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Active Requirements</h3>
-              </div>
+            {/* Deliverables Table */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Deliverables</h3>
+              
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-900">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Position</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Company</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Contact Person</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Email</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Criticality</th>
+                <table className="min-w-full table-auto border-collapse">
+                  <thead>
+                    <tr className="bg-gray-100 dark:bg-gray-700 text-left">
+                      <th className="p-3 text-gray-900 dark:text-gray-200">Positions</th>
+                      <th className="p-3 text-gray-900 dark:text-gray-200">Criticality</th>
+                      <th className="p-3 text-gray-900 dark:text-gray-200">Company</th>
+                      <th className="p-3 text-gray-900 dark:text-gray-200">SPOC</th>
+                      <th className="p-3 text-gray-900 dark:text-gray-200">SPOC Email</th>
+                      <th className="p-3 text-gray-900 dark:text-gray-200">Count</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {activeRequirements.map((req) => (
-                      <tr key={req.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                          {req.position}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                          {req.company}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
-                          {req.contactPerson}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 hover:text-blue-800">
-                          <a href={`mailto:${req.contactPersonEmail}`}>{req.contactPersonEmail}</a>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-3 py-1 rounded text-xs font-semibold ${
-                            req.criticality === 'High' ? 'bg-red-100 text-red-700' :
-                            req.criticality === 'Medium' ? 'bg-blue-100 text-blue-700' :
-                            'bg-gray-200 text-gray-700'
+                  <tbody>
+                    {activeRequirements.slice(0, 5).map((req) => (
+                      <tr key={req.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="p-3 text-blue-600 dark:text-blue-400 font-medium">{req.position}</td>
+                        <td className="p-3">
+                          <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                            req.criticality === 'High' ? 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400' :
+                            req.criticality === 'Medium' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400' :
+                            'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
                           }`}>
-                            {req.criticality.toUpperCase()}
+                            {req.criticality}
                           </span>
+                        </td>
+                        <td className="p-3 text-gray-900 dark:text-gray-200">{req.company}</td>
+                        <td className="p-3 text-gray-900 dark:text-gray-200">{req.contactPerson}</td>
+                        <td className="p-3 text-gray-900 dark:text-gray-200">{req.contactPersonEmail}</td>
+                        <td className="p-3">
+                          <button className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
+                            Set
+                          </button>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+              
+              {/* View More/Less and Archive Buttons */}
+              <div className="flex justify-end gap-4 mt-4">
+                {activeRequirements.length > 5 && (
+                  <button className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    View More
+                  </button>
+                )}
+                <button className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+                  Req-Archives
+                </button>
               </div>
             </div>
           </div>
