@@ -61,6 +61,60 @@ export default function RecruiterDashboard() {
     { id: 8, position: 'Data Analyst', criticality: 'Medium', company: 'InsightSoft', contactPerson: 'Mia', contactPersonEmail: 'mia@corp.com' }
   ]);
   
+  // Performance data
+  const [performanceData] = useState([
+    {
+      candidate: "Aarav",
+      position: "Frontend Developer",
+      client: "TechCorp",
+      offeredOn: "06-06-2025",
+      joinedOn: "06-06-2025",
+      quarter: "FMA",
+      closureValue: "1,52,500",
+      incentive: "3000",
+    },
+    {
+      candidate: "Arjun",
+      position: "UI/UX Designer",
+      client: "Designify",
+      offeredOn: "08-06-2025",
+      joinedOn: "08-06-2025",
+      quarter: "MJJ",
+      closureValue: "4,50,000",
+      incentive: "6000",
+    },
+    {
+      candidate: "Shaurya",
+      position: "Backend Developer",
+      client: "CodeLabs",
+      offeredOn: "20-06-2025",
+      joinedOn: "20-06-2025",
+      quarter: "ASO",
+      closureValue: "3,50,000",
+      incentive: "3000",
+    },
+    {
+      candidate: "Vihaan",
+      position: "QA Tester",
+      client: "AppLogic",
+      offeredOn: "01-07-2025",
+      joinedOn: "01-07-2025",
+      quarter: "NDJ",
+      closureValue: "2,00,000",
+      incentive: "3000",
+    },
+    {
+      candidate: "Aditya",
+      position: "Mobile App Developer",
+      client: "Bug Catchers",
+      offeredOn: "23-07-2025",
+      joinedOn: "23-07-2025",
+      quarter: "NDJ",
+      closureValue: "1,75,000",
+      incentive: "3000",
+    },
+  ]);
+  
   // Active Candidates Management
   const [activeCandidates, setActiveCandidates] = useState<Candidate[]>([
     { id: 'cand001', name: 'John Doe', jobId: 'job001', job: 'Frontend Developer', company: 'TechCorp', status: 'Shortlisted' },
@@ -167,16 +221,13 @@ export default function RecruiterDashboard() {
       case 'updates':
         return (
           <div className="p-6">
-            {/* Header with action buttons */}
+            {/* Header with action button */}
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Updates</h2>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-4">
                 <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition-colors">
                   Post Jobs
                 </button>
-                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition-colors">
-                  Upload Resume
-                </button>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Updates</h2>
               </div>
             </div>
 
@@ -392,8 +443,112 @@ export default function RecruiterDashboard() {
         return (
           <div className="p-6">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Pipeline</h2>
-            <div className="text-gray-600 dark:text-gray-400">
-              Pipeline content will be implemented here
+            
+            {/* Summary Cards */}
+            <div className="grid grid-cols-4 gap-4 mb-8">
+              <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg cursor-pointer">
+                <div className="text-gray-500 dark:text-gray-400 text-sm">Resume processed</div>
+                <div className="text-4xl font-bold text-gray-900 dark:text-white">20</div>
+              </div>
+              <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg cursor-pointer">
+                <div className="text-gray-500 dark:text-gray-400 text-sm">Recruitment worked</div>
+                <div className="text-4xl font-bold text-gray-900 dark:text-white">12</div>
+              </div>
+              <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg cursor-pointer">
+                <div className="text-gray-500 dark:text-gray-400 text-sm">Feedback pending</div>
+                <div className="text-4xl font-bold text-gray-900 dark:text-white">8</div>
+              </div>
+              <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg cursor-pointer">
+                <div className="text-gray-500 dark:text-gray-400 text-sm">Assignment cleared</div>
+                <div className="text-4xl font-bold text-gray-900 dark:text-white">10</div>
+              </div>
+            </div>
+
+            {/* Pipeline Grid */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+              <div className="grid grid-cols-7 gap-4 text-center font-semibold mb-4 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-gray-700 p-3 rounded">
+                <div>Level 1</div>
+                <div>Level 2</div>
+                <div>Level 3</div>
+                <div>Final Round</div>
+                <div>HR Round</div>
+                <div>Offer Stage</div>
+                <div>Closure</div>
+              </div>
+
+              <div className="grid grid-cols-7 gap-4 space-y-4">
+                {/* Keerthana */}
+                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Keerthana</div>
+                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Keerthana</div>
+                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Keerthana</div>
+                <div className="p-2 bg-yellow-100 text-yellow-800 rounded shadow-sm text-sm text-center">Keerthana</div>
+                <div className="p-2 bg-yellow-100 text-yellow-800 rounded shadow-sm text-sm text-center">Keerthana</div>
+                <div className="p-2 bg-green-100 text-green-800 rounded shadow-sm text-sm text-center">Keerthana</div>
+                <div className="p-2 bg-green-100 text-green-800 rounded shadow-sm text-sm text-center">Keerthana</div>
+
+                {/* Vishnu */}
+                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Vishnu</div>
+                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Vishnu</div>
+                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Vishnu</div>
+                <div className="p-2 bg-yellow-100 text-yellow-800 rounded shadow-sm text-sm text-center">Vishnu</div>
+                <div className="p-2 bg-yellow-100 text-yellow-800 rounded shadow-sm text-sm text-center">Vishnu</div>
+                <div className="p-2 bg-green-100 text-green-800 rounded shadow-sm text-sm text-center">Vishnu</div>
+                <div className="p-2 bg-green-100 text-green-800 rounded shadow-sm text-sm text-center">Vishnu</div>
+
+                {/* Chanakya */}
+                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Chanakya</div>
+                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Chanakya</div>
+                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Chanakya</div>
+                <div className="p-2 bg-yellow-100 text-yellow-800 rounded shadow-sm text-sm text-center">Chanakya</div>
+                <div className="p-2 bg-yellow-100 text-yellow-800 rounded shadow-sm text-sm text-center">Chanakya</div>
+                <div className="p-2"></div>
+                <div className="p-2"></div>
+
+                {/* Adhya */}
+                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Adhya</div>
+                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Adhya</div>
+                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Adhya</div>
+                <div className="p-2 bg-yellow-100 text-yellow-800 rounded shadow-sm text-sm text-center">Adhya</div>
+                <div className="p-2"></div>
+                <div className="p-2"></div>
+                <div className="p-2"></div>
+
+                {/* Vanshika */}
+                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Vanshika</div>
+                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Vanshika</div>
+                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Vanshika</div>
+                <div className="p-2"></div>
+                <div className="p-2"></div>
+                <div className="p-2"></div>
+                <div className="p-2"></div>
+
+                {/* Reyansh */}
+                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Reyansh</div>
+                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Reyansh</div>
+                <div className="p-2"></div>
+                <div className="p-2"></div>
+                <div className="p-2"></div>
+                <div className="p-2"></div>
+                <div className="p-2"></div>
+
+                {/* Shaurya */}
+                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Shaurya</div>
+                <div className="p-2"></div>
+                <div className="p-2"></div>
+                <div className="p-2"></div>
+                <div className="p-2"></div>
+                <div className="p-2"></div>
+                <div className="p-2"></div>
+
+                {/* Vihana */}
+                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Vihana</div>
+                <div className="p-2"></div>
+                <div className="p-2"></div>
+                <div className="p-2"></div>
+                <div className="p-2"></div>
+                <div className="p-2"></div>
+                <div className="p-2"></div>
+              </div>
             </div>
           </div>
         );
@@ -401,8 +556,86 @@ export default function RecruiterDashboard() {
         return (
           <div className="p-6">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Performance</h2>
-            <div className="text-gray-600 dark:text-gray-400">
-              Performance content will be implemented here
+            
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg cursor-pointer">
+                <div className="text-lg font-semibold text-blue-700 dark:text-blue-400 mb-1">Tenure</div>
+                <div className="text-3xl font-bold text-gray-800 dark:text-white">4</div>
+                <div className="text-red-500 text-lg font-medium">Quarters</div>
+              </div>
+              
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg cursor-pointer">
+                <div className="text-lg font-semibold text-blue-700 dark:text-blue-400 mb-1">Total Closures</div>
+                <div className="text-3xl font-bold text-gray-800 dark:text-white mt-2">12</div>
+              </div>
+              
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg cursor-pointer">
+                <div className="text-lg font-semibold text-blue-700 dark:text-blue-400 mb-1">Recent Closure</div>
+                <div className="text-lg font-bold text-gray-500 dark:text-gray-300">Adhitya</div>
+                <div className="text-red-500 text-lg font-medium">Tracx</div>
+              </div>
+              
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 text-center hover:shadow-lg cursor-pointer">
+                <div className="text-lg font-semibold text-blue-700 dark:text-blue-400 mb-1">Last Closure</div>
+                <div className="text-lg font-bold text-gray-500 dark:text-gray-300 mt-3">1 Month 15 Days</div>
+              </div>
+            </div>
+            
+            {/* Performance Table */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Closure Performance</h3>
+              </div>
+              
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead className="bg-gray-50 dark:bg-gray-900">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Candidate</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Position</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Client</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Offered On</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Joined On</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Quarter</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Closure Value</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Incentive</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {performanceData.map((row, index) => (
+                      <tr key={index} className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                        index % 2 === 1 ? 'bg-gray-50 dark:bg-gray-900' : ''
+                      }`}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                          {row.candidate}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                          {row.position}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                          {row.client}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                          {row.offeredOn}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                          {row.joinedOn}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                          {row.quarter}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                          ₹{row.closureValue}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                          ₹{row.incentive}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         );
