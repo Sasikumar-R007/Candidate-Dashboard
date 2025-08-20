@@ -253,16 +253,16 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
             {displayProfile.name}
           </h2>
           <div className="flex items-center justify-center gap-2 mb-2">
-            <p className="text-lg text-gray-700 dark:text-gray-300" data-testid="text-profile-role-header">
+            <p className="text-sm font-bold text-gray-700 dark:text-gray-300" data-testid="text-profile-role-header">
               {displayProfile.role}
             </p>
-            <span className="bg-gray-100 dark:bg-gray-200 text-blue-800 dark:text-blue-900 text-sm px-3 py-1 rounded font-medium">
+            <span className="bg-gray-100 dark:bg-gray-200 text-blue-800 dark:text-blue-900 text-sm px-3 py-1 rounded font-bold">
               {displayProfile.employeeId}
             </span>
           </div>
 
           {/* Contact Information */}
-          <div className="flex items-center justify-center gap-6 mb-2 text-gray-600 dark:text-gray-400">
+          <div className="flex items-center justify-center gap-6 mb-2 text-gray-600 dark:text-gray-400 text-sm">
             <span className="flex items-center" data-testid="text-profile-phone-header">
               <i className="fas fa-phone mr-2"></i>
               <span>{displayProfile.phone}</span>
@@ -274,8 +274,8 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
           </div>
 
           {/* Work Details */}
-          <div className="text-gray-600 dark:text-gray-400 mb-4">
-            <div className="flex items-center justify-center gap-4 text-sm mb-1">
+          <div className="text-gray-600 dark:text-gray-400 mb-4 text-xs">
+            <div className="flex items-center justify-center gap-4 mb-1">
               <span data-testid="text-joining-date-header">
                 Joined: {displayProfile.joiningDate}
               </span>
@@ -283,7 +283,7 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
                 Department: {displayProfile.department}
               </span>
             </div>
-            <div className="text-sm">
+            <div>
               <span data-testid="text-reporting-to-header">
                 Reports to: {displayProfile.reportingTo}
               </span>
@@ -315,8 +315,6 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
         open={showEditModal}
         onOpenChange={setShowEditModal}
         profile={displayProfile}
-        onUpdate={setCurrentProfile}
-        apiEndpoint="/api/recruiter/profile"
       />
     </div>
   );
