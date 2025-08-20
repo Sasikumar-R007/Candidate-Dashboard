@@ -33,26 +33,6 @@ export default function RecruiterTabNavigation({ activeTab, onTabChange }: Recru
           ))}
         </nav>
       </div>
-      
-      {/* Action Buttons */}
-      <div className="mt-4 flex justify-end gap-2">
-        <Button 
-          size="sm" 
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded" 
-          data-testid="button-upload-resume"
-        >
-          <i className="fas fa-upload mr-2"></i>
-          Upload Resume
-        </Button>
-        <Button 
-          size="sm" 
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded" 
-          data-testid="button-source-resume"
-        >
-          <i className="fas fa-download mr-2"></i>
-          Source Resume
-        </Button>
-      </div>
     </div>
   );
 }
