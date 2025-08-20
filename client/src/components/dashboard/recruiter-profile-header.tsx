@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/theme-context';
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from '@tanstack/react-query';
 import FileUploadModal from './modals/file-upload-modal';
 import TeamLeaderEditProfileModal from './modals/team-leader-edit-profile-modal';
 
@@ -29,11 +30,15 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentProfile, setCurrentProfile] = useState(profile);
+  const [isBannerUploading, setIsBannerUploading] = useState(false);
+  const [isProfileUploading, setIsProfileUploading] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   const { isDarkMode, toggleTheme } = useTheme();
 
   const handleBannerUpload = async (file: File) => {
+    setIsBannerUploading(true);
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -68,6 +73,9 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
       setCurrentProfile(updatedProfile);
       setShowBannerModal(false);
       
+      // Invalidate and refetch recruiter profile to ensure persistence
+      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/profile'] });
+      
       toast({
         title: "Success",
         description: "Banner image uploaded successfully!",
@@ -79,10 +87,13 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
         description: "Failed to upload banner image. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsBannerUploading(false);
     }
   };
 
   const handleProfilePictureUpload = async (file: File) => {
+    setIsProfileUploading(true);
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -117,6 +128,9 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
       setCurrentProfile(updatedProfile);
       setShowProfileModal(false);
       
+      // Invalidate and refetch recruiter profile to ensure persistence
+      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/profile'] });
+      
       toast({
         title: "Success",
         description: "Profile picture uploaded successfully!",
@@ -128,6 +142,8 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
         description: "Failed to upload profile picture. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsProfileUploading(false);
     }
   };
 
@@ -205,16 +221,16 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
           <div className="flex items-center gap-4">
             <button 
               onClick={toggleTheme}
-              className="text-gray-400 hover:text-gray-800 transition-colors p-2"
+              className="text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors p-3 bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
               title="Toggle theme"
               data-testid="button-toggle-theme"
             >
-              <i className={`fas ${isDarkMode ? 'fa-sun' : 'fa-moon'} text-xl`}></i>
+              <i className={`fas ${isDarkMode ? 'fa-sun' : 'fa-moon'} text-lg`}></i>
             </button>
 
             <div className="flex gap-3">
-              <a href="#" className="text-gray-400 hover:text-blue-600 transition-colors" data-testid="link-linkedin">
-                <i className="fab fa-linkedin text-xl"></i>
+              <a href="#" className="text-gray-400 hover:text-blue-600 transition-colors p-3 bg-gray-100 dark:bg-gray-700 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600" data-testid="link-linkedin">
+                <i className="fab fa-linkedin text-lg"></i>
               </a>
             </div>
 
@@ -222,6 +238,7 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
               variant="outline" 
               size="sm" 
               onClick={() => setShowEditModal(true)}
+              className="rounded-full px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 border-gray-300 dark:border-gray-600"
               data-testid="button-edit-profile-header"
             >
               <i className="fas fa-edit mr-2"></i>
@@ -239,7 +256,7 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
             <p className="text-lg text-gray-700 dark:text-gray-300" data-testid="text-profile-role-header">
               {displayProfile.role}
             </p>
-            <span className="bg-blue-600 text-white text-sm px-3 py-1 rounded font-medium">
+            <span className="bg-gray-100 dark:bg-gray-200 text-blue-800 dark:text-blue-900 text-sm px-3 py-1 rounded font-medium">
               {displayProfile.employeeId}
             </span>
           </div>
@@ -282,6 +299,7 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
         onUpload={handleBannerUpload}
         title="Upload Banner Image"
         accept="image/*"
+        isUploading={isBannerUploading}
       />
 
       <FileUploadModal
@@ -290,6 +308,7 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
         onUpload={handleProfilePictureUpload}
         title="Upload Profile Picture"
         accept="image/*"
+        isUploading={isProfileUploading}
       />
 
       <TeamLeaderEditProfileModal
