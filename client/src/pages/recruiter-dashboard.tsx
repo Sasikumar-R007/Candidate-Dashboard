@@ -221,12 +221,20 @@ export default function RecruiterDashboard() {
       case 'updates':
         return (
           <div className="p-6">
-            {/* Header with action button */}
+            {/* Header with action buttons */}
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Updates</h2>
-              <button className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors">
-                Post Jobs
-              </button>
+              <div className="flex gap-2">
+                <button className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors">
+                  Post Jobs
+                </button>
+                <button className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors">
+                  Upload Resume
+                </button>
+                <button className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors">
+                  Source Resume
+                </button>
+              </div>
             </div>
 
             {/* Stats Cards */}
