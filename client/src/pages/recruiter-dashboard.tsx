@@ -49,6 +49,18 @@ export default function RecruiterDashboard() {
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [activeTab, setActiveTab] = useState('updates');
   
+  // Requirements data
+  const [activeRequirements] = useState([
+    { id: 1, position: 'Frontend Dev', criticality: 'High', company: 'TechCorp', contactPerson: 'John', contactPersonEmail: 'john@corp.com' },
+    { id: 2, position: 'Backend Dev', criticality: 'Medium', company: 'SoftInc', contactPerson: 'Jane', contactPersonEmail: 'jane@corp.com' },
+    { id: 3, position: 'Full Stack Dev', criticality: 'Low', company: 'WebWorks', contactPerson: 'Sam', contactPersonEmail: 'sam@corp.com' },
+    { id: 4, position: 'UI/UX Designer', criticality: 'High', company: 'Designify', contactPerson: 'Alice', contactPersonEmail: 'alice@corp.com' },
+    { id: 5, position: 'Project Manager', criticality: 'Medium', company: 'ManageIt', contactPerson: 'Bob', contactPersonEmail: 'bob@corp.com' },
+    { id: 6, position: 'DevOps Engineer', criticality: 'Low', company: 'CloudBase', contactPerson: 'Eve', contactPersonEmail: 'eve@corp.com' },
+    { id: 7, position: 'QA Tester', criticality: 'High', company: 'BugCatchers', contactPerson: 'Tom', contactPersonEmail: 'tom@corp.com' },
+    { id: 8, position: 'Data Analyst', criticality: 'Medium', company: 'InsightSoft', contactPerson: 'Mia', contactPersonEmail: 'mia@corp.com' }
+  ]);
+  
   // Active Candidates Management
   const [activeCandidates, setActiveCandidates] = useState<Candidate[]>([
     { id: 'cand001', name: 'John Doe', jobId: 'job001', job: 'Frontend Developer', company: 'TechCorp', status: 'Shortlisted' },
@@ -155,12 +167,17 @@ export default function RecruiterDashboard() {
       case 'updates':
         return (
           <div className="p-6">
-            {/* Header with action button */}
+            {/* Header with action buttons */}
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Updates</h2>
-              <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
-                Post Jobs
-              </button>
+              <div className="flex gap-2">
+                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition-colors">
+                  Post Jobs
+                </button>
+                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition-colors">
+                  Upload Resume
+                </button>
+              </div>
             </div>
 
             {/* Stats Cards */}
@@ -294,8 +311,80 @@ export default function RecruiterDashboard() {
         return (
           <div className="p-6">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Requirements</h2>
-            <div className="text-gray-600 dark:text-gray-400">
-              Requirements content will be implemented here
+            
+            {/* Priority Distribution Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <div className="text-center">
+                  <div className="text-red-600 text-3xl font-bold mb-2">
+                    {activeRequirements.filter(r => r.criticality === 'High').length}
+                  </div>
+                  <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">HIGH PRIORITY</h3>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <div className="text-center">
+                  <div className="text-blue-600 text-3xl font-bold mb-2">
+                    {activeRequirements.filter(r => r.criticality === 'Medium').length}
+                  </div>
+                  <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">MEDIUM PRIORITY</h3>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                <div className="text-center">
+                  <div className="text-gray-600 text-3xl font-bold mb-2">
+                    {activeRequirements.filter(r => r.criticality === 'Low').length}
+                  </div>
+                  <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">LOW PRIORITY</h3>
+                </div>
+              </div>
+            </div>
+            
+            {/* Requirements Table */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Active Requirements</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-900">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Position</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Company</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Contact Person</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Email</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Criticality</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {activeRequirements.map((req) => (
+                      <tr key={req.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                          {req.position}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                          {req.company}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                          {req.contactPerson}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 hover:text-blue-800">
+                          <a href={`mailto:${req.contactPersonEmail}`}>{req.contactPersonEmail}</a>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-3 py-1 rounded text-xs font-semibold ${
+                            req.criticality === 'High' ? 'bg-red-100 text-red-700' :
+                            req.criticality === 'Medium' ? 'bg-blue-100 text-blue-700' :
+                            'bg-gray-200 text-gray-700'
+                          }`}>
+                            {req.criticality.toUpperCase()}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         );
