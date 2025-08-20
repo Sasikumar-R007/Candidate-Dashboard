@@ -44,35 +44,25 @@ export default function RecruiterDashboard() {
       case 'updates':
         return (
           <div className="p-6">
-            {/* Header with action buttons */}
+            {/* Header with action button */}
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Updates</h2>
-              <div className="flex gap-3">
-                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
-                  Post Jobs
-                </button>
-                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
-                  Upload Resume
-                </button>
-                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
-                  Source Resume
-                </button>
-              </div>
+              <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+                Post Jobs
+              </button>
             </div>
 
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Active Jobs Card */}
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                    <i className="fas fa-briefcase text-xl text-gray-600 dark:text-gray-400"></i>
-                  </div>
-                </div>
                 <div className="text-center">
+                  <div className="flex justify-center mb-4">
+                    <i className="fas fa-briefcase text-2xl text-gray-600 dark:text-gray-400"></i>
+                  </div>
                   <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Active jobs</h3>
                   <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">12</div>
-                  <div className="bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-3 py-1 rounded-full">
+                  <div className="inline-block bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-2 py-1 rounded font-bold">
                     Total Jobs Posted: 25
                   </div>
                 </div>
@@ -80,15 +70,13 @@ export default function RecruiterDashboard() {
 
               {/* New Applications Card */}
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                    <i className="fas fa-user text-xl text-gray-600 dark:text-gray-400"></i>
-                  </div>
-                </div>
                 <div className="text-center">
+                  <div className="flex justify-center mb-4">
+                    <i className="fas fa-user text-2xl text-gray-600 dark:text-gray-400"></i>
+                  </div>
                   <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">New applications:</h3>
                   <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">12</div>
-                  <div className="bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-3 py-1 rounded-full">
+                  <div className="inline-block bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-2 py-1 rounded font-bold">
                     Candidates Applied: 82
                   </div>
                 </div>
@@ -106,6 +94,9 @@ export default function RecruiterDashboard() {
                     <button className="mt-2 px-4 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded font-medium transition-colors">
                       Add
                     </button>
+                  </div>
+                  <div className="flex items-center px-2">
+                    <div className="h-16 w-px bg-gray-300 dark:bg-gray-600"></div>
                   </div>
                   <div className="text-center">
                     <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Pending cases</div>
