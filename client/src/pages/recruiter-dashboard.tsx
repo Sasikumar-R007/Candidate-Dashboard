@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface RecruiterProfile {
   id: string;
@@ -165,9 +166,25 @@ export default function RecruiterDashboard() {
   const statuses = ['Shortlisted', 'In-Process', 'Interview Scheduled', 'Interview On-Going', 'Final Round', 'HR Round', 'Selected', 'Screened Out'];
   const rejectionReasons = ['Skill mismatch', 'Lack of communication', 'Inadequate experience', 'Unprofessional behavior', 'Other'];
 
-  // Use API data for recruiter profile
+  // Use API data for recruiter profile and metrics
   const { data: recruiterProfile } = useQuery<RecruiterProfile>({
     queryKey: ['/api/recruiter/profile'],
+  });
+
+  const { data: targetMetrics } = useQuery({
+    queryKey: ['/api/recruiter/target-metrics'],
+  });
+
+  const { data: dailyMetrics } = useQuery({
+    queryKey: ['/api/recruiter/daily-metrics'],
+  });
+
+  const { data: meetings } = useQuery({
+    queryKey: ['/api/recruiter/meetings'],
+  });
+
+  const { data: ceoComments } = useQuery({
+    queryKey: ['/api/recruiter/ceo-comments'],
   });
   
   const getToday = () => {
@@ -379,6 +396,167 @@ export default function RecruiterDashboard() {
                   </table>
                 </div>
               </div>
+            </div>
+
+            {/* Target Metrics Section */}
+            <div className="mt-8">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Target Metrics</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-6">
+                    <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Current Quarter</p>
+                      <div className="text-right">
+                        <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                          {targetMetrics?.currentQuarter || "ASO-2025"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Minimum Target</p>
+                      <div className="text-right">
+                        <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
+                          ₹{targetMetrics?.minimumTarget || "8,00,000"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Target Achieved</p>
+                      <div className="text-right">
+                        <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
+                          ₹{targetMetrics?.targetAchieved || "6,50,000"}
+                        </span>
+                      </div>
+                      <div className="text-right mt-2">
+                        <span className="text-sm text-green-600 dark:text-green-400 font-medium">
+                          Incentive: ₹{targetMetrics?.incentiveEarned || "35,000"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Daily Metrics Section */}
+            <div className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Daily Metrics</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-6">
+                    {/* Left side - 2x2 Grid */}
+                    <div className="col-span-2 grid grid-cols-2 gap-4">
+                      <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Total Requirements</p>
+                        <div className="text-right">
+                          <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
+                            {dailyMetrics?.totalRequirements || "15"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Completed Requirements</p>
+                        <div className="text-right">
+                          <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
+                            {dailyMetrics?.completedRequirements || "8"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Avg. Resumes per Requirement</p>
+                        <div className="text-right">
+                          <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
+                            {dailyMetrics?.avgResumesPerRequirement || "03"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-6 border border-gray-200 dark:border-gray-700">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Requirements per Recruiter</p>
+                        <div className="text-right">
+                          <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
+                            {dailyMetrics?.requirementsPerRecruiter || "02"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Right side - Daily Delivery */}
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded shadow-sm p-6 border border-yellow-200 dark:border-yellow-800">
+                      <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Daily Delivery</h3>
+                      <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div className="text-center">
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Delivered</p>
+                          <p className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
+                            {dailyMetrics?.dailyDeliveryDelivered || "2"}
+                          </p>
+                          <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 text-white px-4">
+                            View
+                          </Button>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Defaulted</p>
+                          <p className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
+                            {dailyMetrics?.dailyDeliveryDefaulted || "1"}
+                          </p>
+                          <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 text-white px-4">
+                            View
+                          </Button>
+                        </div>
+                      </div>
+                      <Button variant="outline" size="sm" className="w-full">
+                        View More
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Bottom Section - CEO Comments and Pending Meetings */}
+            <div className="mt-6 grid grid-cols-2 gap-6">
+              {/* CEO Comments */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>CEO Comments</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="bg-pink-50 dark:bg-pink-900/20 p-4 rounded">
+                    <ul className="space-y-2 text-sm">
+                      {ceoComments?.map((commentObj: any, index: number) => (
+                        <li key={index}>
+                          {commentObj.comment}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Pending Meetings */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Pending Meetings</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4">
+                    {meetings?.map((meeting: any, index: number) => (
+                      <div key={index} className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded text-center">
+                        <h3 className="font-semibold text-sm">{meeting.type}</h3>
+                        <p className="text-2xl font-bold text-blue-600 my-2">
+                          {meeting.count}
+                        </p>
+                        <Button variant="outline" size="sm">
+                          View
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         );

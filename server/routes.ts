@@ -516,6 +516,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Recruiter file upload endpoints
+  // Recruiter data endpoints - same as team leader
+  app.get("/api/recruiter/target-metrics", (req, res) => {
+    const targetMetrics = {
+      id: "target-rec-001",
+      currentQuarter: "ASO-2025",
+      minimumTarget: "8,00,000",
+      targetAchieved: "6,50,000",
+      incentiveEarned: "35,000"
+    };
+    res.json(targetMetrics);
+  });
+
+  app.get("/api/recruiter/daily-metrics", (req, res) => {
+    const dailyMetrics = {
+      id: "daily-rec-001",
+      date: "21-Aug-2025",
+      totalRequirements: "15",
+      completedRequirements: "8",
+      avgResumesPerRequirement: "03",
+      requirementsPerRecruiter: "02",
+      dailyDeliveryDelivered: "2",
+      dailyDeliveryDefaulted: "1"
+    };
+    res.json(dailyMetrics);
+  });
+
+  app.get("/api/recruiter/meetings", (req, res) => {
+    const meetings = [
+      { id: "meeting-rec-001", type: "TL's Meeting", count: "2" },
+      { id: "meeting-rec-002", type: "CEO's Meeting", count: "1" }
+    ];
+    res.json(meetings);
+  });
+
+  app.get("/api/recruiter/ceo-comments", (req, res) => {
+    const comments = [
+      { id: "comment-rec-001", comment: "Focus on high-priority requirements this week", date: "21-Aug-2025" },
+      { id: "comment-rec-002", comment: "Improve interview scheduling process", date: "21-Aug-2025" },
+      { id: "comment-rec-003", comment: "Follow up on pending candidates", date: "20-Aug-2025" }
+    ];
+    res.json(comments);
+  });
+
   app.post("/api/recruiter/upload/banner", upload.single('file'), (req, res) => {
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
