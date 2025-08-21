@@ -405,10 +405,10 @@ export default function RecruiterDashboard() {
 
             {/* Archives and View More Buttons */}
             <div className="mt-6 flex justify-end gap-4">
-              <Button variant="outline" className="bg-red-500 hover:bg-red-700 text-white border-red-500 hover:border-red-700 rounded transition-colors duration-200">
+              <Button variant="outline" className="bg-red-500 hover:bg-red-600 text-white border-red-500 hover:border-red-600 rounded transition-colors duration-200">
                 Archives
               </Button>
-              <Button variant="outline" className="bg-blue-500 hover:bg-blue-700 text-white border-blue-500 hover:border-blue-700 rounded transition-colors duration-200">
+              <Button variant="outline" className="bg-blue-500 hover:bg-blue-600 text-white border-blue-500 hover:border-blue-600 rounded transition-colors duration-200">
                 View More
               </Button>
             </div>
