@@ -9,6 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { CalendarIcon, EditIcon } from "lucide-react";
+import { format } from "date-fns";
 
 interface RecruiterProfile {
   id: string;
@@ -148,7 +152,8 @@ export default function RecruiterDashboard() {
   const [showModal, setShowModal] = useState(false);
   const [requirementCounts, setRequirementCounts] = useState<{[reqId: string]: {[date: string]: string}}>({});
   const [openCalendarId, setOpenCalendarId] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedDateString, setSelectedDateString] = useState('');
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [inputCount, setInputCount] = useState('');
   const [calendarStep, setCalendarStep] = useState<'calendar' | 'input'>('calendar');
   
@@ -275,7 +280,7 @@ export default function RecruiterDashboard() {
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Active Jobs Card */}
-              <button className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors duration-200 text-left w-full">
+              <button className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-shadow duration-300 text-left w-full">
                 <div className="text-center">
                   <div className="flex justify-center mb-4">
                     <i className="fas fa-briefcase text-2xl text-gray-600 dark:text-gray-400"></i>
@@ -289,7 +294,7 @@ export default function RecruiterDashboard() {
               </button>
 
               {/* New Applications Card */}
-              <button className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors duration-200 text-left w-full">
+              <button className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-shadow duration-300 text-left w-full">
                 <div className="text-center">
                   <div className="flex justify-center mb-4">
                     <i className="fas fa-user text-2xl text-gray-600 dark:text-gray-400"></i>
@@ -303,7 +308,7 @@ export default function RecruiterDashboard() {
               </button>
 
               {/* Interview Tracker Card */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:border-blue-300 dark:hover:border-blue-600 transition-colors duration-200">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-shadow duration-300">
                 <div className="text-center mb-4">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Interview Tracker</h3>
                 </div>
@@ -411,32 +416,30 @@ export default function RecruiterDashboard() {
             {/* Target Metrics Section */}
             <div className="mt-8">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Target</h3>
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
-                <div className="grid grid-cols-4">
-                  <div className="bg-blue-100 dark:bg-blue-900/20 p-6 text-center border-r border-gray-400 dark:border-gray-600">
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Current Quarter</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">
-                      {targetMetrics?.currentQuarter || "ASO-2025"}
-                    </p>
-                  </div>
-                  <div className="bg-blue-100 dark:bg-blue-900/20 p-6 text-center border-r border-gray-400 dark:border-gray-600">
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Minimum Target</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">
-                      {targetMetrics?.minimumTarget || "15,00,000"}
-                    </p>
-                  </div>
-                  <div className="bg-blue-100 dark:bg-blue-900/20 p-6 text-center border-r border-gray-400 dark:border-gray-600">
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Target Achieved</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">
-                      {targetMetrics?.targetAchieved || "10,00,000"}
-                    </p>
-                  </div>
-                  <div className="bg-blue-100 dark:bg-blue-900/20 p-6 text-center">
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Incentive Earned</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white">
-                      {targetMetrics?.incentiveEarned || "50,000"}
-                    </p>
-                  </div>
+              <div className="grid grid-cols-4 gap-0 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-gray-800 dark:to-gray-700 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600">
+                <div className="bg-blue-100 dark:bg-gray-700 text-center py-6 px-4 border-r border-blue-200 dark:border-gray-600">
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Current Quarter</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">
+                    {targetMetrics?.currentQuarter || "ASO-2025"}
+                  </p>
+                </div>
+                <div className="bg-blue-50 dark:bg-gray-750 text-center py-6 px-4 border-r border-blue-200 dark:border-gray-600">
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Minimum Target</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">
+                    {targetMetrics?.minimumTarget || "15,00,000"}
+                  </p>
+                </div>
+                <div className="bg-blue-100 dark:bg-gray-700 text-center py-6 px-4 border-r border-blue-200 dark:border-gray-600">
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Target Achieved</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">
+                    {targetMetrics?.targetAchieved || "10,00,000"}
+                  </p>
+                </div>
+                <div className="bg-blue-50 dark:bg-gray-750 text-center py-6 px-4">
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Incentive Earned</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">
+                    {targetMetrics?.incentiveEarned || "50,000"}
+                  </p>
                 </div>
               </div>
             </div>
@@ -445,14 +448,25 @@ export default function RecruiterDashboard() {
             <div className="mt-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Daily Metrics</h3>
-                <button 
-                  className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded text-sm cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
-                  onClick={() => setOpenCalendarId(openCalendarId ? null : 'daily-metrics')}
-                >
-                  <i className="fas fa-calendar"></i>
-                  <span className="text-gray-700 dark:text-gray-300">12-Aug-2025</span>
-                  <i className="fas fa-edit text-gray-500"></i>
-                </button>
+                <div className="flex items-center gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="text-sm text-gray-500 dark:text-gray-400 border-none p-2">
+                        <CalendarIcon className="h-4 w-4 mr-2" />
+                        <span>{format(selectedDate, "dd-MMM-yyyy")}</span>
+                        <EditIcon className="h-4 w-4 ml-2" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onSelect={(date) => date && setSelectedDate(date)}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
               
               <div className="grid grid-cols-3 gap-4">
