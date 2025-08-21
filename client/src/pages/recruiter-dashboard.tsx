@@ -275,7 +275,7 @@ export default function RecruiterDashboard() {
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Active Jobs Card */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-shadow duration-300 transform hover:-translate-y-1">
+              <button className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors duration-200 text-left w-full">
                 <div className="text-center">
                   <div className="flex justify-center mb-4">
                     <i className="fas fa-briefcase text-2xl text-gray-600 dark:text-gray-400"></i>
@@ -286,10 +286,10 @@ export default function RecruiterDashboard() {
                     Total Jobs Posted: 25
                   </div>
                 </div>
-              </div>
+              </button>
 
               {/* New Applications Card */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-shadow duration-300 transform hover:-translate-y-1">
+              <button className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors duration-200 text-left w-full">
                 <div className="text-center">
                   <div className="flex justify-center mb-4">
                     <i className="fas fa-user text-2xl text-gray-600 dark:text-gray-400"></i>
@@ -300,10 +300,10 @@ export default function RecruiterDashboard() {
                     Candidates Applied: 82
                   </div>
                 </div>
-              </div>
+              </button>
 
               {/* Interview Tracker Card */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-shadow duration-300 transform hover:-translate-y-1">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:border-blue-300 dark:hover:border-blue-600 transition-colors duration-200">
                 <div className="text-center mb-4">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Interview Tracker</h3>
                 </div>
@@ -400,10 +400,10 @@ export default function RecruiterDashboard() {
 
             {/* Archives and View More Buttons */}
             <div className="mt-6 flex justify-end gap-4">
-              <Button variant="outline" className="bg-red-500 hover:bg-red-600 text-white border-red-500 rounded">
+              <Button variant="outline" className="bg-red-500 hover:bg-red-700 text-white border-red-500 hover:border-red-700 rounded transition-colors duration-200">
                 Archives
               </Button>
-              <Button variant="outline" className="bg-blue-500 hover:bg-blue-600 text-white border-blue-500 rounded">
+              <Button variant="outline" className="bg-blue-500 hover:bg-blue-700 text-white border-blue-500 hover:border-blue-700 rounded transition-colors duration-200">
                 View More
               </Button>
             </div>
@@ -528,7 +528,7 @@ export default function RecruiterDashboard() {
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">CEO Comments</h3>
                 </div>
                 <div className="p-4">
-                  <div className="bg-pink-50 dark:bg-pink-900/20 p-4 rounded-lg">
+                  <div className="bg-pink-50 dark:bg-pink-900/20 p-4">
                     <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
                       {ceoComments?.map((commentObj: any, index: number) => (
                         <li key={index}>
@@ -546,7 +546,7 @@ export default function RecruiterDashboard() {
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Pending Meetings</h3>
                 </div>
                 <div className="p-4">
-                  <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg overflow-hidden">
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 overflow-hidden">
                     <div className="grid grid-cols-3 bg-yellow-200 dark:bg-yellow-800/40 text-sm font-semibold text-gray-700 dark:text-gray-300">
                       <div className="p-2 text-center border-r border-yellow-300 dark:border-yellow-700">Meeting</div>
                       <div className="p-2 text-center border-r border-yellow-300 dark:border-yellow-700">Date</div>
