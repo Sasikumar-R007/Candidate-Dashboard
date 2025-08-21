@@ -275,7 +275,7 @@ export default function RecruiterDashboard() {
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Active Jobs Card */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-shadow duration-300 transform hover:-translate-y-1">
                 <div className="text-center">
                   <div className="flex justify-center mb-4">
                     <i className="fas fa-briefcase text-2xl text-gray-600 dark:text-gray-400"></i>
@@ -289,7 +289,7 @@ export default function RecruiterDashboard() {
               </div>
 
               {/* New Applications Card */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-shadow duration-300 transform hover:-translate-y-1">
                 <div className="text-center">
                   <div className="flex justify-center mb-4">
                     <i className="fas fa-user text-2xl text-gray-600 dark:text-gray-400"></i>
@@ -303,7 +303,7 @@ export default function RecruiterDashboard() {
               </div>
 
               {/* Interview Tracker Card */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-shadow duration-300 transform hover:-translate-y-1">
                 <div className="text-center mb-4">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Interview Tracker</h3>
                 </div>
@@ -399,11 +399,11 @@ export default function RecruiterDashboard() {
             </div>
 
             {/* Archives and View More Buttons */}
-            <div className="mt-6 flex gap-4">
-              <Button variant="outline" className="bg-blue-500 hover:bg-blue-600 text-white border-blue-500">
+            <div className="mt-6 flex justify-end gap-4">
+              <Button variant="outline" className="bg-red-500 hover:bg-red-600 text-white border-red-500 rounded">
                 Archives
               </Button>
-              <Button variant="outline" className="bg-blue-500 hover:bg-blue-600 text-white border-blue-500">
+              <Button variant="outline" className="bg-blue-500 hover:bg-blue-600 text-white border-blue-500 rounded">
                 View More
               </Button>
             </div>
@@ -411,29 +411,29 @@ export default function RecruiterDashboard() {
             {/* Target Metrics Section */}
             <div className="mt-8">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Target</h3>
-              <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="grid grid-cols-4">
-                  <div className="bg-blue-100 dark:bg-blue-900/20 p-4 text-center border-r border-gray-200 dark:border-gray-700">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Current Quarter</p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <div className="bg-blue-100 dark:bg-blue-900/20 p-6 text-center border-r border-gray-400 dark:border-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Current Quarter</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white">
                       {targetMetrics?.currentQuarter || "ASO-2025"}
                     </p>
                   </div>
-                  <div className="bg-blue-100 dark:bg-blue-900/20 p-4 text-center border-r border-gray-200 dark:border-gray-700">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Minimum Target</p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <div className="bg-blue-100 dark:bg-blue-900/20 p-6 text-center border-r border-gray-400 dark:border-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Minimum Target</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white">
                       {targetMetrics?.minimumTarget || "15,00,000"}
                     </p>
                   </div>
-                  <div className="bg-blue-100 dark:bg-blue-900/20 p-4 text-center border-r border-gray-200 dark:border-gray-700">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Target Achieved</p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <div className="bg-blue-100 dark:bg-blue-900/20 p-6 text-center border-r border-gray-400 dark:border-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Target Achieved</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white">
                       {targetMetrics?.targetAchieved || "10,00,000"}
                     </p>
                   </div>
-                  <div className="bg-blue-100 dark:bg-blue-900/20 p-4 text-center">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Incentive Earned</p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  <div className="bg-blue-100 dark:bg-blue-900/20 p-6 text-center">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Incentive Earned</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white">
                       {targetMetrics?.incentiveEarned || "50,000"}
                     </p>
                   </div>
@@ -445,17 +445,20 @@ export default function RecruiterDashboard() {
             <div className="mt-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Daily Metrics</h3>
-                <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded text-sm">
+                <button 
+                  className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded text-sm cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600"
+                  onClick={() => setOpenCalendarId(openCalendarId ? null : 'daily-metrics')}
+                >
                   <i className="fas fa-calendar"></i>
                   <span className="text-gray-700 dark:text-gray-300">12-Aug-2025</span>
                   <i className="fas fa-edit text-gray-500"></i>
-                </div>
+                </button>
               </div>
               
               <div className="grid grid-cols-3 gap-4">
                 {/* Left side - 2x2 Grid */}
                 <div className="col-span-2 grid grid-cols-2 gap-4">
-                  <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-300">
                     <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Total Requirements</p>
                     <div className="text-right">
                       <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
@@ -463,7 +466,7 @@ export default function RecruiterDashboard() {
                       </span>
                     </div>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-300">
                     <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Avg. Resumes per Requirement</p>
                     <div className="text-right">
                       <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
@@ -471,15 +474,15 @@ export default function RecruiterDashboard() {
                       </span>
                     </div>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-4 border border-gray-200 dark:border-gray-700 flex items-center">
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Overall Performance</p>
-                    </div>
-                    <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold text-lg">C</span>
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-300">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Overall Performance</p>
+                    <div className="text-right">
+                      <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center ml-auto">
+                        <span className="text-white font-bold text-lg">G</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-4 border border-gray-200 dark:border-gray-700">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-300">
                     <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Avg. Requirements per Month</p>
                     <div className="text-right">
                       <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">22</span>
@@ -488,7 +491,7 @@ export default function RecruiterDashboard() {
                 </div>
                 
                 {/* Right side - Daily Delivery */}
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded shadow-sm p-4 border border-yellow-200 dark:border-yellow-800">
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg shadow-sm p-4 border border-yellow-200 dark:border-yellow-800">
                   <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Daily Delivery</h3>
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div className="text-center">
@@ -520,12 +523,12 @@ export default function RecruiterDashboard() {
             {/* Bottom Section - CEO Comments and Pending Meetings */}
             <div className="mt-6 grid grid-cols-2 gap-6">
               {/* CEO Comments */}
-              <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">CEO Comments</h3>
                 </div>
                 <div className="p-4">
-                  <div className="bg-pink-50 dark:bg-pink-900/20 p-4 rounded">
+                  <div className="bg-pink-50 dark:bg-pink-900/20 p-4 rounded-lg">
                     <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
                       {ceoComments?.map((commentObj: any, index: number) => (
                         <li key={index}>
@@ -538,12 +541,12 @@ export default function RecruiterDashboard() {
               </div>
 
               {/* Pending Meetings */}
-              <div className="bg-white dark:bg-gray-800 rounded shadow-sm border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
                 <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Pending Meetings</h3>
                 </div>
                 <div className="p-4">
-                  <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded overflow-hidden">
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg overflow-hidden">
                     <div className="grid grid-cols-3 bg-yellow-200 dark:bg-yellow-800/40 text-sm font-semibold text-gray-700 dark:text-gray-300">
                       <div className="p-2 text-center border-r border-yellow-300 dark:border-yellow-700">Meeting</div>
                       <div className="p-2 text-center border-r border-yellow-300 dark:border-yellow-700">Date</div>
