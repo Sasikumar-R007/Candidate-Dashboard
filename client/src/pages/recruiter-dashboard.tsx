@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, EditIcon, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, Upload } from "lucide-react";
+import { CalendarIcon, EditIcon, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, Upload, X } from "lucide-react";
 import { format } from "date-fns";
 
 interface RecruiterProfile {
@@ -1290,8 +1290,15 @@ export default function RecruiterDashboard() {
       <Dialog open={isPostJobModalOpen} onOpenChange={setIsPostJobModalOpen}>
         <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 ml-32">
           <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(95vh - 4rem)' }}>
-            <DialogHeader className="sticky top-0 bg-white z-10 pb-4">
+            <DialogHeader className="sticky top-0 bg-white z-10 pb-4 flex flex-row items-center justify-between">
               <DialogTitle>Post the job</DialogTitle>
+              <button 
+                onClick={() => setIsPostJobModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 p-1"
+                type="button"
+              >
+                <X size={20} />
+              </button>
             </DialogHeader>
             
             <div className="space-y-4">
@@ -1313,7 +1320,7 @@ export default function RecruiterDashboard() {
                 <Input
                   value={jobFormData.companyName}
                   onChange={(e) => setJobFormData({...jobFormData, companyName: e.target.value})}
-                  className="pl-10 bg-gray-50 rounded-none border"
+                  className="pl-10 bg-gray-50 rounded-sm border"
                   placeholder="Company Name"
                 />
               </div>
@@ -1326,7 +1333,7 @@ export default function RecruiterDashboard() {
                 <Input
                   value={jobFormData.companyTagline}
                   onChange={(e) => setJobFormData({...jobFormData, companyTagline: e.target.value})}
-                  className="pl-10 bg-gray-50 rounded-none border pr-16"
+                  className="pl-10 bg-gray-50 rounded-sm border pr-16"
                   placeholder="Company Tagline"
                 />
                 <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">0/100</span>
@@ -1339,7 +1346,7 @@ export default function RecruiterDashboard() {
                     <BarChart3 size={16} />
                   </div>
                   <Select value={jobFormData.companyType} onValueChange={(value) => setJobFormData({...jobFormData, companyType: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-none border">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border">
                       <SelectValue placeholder="Company Type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1354,7 +1361,7 @@ export default function RecruiterDashboard() {
                     <Target size={16} />
                   </div>
                   <Select value={jobFormData.market} onValueChange={(value) => setJobFormData({...jobFormData, market: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-none border">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border">
                       <SelectValue placeholder="Market" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1373,7 +1380,7 @@ export default function RecruiterDashboard() {
                     <FolderOpen size={16} />
                   </div>
                   <Select value={jobFormData.field} onValueChange={(value) => setJobFormData({...jobFormData, field: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-none border">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border">
                       <SelectValue placeholder="Use 25-26 Without Background" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1388,7 +1395,7 @@ export default function RecruiterDashboard() {
                     <Hash size={16} />
                   </div>
                   <Select value={jobFormData.noOfPositions} onValueChange={(value) => setJobFormData({...jobFormData, noOfPositions: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-none border">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border">
                       <SelectValue placeholder="No of Positions" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1407,7 +1414,7 @@ export default function RecruiterDashboard() {
                     <User size={16} />
                   </div>
                   <Select value={jobFormData.role} onValueChange={(value) => setJobFormData({...jobFormData, role: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-none border">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border">
                       <SelectValue placeholder="Role" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1422,7 +1429,7 @@ export default function RecruiterDashboard() {
                     <TrendingUp size={16} />
                   </div>
                   <Select value={jobFormData.experience} onValueChange={(value) => setJobFormData({...jobFormData, experience: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-none border">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border">
                       <SelectValue placeholder="Experience" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1441,7 +1448,7 @@ export default function RecruiterDashboard() {
                     <MapPin size={16} />
                   </div>
                   <Select value={jobFormData.location} onValueChange={(value) => setJobFormData({...jobFormData, location: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-none border">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border">
                       <SelectValue placeholder="Location" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1456,7 +1463,7 @@ export default function RecruiterDashboard() {
                     <Laptop size={16} />
                   </div>
                   <Select value={jobFormData.workMode} onValueChange={(value) => setJobFormData({...jobFormData, workMode: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-none border">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border">
                       <SelectValue placeholder="Work Type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1475,7 +1482,7 @@ export default function RecruiterDashboard() {
                     <Briefcase size={16} />
                   </div>
                   <Select value={jobFormData.workMode} onValueChange={(value) => setJobFormData({...jobFormData, workMode: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-none border">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border">
                       <SelectValue placeholder="Work Mode" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1490,7 +1497,7 @@ export default function RecruiterDashboard() {
                     <DollarSign size={16} />
                   </div>
                   <Select value={jobFormData.salaryPackage} onValueChange={(value) => setJobFormData({...jobFormData, salaryPackage: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-none border">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border">
                       <SelectValue placeholder="Salary Package" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1507,7 +1514,7 @@ export default function RecruiterDashboard() {
                 <textarea
                   value={jobFormData.aboutCompany}
                   onChange={(e) => setJobFormData({...jobFormData, aboutCompany: e.target.value})}
-                  className="w-full bg-gray-50 border rounded-none p-3 min-h-[80px] text-sm resize-none pr-16"
+                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-16"
                   placeholder="About Company"
                 />
                 <span className="absolute right-3 bottom-3 text-gray-400 text-xs">0/1000</span>
@@ -1518,7 +1525,7 @@ export default function RecruiterDashboard() {
                 <textarea
                   value={jobFormData.roleDefinitions}
                   onChange={(e) => setJobFormData({...jobFormData, roleDefinitions: e.target.value})}
-                  className="w-full bg-gray-50 border rounded-none p-3 min-h-[80px] text-sm resize-none pr-16"
+                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-16"
                   placeholder="Role Definitions"
                 />
                 <span className="absolute right-3 bottom-3 text-gray-400 text-xs">0/1500</span>
@@ -1529,7 +1536,7 @@ export default function RecruiterDashboard() {
                 <textarea
                   value={jobFormData.keyResponsibility}
                   onChange={(e) => setJobFormData({...jobFormData, keyResponsibility: e.target.value})}
-                  className="w-full bg-gray-50 border rounded-none p-3 min-h-[80px] text-sm resize-none pr-20"
+                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-20"
                   placeholder="Key Responsibility"
                 />
                 <span className="absolute right-3 bottom-3 text-gray-400 text-xs">0-20 points</span>
@@ -1549,7 +1556,7 @@ export default function RecruiterDashboard() {
                         newSkills[index] = value;
                         setJobFormData({...jobFormData, primarySkills: newSkills});
                       }}>
-                        <SelectTrigger className="bg-gray-50 text-xs rounded-none border">
+                        <SelectTrigger className="bg-gray-50 text-xs rounded-sm border">
                           <SelectValue placeholder="Data Analyst" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1572,7 +1579,7 @@ export default function RecruiterDashboard() {
                         newSkills[index] = value;
                         setJobFormData({...jobFormData, secondarySkills: newSkills});
                       }}>
-                        <SelectTrigger className="bg-gray-50 text-xs rounded-none border">
+                        <SelectTrigger className="bg-gray-50 text-xs rounded-sm border">
                           <SelectValue placeholder="SEO" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1591,7 +1598,7 @@ export default function RecruiterDashboard() {
                   <Select value={jobFormData.knowledgeOnly[0]} onValueChange={(value) => {
                     setJobFormData({...jobFormData, knowledgeOnly: [value]});
                   }}>
-                    <SelectTrigger className="bg-gray-50 text-xs rounded-none border">
+                    <SelectTrigger className="bg-gray-50 text-xs rounded-sm border">
                       <SelectValue placeholder="Select skill" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1611,7 +1618,7 @@ export default function RecruiterDashboard() {
                 <Input
                   value={jobFormData.companyLogo}
                   onChange={(e) => setJobFormData({...jobFormData, companyLogo: e.target.value})}
-                  className="pl-10 bg-gray-50 rounded-none border"
+                  className="pl-10 bg-gray-50 rounded-sm border"
                   placeholder="Company Logo (Image/Link)"
                 />
               </div>
@@ -1620,13 +1627,13 @@ export default function RecruiterDashboard() {
               <div className="flex gap-3 pt-4">
                 <Button 
                   variant="outline" 
-                  className="flex-1 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 rounded-none"
+                  className="flex-1 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 rounded-sm"
                   onClick={() => setIsPreviewModalOpen(true)}
                 >
                   Preview
                 </Button>
                 <Button 
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-none"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-sm"
                   onClick={handlePostJob}
                 >
                   Post
@@ -1640,8 +1647,15 @@ export default function RecruiterDashboard() {
       {/* Preview Modal */}
       <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 ml-32">
-          <DialogHeader>
+          <DialogHeader className="flex flex-row items-center justify-between">
             <DialogTitle>Job Preview</DialogTitle>
+            <button 
+              onClick={() => setIsPreviewModalOpen(false)}
+              className="text-gray-400 hover:text-gray-600 p-1"
+              type="button"
+            >
+              <X size={20} />
+            </button>
           </DialogHeader>
           
           {/* Job Card Preview - Matching Candidate Dashboard Design */}
