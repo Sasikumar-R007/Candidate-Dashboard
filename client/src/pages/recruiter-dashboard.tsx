@@ -56,6 +56,7 @@ export default function RecruiterDashboard() {
   const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [formError, setFormError] = useState('');
   const [jobFormData, setJobFormData] = useState({
     companyName: '',
     companyTagline: '',
@@ -84,12 +85,14 @@ export default function RecruiterDashboard() {
 
   const handlePostJob = () => {
     if (!validateForm()) {
-      alert('Please fill all required fields');
+      // Show inline error message instead of alert
+      setFormError('Please fill out all required fields');
       return;
     }
     
     setIsPostJobModalOpen(false);
     setShowSuccessAlert(true);
+    setFormError(''); // Clear any form errors
     setTimeout(() => setShowSuccessAlert(false), 3000);
     
     // Reset form
@@ -1285,21 +1288,23 @@ export default function RecruiterDashboard() {
 
       {/* Post Job Modal */}
       <Dialog open={isPostJobModalOpen} onOpenChange={setIsPostJobModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden ml-64 mr-4">
+        <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 ml-32">
           <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(95vh - 4rem)' }}>
             <DialogHeader className="sticky top-0 bg-white z-10 pb-4">
-              <DialogTitle className="flex items-center justify-between">
-                Post the job
-                <button 
-                  onClick={() => setIsPostJobModalOpen(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
-              </DialogTitle>
+              <DialogTitle>Post the job</DialogTitle>
             </DialogHeader>
             
             <div className="space-y-4">
+              {/* Required fields notice */}
+              <div className="text-sm text-red-500 mb-4">* All fields are required</div>
+              
+              {/* Error message */}
+              {formError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+                  {formError}
+                </div>
+              )}
+              
               {/* Company Name */}
               <div className="relative">
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500">
@@ -1308,10 +1313,9 @@ export default function RecruiterDashboard() {
                 <Input
                   value={jobFormData.companyName}
                   onChange={(e) => setJobFormData({...jobFormData, companyName: e.target.value})}
-                  className="pl-10 bg-gray-50 rounded-sm"
+                  className="pl-10 bg-gray-50 rounded-none border"
                   placeholder="Company Name"
                 />
-                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500 text-sm">*</span>
               </div>
 
               {/* Company Tagline */}
@@ -1322,7 +1326,7 @@ export default function RecruiterDashboard() {
                 <Input
                   value={jobFormData.companyTagline}
                   onChange={(e) => setJobFormData({...jobFormData, companyTagline: e.target.value})}
-                  className="pl-10 bg-gray-50 rounded-sm"
+                  className="pl-10 bg-gray-50 rounded-none border pr-16"
                   placeholder="Company Tagline"
                 />
                 <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">0/100</span>
@@ -1335,7 +1339,7 @@ export default function RecruiterDashboard() {
                     <BarChart3 size={16} />
                   </div>
                   <Select value={jobFormData.companyType} onValueChange={(value) => setJobFormData({...jobFormData, companyType: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-none border">
                       <SelectValue placeholder="Company Type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1350,7 +1354,7 @@ export default function RecruiterDashboard() {
                     <Target size={16} />
                   </div>
                   <Select value={jobFormData.market} onValueChange={(value) => setJobFormData({...jobFormData, market: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-none border">
                       <SelectValue placeholder="Market" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1369,7 +1373,7 @@ export default function RecruiterDashboard() {
                     <FolderOpen size={16} />
                   </div>
                   <Select value={jobFormData.field} onValueChange={(value) => setJobFormData({...jobFormData, field: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-none border">
                       <SelectValue placeholder="Use 25-26 Without Background" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1384,7 +1388,7 @@ export default function RecruiterDashboard() {
                     <Hash size={16} />
                   </div>
                   <Select value={jobFormData.noOfPositions} onValueChange={(value) => setJobFormData({...jobFormData, noOfPositions: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-none border">
                       <SelectValue placeholder="No of Positions" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1403,7 +1407,7 @@ export default function RecruiterDashboard() {
                     <User size={16} />
                   </div>
                   <Select value={jobFormData.role} onValueChange={(value) => setJobFormData({...jobFormData, role: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-none border">
                       <SelectValue placeholder="Role" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1418,7 +1422,7 @@ export default function RecruiterDashboard() {
                     <TrendingUp size={16} />
                   </div>
                   <Select value={jobFormData.experience} onValueChange={(value) => setJobFormData({...jobFormData, experience: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-none border">
                       <SelectValue placeholder="Experience" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1427,7 +1431,6 @@ export default function RecruiterDashboard() {
                       <SelectItem value="5+">5+ years</SelectItem>
                     </SelectContent>
                   </Select>
-                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500 text-sm">*</span>
                 </div>
               </div>
 
@@ -1438,7 +1441,7 @@ export default function RecruiterDashboard() {
                     <MapPin size={16} />
                   </div>
                   <Select value={jobFormData.location} onValueChange={(value) => setJobFormData({...jobFormData, location: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-none border">
                       <SelectValue placeholder="Location" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1453,7 +1456,7 @@ export default function RecruiterDashboard() {
                     <Laptop size={16} />
                   </div>
                   <Select value={jobFormData.workMode} onValueChange={(value) => setJobFormData({...jobFormData, workMode: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-none border">
                       <SelectValue placeholder="Work Type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1472,7 +1475,7 @@ export default function RecruiterDashboard() {
                     <Briefcase size={16} />
                   </div>
                   <Select value={jobFormData.workMode} onValueChange={(value) => setJobFormData({...jobFormData, workMode: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-none border">
                       <SelectValue placeholder="Work Mode" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1487,7 +1490,7 @@ export default function RecruiterDashboard() {
                     <DollarSign size={16} />
                   </div>
                   <Select value={jobFormData.salaryPackage} onValueChange={(value) => setJobFormData({...jobFormData, salaryPackage: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-none border">
                       <SelectValue placeholder="Salary Package" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1496,7 +1499,6 @@ export default function RecruiterDashboard() {
                       <SelectItem value="10+">10+ LPA</SelectItem>
                     </SelectContent>
                   </Select>
-                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500 text-sm">*</span>
                 </div>
               </div>
 
@@ -1505,10 +1507,9 @@ export default function RecruiterDashboard() {
                 <textarea
                   value={jobFormData.aboutCompany}
                   onChange={(e) => setJobFormData({...jobFormData, aboutCompany: e.target.value})}
-                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-16"
+                  className="w-full bg-gray-50 border rounded-none p-3 min-h-[80px] text-sm resize-none pr-16"
                   placeholder="About Company"
                 />
-                <span className="absolute right-3 top-3 text-red-500 text-sm">*</span>
                 <span className="absolute right-3 bottom-3 text-gray-400 text-xs">0/1000</span>
               </div>
 
@@ -1517,10 +1518,9 @@ export default function RecruiterDashboard() {
                 <textarea
                   value={jobFormData.roleDefinitions}
                   onChange={(e) => setJobFormData({...jobFormData, roleDefinitions: e.target.value})}
-                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-16"
+                  className="w-full bg-gray-50 border rounded-none p-3 min-h-[80px] text-sm resize-none pr-16"
                   placeholder="Role Definitions"
                 />
-                <span className="absolute right-3 top-3 text-red-500 text-sm">*</span>
                 <span className="absolute right-3 bottom-3 text-gray-400 text-xs">0/1500</span>
               </div>
 
@@ -1529,10 +1529,9 @@ export default function RecruiterDashboard() {
                 <textarea
                   value={jobFormData.keyResponsibility}
                   onChange={(e) => setJobFormData({...jobFormData, keyResponsibility: e.target.value})}
-                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-20"
+                  className="w-full bg-gray-50 border rounded-none p-3 min-h-[80px] text-sm resize-none pr-20"
                   placeholder="Key Responsibility"
                 />
-                <span className="absolute right-3 top-3 text-red-500 text-sm">*</span>
                 <span className="absolute right-3 bottom-3 text-gray-400 text-xs">0-20 points</span>
               </div>
 
@@ -1550,7 +1549,7 @@ export default function RecruiterDashboard() {
                         newSkills[index] = value;
                         setJobFormData({...jobFormData, primarySkills: newSkills});
                       }}>
-                        <SelectTrigger className="bg-gray-50 text-xs rounded-sm">
+                        <SelectTrigger className="bg-gray-50 text-xs rounded-none border">
                           <SelectValue placeholder="Data Analyst" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1573,7 +1572,7 @@ export default function RecruiterDashboard() {
                         newSkills[index] = value;
                         setJobFormData({...jobFormData, secondarySkills: newSkills});
                       }}>
-                        <SelectTrigger className="bg-gray-50 text-xs rounded-sm">
+                        <SelectTrigger className="bg-gray-50 text-xs rounded-none border">
                           <SelectValue placeholder="SEO" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1592,7 +1591,7 @@ export default function RecruiterDashboard() {
                   <Select value={jobFormData.knowledgeOnly[0]} onValueChange={(value) => {
                     setJobFormData({...jobFormData, knowledgeOnly: [value]});
                   }}>
-                    <SelectTrigger className="bg-gray-50 text-xs rounded-sm">
+                    <SelectTrigger className="bg-gray-50 text-xs rounded-none border">
                       <SelectValue placeholder="Select skill" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1612,7 +1611,7 @@ export default function RecruiterDashboard() {
                 <Input
                   value={jobFormData.companyLogo}
                   onChange={(e) => setJobFormData({...jobFormData, companyLogo: e.target.value})}
-                  className="pl-10 bg-gray-50 rounded-sm"
+                  className="pl-10 bg-gray-50 rounded-none border"
                   placeholder="Company Logo (Image/Link)"
                 />
               </div>
@@ -1621,13 +1620,13 @@ export default function RecruiterDashboard() {
               <div className="flex gap-3 pt-4">
                 <Button 
                   variant="outline" 
-                  className="flex-1 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 rounded-sm"
+                  className="flex-1 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 rounded-none"
                   onClick={() => setIsPreviewModalOpen(true)}
                 >
                   Preview
                 </Button>
                 <Button 
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-sm"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-none"
                   onClick={handlePostJob}
                 >
                   Post
@@ -1640,60 +1639,116 @@ export default function RecruiterDashboard() {
 
       {/* Preview Modal */}
       <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
-        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto ml-80 mr-4">
+        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 ml-32">
           <DialogHeader>
             <DialogTitle>Job Preview</DialogTitle>
           </DialogHeader>
           
-          {/* Job Card Preview */}
-          <div className="bg-white border rounded-lg p-4 shadow-sm">
-            <div className="flex items-start gap-3 mb-3">
-              <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
-                {jobFormData.companyLogo ? (
-                  <img src={jobFormData.companyLogo} alt="Company" className="w-8 h-8 rounded" />
-                ) : (
-                  <Building size={20} className="text-gray-400" />
-                )}
+          {/* Job Card Preview - Matching Candidate Dashboard Design */}
+          <div className="bg-white border border-gray-200 rounded-2xl hover:shadow-lg transition-all duration-200 overflow-hidden">
+            <div className="flex">
+              {/* Company Logo Section - Left Side */}
+              <div className="w-52 flex flex-col items-center justify-center relative">
+                <div className="bg-gradient-to-br from-green-100 to-green-200 rounded-xl p-6 flex flex-col items-center justify-center mx-2 my-4 h-full min-h-[200px]" style={{width: '80%'}}>
+                  {jobFormData.companyLogo ? (
+                    <img
+                      src={jobFormData.companyLogo}
+                      alt={`${jobFormData.companyName} logo`}
+                      className="w-16 h-16 rounded object-cover mb-2"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 bg-white rounded flex items-center justify-center mb-2">
+                      <Building size={32} className="text-gray-400" />
+                    </div>
+                  )}
+                  <div className="text-center">
+                    <div className="text-sm font-bold text-gray-700">
+                      {jobFormData.companyName ? jobFormData.companyName.split(' ')[0] : 'Company'}
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-900">{jobFormData.role || 'Job Title'}</h3>
-                <p className="text-sm text-gray-600">{jobFormData.companyName || 'Company Name'}</p>
-                <p className="text-xs text-gray-500">{jobFormData.companyTagline || 'Company tagline'}</p>
-              </div>
-            </div>
-            
-            <div className="space-y-2 text-sm text-gray-600">
-              <div className="flex items-center gap-2">
-                <MapPin size={14} />
-                <span>{jobFormData.location || 'Location'}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Briefcase size={14} />
-                <span>{jobFormData.workMode || 'Work Mode'}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <DollarSign size={14} />
-                <span>{jobFormData.salaryPackage || 'Salary'} LPA</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <TrendingUp size={14} />
-                <span>{jobFormData.experience || 'Experience'}</span>
-              </div>
-            </div>
 
-            {jobFormData.aboutCompany && (
-              <div className="mt-3 pt-3 border-t">
-                <p className="text-xs text-gray-600">{jobFormData.aboutCompany.substring(0, 100)}...</p>
-              </div>
-            )}
+              {/* Job Details - Right Side */}
+              <div className="flex-1 p-6 relative">
+                {/* Save Job Button - Top Right */}
+                <button className="absolute top-6 right-6 p-3 rounded-full bg-orange-500 hover:bg-orange-600 text-white transition-all duration-200">
+                  <i className="far fa-bookmark text-white"></i>
+                </button>
 
-            <div className="mt-4 flex gap-2">
-              <Button size="sm" className="bg-blue-600 text-white text-xs px-3 py-1 rounded-sm">
-                Apply Now
-              </Button>
-              <Button size="sm" variant="outline" className="text-xs px-3 py-1 rounded-sm">
-                Save Job
-              </Button>
+                <h3 className="text-lg font-medium text-gray-700 mb-1">
+                  {jobFormData.companyName || 'Company Name'}
+                </h3>
+                <h4 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
+                  {jobFormData.role || 'Job Title'}
+                  <i className="fas fa-fire text-red-500 text-lg"></i>
+                </h4>
+                <p className="text-gray-600 mb-4">
+                  {jobFormData.companyTagline || 'Technology Product based hyper growth, Innovative company.'}
+                </p>
+                
+                <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
+                  <span className="flex items-center gap-1">
+                    <i className="fas fa-briefcase"></i>
+                    {jobFormData.experience || 'Experience'}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="font-semibold">₹</span>
+                    {jobFormData.salaryPackage || 'Salary'} LPA
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <i className="fas fa-map-marker-alt"></i>
+                    {jobFormData.location || 'Location'}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <i className="fas fa-clock"></i>
+                    {jobFormData.workMode || 'Work from office'}
+                  </span>
+                  <span className="font-medium">{jobFormData.type || 'Permanent'}</span>
+                </div>
+
+                {/* Job Tags */}
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-xs">
+                    Open Positions ~ {jobFormData.noOfPositions || '2'}
+                  </span>
+                  <span className="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-xs">
+                    {jobFormData.companyType || 'Product'}
+                  </span>
+                  <span className="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-xs">
+                    {jobFormData.market || 'B2B'}
+                  </span>
+                  <span className="bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-xs">
+                    {jobFormData.type || 'Full Time'}
+                  </span>
+                </div>
+
+                {/* Skills */}
+                <div className="flex items-center gap-2 mb-4">
+                  {jobFormData.primarySkills.filter(skill => skill).map((skill, index) => (
+                    <span key={index} className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                      {skill}
+                    </span>
+                  ))}
+                  {jobFormData.secondarySkills.filter(skill => skill).map((skill, index) => (
+                    <span key={index} className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">Posted: 3 days ago</span>
+                  <div className="flex gap-2">
+                    <Button className="bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 rounded font-medium" size="sm">
+                      View More
+                    </Button>
+                    <Button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium" size="sm">
+                      Apply
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </DialogContent>
