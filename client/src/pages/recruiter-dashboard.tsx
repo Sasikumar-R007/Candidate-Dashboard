@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, EditIcon } from "lucide-react";
+import { CalendarIcon, EditIcon, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, Upload } from "lucide-react";
 import { format } from "date-fns";
 
 interface RecruiterProfile {
@@ -54,6 +54,8 @@ export default function RecruiterDashboard() {
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [activeTab, setActiveTab] = useState('updates');
   const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [jobFormData, setJobFormData] = useState({
     companyName: '',
     companyTagline: '',
@@ -71,8 +73,47 @@ export default function RecruiterDashboard() {
     keyResponsibility: '',
     primarySkills: ['', '', ''],
     secondarySkills: ['', ''],
-    knowledgeOnly: ['']
+    knowledgeOnly: [''],
+    companyLogo: ''
   });
+
+  const validateForm = () => {
+    const required = ['companyName', 'experience', 'salaryPackage', 'aboutCompany', 'roleDefinitions', 'keyResponsibility'];
+    return required.every(field => jobFormData[field].trim() !== '');
+  };
+
+  const handlePostJob = () => {
+    if (!validateForm()) {
+      alert('Please fill all required fields');
+      return;
+    }
+    
+    setIsPostJobModalOpen(false);
+    setShowSuccessAlert(true);
+    setTimeout(() => setShowSuccessAlert(false), 3000);
+    
+    // Reset form
+    setJobFormData({
+      companyName: '',
+      companyTagline: '',
+      companyType: '',
+      market: '',
+      field: '',
+      noOfPositions: '',
+      role: '',
+      experience: '',
+      location: '',
+      workMode: '',
+      salaryPackage: '',
+      aboutCompany: '',
+      roleDefinitions: '',
+      keyResponsibility: '',
+      primarySkills: ['', '', ''],
+      secondarySkills: ['', ''],
+      knowledgeOnly: [''],
+      companyLogo: ''
+    });
+  };
   
   // Requirements data
   const [activeRequirements] = useState([
@@ -1244,332 +1285,314 @@ export default function RecruiterDashboard() {
 
       {/* Post Job Modal */}
       <Dialog open={isPostJobModalOpen} onOpenChange={setIsPostJobModalOpen}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              Post the job
-              <button 
-                onClick={() => setIsPostJobModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                ✕
-              </button>
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4">
-            {/* Company Name */}
-            <div>
-              <Label htmlFor="companyName" className="text-sm font-medium flex items-center gap-1">
-                <span className="text-blue-500">🏢</span>
-                Company Name <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="companyName"
-                value={jobFormData.companyName}
-                onChange={(e) => setJobFormData({...jobFormData, companyName: e.target.value})}
-                className="mt-1 bg-gray-50"
-              />
-            </div>
-
-            {/* Company Tagline */}
-            <div>
-              <Label htmlFor="companyTagline" className="text-sm font-medium flex items-center gap-1">
-                <span className="text-blue-500">*</span>
-                Company Tagline
-                <span className="text-gray-400 ml-auto text-xs">0/100</span>
-              </Label>
-              <Input
-                id="companyTagline"
-                value={jobFormData.companyTagline}
-                onChange={(e) => setJobFormData({...jobFormData, companyTagline: e.target.value})}
-                className="mt-1 bg-gray-50"
-              />
-            </div>
-
-            {/* Row 1: Company Type, Market */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-sm font-medium flex items-center gap-1">
-                  <span className="text-blue-500">📊</span>
-                  Company Type
-                </Label>
-                <Select value={jobFormData.companyType} onValueChange={(value) => setJobFormData({...jobFormData, companyType: value})}>
-                  <SelectTrigger className="mt-1 bg-gray-50">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="startup">Startup</SelectItem>
-                    <SelectItem value="corporate">Corporate</SelectItem>
-                    <SelectItem value="enterprise">Enterprise</SelectItem>
-                  </SelectContent>
-                </Select>
+        <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden ml-64 mr-4">
+          <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(95vh - 4rem)' }}>
+            <DialogHeader className="sticky top-0 bg-white z-10 pb-4">
+              <DialogTitle className="flex items-center justify-between">
+                Post the job
+                <button 
+                  onClick={() => setIsPostJobModalOpen(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              {/* Company Name */}
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500">
+                  <Building size={16} />
+                </div>
+                <Input
+                  value={jobFormData.companyName}
+                  onChange={(e) => setJobFormData({...jobFormData, companyName: e.target.value})}
+                  className="pl-10 bg-gray-50 rounded-sm"
+                  placeholder="Company Name"
+                />
+                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500 text-sm">*</span>
               </div>
-              <div>
-                <Label className="text-sm font-medium flex items-center gap-1">
-                  <span className="text-blue-500">🎯</span>
-                  Market
-                </Label>
-                <Select value={jobFormData.market} onValueChange={(value) => setJobFormData({...jobFormData, market: value})}>
-                  <SelectTrigger className="mt-1 bg-gray-50">
-                    <SelectValue placeholder="Select market" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="technology">Technology</SelectItem>
-                    <SelectItem value="finance">Finance</SelectItem>
-                    <SelectItem value="healthcare">Healthcare</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
 
-            {/* Row 2: Field, No of Positions */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-sm font-medium flex items-center gap-1">
-                  <span className="text-blue-500">📂</span>
-                  Field
-                </Label>
-                <Select value={jobFormData.field} onValueChange={(value) => setJobFormData({...jobFormData, field: value})}>
-                  <SelectTrigger className="mt-1 bg-gray-50">
-                    <SelectValue placeholder="Use 25-26 Without Background" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="software-development">Software Development</SelectItem>
-                    <SelectItem value="design">Design</SelectItem>
-                    <SelectItem value="marketing">Marketing</SelectItem>
-                  </SelectContent>
-                </Select>
+              {/* Company Tagline */}
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500">
+                  <Tag size={16} />
+                </div>
+                <Input
+                  value={jobFormData.companyTagline}
+                  onChange={(e) => setJobFormData({...jobFormData, companyTagline: e.target.value})}
+                  className="pl-10 bg-gray-50 rounded-sm"
+                  placeholder="Company Tagline"
+                />
+                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">0/100</span>
               </div>
-              <div>
-                <Label className="text-sm font-medium flex items-center gap-1">
-                  <span className="text-blue-500">#</span>
-                  No of Positions
-                </Label>
-                <Select value={jobFormData.noOfPositions} onValueChange={(value) => setJobFormData({...jobFormData, noOfPositions: value})}>
-                  <SelectTrigger className="mt-1 bg-gray-50">
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">1</SelectItem>
-                    <SelectItem value="2-5">2-5</SelectItem>
-                    <SelectItem value="5+">5+</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
 
-            {/* Row 3: Role, Experience */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-sm font-medium flex items-center gap-1">
-                  <span className="text-blue-500">👤</span>
-                  Role
-                </Label>
-                <Select value={jobFormData.role} onValueChange={(value) => setJobFormData({...jobFormData, role: value})}>
-                  <SelectTrigger className="mt-1 bg-gray-50">
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="developer">Developer</SelectItem>
-                    <SelectItem value="designer">Designer</SelectItem>
-                    <SelectItem value="manager">Manager</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-sm font-medium flex items-center gap-1">
-                  <span className="text-blue-500">📈</span>
-                  Experience <span className="text-red-500">*</span>
-                </Label>
-                <Select value={jobFormData.experience} onValueChange={(value) => setJobFormData({...jobFormData, experience: value})}>
-                  <SelectTrigger className="mt-1 bg-gray-50">
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0-2">0-2 years</SelectItem>
-                    <SelectItem value="2-5">2-5 years</SelectItem>
-                    <SelectItem value="5+">5+ years</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Row 4: Location, Work Mode */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-sm font-medium flex items-center gap-1">
-                  <span className="text-blue-500">📍</span>
-                  Location
-                </Label>
-                <Select value={jobFormData.location} onValueChange={(value) => setJobFormData({...jobFormData, location: value})}>
-                  <SelectTrigger className="mt-1 bg-gray-50">
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mumbai">Mumbai</SelectItem>
-                    <SelectItem value="delhi">Delhi</SelectItem>
-                    <SelectItem value="bangalore">Bangalore</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-sm font-medium flex items-center gap-1">
-                  <span className="text-blue-500">👨‍💻</span>
-                  Work Type <span className="text-red-500">*</span>
-                </Label>
-                <Select value={jobFormData.workMode} onValueChange={(value) => setJobFormData({...jobFormData, workMode: value})}>
-                  <SelectTrigger className="mt-1 bg-gray-50">
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="remote">Remote</SelectItem>
-                    <SelectItem value="office">Office</SelectItem>
-                    <SelectItem value="hybrid">Hybrid</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Row 5: Work Mode, Salary Package */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-sm font-medium flex items-center gap-1">
-                  <span className="text-blue-500">🏢</span>
-                  Work Mode
-                </Label>
-                <Select value={jobFormData.workMode} onValueChange={(value) => setJobFormData({...jobFormData, workMode: value})}>
-                  <SelectTrigger className="mt-1 bg-gray-50">
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="full-time">Full Time</SelectItem>
-                    <SelectItem value="part-time">Part Time</SelectItem>
-                    <SelectItem value="contract">Contract</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-sm font-medium flex items-center gap-1">
-                  <span className="text-blue-500">💰</span>
-                  Salary Packages <span className="text-red-500">*</span>
-                </Label>
-                <Select value={jobFormData.salaryPackage} onValueChange={(value) => setJobFormData({...jobFormData, salaryPackage: value})}>
-                  <SelectTrigger className="mt-1 bg-gray-50">
-                    <SelectValue placeholder="Select" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0-5">0-5 LPA</SelectItem>
-                    <SelectItem value="5-10">5-10 LPA</SelectItem>
-                    <SelectItem value="10+">10+ LPA</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* About Company */}
-            <div>
-              <Label htmlFor="aboutCompany" className="text-sm font-medium flex items-center gap-1">
-                About Company <span className="text-red-500">*</span>
-                <span className="text-gray-400 ml-auto text-xs">0/1000</span>
-              </Label>
-              <textarea
-                id="aboutCompany"
-                value={jobFormData.aboutCompany}
-                onChange={(e) => setJobFormData({...jobFormData, aboutCompany: e.target.value})}
-                className="mt-1 w-full bg-gray-50 border rounded-md p-2 min-h-[80px] text-sm resize-none"
-                placeholder="Enter here..."
-              />
-            </div>
-
-            {/* Role Definitions */}
-            <div>
-              <Label htmlFor="roleDefinitions" className="text-sm font-medium flex items-center gap-1">
-                Role Definitions <span className="text-red-500">*</span>
-                <span className="text-gray-400 ml-auto text-xs">0/1500</span>
-              </Label>
-              <textarea
-                id="roleDefinitions"
-                value={jobFormData.roleDefinitions}
-                onChange={(e) => setJobFormData({...jobFormData, roleDefinitions: e.target.value})}
-                className="mt-1 w-full bg-gray-50 border rounded-md p-2 min-h-[80px] text-sm resize-none"
-                placeholder="Enter here..."
-              />
-            </div>
-
-            {/* Key Responsibility */}
-            <div>
-              <Label htmlFor="keyResponsibility" className="text-sm font-medium flex items-center gap-1">
-                Key responsibility <span className="text-red-500">*</span>
-                <span className="text-gray-400 ml-auto text-xs">0-20 points</span>
-              </Label>
-              <textarea
-                id="keyResponsibility"
-                value={jobFormData.keyResponsibility}
-                onChange={(e) => setJobFormData({...jobFormData, keyResponsibility: e.target.value})}
-                className="mt-1 w-full bg-gray-50 border rounded-md p-2 min-h-[80px] text-sm resize-none"
-                placeholder="Enter here..."
-              />
-            </div>
-
-            {/* Add up to 15 skills */}
-            <div>
-              <Label className="text-sm font-medium">Add up to 15 skills</Label>
-              
-              {/* Primary Skills */}
-              <div className="mt-2">
-                <Label className="text-xs text-gray-600">Primary Skills</Label>
-                <div className="grid grid-cols-3 gap-2 mt-1">
-                  {jobFormData.primarySkills.map((skill, index) => (
-                    <Select key={`primary-${index}`} value={skill} onValueChange={(value) => {
-                      const newSkills = [...jobFormData.primarySkills];
-                      newSkills[index] = value;
-                      setJobFormData({...jobFormData, primarySkills: newSkills});
-                    }}>
-                      <SelectTrigger className="bg-gray-50 text-xs">
-                        <SelectValue placeholder="Data Analyst" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="data-analyst">Data Analyst</SelectItem>
-                        <SelectItem value="react">React</SelectItem>
-                        <SelectItem value="node">Node.js</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ))}
+              {/* Row 1: Company Type, Market */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 z-10">
+                    <BarChart3 size={16} />
+                  </div>
+                  <Select value={jobFormData.companyType} onValueChange={(value) => setJobFormData({...jobFormData, companyType: value})}>
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm">
+                      <SelectValue placeholder="Company Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="startup">Startup</SelectItem>
+                      <SelectItem value="corporate">Corporate</SelectItem>
+                      <SelectItem value="enterprise">Enterprise</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 z-10">
+                    <Target size={16} />
+                  </div>
+                  <Select value={jobFormData.market} onValueChange={(value) => setJobFormData({...jobFormData, market: value})}>
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm">
+                      <SelectValue placeholder="Market" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="technology">Technology</SelectItem>
+                      <SelectItem value="finance">Finance</SelectItem>
+                      <SelectItem value="healthcare">Healthcare</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
-              {/* Secondary Skills */}
-              <div className="mt-3">
-                <Label className="text-xs text-gray-600">Secondary Skills</Label>
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  {jobFormData.secondarySkills.map((skill, index) => (
-                    <Select key={`secondary-${index}`} value={skill} onValueChange={(value) => {
-                      const newSkills = [...jobFormData.secondarySkills];
-                      newSkills[index] = value;
-                      setJobFormData({...jobFormData, secondarySkills: newSkills});
-                    }}>
-                      <SelectTrigger className="bg-gray-50 text-xs">
-                        <SelectValue placeholder="SEO" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="seo">SEO</SelectItem>
-                        <SelectItem value="content-creation">Content Creation</SelectItem>
-                        <SelectItem value="analytics">Analytics</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ))}
+              {/* Row 2: Field, No of Positions */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 z-10">
+                    <FolderOpen size={16} />
+                  </div>
+                  <Select value={jobFormData.field} onValueChange={(value) => setJobFormData({...jobFormData, field: value})}>
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm">
+                      <SelectValue placeholder="Use 25-26 Without Background" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="software-development">Software Development</SelectItem>
+                      <SelectItem value="design">Design</SelectItem>
+                      <SelectItem value="marketing">Marketing</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 z-10">
+                    <Hash size={16} />
+                  </div>
+                  <Select value={jobFormData.noOfPositions} onValueChange={(value) => setJobFormData({...jobFormData, noOfPositions: value})}>
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm">
+                      <SelectValue placeholder="No of Positions" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1</SelectItem>
+                      <SelectItem value="2-5">2-5</SelectItem>
+                      <SelectItem value="5+">5+</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
-              {/* Knowledge Only */}
-              <div className="mt-3">
-                <Label className="text-xs text-gray-600">Knowledge only</Label>
-                <div className="mt-1">
+              {/* Row 3: Role, Experience */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 z-10">
+                    <User size={16} />
+                  </div>
+                  <Select value={jobFormData.role} onValueChange={(value) => setJobFormData({...jobFormData, role: value})}>
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm">
+                      <SelectValue placeholder="Role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="developer">Developer</SelectItem>
+                      <SelectItem value="designer">Designer</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 z-10">
+                    <TrendingUp size={16} />
+                  </div>
+                  <Select value={jobFormData.experience} onValueChange={(value) => setJobFormData({...jobFormData, experience: value})}>
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm">
+                      <SelectValue placeholder="Experience" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0-2">0-2 years</SelectItem>
+                      <SelectItem value="2-5">2-5 years</SelectItem>
+                      <SelectItem value="5+">5+ years</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500 text-sm">*</span>
+                </div>
+              </div>
+
+              {/* Row 4: Location, Work Type */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 z-10">
+                    <MapPin size={16} />
+                  </div>
+                  <Select value={jobFormData.location} onValueChange={(value) => setJobFormData({...jobFormData, location: value})}>
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm">
+                      <SelectValue placeholder="Location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mumbai">Mumbai</SelectItem>
+                      <SelectItem value="delhi">Delhi</SelectItem>
+                      <SelectItem value="bangalore">Bangalore</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 z-10">
+                    <Laptop size={16} />
+                  </div>
+                  <Select value={jobFormData.workMode} onValueChange={(value) => setJobFormData({...jobFormData, workMode: value})}>
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm">
+                      <SelectValue placeholder="Work Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="remote">Remote</SelectItem>
+                      <SelectItem value="office">Office</SelectItem>
+                      <SelectItem value="hybrid">Hybrid</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Row 5: Work Mode, Salary Package */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 z-10">
+                    <Briefcase size={16} />
+                  </div>
+                  <Select value={jobFormData.workMode} onValueChange={(value) => setJobFormData({...jobFormData, workMode: value})}>
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm">
+                      <SelectValue placeholder="Work Mode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="full-time">Full Time</SelectItem>
+                      <SelectItem value="part-time">Part Time</SelectItem>
+                      <SelectItem value="contract">Contract</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="relative">
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500 z-10">
+                    <DollarSign size={16} />
+                  </div>
+                  <Select value={jobFormData.salaryPackage} onValueChange={(value) => setJobFormData({...jobFormData, salaryPackage: value})}>
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm">
+                      <SelectValue placeholder="Salary Package" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0-5">0-5 LPA</SelectItem>
+                      <SelectItem value="5-10">5-10 LPA</SelectItem>
+                      <SelectItem value="10+">10+ LPA</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-red-500 text-sm">*</span>
+                </div>
+              </div>
+
+              {/* About Company */}
+              <div className="relative">
+                <textarea
+                  value={jobFormData.aboutCompany}
+                  onChange={(e) => setJobFormData({...jobFormData, aboutCompany: e.target.value})}
+                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-16"
+                  placeholder="About Company"
+                />
+                <span className="absolute right-3 top-3 text-red-500 text-sm">*</span>
+                <span className="absolute right-3 bottom-3 text-gray-400 text-xs">0/1000</span>
+              </div>
+
+              {/* Role Definitions */}
+              <div className="relative">
+                <textarea
+                  value={jobFormData.roleDefinitions}
+                  onChange={(e) => setJobFormData({...jobFormData, roleDefinitions: e.target.value})}
+                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-16"
+                  placeholder="Role Definitions"
+                />
+                <span className="absolute right-3 top-3 text-red-500 text-sm">*</span>
+                <span className="absolute right-3 bottom-3 text-gray-400 text-xs">0/1500</span>
+              </div>
+
+              {/* Key Responsibility */}
+              <div className="relative">
+                <textarea
+                  value={jobFormData.keyResponsibility}
+                  onChange={(e) => setJobFormData({...jobFormData, keyResponsibility: e.target.value})}
+                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-20"
+                  placeholder="Key Responsibility"
+                />
+                <span className="absolute right-3 top-3 text-red-500 text-sm">*</span>
+                <span className="absolute right-3 bottom-3 text-gray-400 text-xs">0-20 points</span>
+              </div>
+
+              {/* Add up to 15 skills */}
+              <div>
+                <Label className="text-sm font-medium mb-3 block">Add up to 15 skills</Label>
+                
+                {/* Primary Skills */}
+                <div className="mb-3">
+                  <Label className="text-xs text-gray-600 mb-2 block">Primary Skills</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {jobFormData.primarySkills.map((skill, index) => (
+                      <Select key={`primary-${index}`} value={skill} onValueChange={(value) => {
+                        const newSkills = [...jobFormData.primarySkills];
+                        newSkills[index] = value;
+                        setJobFormData({...jobFormData, primarySkills: newSkills});
+                      }}>
+                        <SelectTrigger className="bg-gray-50 text-xs rounded-sm">
+                          <SelectValue placeholder="Data Analyst" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="data-analyst">Data Analyst</SelectItem>
+                          <SelectItem value="react">React</SelectItem>
+                          <SelectItem value="node">Node.js</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Secondary Skills */}
+                <div className="mb-3">
+                  <Label className="text-xs text-gray-600 mb-2 block">Secondary Skills</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {jobFormData.secondarySkills.map((skill, index) => (
+                      <Select key={`secondary-${index}`} value={skill} onValueChange={(value) => {
+                        const newSkills = [...jobFormData.secondarySkills];
+                        newSkills[index] = value;
+                        setJobFormData({...jobFormData, secondarySkills: newSkills});
+                      }}>
+                        <SelectTrigger className="bg-gray-50 text-xs rounded-sm">
+                          <SelectValue placeholder="SEO" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="seo">SEO</SelectItem>
+                          <SelectItem value="content-creation">Content Creation</SelectItem>
+                          <SelectItem value="analytics">Analytics</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Knowledge Only */}
+                <div>
+                  <Label className="text-xs text-gray-600 mb-2 block">Knowledge only</Label>
                   <Select value={jobFormData.knowledgeOnly[0]} onValueChange={(value) => {
                     setJobFormData({...jobFormData, knowledgeOnly: [value]});
                   }}>
-                    <SelectTrigger className="bg-gray-50 text-xs">
+                    <SelectTrigger className="bg-gray-50 text-xs rounded-sm">
                       <SelectValue placeholder="Select skill" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1580,30 +1603,108 @@ export default function RecruiterDashboard() {
                   </Select>
                 </div>
               </div>
+
+              {/* Company Logo */}
+              <div className="relative">
+                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-500">
+                  <Upload size={16} />
+                </div>
+                <Input
+                  value={jobFormData.companyLogo}
+                  onChange={(e) => setJobFormData({...jobFormData, companyLogo: e.target.value})}
+                  className="pl-10 bg-gray-50 rounded-sm"
+                  placeholder="Company Logo (Image/Link)"
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 rounded-sm"
+                  onClick={() => setIsPreviewModalOpen(true)}
+                >
+                  Preview
+                </Button>
+                <Button 
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-sm"
+                  onClick={handlePostJob}
+                >
+                  Post
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Preview Modal */}
+      <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
+        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto ml-80 mr-4">
+          <DialogHeader>
+            <DialogTitle>Job Preview</DialogTitle>
+          </DialogHeader>
+          
+          {/* Job Card Preview */}
+          <div className="bg-white border rounded-lg p-4 shadow-sm">
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
+                {jobFormData.companyLogo ? (
+                  <img src={jobFormData.companyLogo} alt="Company" className="w-8 h-8 rounded" />
+                ) : (
+                  <Building size={20} className="text-gray-400" />
+                )}
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900">{jobFormData.role || 'Job Title'}</h3>
+                <p className="text-sm text-gray-600">{jobFormData.companyName || 'Company Name'}</p>
+                <p className="text-xs text-gray-500">{jobFormData.companyTagline || 'Company tagline'}</p>
+              </div>
+            </div>
+            
+            <div className="space-y-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <MapPin size={14} />
+                <span>{jobFormData.location || 'Location'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Briefcase size={14} />
+                <span>{jobFormData.workMode || 'Work Mode'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <DollarSign size={14} />
+                <span>{jobFormData.salaryPackage || 'Salary'} LPA</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <TrendingUp size={14} />
+                <span>{jobFormData.experience || 'Experience'}</span>
+              </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-4">
-              <Button 
-                variant="outline" 
-                className="flex-1 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100"
-                onClick={() => console.log('Preview job')}
-              >
-                Preview
+            {jobFormData.aboutCompany && (
+              <div className="mt-3 pt-3 border-t">
+                <p className="text-xs text-gray-600">{jobFormData.aboutCompany.substring(0, 100)}...</p>
+              </div>
+            )}
+
+            <div className="mt-4 flex gap-2">
+              <Button size="sm" className="bg-blue-600 text-white text-xs px-3 py-1 rounded-sm">
+                Apply Now
               </Button>
-              <Button 
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={() => {
-                  console.log('Post job:', jobFormData);
-                  setIsPostJobModalOpen(false);
-                }}
-              >
-                Post
+              <Button size="sm" variant="outline" className="text-xs px-3 py-1 rounded-sm">
+                Save Job
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Success Alert */}
+      {showSuccessAlert && (
+        <div className="fixed bottom-4 left-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-in slide-in-from-bottom">
+          Job posted successfully!
+        </div>
+      )}
     </div>
   );
 }
