@@ -405,10 +405,10 @@ export default function RecruiterDashboard() {
 
             {/* Archives and View More Buttons */}
             <div className="mt-6 flex justify-end gap-4">
-              <Button variant="outline" className="bg-red-500 hover:bg-red-600 text-white border-red-500 hover:border-red-600 rounded transition-colors duration-200">
+              <Button variant="outline" className="bg-red-500 hover:bg-red-600 text-white border-red-500 hover:border-red-600 rounded transition-all duration-300 hover:scale-105 hover:shadow-lg">
                 Archives
               </Button>
-              <Button variant="outline" className="bg-blue-500 hover:bg-blue-600 text-white border-blue-500 hover:border-blue-600 rounded transition-colors duration-200">
+              <Button variant="outline" className="bg-blue-500 hover:bg-blue-600 text-white border-blue-500 hover:border-blue-600 rounded transition-all duration-300 hover:scale-105 hover:shadow-lg">
                 View More
               </Button>
             </div>
@@ -506,7 +506,7 @@ export default function RecruiterDashboard() {
                 
                 {/* Right side - Daily Delivery */}
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg shadow-sm p-4 border border-yellow-200 dark:border-yellow-800">
-                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Daily Delivery</h3>
+                  <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4 text-center">Daily Delivery</h3>
                   <div className="grid grid-cols-2 gap-4 mb-4">
                     <div className="text-center">
                       <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Delivered</p>
