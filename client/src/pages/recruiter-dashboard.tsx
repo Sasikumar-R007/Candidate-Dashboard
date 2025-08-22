@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, EditIcon, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, Upload, X } from "lucide-react";
 import { format } from "date-fns";
+import { useLocation } from "wouter";
 
 interface RecruiterProfile {
   id: string;
@@ -53,6 +54,7 @@ interface Interview {
 export default function RecruiterDashboard() {
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [activeTab, setActiveTab] = useState('updates');
+  const [, setLocation] = useLocation();
   const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isUploadResumeModalOpen, setIsUploadResumeModalOpen] = useState(false);
@@ -365,7 +367,9 @@ export default function RecruiterDashboard() {
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors">
                   Upload Resume
                 </button>
-                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors">
+                <button 
+                  onClick={() => setLocation('/source-resume')}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors">
                   Source Resume
                 </button>
               </div>
@@ -1316,7 +1320,7 @@ export default function RecruiterDashboard() {
 
       {/* Post Job Modal */}
       <Dialog open={isPostJobModalOpen} onOpenChange={setIsPostJobModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 ml-32">
+        <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden">
           <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(95vh - 4rem)' }}>
             <DialogHeader className="sticky top-0 bg-white z-10 pb-4">
               <DialogTitle>Post the job</DialogTitle>
@@ -1341,7 +1345,7 @@ export default function RecruiterDashboard() {
                 <Input
                   value={jobFormData.companyName}
                   onChange={(e) => setJobFormData({...jobFormData, companyName: e.target.value})}
-                  className="pl-10 bg-gray-50 rounded-sm border"
+                  className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0"
                   placeholder="Company Name"
                 />
               </div>
@@ -1354,7 +1358,7 @@ export default function RecruiterDashboard() {
                 <Input
                   value={jobFormData.companyTagline}
                   onChange={(e) => setJobFormData({...jobFormData, companyTagline: e.target.value})}
-                  className="pl-10 bg-gray-50 rounded-sm border pr-16"
+                  className="pl-10 bg-gray-50 rounded-sm border pr-16 focus-visible:ring-1 focus-visible:ring-offset-0"
                   placeholder="Company Tagline"
                 />
                 <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">0/100</span>
@@ -1367,7 +1371,7 @@ export default function RecruiterDashboard() {
                     <BarChart3 size={16} />
                   </div>
                   <Select value={jobFormData.companyType} onValueChange={(value) => setJobFormData({...jobFormData, companyType: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0">
                       <SelectValue placeholder="Company Type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1382,7 +1386,7 @@ export default function RecruiterDashboard() {
                     <Target size={16} />
                   </div>
                   <Select value={jobFormData.market} onValueChange={(value) => setJobFormData({...jobFormData, market: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0">
                       <SelectValue placeholder="Market" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1401,7 +1405,7 @@ export default function RecruiterDashboard() {
                     <FolderOpen size={16} />
                   </div>
                   <Select value={jobFormData.field} onValueChange={(value) => setJobFormData({...jobFormData, field: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0">
                       <SelectValue placeholder="Use 25-26 Without Background" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1416,7 +1420,7 @@ export default function RecruiterDashboard() {
                     <Hash size={16} />
                   </div>
                   <Select value={jobFormData.noOfPositions} onValueChange={(value) => setJobFormData({...jobFormData, noOfPositions: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0">
                       <SelectValue placeholder="No of Positions" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1435,7 +1439,7 @@ export default function RecruiterDashboard() {
                     <User size={16} />
                   </div>
                   <Select value={jobFormData.role} onValueChange={(value) => setJobFormData({...jobFormData, role: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0">
                       <SelectValue placeholder="Role" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1450,7 +1454,7 @@ export default function RecruiterDashboard() {
                     <TrendingUp size={16} />
                   </div>
                   <Select value={jobFormData.experience} onValueChange={(value) => setJobFormData({...jobFormData, experience: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0">
                       <SelectValue placeholder="Experience" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1469,7 +1473,7 @@ export default function RecruiterDashboard() {
                     <MapPin size={16} />
                   </div>
                   <Select value={jobFormData.location} onValueChange={(value) => setJobFormData({...jobFormData, location: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0">
                       <SelectValue placeholder="Location" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1484,7 +1488,7 @@ export default function RecruiterDashboard() {
                     <Laptop size={16} />
                   </div>
                   <Select value={jobFormData.workMode} onValueChange={(value) => setJobFormData({...jobFormData, workMode: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0">
                       <SelectValue placeholder="Work Type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1503,7 +1507,7 @@ export default function RecruiterDashboard() {
                     <Briefcase size={16} />
                   </div>
                   <Select value={jobFormData.workMode} onValueChange={(value) => setJobFormData({...jobFormData, workMode: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0">
                       <SelectValue placeholder="Work Mode" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1518,7 +1522,7 @@ export default function RecruiterDashboard() {
                     <DollarSign size={16} />
                   </div>
                   <Select value={jobFormData.salaryPackage} onValueChange={(value) => setJobFormData({...jobFormData, salaryPackage: value})}>
-                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border">
+                    <SelectTrigger className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0">
                       <SelectValue placeholder="Salary Package" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1639,7 +1643,7 @@ export default function RecruiterDashboard() {
                 <Input
                   value={jobFormData.companyLogo}
                   onChange={(e) => setJobFormData({...jobFormData, companyLogo: e.target.value})}
-                  className="pl-10 bg-gray-50 rounded-sm border"
+                  className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0"
                   placeholder="Company Logo (Image/Link)"
                 />
               </div>

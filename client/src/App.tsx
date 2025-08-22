@@ -9,6 +9,7 @@ import Dashboard from "@/pages/dashboard";
 import TeamLeaderDashboard from "@/pages/team-leader-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
 import RecruiterDashboard from "@/pages/recruiter-dashboard";
+import SourceResume from "@/pages/source-resume";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -19,6 +20,7 @@ function Router() {
       <Route path="/team-leader" component={TeamLeaderDashboard} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/recruiter" component={RecruiterDashboard} />
+      <Route path="/source-resume" component={SourceResume} />
       <Route component={NotFound} />
     </Switch>
   );
