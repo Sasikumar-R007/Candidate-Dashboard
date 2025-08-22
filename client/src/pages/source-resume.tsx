@@ -80,6 +80,66 @@ const mockCandidates = [
     phone: "+91 9876543211",
     saved: false,
   },
+  {
+    id: 4,
+    name: "Ravi Kumar",
+    title: "DevOps Engineer",
+    location: "Chennai, India",
+    experience: 6,
+    education: "B.Tech IT",
+    currentCompany: "Amazon",
+    lastActive: "3 days ago",
+    skills: ["AWS", "Docker", "Kubernetes", "Linux", "Python"],
+    summary: "DevOps engineer with strong cloud and automation background.",
+    resumeUrl: "#",
+    profilePic: "",
+    noticePeriod: "60 days",
+    ctc: "₹28L",
+    expectedCtc: "₹32L",
+    email: "ravi.kumar@email.com",
+    phone: "+91 9876543212",
+    saved: false,
+  },
+  {
+    id: 5,
+    name: "Meena S",
+    title: "Full Stack Developer",
+    location: "Remote",
+    experience: 3.5,
+    education: "M.Sc. Computer Science",
+    currentCompany: "Google",
+    lastActive: "6 hours ago",
+    skills: ["Node.js", "React", "MongoDB", "Express", "AWS"],
+    summary: "Full stack developer with a passion for scalable web apps.",
+    resumeUrl: "#",
+    profilePic: "",
+    noticePeriod: "Immediate",
+    ctc: "₹20L",
+    expectedCtc: "₹25L",
+    email: "meena.s@email.com",
+    phone: "+91 9876543213",
+    saved: true,
+  },
+  {
+    id: 6,
+    name: "Tom Victor",
+    title: "Backend Developer",
+    location: "Bangalore, India",
+    experience: 2,
+    education: "BCA",
+    currentCompany: "Infosys",
+    lastActive: "4 days ago",
+    skills: ["Node.js", "Express", "MongoDB", "Docker"],
+    summary: "Backend developer with a focus on Node.js and microservices.",
+    resumeUrl: "#",
+    profilePic: "",
+    noticePeriod: "30 days",
+    ctc: "₹10L",
+    expectedCtc: "₹13L",
+    email: "tom.victor@email.com",
+    phone: "+91 9876543214",
+    saved: false,
+  },
 ];
 
 const allSkills = [
@@ -147,6 +207,7 @@ function exportToCSV(data: any[]) {
 }
 
 const SourceResume = () => {
+  const [step, setStep] = useState(1); // 1: filter, 2: results
   const [searchQuery, setSearchQuery] = useState("");
   const [booleanMode, setBooleanMode] = useState(false);
   const [filters, setFilters] = useState(initialFilters);
@@ -267,7 +328,7 @@ const SourceResume = () => {
       );
     } else {
       setSelectedIds((prev) => [
-        ...Array.from(new Set([...prev, ...paginatedCandidates.map((c) => c.id)])),
+        ...new Set([...prev, ...paginatedCandidates.map((c) => c.id)]),
       ]);
     }
   };
@@ -289,33 +350,37 @@ const SourceResume = () => {
     setSelectedIds([]);
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Left Panel - Filters */}
-      <div className="w-80 bg-white border-r border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-purple-600">Filters</h2>
-          <button
-            onClick={resetFilters}
-            className="p-1.5 text-gray-400 hover:text-gray-600"
-          >
-            <RotateCw size={16} />
-          </button>
-        </div>
-
-        <div className="space-y-6">
-          {/* Search */}
-          <div>
-            <input
-              type="text"
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-              placeholder="Search by name, skill, company..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <div className="mt-2">
+  // UI
+  if (step === 1) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-2xl">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-blue-600">
+              Source Resume
+            </h2>
+            <button
+              onClick={resetFilters}
+              className="p-2 rounded-full hover:bg-gray-100"
+            >
+              <RotateCw className="w-5 h-5 text-gray-600" />
+            </button>
+          </div>
+          <div className="mb-4 flex items-center gap-4">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                className="w-full border rounded px-4 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                placeholder={
+                  booleanMode
+                    ? "Boolean search (e.g. React AND Node.js)"
+                    : "Search by name, skill, company..."
+                }
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
               <button
-                className={`px-3 py-1 rounded text-xs ${
+                className={`absolute right-2 top-2 px-2 py-1 rounded text-xs ${
                   booleanMode
                     ? "bg-purple-600 text-white"
                     : "bg-gray-200 text-gray-700"
@@ -327,12 +392,221 @@ const SourceResume = () => {
               </button>
             </div>
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Location</label>
+              <select
+                className="w-full border rounded px-2 py-2"
+                value={filters.location}
+                onChange={(e) =>
+                  setFilters({ ...filters, location: e.target.value })
+                }
+              >
+                <option value="">Any</option>
+                {allLocations.map((loc) => (
+                  <option key={loc} value={loc}>
+                    {loc}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Experience (years)
+              </label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="number"
+                  min={0}
+                  max={filters.experience[1]}
+                  value={filters.experience[0]}
+                  onChange={(e) =>
+                    setFilters({
+                      ...filters,
+                      experience: [
+                        parseInt(e.target.value) || 0,
+                        filters.experience[1],
+                      ],
+                    })
+                  }
+                  className="w-16 border rounded px-2 py-1"
+                />
+                <span>-</span>
+                <input
+                  type="number"
+                  min={filters.experience[0]}
+                  max={15}
+                  value={filters.experience[1]}
+                  onChange={(e) =>
+                    setFilters({
+                      ...filters,
+                      experience: [
+                        filters.experience[0],
+                        parseInt(e.target.value) || 15,
+                      ],
+                    })
+                  }
+                  className="w-16 border rounded px-2 py-1"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Skills</label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {filters.skills.map((skill) => (
+                  <span
+                    key={skill}
+                    className="inline-flex items-center rounded-full bg-purple-100 px-2 py-1 text-sm text-purple-800"
+                  >
+                    {skill}
+                    <button
+                      type="button"
+                      onClick={() => handleSkillRemove(skill)}
+                      className="ml-1 rounded-full bg-purple-200 px-1 text-xs text-purple-800 hover:bg-purple-300"
+                    >
+                      &times;
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <input
+                type="text"
+                className="w-full border rounded px-2 py-1"
+                placeholder="Add a skill and press Enter"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.target as HTMLInputElement).value) {
+                    handleSkillAdd((e.target as HTMLInputElement).value);
+                    (e.target as HTMLInputElement).value = "";
+                  }
+                }}
+              />
+              <div className="flex flex-wrap gap-2 mt-2">
+                {allSkills.map((skill) => (
+                  <button
+                    key={skill}
+                    type="button"
+                    className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded hover:bg-purple-100"
+                    onClick={() => handleSkillAdd(skill)}
+                  >
+                    {skill}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Role</label>
+              <select
+                className="w-full border rounded px-2 py-2"
+                value={filters.role}
+                onChange={(e) =>
+                  setFilters({ ...filters, role: e.target.value })
+                }
+              >
+                <option value="">Any</option>
+                {allRoles.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-1">
+                Current Company
+              </label>
+              <select
+                className="w-full border rounded px-2 py-2"
+                value={filters.company}
+                onChange={(e) =>
+                  setFilters({ ...filters, company: e.target.value })
+                }
+              >
+                <option value="">Any</option>
+                {allCompanies.map((company) => (
+                  <option key={company} value={company}>
+                    {company}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <button
+            className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold text-lg mt-6 hover:bg-green-700 transition"
+            onClick={() => setStep(2)}
+          >
+            Source Resume
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-          {/* Location */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Location</label>
+  // Step 2: Results UI
+  return (
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar Filters */}
+      <aside className="bg-white border-r w-72 flex-shrink-0 flex flex-col p-6 space-y-6">
+        <div>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-purple-700">Filters</h2>
+            <button
+              onClick={resetFilters}
+              className="p-2 rounded-full hover:bg-gray-100"
+            >
+              <RotateCw className="w-5 h-5 text-gray-600" />
+            </button>
+          </div>
+          <div className="flex flex-col gap-2 mb-6">
+            <button
+              className={`text-left px-3 py-2 rounded font-medium ${
+                sidebarView === "all"
+                  ? "bg-purple-50 text-purple-700"
+                  : "text-gray-700 hover:bg-gray-100"
+              }`}
+              onClick={() => setSidebarView("all")}
+            >
+              All Candidates
+            </button>
+            <button
+              className={`text-left px-3 py-2 rounded font-medium ${
+                sidebarView === "saved"
+                  ? "bg-purple-50 text-purple-700"
+                  : "text-gray-700 hover:bg-gray-100"
+              }`}
+              onClick={() => setSidebarView("saved")}
+            >
+              Saved Candidates
+            </button>
+          </div>
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-1">Search</label>
+            <input
+              type="text"
+              className="w-full border rounded px-4 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              placeholder={
+                booleanMode
+                  ? "Boolean search (e.g. React AND Node.js)"
+                  : "Search by name, skill, company..."
+              }
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <button
+              className={`mt-2 px-2 py-1 rounded text-xs ${
+                booleanMode
+                  ? "bg-purple-600 text-white"
+                  : "bg-gray-200 text-gray-700"
+              }`}
+              onClick={() => setBooleanMode((v) => !v)}
+              type="button"
+            >
+              Boolean
+            </button>
+          </div>
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-1">Location</label>
             <select
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full border rounded px-2 py-2"
               value={filters.location}
               onChange={(e) =>
                 setFilters({ ...filters, location: e.target.value })
@@ -346,10 +620,10 @@ const SourceResume = () => {
               ))}
             </select>
           </div>
-
-          {/* Experience */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Experience (years)</label>
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-1">
+              Experience (years)
+            </label>
             <div className="flex gap-2 items-center">
               <input
                 type="number"
@@ -365,13 +639,13 @@ const SourceResume = () => {
                     ],
                   })
                 }
-                className="w-20 border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                className="w-16 border rounded px-2 py-1"
               />
-              <span className="text-sm text-gray-500">-</span>
+              <span>-</span>
               <input
                 type="number"
                 min={filters.experience[0]}
-                max={20}
+                max={15}
                 value={filters.experience[1]}
                 onChange={(e) =>
                   setFilters({
@@ -382,45 +656,57 @@ const SourceResume = () => {
                     ],
                   })
                 }
-                className="w-20 border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                className="w-16 border rounded px-2 py-1"
               />
             </div>
           </div>
-
-          {/* Skills */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Skills</label>
-            <input
-              type="text"
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-              placeholder="Add a skill and press Enter"
-            />
-            <div className="flex flex-wrap gap-2 mt-3">
-              {allSkills.slice(0, 8).map((skill) => (
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-1">Skills</label>
+            <div className="flex flex-wrap gap-2 mb-2">
+              {filters.skills.map((skill) => (
                 <span
                   key={skill}
-                  className={`px-2 py-1 rounded text-xs cursor-pointer ${
-                    filters.skills.includes(skill)
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                  onClick={() => 
-                    filters.skills.includes(skill) 
-                      ? handleSkillRemove(skill)
-                      : handleSkillAdd(skill)
-                  }
+                  className="inline-flex items-center rounded-full bg-purple-100 px-2 py-1 text-sm text-purple-800"
                 >
                   {skill}
+                  <button
+                    type="button"
+                    onClick={() => handleSkillRemove(skill)}
+                    className="ml-1 rounded-full bg-purple-200 px-1 text-xs text-purple-800 hover:bg-purple-300"
+                  >
+                    &times;
+                  </button>
                 </span>
               ))}
             </div>
+            <input
+              type="text"
+              className="w-full border rounded px-2 py-1"
+              placeholder="Add a skill and press Enter"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.target as HTMLInputElement).value) {
+                  handleSkillAdd((e.target as HTMLInputElement).value);
+                  (e.target as HTMLInputElement).value = "";
+                }
+              }}
+            />
+            <div className="flex flex-wrap gap-2 mt-2">
+              {allSkills.map((skill) => (
+                <button
+                  key={skill}
+                  type="button"
+                  className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded hover:bg-purple-100"
+                  onClick={() => handleSkillAdd(skill)}
+                >
+                  {skill}
+                </button>
+              ))}
+            </div>
           </div>
-
-          {/* Role */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Role</label>
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-1">Role</label>
             <select
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full border rounded px-2 py-2"
               value={filters.role}
               onChange={(e) =>
                 setFilters({ ...filters, role: e.target.value })
@@ -434,12 +720,12 @@ const SourceResume = () => {
               ))}
             </select>
           </div>
-
-          {/* Current Company */}
-          <div>
-            <label className="block text-sm font-medium mb-2">Current Company</label>
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-1">
+              Current Company
+            </label>
             <select
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full border rounded px-2 py-2"
               value={filters.company}
               onChange={(e) =>
                 setFilters({ ...filters, company: e.target.value })
@@ -453,241 +739,273 @@ const SourceResume = () => {
               ))}
             </select>
           </div>
-
-          {/* Source Resume Button */}
-          <button
-            className="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-md font-medium"
-          >
-            Source Resume
-          </button>
         </div>
-      </div>
+      </aside>
 
-      {/* Right Panel - Results */}
-      <div className="flex-1 flex">
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setStep(1)}
+              className="flex items-center gap-2 px-3 py-1 border border-gray-300 rounded text-sm text-gray-600 hover:bg-gray-50"
+            >
+              <ArrowLeft size={16} />
+              Back to Filters
+            </button>
+            <h1 className="text-xl font-semibold">
+              {filteredCandidates.length} Candidates Found
+            </h1>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => exportToCSV(filteredCandidates)}
+              className="flex items-center gap-2 px-3 py-1 border border-gray-300 rounded text-sm text-gray-600 hover:bg-gray-50"
+            >
+              Export
+            </button>
+            <button
+              onClick={() => setLocation('/recruiter')}
+              className="flex items-center gap-2 px-3 py-1 border border-gray-300 rounded text-sm text-gray-600 hover:bg-gray-50"
+            >
+              Back
+            </button>
+            <div className="relative">
+              {selectedIds.length > 0 && (
+                <>
+                  <button
+                    onClick={() => setShowBulkDropdown(!showBulkDropdown)}
+                    className="px-3 py-1 border border-gray-300 rounded text-sm text-gray-600 hover:bg-gray-50"
+                  >
+                    Bulk Actions ({selectedIds.length})
+                  </button>
+                  {showBulkDropdown && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
+                      <div className="py-1">
+                        <button
+                          onClick={() => handleBulkAction("save")}
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                        >
+                          Save Selected
+                        </button>
+                        <button
+                          onClick={() => handleBulkAction("unsave")}
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                        >
+                          Unsave Selected
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Results List */}
-        <div className="flex-1 p-6">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <input
-                type="text" 
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm w-80 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                placeholder="Search by name, skill, company..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md text-sm">
-                Boolean
+        <div className="flex-1 flex gap-6">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-4">
+              <button
+                onClick={handleSelectAll}
+                className="flex items-center gap-2 text-sm text-gray-600"
+              >
+                {paginatedCandidates.every((c) => selectedIds.includes(c.id)) ? (
+                  <CheckSquare size={16} className="text-blue-600" />
+                ) : (
+                  <Square size={16} />
+                )}
+                Select All
               </button>
             </div>
-            <div className="flex items-center gap-3">
-              <button
-                className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-md text-sm"
-              >
-                Bulk Actions
-              </button>
-              <button className="flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-md text-sm">
-                Export
-              </button>
-              <button
-                onClick={() => setLocation('/recruiter')}
-                className="flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-md text-sm"
-              >
-                <ArrowLeft size={16} />
-                Back
-              </button>
-            </div>
-          </div>
-
-          {/* Sidebar Toggle */}
-          <div className="flex gap-2 mb-6">
-            <button
-              onClick={() => setSidebarView("all")}
-              className={`px-4 py-2 rounded text-sm ${
-                sidebarView === "all"
-                  ? "bg-blue-600 text-white"
-                  : "bg-white border border-gray-300 text-gray-700"
-              }`}
-            >
-              All Candidates
-            </button>
-            <button
-              onClick={() => setSidebarView("saved")}
-              className={`px-4 py-2 rounded text-sm ${
-                sidebarView === "saved"
-                  ? "bg-blue-600 text-white"
-                  : "bg-white border border-gray-300 text-gray-700"
-              }`}
-            >
-              Saved Candidates
-            </button>
-          </div>
-
-          {/* Results List */}
-          <div className="space-y-4">
-            {paginatedCandidates.map((candidate) => (
-              <div
-                key={candidate.id}
-                className={`bg-white border border-gray-200 rounded-lg p-4 cursor-pointer ${
-                  selectedCandidate?.id === candidate.id
-                    ? "border-blue-500 bg-blue-50"
-                    : "hover:border-gray-300"
-                }`}
-                onClick={() => setSelectedCandidate(candidate)}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(candidate.id)}
-                      onChange={(e) => {
+            <div className="space-y-4">
+              {paginatedCandidates.map((candidate) => (
+                <div
+                  key={candidate.id}
+                  className={`bg-white border rounded-lg p-4 cursor-pointer ${
+                    selectedCandidate?.id === candidate.id
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                  onClick={() => setSelectedCandidate(candidate)}
+                >
+                  <div className="flex items-start gap-4">
+                    <button
+                      onClick={(e) => {
                         e.stopPropagation();
                         handleSelectCandidate(candidate.id);
                       }}
                       className="mt-1"
-                    />
-                    <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+                    >
+                      {selectedIds.includes(candidate.id) ? (
+                        <CheckSquare size={20} className="text-blue-600" />
+                      ) : (
+                        <Square size={20} className="text-gray-400" />
+                      )}
+                    </button>
+                    <div className="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold">
                       {candidate.name.charAt(0)}
                     </div>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-blue-600">{candidate.name}</h3>
-                      <p className="text-sm text-gray-600">{candidate.title}</p>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
-                        <span className="flex items-center gap-1">
-                          <MapPin size={12} />
-                          {candidate.location}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Briefcase size={12} />
-                          {candidate.experience} years experience
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <GraduationCap size={12} />
-                          {candidate.education}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600 mt-2">{candidate.summary}</p>
-                      <div className="flex items-center gap-1 mt-2 text-sm text-gray-500">
-                        <Clock size={12} />
-                        Last active: {candidate.lastActive}
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-blue-600">{candidate.name}</h3>
+                          <p className="text-sm text-gray-600">{candidate.title}</p>
+                          <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
+                            <span className="flex items-center gap-1">
+                              <MapPin size={12} />
+                              {candidate.location}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Briefcase size={12} />
+                              {candidate.experience} years experience
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <GraduationCap size={12} />
+                              {candidate.education}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600 mt-2 line-clamp-2">{candidate.summary}</p>
+                          <div className="flex items-center gap-1 mt-2 text-sm text-gray-500">
+                            <Clock size={12} />
+                            Last active: {candidate.lastActive}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSaveCandidate(candidate.id);
+                            }}
+                            className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                          >
+                            Save Candidate
+                          </button>
+                          <button className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+                            View Resume
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSaveCandidate(candidate.id);
-                      }}
-                      className="px-3 py-1 bg-blue-600 text-white rounded text-sm"
-                    >
-                      Save Candidate
-                    </button>
-                    <button className="px-3 py-1 bg-blue-600 text-white rounded text-sm">
-                      View Resume
-                    </button>
-                  </div>
                 </div>
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-4 mt-8">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 border border-gray-300 rounded text-sm disabled:opacity-50"
+                >
+                  Previous
+                </button>
+                <span className="text-sm text-gray-600">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 border border-gray-300 rounded text-sm disabled:opacity-50"
+                >
+                  Next
+                </button>
               </div>
-            ))}
+            )}
           </div>
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-4 mt-8">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="px-4 py-2 border border-gray-300 rounded text-sm disabled:opacity-50"
-              >
-                Previous
-              </button>
-              <span className="text-sm text-gray-600">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="px-4 py-2 border border-gray-300 rounded text-sm disabled:opacity-50"
-              >
-                Next
-              </button>
+          {/* Right Sidebar - Selected Candidate Details */}
+          {selectedCandidate && (
+            <div className="w-80 bg-white border border-gray-200 rounded-lg p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-16 h-16 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold text-xl">
+                  {selectedCandidate.name.charAt(0)}
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">{selectedCandidate.name}</h3>
+                  <p className="text-gray-600">{selectedCandidate.title}</p>
+                  <p className="text-sm text-gray-500">{selectedCandidate.location}</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-1">Experienced full-stack developer with expertise in modern web technologies and cloud platforms.</h4>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-1">Current Company</h4>
+                    <p className="text-sm text-gray-600">{selectedCandidate.currentCompany}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-1">Experience</h4>
+                    <p className="text-sm text-gray-600">{selectedCandidate.experience} years</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-1">Education</h4>
+                  <p className="text-sm text-gray-600">{selectedCandidate.education}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-1">Notice Period</h4>
+                    <p className="text-sm text-gray-600">{selectedCandidate.noticePeriod}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-1">CTC</h4>
+                    <p className="text-sm text-gray-600">₹32L</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-1">Expected</h4>
+                    <p className="text-sm text-gray-600">₹38L</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-1">Phone</h4>
+                    <p className="text-sm text-gray-600">+91 9876543210</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Skills</h4>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedCandidate.skills.map((skill, index) => (
+                      <span
+                        key={index}
+                        className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-2 mt-6">
+                  <button className="flex-1 bg-blue-600 text-white py-2 rounded text-sm flex items-center justify-center gap-1 hover:bg-blue-700">
+                    <Download size={14} />
+                    Resume
+                  </button>
+                  <button className="p-2 border border-gray-300 rounded text-gray-600 hover:bg-gray-50">
+                    <Phone size={14} />
+                  </button>
+                  <button className="p-2 border border-gray-300 rounded text-gray-600 hover:bg-gray-50">
+                    <Mail size={14} />
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
-
-        {/* Right Sidebar - Selected Candidate Details */}
-        {selectedCandidate && (
-          <div className="w-80 bg-white border-l border-gray-200 p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-xl">
-                {selectedCandidate.name.charAt(0)}
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg">{selectedCandidate.name}</h3>
-                <p className="text-gray-600">{selectedCandidate.title}</p>
-                <p className="text-sm text-gray-500">{selectedCandidate.location}</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Experience</h4>
-                <p className="text-sm text-gray-600">{selectedCandidate.experience} years</p>
-              </div>
-
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Education</h4>
-                <p className="text-sm text-gray-600">{selectedCandidate.education}</p>
-              </div>
-
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Current Company</h4>
-                <p className="text-sm text-gray-600">{selectedCandidate.currentCompany}</p>
-              </div>
-
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Notice Period</h4>
-                <p className="text-sm text-gray-600">{selectedCandidate.noticePeriod}</p>
-              </div>
-
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">CTC</h4>
-                <p className="text-sm text-gray-600">Current: {selectedCandidate.ctc}</p>
-                <p className="text-sm text-gray-600">Expected: {selectedCandidate.expectedCtc}</p>
-              </div>
-
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Skills</h4>
-                <div className="flex flex-wrap gap-1">
-                  {selectedCandidate.skills.map((skill, index) => (
-                    <span
-                      key={index}
-                      className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex gap-2 mt-6">
-                <button className="flex-1 bg-blue-600 text-white py-2 rounded text-sm flex items-center justify-center gap-1">
-                  <Download size={14} />
-                  Resume
-                </button>
-                <button className="p-2 border border-gray-300 rounded text-gray-600 hover:bg-gray-50">
-                  <Phone size={14} />
-                </button>
-                <button className="p-2 border border-gray-300 rounded text-gray-600 hover:bg-gray-50">
-                  <Mail size={14} />
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      </main>
     </div>
   );
 };
