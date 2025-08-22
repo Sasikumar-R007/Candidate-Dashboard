@@ -194,7 +194,7 @@ export default function RecruiterActiveJobs() {
   );
 
   const getStatusBadge = (status: string) => {
-    const statusClasses = {
+    const statusClasses: Record<string, string> = {
       'Active': 'bg-green-100 text-green-800',
       'Closed': 'bg-red-100 text-red-800',
       'Draft': 'bg-yellow-100 text-yellow-800'
@@ -208,7 +208,7 @@ export default function RecruiterActiveJobs() {
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center gap-4 mb-4">
           <Button
-            onClick={() => setLocation('/recruiter-dashboard')}
+            onClick={() => setLocation('/recruiter')}
             variant="outline"
             size="sm"
             className="flex items-center gap-2"

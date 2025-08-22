@@ -185,7 +185,7 @@ export default function RecruiterNewApplications() {
   );
 
   const getStatusBadge = (status: string) => {
-    const statusClasses = {
+    const statusClasses: Record<string, string> = {
       'New': 'bg-blue-100 text-blue-800',
       'Reviewed': 'bg-yellow-100 text-yellow-800',
       'Shortlisted': 'bg-green-100 text-green-800',
@@ -231,7 +231,7 @@ export default function RecruiterNewApplications() {
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center gap-4 mb-4">
           <Button
-            onClick={() => setLocation('/recruiter-dashboard')}
+            onClick={() => setLocation('/recruiter')}
             variant="outline"
             size="sm"
             className="flex items-center gap-2"
