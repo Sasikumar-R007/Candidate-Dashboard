@@ -55,8 +55,34 @@ export default function RecruiterDashboard() {
   const [activeTab, setActiveTab] = useState('updates');
   const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [isUploadResumeModalOpen, setIsUploadResumeModalOpen] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [formError, setFormError] = useState('');
+  const [resumeFormData, setResumeFormData] = useState({
+    firstName: '',
+    lastName: '',
+    mobileNumber: '',
+    whatsappNumber: '',
+    primaryEmail: '',
+    secondaryEmail: '',
+    highestQualification: '',
+    collegeName: '',
+    linkedin: '',
+    pedigreeLevel: '',
+    currentLocation: '',
+    noticePeriod: '',
+    website: '',
+    portfolio1: '',
+    currentCompany: '',
+    portfolio2: '',
+    currentRole: '',
+    portfolio3: '',
+    companyDomain: '',
+    companyLevel: '',
+    skills: ['', '', '', '', '']
+  });
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [resumeFormError, setResumeFormError] = useState('');
   const [jobFormData, setJobFormData] = useState({
     companyName: '',
     companyTagline: '',
@@ -334,7 +360,9 @@ export default function RecruiterDashboard() {
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors">
                   Post Jobs
                 </button>
-                <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors">
+                <button 
+                  onClick={() => setIsUploadResumeModalOpen(true)}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors">
                   Upload Resume
                 </button>
                 <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors">
@@ -1290,15 +1318,8 @@ export default function RecruiterDashboard() {
       <Dialog open={isPostJobModalOpen} onOpenChange={setIsPostJobModalOpen}>
         <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden fixed left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 ml-32">
           <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(95vh - 4rem)' }}>
-            <DialogHeader className="sticky top-0 bg-white z-10 pb-4 flex flex-row items-center justify-between">
+            <DialogHeader className="sticky top-0 bg-white z-10 pb-4">
               <DialogTitle>Post the job</DialogTitle>
-              <button 
-                onClick={() => setIsPostJobModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 p-1"
-                type="button"
-              >
-                <X size={20} />
-              </button>
             </DialogHeader>
             
             <div className="space-y-4">
@@ -1762,6 +1783,440 @@ export default function RecruiterDashboard() {
                     </Button>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Resume Modal */}
+      <Dialog open={isUploadResumeModalOpen} onOpenChange={setIsUploadResumeModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden">
+          <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(95vh - 4rem)' }}>
+            <DialogHeader>
+              <DialogTitle>Upload Resume</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4 pt-4">
+              {/* Error message */}
+              {resumeFormError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded text-sm">
+                  {resumeFormError}
+                </div>
+              )}
+              
+              {/* Row 1: First Name, Last Name */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
+                    First Name *
+                  </Label>
+                  <Input
+                    id="firstName"
+                    value={resumeFormData.firstName}
+                    onChange={(e) => setResumeFormData({...resumeFormData, firstName: e.target.value})}
+                    className="bg-gray-50 rounded"
+                    placeholder="First Name"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">
+                    Last Name *
+                  </Label>
+                  <Input
+                    id="lastName"
+                    value={resumeFormData.lastName}
+                    onChange={(e) => setResumeFormData({...resumeFormData, lastName: e.target.value})}
+                    className="bg-gray-50 rounded"
+                    placeholder="Last Name"
+                  />
+                </div>
+              </div>
+
+              {/* Row 2: Mobile Number, WhatsApp Number */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="mobileNumber" className="text-sm font-medium text-gray-700">
+                    Mobile Number *
+                  </Label>
+                  <Input
+                    id="mobileNumber"
+                    value={resumeFormData.mobileNumber}
+                    onChange={(e) => setResumeFormData({...resumeFormData, mobileNumber: e.target.value})}
+                    className="bg-gray-50 rounded"
+                    placeholder="Mobile Number"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="whatsappNumber" className="text-sm font-medium text-gray-700">
+                    WhatsApp Number
+                  </Label>
+                  <Input
+                    id="whatsappNumber"
+                    value={resumeFormData.whatsappNumber}
+                    onChange={(e) => setResumeFormData({...resumeFormData, whatsappNumber: e.target.value})}
+                    className="bg-gray-50 rounded"
+                    placeholder="WhatsApp Number"
+                  />
+                </div>
+              </div>
+
+              {/* Row 3: Primary Email, Secondary Email */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="primaryEmail" className="text-sm font-medium text-gray-700">
+                    Primary Email *
+                  </Label>
+                  <Input
+                    id="primaryEmail"
+                    type="email"
+                    value={resumeFormData.primaryEmail}
+                    onChange={(e) => setResumeFormData({...resumeFormData, primaryEmail: e.target.value})}
+                    className="bg-gray-50 rounded"
+                    placeholder="Primary Email"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="secondaryEmail" className="text-sm font-medium text-gray-700">
+                    Secondary Email
+                  </Label>
+                  <Input
+                    id="secondaryEmail"
+                    type="email"
+                    value={resumeFormData.secondaryEmail}
+                    onChange={(e) => setResumeFormData({...resumeFormData, secondaryEmail: e.target.value})}
+                    className="bg-gray-50 rounded"
+                    placeholder="Secondary Email"
+                  />
+                </div>
+              </div>
+
+              {/* Row 4: Highest Qualification, College Name */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="highestQualification" className="text-sm font-medium text-gray-700">
+                    Highest Qualification *
+                  </Label>
+                  <Select value={resumeFormData.highestQualification} onValueChange={(value) => setResumeFormData({...resumeFormData, highestQualification: value})}>
+                    <SelectTrigger className="bg-gray-50 rounded">
+                      <SelectValue placeholder="Highest Qualification" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bachelor">Bachelor's Degree</SelectItem>
+                      <SelectItem value="master">Master's Degree</SelectItem>
+                      <SelectItem value="phd">PhD</SelectItem>
+                      <SelectItem value="diploma">Diploma</SelectItem>
+                      <SelectItem value="12th">12th Standard</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="collegeName" className="text-sm font-medium text-gray-700">
+                    College Name *
+                  </Label>
+                  <Input
+                    id="collegeName"
+                    value={resumeFormData.collegeName}
+                    onChange={(e) => setResumeFormData({...resumeFormData, collegeName: e.target.value})}
+                    className="bg-gray-50 rounded"
+                    placeholder="College Name"
+                  />
+                </div>
+              </div>
+
+              {/* Row 5: LinkedIn, Pedigree Level */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="linkedin" className="text-sm font-medium text-gray-700">
+                    LinkedIn
+                  </Label>
+                  <Input
+                    id="linkedin"
+                    value={resumeFormData.linkedin}
+                    onChange={(e) => setResumeFormData({...resumeFormData, linkedin: e.target.value})}
+                    className="bg-gray-50 rounded"
+                    placeholder="LinkedIn Profile"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="pedigreeLevel" className="text-sm font-medium text-gray-700">
+                    Pedigree Level *
+                  </Label>
+                  <Select value={resumeFormData.pedigreeLevel} onValueChange={(value) => setResumeFormData({...resumeFormData, pedigreeLevel: value})}>
+                    <SelectTrigger className="bg-gray-50 rounded">
+                      <SelectValue placeholder="Pedigree Level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="tier1">Tier 1</SelectItem>
+                      <SelectItem value="tier2">Tier 2</SelectItem>
+                      <SelectItem value="tier3">Tier 3</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Row 6: Current Location, Notice Period */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="currentLocation" className="text-sm font-medium text-gray-700">
+                    Current Location *
+                  </Label>
+                  <Select value={resumeFormData.currentLocation} onValueChange={(value) => setResumeFormData({...resumeFormData, currentLocation: value})}>
+                    <SelectTrigger className="bg-gray-50 rounded">
+                      <SelectValue placeholder="Current Location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mumbai">Mumbai</SelectItem>
+                      <SelectItem value="delhi">Delhi</SelectItem>
+                      <SelectItem value="bangalore">Bangalore</SelectItem>
+                      <SelectItem value="pune">Pune</SelectItem>
+                      <SelectItem value="hyderabad">Hyderabad</SelectItem>
+                      <SelectItem value="chennai">Chennai</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="noticePeriod" className="text-sm font-medium text-gray-700">
+                    Notice Period
+                  </Label>
+                  <Select value={resumeFormData.noticePeriod} onValueChange={(value) => setResumeFormData({...resumeFormData, noticePeriod: value})}>
+                    <SelectTrigger className="bg-gray-50 rounded">
+                      <SelectValue placeholder="Notice Period" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="immediate">Immediate</SelectItem>
+                      <SelectItem value="15days">15 Days</SelectItem>
+                      <SelectItem value="1month">1 Month</SelectItem>
+                      <SelectItem value="2months">2 Months</SelectItem>
+                      <SelectItem value="3months">3 Months</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Row 7: Website, Portfolio 1 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="website" className="text-sm font-medium text-gray-700">
+                    Website
+                  </Label>
+                  <Input
+                    id="website"
+                    value={resumeFormData.website}
+                    onChange={(e) => setResumeFormData({...resumeFormData, website: e.target.value})}
+                    className="bg-gray-50 rounded"
+                    placeholder="Website URL"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="portfolio1" className="text-sm font-medium text-gray-700">
+                    Portfolio 1
+                  </Label>
+                  <Input
+                    id="portfolio1"
+                    value={resumeFormData.portfolio1}
+                    onChange={(e) => setResumeFormData({...resumeFormData, portfolio1: e.target.value})}
+                    className="bg-gray-50 rounded"
+                    placeholder="Portfolio URL"
+                  />
+                </div>
+              </div>
+
+              {/* Row 8: Current Company, Portfolio 2 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="currentCompany" className="text-sm font-medium text-gray-700">
+                    Current Company *
+                  </Label>
+                  <Input
+                    id="currentCompany"
+                    value={resumeFormData.currentCompany}
+                    onChange={(e) => setResumeFormData({...resumeFormData, currentCompany: e.target.value})}
+                    className="bg-gray-50 rounded"
+                    placeholder="Current Company"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="portfolio2" className="text-sm font-medium text-gray-700">
+                    Portfolio 2
+                  </Label>
+                  <Input
+                    id="portfolio2"
+                    value={resumeFormData.portfolio2}
+                    onChange={(e) => setResumeFormData({...resumeFormData, portfolio2: e.target.value})}
+                    className="bg-gray-50 rounded"
+                    placeholder="Portfolio URL"
+                  />
+                </div>
+              </div>
+
+              {/* Row 9: Current Role, Portfolio 3 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="currentRole" className="text-sm font-medium text-gray-700">
+                    Current Role *
+                  </Label>
+                  <Input
+                    id="currentRole"
+                    value={resumeFormData.currentRole}
+                    onChange={(e) => setResumeFormData({...resumeFormData, currentRole: e.target.value})}
+                    className="bg-gray-50 rounded"
+                    placeholder="Current Role"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="portfolio3" className="text-sm font-medium text-gray-700">
+                    Portfolio 3
+                  </Label>
+                  <Input
+                    id="portfolio3"
+                    value={resumeFormData.portfolio3}
+                    onChange={(e) => setResumeFormData({...resumeFormData, portfolio3: e.target.value})}
+                    className="bg-gray-50 rounded"
+                    placeholder="Portfolio URL"
+                  />
+                </div>
+              </div>
+
+              {/* Row 10: Company Domain, Company Level */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="companyDomain" className="text-sm font-medium text-gray-700">
+                    Company Domain *
+                  </Label>
+                  <Select value={resumeFormData.companyDomain} onValueChange={(value) => setResumeFormData({...resumeFormData, companyDomain: value})}>
+                    <SelectTrigger className="bg-gray-50 rounded">
+                      <SelectValue placeholder="Company Domain" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="technology">Technology</SelectItem>
+                      <SelectItem value="finance">Finance</SelectItem>
+                      <SelectItem value="healthcare">Healthcare</SelectItem>
+                      <SelectItem value="retail">Retail</SelectItem>
+                      <SelectItem value="manufacturing">Manufacturing</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="companyLevel" className="text-sm font-medium text-gray-700">
+                    Company Level *
+                  </Label>
+                  <Select value={resumeFormData.companyLevel} onValueChange={(value) => setResumeFormData({...resumeFormData, companyLevel: value})}>
+                    <SelectTrigger className="bg-gray-50 rounded">
+                      <SelectValue placeholder="Company Level" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="startup">Startup</SelectItem>
+                      <SelectItem value="midsize">Mid-size</SelectItem>
+                      <SelectItem value="enterprise">Enterprise</SelectItem>
+                      <SelectItem value="mnc">MNC</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Skills Section */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Skills *
+                </Label>
+                <p className="text-xs text-gray-500 mb-3">Add up to 15 skills</p>
+                <div className="flex flex-wrap gap-2">
+                  {resumeFormData.skills.map((skill, index) => (
+                    <Input
+                      key={index}
+                      value={skill}
+                      onChange={(e) => {
+                        const newSkills = [...resumeFormData.skills];
+                        newSkills[index] = e.target.value;
+                        setResumeFormData({...resumeFormData, skills: newSkills});
+                      }}
+                      className="bg-gray-50 rounded w-32 text-sm"
+                      placeholder={`Skill ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Resume Upload */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Upload Resume (PDF/Image)
+                </Label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                  <div className="flex flex-col items-center">
+                    <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-600 mb-2">Choose File Drag File</p>
+                    {resumeFile && (
+                      <p className="text-xs text-green-600">Selected: {resumeFile.name}</p>
+                    )}
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setResumeFile(e.target.files[0]);
+                        }
+                      }}
+                      className="hidden"
+                      id="resume-upload"
+                    />
+                    <label
+                      htmlFor="resume-upload"
+                      className="cursor-pointer bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded text-xs text-gray-600 mt-2"
+                    >
+                      Browse Files
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex justify-center pt-4">
+                <Button
+                  onClick={() => {
+                    // Basic validation
+                    const required = ['firstName', 'lastName', 'mobileNumber', 'primaryEmail', 'highestQualification', 'collegeName', 'pedigreeLevel', 'currentLocation', 'currentCompany', 'currentRole', 'companyDomain', 'companyLevel'];
+                    const hasEmptyRequired = required.some(field => !resumeFormData[field].trim());
+                    const hasSkills = resumeFormData.skills.some(skill => skill.trim());
+                    
+                    if (hasEmptyRequired || !hasSkills) {
+                      setResumeFormError('Please fill out all required fields and add at least one skill');
+                      return;
+                    }
+                    
+                    setIsUploadResumeModalOpen(false);
+                    // Reset form
+                    setResumeFormData({
+                      firstName: '',
+                      lastName: '',
+                      mobileNumber: '',
+                      whatsappNumber: '',
+                      primaryEmail: '',
+                      secondaryEmail: '',
+                      highestQualification: '',
+                      collegeName: '',
+                      linkedin: '',
+                      pedigreeLevel: '',
+                      currentLocation: '',
+                      noticePeriod: '',
+                      website: '',
+                      portfolio1: '',
+                      currentCompany: '',
+                      portfolio2: '',
+                      currentRole: '',
+                      portfolio3: '',
+                      companyDomain: '',
+                      companyLevel: '',
+                      skills: ['', '', '', '', '']
+                    });
+                    setResumeFile(null);
+                    setResumeFormError('');
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded font-medium"
+                >
+                  Submit Resume
+                </Button>
               </div>
             </div>
           </div>
