@@ -1321,10 +1321,10 @@ export default function RecruiterDashboard() {
       {/* Post Job Modal */}
       <Dialog open={isPostJobModalOpen} onOpenChange={setIsPostJobModalOpen}>
         <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden">
-          <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(95vh - 4rem)' }}>
-            <DialogHeader className="sticky top-0 bg-white z-10 pb-4">
-              <DialogTitle>Post the job</DialogTitle>
-            </DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Post the job</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(85vh - 4rem)' }}>
             
             <div className="space-y-4">
               {/* Required fields notice */}
@@ -1811,319 +1811,203 @@ export default function RecruiterDashboard() {
               
               {/* Row 1: First Name, Last Name */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">
-                    First Name *
-                  </Label>
-                  <Input
-                    id="firstName"
-                    value={resumeFormData.firstName}
-                    onChange={(e) => setResumeFormData({...resumeFormData, firstName: e.target.value})}
-                    className="bg-gray-50 rounded"
-                    placeholder="First Name"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">
-                    Last Name *
-                  </Label>
-                  <Input
-                    id="lastName"
-                    value={resumeFormData.lastName}
-                    onChange={(e) => setResumeFormData({...resumeFormData, lastName: e.target.value})}
-                    className="bg-gray-50 rounded"
-                    placeholder="Last Name"
-                  />
-                </div>
+                <Input
+                  value={resumeFormData.firstName}
+                  onChange={(e) => setResumeFormData({...resumeFormData, firstName: e.target.value})}
+                  className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                  placeholder="First Name *"
+                />
+                <Input
+                  value={resumeFormData.lastName}
+                  onChange={(e) => setResumeFormData({...resumeFormData, lastName: e.target.value})}
+                  className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                  placeholder="Last Name *"
+                />
               </div>
 
               {/* Row 2: Mobile Number, WhatsApp Number */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="mobileNumber" className="text-sm font-medium text-gray-700">
-                    Mobile Number *
-                  </Label>
-                  <Input
-                    id="mobileNumber"
-                    value={resumeFormData.mobileNumber}
-                    onChange={(e) => setResumeFormData({...resumeFormData, mobileNumber: e.target.value})}
-                    className="bg-gray-50 rounded"
-                    placeholder="Mobile Number"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="whatsappNumber" className="text-sm font-medium text-gray-700">
-                    WhatsApp Number
-                  </Label>
-                  <Input
-                    id="whatsappNumber"
-                    value={resumeFormData.whatsappNumber}
-                    onChange={(e) => setResumeFormData({...resumeFormData, whatsappNumber: e.target.value})}
-                    className="bg-gray-50 rounded"
-                    placeholder="WhatsApp Number"
-                  />
-                </div>
+                <Input
+                  value={resumeFormData.mobileNumber}
+                  onChange={(e) => setResumeFormData({...resumeFormData, mobileNumber: e.target.value})}
+                  className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                  placeholder="Mobile Number *"
+                />
+                <Input
+                  value={resumeFormData.whatsappNumber}
+                  onChange={(e) => setResumeFormData({...resumeFormData, whatsappNumber: e.target.value})}
+                  className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                  placeholder="WhatsApp Number"
+                />
               </div>
 
               {/* Row 3: Primary Email, Secondary Email */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="primaryEmail" className="text-sm font-medium text-gray-700">
-                    Primary Email *
-                  </Label>
-                  <Input
-                    id="primaryEmail"
-                    type="email"
-                    value={resumeFormData.primaryEmail}
-                    onChange={(e) => setResumeFormData({...resumeFormData, primaryEmail: e.target.value})}
-                    className="bg-gray-50 rounded"
-                    placeholder="Primary Email"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="secondaryEmail" className="text-sm font-medium text-gray-700">
-                    Secondary Email
-                  </Label>
-                  <Input
-                    id="secondaryEmail"
-                    type="email"
-                    value={resumeFormData.secondaryEmail}
-                    onChange={(e) => setResumeFormData({...resumeFormData, secondaryEmail: e.target.value})}
-                    className="bg-gray-50 rounded"
-                    placeholder="Secondary Email"
-                  />
-                </div>
+                <Input
+                  type="email"
+                  value={resumeFormData.primaryEmail}
+                  onChange={(e) => setResumeFormData({...resumeFormData, primaryEmail: e.target.value})}
+                  className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                  placeholder="Primary Email *"
+                />
+                <Input
+                  type="email"
+                  value={resumeFormData.secondaryEmail}
+                  onChange={(e) => setResumeFormData({...resumeFormData, secondaryEmail: e.target.value})}
+                  className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                  placeholder="Secondary Email"
+                />
               </div>
 
               {/* Row 4: Highest Qualification, College Name */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="highestQualification" className="text-sm font-medium text-gray-700">
-                    Highest Qualification *
-                  </Label>
-                  <Select value={resumeFormData.highestQualification} onValueChange={(value) => setResumeFormData({...resumeFormData, highestQualification: value})}>
-                    <SelectTrigger className="bg-gray-50 rounded">
-                      <SelectValue placeholder="Highest Qualification" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="bachelor">Bachelor's Degree</SelectItem>
-                      <SelectItem value="master">Master's Degree</SelectItem>
-                      <SelectItem value="phd">PhD</SelectItem>
-                      <SelectItem value="diploma">Diploma</SelectItem>
-                      <SelectItem value="12th">12th Standard</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="collegeName" className="text-sm font-medium text-gray-700">
-                    College Name *
-                  </Label>
-                  <Input
-                    id="collegeName"
-                    value={resumeFormData.collegeName}
-                    onChange={(e) => setResumeFormData({...resumeFormData, collegeName: e.target.value})}
-                    className="bg-gray-50 rounded"
-                    placeholder="College Name"
-                  />
-                </div>
+                <Select value={resumeFormData.highestQualification} onValueChange={(value) => setResumeFormData({...resumeFormData, highestQualification: value})}>
+                  <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0">
+                    <SelectValue placeholder="Highest Qualification *" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="bachelor">Bachelor's Degree</SelectItem>
+                    <SelectItem value="master">Master's Degree</SelectItem>
+                    <SelectItem value="phd">PhD</SelectItem>
+                    <SelectItem value="diploma">Diploma</SelectItem>
+                    <SelectItem value="12th">12th Standard</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  value={resumeFormData.collegeName}
+                  onChange={(e) => setResumeFormData({...resumeFormData, collegeName: e.target.value})}
+                  className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                  placeholder="College Name *"
+                />
               </div>
 
               {/* Row 5: LinkedIn, Pedigree Level */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="linkedin" className="text-sm font-medium text-gray-700">
-                    LinkedIn
-                  </Label>
-                  <Input
-                    id="linkedin"
-                    value={resumeFormData.linkedin}
-                    onChange={(e) => setResumeFormData({...resumeFormData, linkedin: e.target.value})}
-                    className="bg-gray-50 rounded"
-                    placeholder="LinkedIn Profile"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="pedigreeLevel" className="text-sm font-medium text-gray-700">
-                    Pedigree Level *
-                  </Label>
-                  <Select value={resumeFormData.pedigreeLevel} onValueChange={(value) => setResumeFormData({...resumeFormData, pedigreeLevel: value})}>
-                    <SelectTrigger className="bg-gray-50 rounded">
-                      <SelectValue placeholder="Pedigree Level" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="tier1">Tier 1</SelectItem>
-                      <SelectItem value="tier2">Tier 2</SelectItem>
-                      <SelectItem value="tier3">Tier 3</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Input
+                  value={resumeFormData.linkedin}
+                  onChange={(e) => setResumeFormData({...resumeFormData, linkedin: e.target.value})}
+                  className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                  placeholder="LinkedIn Profile"
+                />
+                <Select value={resumeFormData.pedigreeLevel} onValueChange={(value) => setResumeFormData({...resumeFormData, pedigreeLevel: value})}>
+                  <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0">
+                    <SelectValue placeholder="Pedigree Level *" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="tier1">Tier 1</SelectItem>
+                    <SelectItem value="tier2">Tier 2</SelectItem>
+                    <SelectItem value="tier3">Tier 3</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Row 6: Current Location, Notice Period */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="currentLocation" className="text-sm font-medium text-gray-700">
-                    Current Location *
-                  </Label>
-                  <Select value={resumeFormData.currentLocation} onValueChange={(value) => setResumeFormData({...resumeFormData, currentLocation: value})}>
-                    <SelectTrigger className="bg-gray-50 rounded">
-                      <SelectValue placeholder="Current Location" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="mumbai">Mumbai</SelectItem>
-                      <SelectItem value="delhi">Delhi</SelectItem>
-                      <SelectItem value="bangalore">Bangalore</SelectItem>
-                      <SelectItem value="pune">Pune</SelectItem>
-                      <SelectItem value="hyderabad">Hyderabad</SelectItem>
-                      <SelectItem value="chennai">Chennai</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="noticePeriod" className="text-sm font-medium text-gray-700">
-                    Notice Period
-                  </Label>
-                  <Select value={resumeFormData.noticePeriod} onValueChange={(value) => setResumeFormData({...resumeFormData, noticePeriod: value})}>
-                    <SelectTrigger className="bg-gray-50 rounded">
-                      <SelectValue placeholder="Notice Period" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="immediate">Immediate</SelectItem>
-                      <SelectItem value="15days">15 Days</SelectItem>
-                      <SelectItem value="1month">1 Month</SelectItem>
-                      <SelectItem value="2months">2 Months</SelectItem>
-                      <SelectItem value="3months">3 Months</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Select value={resumeFormData.currentLocation} onValueChange={(value) => setResumeFormData({...resumeFormData, currentLocation: value})}>
+                  <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0">
+                    <SelectValue placeholder="Current Location *" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mumbai">Mumbai</SelectItem>
+                    <SelectItem value="delhi">Delhi</SelectItem>
+                    <SelectItem value="bangalore">Bangalore</SelectItem>
+                    <SelectItem value="pune">Pune</SelectItem>
+                    <SelectItem value="hyderabad">Hyderabad</SelectItem>
+                    <SelectItem value="chennai">Chennai</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={resumeFormData.noticePeriod} onValueChange={(value) => setResumeFormData({...resumeFormData, noticePeriod: value})}>
+                  <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0">
+                    <SelectValue placeholder="Notice Period" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="immediate">Immediate</SelectItem>
+                    <SelectItem value="15days">15 Days</SelectItem>
+                    <SelectItem value="1month">1 Month</SelectItem>
+                    <SelectItem value="2months">2 Months</SelectItem>
+                    <SelectItem value="3months">3 Months</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Row 7: Website, Portfolio 1 */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="website" className="text-sm font-medium text-gray-700">
-                    Website
-                  </Label>
-                  <Input
-                    id="website"
-                    value={resumeFormData.website}
-                    onChange={(e) => setResumeFormData({...resumeFormData, website: e.target.value})}
-                    className="bg-gray-50 rounded"
-                    placeholder="Website URL"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="portfolio1" className="text-sm font-medium text-gray-700">
-                    Portfolio 1
-                  </Label>
-                  <Input
-                    id="portfolio1"
-                    value={resumeFormData.portfolio1}
-                    onChange={(e) => setResumeFormData({...resumeFormData, portfolio1: e.target.value})}
-                    className="bg-gray-50 rounded"
-                    placeholder="Portfolio URL"
-                  />
-                </div>
+                <Input
+                  value={resumeFormData.website}
+                  onChange={(e) => setResumeFormData({...resumeFormData, website: e.target.value})}
+                  className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                  placeholder="Website URL"
+                />
+                <Input
+                  value={resumeFormData.portfolio1}
+                  onChange={(e) => setResumeFormData({...resumeFormData, portfolio1: e.target.value})}
+                  className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                  placeholder="Portfolio 1 URL"
+                />
               </div>
 
               {/* Row 8: Current Company, Portfolio 2 */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="currentCompany" className="text-sm font-medium text-gray-700">
-                    Current Company *
-                  </Label>
-                  <Input
-                    id="currentCompany"
-                    value={resumeFormData.currentCompany}
-                    onChange={(e) => setResumeFormData({...resumeFormData, currentCompany: e.target.value})}
-                    className="bg-gray-50 rounded"
-                    placeholder="Current Company"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="portfolio2" className="text-sm font-medium text-gray-700">
-                    Portfolio 2
-                  </Label>
-                  <Input
-                    id="portfolio2"
-                    value={resumeFormData.portfolio2}
-                    onChange={(e) => setResumeFormData({...resumeFormData, portfolio2: e.target.value})}
-                    className="bg-gray-50 rounded"
-                    placeholder="Portfolio URL"
-                  />
-                </div>
+                <Input
+                  value={resumeFormData.currentCompany}
+                  onChange={(e) => setResumeFormData({...resumeFormData, currentCompany: e.target.value})}
+                  className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                  placeholder="Current Company *"
+                />
+                <Input
+                  value={resumeFormData.portfolio2}
+                  onChange={(e) => setResumeFormData({...resumeFormData, portfolio2: e.target.value})}
+                  className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                  placeholder="Portfolio 2 URL"
+                />
               </div>
 
               {/* Row 9: Current Role, Portfolio 3 */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="currentRole" className="text-sm font-medium text-gray-700">
-                    Current Role *
-                  </Label>
-                  <Input
-                    id="currentRole"
-                    value={resumeFormData.currentRole}
-                    onChange={(e) => setResumeFormData({...resumeFormData, currentRole: e.target.value})}
-                    className="bg-gray-50 rounded"
-                    placeholder="Current Role"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="portfolio3" className="text-sm font-medium text-gray-700">
-                    Portfolio 3
-                  </Label>
-                  <Input
-                    id="portfolio3"
-                    value={resumeFormData.portfolio3}
-                    onChange={(e) => setResumeFormData({...resumeFormData, portfolio3: e.target.value})}
-                    className="bg-gray-50 rounded"
-                    placeholder="Portfolio URL"
-                  />
-                </div>
+                <Input
+                  value={resumeFormData.currentRole}
+                  onChange={(e) => setResumeFormData({...resumeFormData, currentRole: e.target.value})}
+                  className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                  placeholder="Current Role *"
+                />
+                <Input
+                  value={resumeFormData.portfolio3}
+                  onChange={(e) => setResumeFormData({...resumeFormData, portfolio3: e.target.value})}
+                  className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                  placeholder="Portfolio 3 URL"
+                />
               </div>
 
               {/* Row 10: Company Domain, Company Level */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="companyDomain" className="text-sm font-medium text-gray-700">
-                    Company Domain *
-                  </Label>
-                  <Select value={resumeFormData.companyDomain} onValueChange={(value) => setResumeFormData({...resumeFormData, companyDomain: value})}>
-                    <SelectTrigger className="bg-gray-50 rounded">
-                      <SelectValue placeholder="Company Domain" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="technology">Technology</SelectItem>
-                      <SelectItem value="finance">Finance</SelectItem>
-                      <SelectItem value="healthcare">Healthcare</SelectItem>
-                      <SelectItem value="retail">Retail</SelectItem>
-                      <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="companyLevel" className="text-sm font-medium text-gray-700">
-                    Company Level *
-                  </Label>
-                  <Select value={resumeFormData.companyLevel} onValueChange={(value) => setResumeFormData({...resumeFormData, companyLevel: value})}>
-                    <SelectTrigger className="bg-gray-50 rounded">
-                      <SelectValue placeholder="Company Level" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="startup">Startup</SelectItem>
-                      <SelectItem value="midsize">Mid-size</SelectItem>
-                      <SelectItem value="enterprise">Enterprise</SelectItem>
-                      <SelectItem value="mnc">MNC</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Select value={resumeFormData.companyDomain} onValueChange={(value) => setResumeFormData({...resumeFormData, companyDomain: value})}>
+                  <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0">
+                    <SelectValue placeholder="Company Domain *" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="technology">Technology</SelectItem>
+                    <SelectItem value="finance">Finance</SelectItem>
+                    <SelectItem value="healthcare">Healthcare</SelectItem>
+                    <SelectItem value="retail">Retail</SelectItem>
+                    <SelectItem value="manufacturing">Manufacturing</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={resumeFormData.companyLevel} onValueChange={(value) => setResumeFormData({...resumeFormData, companyLevel: value})}>
+                  <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0">
+                    <SelectValue placeholder="Company Level *" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="startup">Startup</SelectItem>
+                    <SelectItem value="midsize">Mid-size</SelectItem>
+                    <SelectItem value="enterprise">Enterprise</SelectItem>
+                    <SelectItem value="mnc">MNC</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Skills Section */}
               <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                  Skills *
-                </Label>
+                <p className="text-sm font-medium text-gray-700 mb-1">Skills *</p>
                 <p className="text-xs text-gray-500 mb-3">Add up to 15 skills</p>
                 <div className="flex flex-wrap gap-2">
                   {resumeFormData.skills.map((skill, index) => (
@@ -2135,18 +2019,27 @@ export default function RecruiterDashboard() {
                         newSkills[index] = e.target.value;
                         setResumeFormData({...resumeFormData, skills: newSkills});
                       }}
-                      className="bg-gray-50 rounded w-32 text-sm"
+                      className="bg-gray-50 rounded w-32 text-sm focus-visible:ring-1 focus-visible:ring-offset-0"
                       placeholder={`Skill ${index + 1}`}
                     />
                   ))}
+                  {resumeFormData.skills.length < 15 && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setResumeFormData({...resumeFormData, skills: [...resumeFormData.skills, '']})}
+                      className="text-xs px-2 py-1"
+                    >
+                      + Add Skill
+                    </Button>
+                  )}
                 </div>
               </div>
 
               {/* Resume Upload */}
               <div>
-                <Label className="text-sm font-medium text-gray-700 mb-2 block">
-                  Upload Resume (PDF/Image)
-                </Label>
+                <p className="text-sm font-medium text-gray-700 mb-2">Upload Resume (PDF/Image)</p>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
                   <div className="flex flex-col items-center">
                     <Upload className="h-8 w-8 text-gray-400 mb-2" />
