@@ -545,20 +545,20 @@ const SourceResume = () => {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Left Section - Filters */}
-      <aside className="bg-white border-r w-80 flex-shrink-0 flex flex-col p-6">
-        <div className="flex items-center justify-between mb-6">
+      <aside className="bg-white border-r w-80 flex-shrink-0 flex flex-col p-4">
+        <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-purple-700">Filters</h2>
           <button
             onClick={resetFilters}
-            className="p-2 rounded-full hover:bg-gray-100"
+            className="p-1.5 rounded-full hover:bg-gray-100"
           >
             <RotateCw className="w-5 h-5 text-gray-600" />
           </button>
         </div>
         
-        <div className="flex flex-col gap-3 mb-6">
+        <div className="flex flex-col gap-2 mb-4">
           <button
-            className={`text-left px-4 py-3 rounded-lg text-base font-medium ${
+            className={`text-left px-3 py-2 rounded-lg text-base font-medium ${
               sidebarView === "all"
                 ? "bg-purple-50 text-purple-700"
                 : "text-gray-700 hover:bg-gray-100"
@@ -568,7 +568,7 @@ const SourceResume = () => {
             All Candidates
           </button>
           <button
-            className={`text-left px-4 py-3 rounded-lg text-base font-medium ${
+            className={`text-left px-3 py-2 rounded-lg text-base font-medium ${
               sidebarView === "saved"
                 ? "bg-purple-50 text-purple-700"
                 : "text-gray-700 hover:bg-gray-100"
@@ -579,18 +579,18 @@ const SourceResume = () => {
           </button>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           <div>
-            <label className="block text-base font-medium mb-2">Search</label>
+            <label className="block text-base font-medium mb-1">Search</label>
             <input
               type="text"
-              className="w-full border rounded-lg px-4 py-3 text-base focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="w-full border rounded-lg px-3 py-2 text-base focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               placeholder="Search by name, skill, company..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             <button
-              className={`mt-2 px-3 py-1 rounded text-sm ${
+              className={`mt-1 px-2 py-1 rounded text-sm ${
                 booleanMode
                   ? "bg-purple-600 text-white"
                   : "bg-gray-200 text-gray-700"
@@ -603,9 +603,9 @@ const SourceResume = () => {
           </div>
 
           <div>
-            <label className="block text-base font-medium mb-2">Location</label>
+            <label className="block text-base font-medium mb-1">Location</label>
             <select
-              className="w-full border rounded-lg px-4 py-3 text-base"
+              className="w-full border rounded-lg px-3 py-2 text-base"
               value={filters.location}
               onChange={(e) =>
                 setFilters({ ...filters, location: e.target.value })
@@ -621,8 +621,8 @@ const SourceResume = () => {
           </div>
 
           <div>
-            <label className="block text-base font-medium mb-2">Experience (years)</label>
-            <div className="flex gap-3 items-center">
+            <label className="block text-base font-medium mb-1">Experience (years)</label>
+            <div className="flex gap-2 items-center">
               <input
                 type="number"
                 min={0}
@@ -637,7 +637,7 @@ const SourceResume = () => {
                     ],
                   })
                 }
-                className="w-16 border rounded-lg px-2 py-2 text-base"
+                className="w-16 border rounded-lg px-2 py-1 text-base"
               />
               <span className="text-base">-</span>
               <input
@@ -654,24 +654,24 @@ const SourceResume = () => {
                     ],
                   })
                 }
-                className="w-16 border rounded-lg px-2 py-2 text-base"
+                className="w-16 border rounded-lg px-2 py-1 text-base"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-base font-medium mb-2">Skills</label>
-            <div className="mb-3">
+            <label className="block text-base font-medium mb-1">Skills</label>
+            <div className="mb-2">
               {filters.skills.map((skill) => (
                 <span
                   key={skill}
-                  className="inline-flex items-center rounded-full bg-purple-100 px-3 py-1 text-sm text-purple-800 mr-2 mb-2"
+                  className="inline-flex items-center rounded-full bg-purple-100 px-2 py-1 text-sm text-purple-800 mr-1 mb-1"
                 >
                   {skill}
                   <button
                     type="button"
                     onClick={() => handleSkillRemove(skill)}
-                    className="ml-2 rounded-full bg-purple-200 px-1 text-xs text-purple-800 hover:bg-purple-300"
+                    className="ml-1 rounded-full bg-purple-200 px-1 text-xs text-purple-800 hover:bg-purple-300"
                   >
                     ×
                   </button>
@@ -680,7 +680,7 @@ const SourceResume = () => {
             </div>
             <input
               type="text"
-              className="w-full border rounded-lg px-4 py-3 text-base"
+              className="w-full border rounded-lg px-3 py-2 text-base"
               placeholder="Add a skill and press Enter"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && (e.target as HTMLInputElement).value) {
@@ -689,12 +689,12 @@ const SourceResume = () => {
                 }
               }}
             />
-            <div className="flex flex-wrap gap-2 mt-3">
+            <div className="flex flex-wrap gap-1 mt-2">
               {allSkills.map((skill) => (
                 <button
                   key={skill}
                   type="button"
-                  className="text-sm px-3 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-purple-100"
+                  className="text-sm px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-purple-100"
                   onClick={() => handleSkillAdd(skill)}
                 >
                   {skill}
@@ -704,9 +704,9 @@ const SourceResume = () => {
           </div>
 
           <div>
-            <label className="block text-base font-medium mb-2">Role</label>
+            <label className="block text-base font-medium mb-1">Role</label>
             <select
-              className="w-full border rounded-lg px-4 py-3 text-base"
+              className="w-full border rounded-lg px-3 py-2 text-base"
               value={filters.role}
               onChange={(e) =>
                 setFilters({ ...filters, role: e.target.value })
@@ -772,19 +772,19 @@ const SourceResume = () => {
         </div>
 
         {/* Profiles List - Scrollable */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="space-y-6">
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="space-y-4">
             {filteredCandidates.map((candidate) => (
               <div
                 key={candidate.id}
-                className={`border-2 rounded-2xl p-6 cursor-pointer transition-all ${
+                className={`border-2 rounded-2xl p-4 cursor-pointer transition-all ${
                   selectedCandidate?.id === candidate.id
                     ? "border-purple-500 bg-purple-50"
                     : "border-purple-200 hover:border-purple-300 bg-white"
                 }`}
                 onClick={() => setSelectedCandidate(candidate)}
               >
-                <div className="flex items-start gap-6">
+                <div className="flex items-start gap-4">
                   <input
                     type="checkbox"
                     checked={selectedIds.includes(candidate.id)}
@@ -812,7 +812,7 @@ const SourceResume = () => {
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-lg text-gray-900">{candidate.name}</h3>
                         <p className="text-blue-600 font-medium">{candidate.title}</p>
-                        <div className="flex items-center gap-6 mt-2 text-sm text-gray-500">
+                        <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
                           <span className="flex items-center gap-1">
                             <Briefcase size={14} />
                             {candidate.experience} years experience
@@ -830,29 +830,29 @@ const SourceResume = () => {
                           <Briefcase size={14} />
                           {candidate.currentCompany}
                         </div>
-                        <div className="flex flex-wrap gap-2 mt-3">
+                        <div className="flex flex-wrap gap-1 mt-2">
                           {candidate.skills.map((skill, index) => (
                             <span
                               key={index}
-                              className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
+                              className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs"
                             >
                               {skill}
                             </span>
                           ))}
                         </div>
-                        <p className="text-sm text-gray-600 mt-3 line-clamp-2">{candidate.summary}</p>
-                        <div className="flex items-center gap-1 mt-2 text-sm text-gray-500">
+                        <p className="text-sm text-gray-600 mt-2 line-clamp-2">{candidate.summary}</p>
+                        <div className="flex items-center gap-1 mt-1 text-sm text-gray-500">
                           <Clock size={12} />
                           Last active: {candidate.lastActive}
                         </div>
                       </div>
-                      <div className="flex items-center gap-3 ml-6">
+                      <div className="flex items-center gap-2 ml-4">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleSaveCandidate(candidate.id);
                           }}
-                          className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                          className={`px-3 py-1 rounded-lg text-sm font-medium ${
                             candidate.saved
                               ? "bg-purple-100 text-purple-700 border border-purple-300"
                               : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
@@ -860,7 +860,7 @@ const SourceResume = () => {
                         >
                           {candidate.saved ? "Saved" : "Save Candidate"}
                         </button>
-                        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+                        <button className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
                           View Resume
                         </button>
                       </div>
@@ -875,16 +875,16 @@ const SourceResume = () => {
 
       {/* Right Section - Candidate Details (Larger) */}
       {selectedCandidate && (
-        <aside className="w-96 bg-white p-6">
-          <div className="flex flex-col items-center text-center mb-6">
+        <aside className="w-96 bg-white p-4">
+          <div className="flex flex-col items-center text-center mb-4">
             {selectedCandidate.profilePic ? (
               <img
                 src={selectedCandidate.profilePic}
                 alt={selectedCandidate.name}
-                className="w-20 h-20 rounded-full object-cover mb-4"
+                className="w-20 h-20 rounded-full object-cover mb-3"
               />
             ) : (
-              <div className="w-20 h-20 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-semibold text-2xl mb-4">
+              <div className="w-20 h-20 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-semibold text-2xl mb-3">
                 {selectedCandidate.name.split(' ').map(n => n[0]).join('')}
               </div>
             )}
@@ -893,7 +893,7 @@ const SourceResume = () => {
             <p className="text-gray-500">{selectedCandidate.location}</p>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-3">
             <div>
               <p className="text-gray-700 text-sm leading-relaxed">{selectedCandidate.summary}</p>
             </div>
@@ -931,29 +931,29 @@ const SourceResume = () => {
               <p className="font-semibold text-gray-900">Phone: <span className="font-normal">{selectedCandidate.phone}</span></p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1">
               {selectedCandidate.skills.map((skill, index) => (
                 <span
                   key={index}
-                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
+                  className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs"
                 >
                   {skill}
                 </span>
               ))}
             </div>
 
-            <div className="flex gap-3 mt-8">
-              <button className="flex-1 bg-blue-600 text-white py-3 rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-blue-700">
+            <div className="flex gap-2 mt-4">
+              <button className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-blue-700">
                 <Download size={16} />
                 Resume
               </button>
-              <button className="p-3 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
+              <button className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
                 <Bookmark size={16} />
               </button>
-              <button className="p-3 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
+              <button className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
                 <Phone size={16} />
               </button>
-              <button className="p-3 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
+              <button className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
                 <Mail size={16} />
               </button>
             </div>
