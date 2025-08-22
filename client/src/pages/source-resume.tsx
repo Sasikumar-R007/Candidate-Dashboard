@@ -15,10 +15,6 @@ import {
   Mail,
 } from "lucide-react";
 import { useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const mockCandidates = [
   {
@@ -166,8 +162,8 @@ const allLocations = ["Mumbai, Maharashtra", "Remote", "Bangalore, India"];
 
 const initialFilters = {
   location: "",
-  experience: [0, 15],
-  skills: [],
+  experience: [0, 15] as [number, number],
+  skills: [] as string[],
   role: "",
   company: "",
 };
@@ -305,11 +301,6 @@ const SourceResume = () => {
     if (skill && !filters.skills.includes(skill)) {
       setFilters({ ...filters, skills: [...filters.skills, skill] });
     }
-    // Clear the Select value by not maintaining any value state
-    const selectElement = document.querySelector('[role="combobox"]') as HTMLElement;
-    if (selectElement) {
-      selectElement.click(); // This will close the select
-    }
   };
   const handleSkillRemove = (skill: string) => {
     setFilters({
@@ -369,7 +360,7 @@ const SourceResume = () => {
           </h2>
           <div className="mb-4 flex items-center gap-4">
             <div className="flex-1 relative">
-              <Input
+              <input
                 type="text"
                 className="w-full border rounded px-4 py-2 focus:ring-2 focus:ring-purple-500"
                 placeholder={
@@ -395,27 +386,28 @@ const SourceResume = () => {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <Label className="block text-sm font-medium mb-1">Location</Label>
-              <Select value={filters.location} onValueChange={(value) => setFilters({ ...filters, location: value })}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Any" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Any</SelectItem>
-                  {allLocations.map((loc) => (
-                    <SelectItem key={loc} value={loc}>
-                      {loc}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <label className="block text-sm font-medium mb-1">Location</label>
+              <select
+                className="w-full border rounded px-2 py-2"
+                value={filters.location}
+                onChange={(e) =>
+                  setFilters({ ...filters, location: e.target.value })
+                }
+              >
+                <option value="">Any</option>
+                {allLocations.map((loc) => (
+                  <option key={loc} value={loc}>
+                    {loc}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
-              <Label className="block text-sm font-medium mb-1">
+              <label className="block text-sm font-medium mb-1">
                 Experience (years)
-              </Label>
+              </label>
               <div className="flex gap-2 items-center">
-                <Input
+                <input
                   type="number"
                   min={0}
                   max={filters.experience[1]}
@@ -429,10 +421,10 @@ const SourceResume = () => {
                       ],
                     })
                   }
-                  className="w-20"
+                  className="w-20 border rounded px-2 py-1"
                 />
                 <span>to</span>
-                <Input
+                <input
                   type="number"
                   min={filters.experience[0]}
                   max={20}
@@ -446,45 +438,47 @@ const SourceResume = () => {
                       ],
                     })
                   }
-                  className="w-20"
+                  className="w-20 border rounded px-2 py-1"
                 />
               </div>
             </div>
             <div>
-              <Label className="block text-sm font-medium mb-1">Role</Label>
-              <Select value={filters.role} onValueChange={(value) => setFilters({ ...filters, role: value })}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Any" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Any</SelectItem>
-                  {allRoles.map((role) => (
-                    <SelectItem key={role} value={role}>
-                      {role}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <label className="block text-sm font-medium mb-1">Role</label>
+              <select
+                className="w-full border rounded px-2 py-2"
+                value={filters.role}
+                onChange={(e) =>
+                  setFilters({ ...filters, role: e.target.value })
+                }
+              >
+                <option value="">Any</option>
+                {allRoles.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
-              <Label className="block text-sm font-medium mb-1">Company</Label>
-              <Select value={filters.company} onValueChange={(value) => setFilters({ ...filters, company: value })}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Any" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Any</SelectItem>
-                  {allCompanies.map((company) => (
-                    <SelectItem key={company} value={company}>
-                      {company}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <label className="block text-sm font-medium mb-1">Company</label>
+              <select
+                className="w-full border rounded px-2 py-2"
+                value={filters.company}
+                onChange={(e) =>
+                  setFilters({ ...filters, company: e.target.value })
+                }
+              >
+                <option value="">Any</option>
+                {allCompanies.map((company) => (
+                  <option key={company} value={company}>
+                    {company}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           <div className="mb-4">
-            <Label className="block text-sm font-medium mb-1">Skills</Label>
+            <label className="block text-sm font-medium mb-1">Skills</label>
             <div className="flex flex-wrap gap-2 mb-2">
               {filters.skills.map((skill) => (
                 <span
@@ -502,38 +496,39 @@ const SourceResume = () => {
                 </span>
               ))}
             </div>
-            <Select onValueChange={(value) => {
-              handleSkillAdd(value);
-            }} value="">
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Add skills..." />
-              </SelectTrigger>
-              <SelectContent>
-                {allSkills
-                  .filter((skill) => !filters.skills.includes(skill))
-                  .map((skill) => (
-                    <SelectItem key={skill} value={skill}>
-                      {skill}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
+            <select
+              onChange={(e) => {
+                if (e.target.value) {
+                  handleSkillAdd(e.target.value);
+                  e.target.value = "";
+                }
+              }}
+              className="w-full border rounded px-2 py-2"
+            >
+              <option value="">Add skills...</option>
+              {allSkills
+                .filter((skill) => !filters.skills.includes(skill))
+                .map((skill) => (
+                  <option key={skill} value={skill}>
+                    {skill}
+                  </option>
+                ))}
+            </select>
           </div>
           <div className="flex justify-between">
-            <Button
+            <button
               onClick={resetFilters}
-              variant="outline"
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded text-gray-600 hover:bg-gray-50"
             >
               <RotateCw size={16} />
               Reset
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={() => setStep(2)}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-medium"
             >
               Search ({filteredCandidates.length} results)
-            </Button>
+            </button>
           </div>
         </div>
       </div>
@@ -548,39 +543,34 @@ const SourceResume = () => {
         <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <Button
+              <button
                 onClick={() => setStep(1)}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 px-3 py-1 border border-gray-300 rounded text-sm text-gray-600 hover:bg-gray-50"
               >
                 <ArrowLeft size={16} />
                 Back to Filters
-              </Button>
+              </button>
               <h1 className="text-xl font-semibold">
                 {filteredCandidates.length} Candidates Found
               </h1>
             </div>
             <div className="flex gap-2">
-              <Button
+              <button
                 onClick={() => exportToCSV(filteredCandidates)}
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 px-3 py-1 border border-gray-300 rounded text-sm text-gray-600 hover:bg-gray-50"
               >
                 <Download size={16} />
                 Export CSV
-              </Button>
+              </button>
               <div className="relative">
                 {selectedIds.length > 0 && (
                   <>
-                    <Button
+                    <button
                       onClick={() => setShowBulkDropdown(!showBulkDropdown)}
-                      variant="outline"
-                      size="sm"
+                      className="px-3 py-1 border border-gray-300 rounded text-sm text-gray-600 hover:bg-gray-50"
                     >
                       Actions ({selectedIds.length})
-                    </Button>
+                    </button>
                     {showBulkDropdown && (
                       <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
                         <div className="py-1">
@@ -607,20 +597,26 @@ const SourceResume = () => {
 
           {/* Sidebar Toggle */}
           <div className="flex gap-4">
-            <Button
+            <button
               onClick={() => setSidebarView("all")}
-              variant={sidebarView === "all" ? "default" : "outline"}
-              size="sm"
+              className={`px-4 py-2 rounded text-sm ${
+                sidebarView === "all"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
             >
               All Candidates ({candidates.length})
-            </Button>
-            <Button
+            </button>
+            <button
               onClick={() => setSidebarView("saved")}
-              variant={sidebarView === "saved" ? "default" : "outline"}
-              size="sm"
+              className={`px-4 py-2 rounded text-sm ${
+                sidebarView === "saved"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              }`}
             >
               Saved ({candidates.filter((c) => c.saved).length})
-            </Button>
+            </button>
           </div>
         </div>
 
@@ -668,10 +664,10 @@ const SourceResume = () => {
                     e.stopPropagation();
                     handleSaveCandidate(candidate.id);
                   }}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-400 hover:text-blue-500"
                 >
                   {candidate.saved ? (
-                    <BookmarkCheck size={20} className="text-blue-600" />
+                    <BookmarkCheck size={20} className="text-blue-500" />
                   ) : (
                     <Bookmark size={20} />
                   )}
@@ -683,88 +679,98 @@ const SourceResume = () => {
               </h3>
               <p className="text-sm text-gray-600 mb-2">{candidate.title}</p>
 
-              <div className="space-y-1 mb-3">
-                <div className="flex items-center gap-1 text-xs text-gray-500">
-                  <Briefcase size={12} />
-                  <span>
-                    {candidate.experience} yrs • {candidate.currentCompany}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1 text-xs text-gray-500">
-                  <MapPin size={12} />
-                  <span>{candidate.location}</span>
-                </div>
-                <div className="flex items-center gap-1 text-xs text-gray-500">
-                  <Clock size={12} />
-                  <span>Active {candidate.lastActive}</span>
-                </div>
+              <div className="flex items-center text-xs text-gray-500 mb-2">
+                <MapPin size={12} className="mr-1" />
+                {candidate.location}
               </div>
 
-              <div className="flex flex-wrap gap-1">
+              <div className="flex items-center text-xs text-gray-500 mb-2">
+                <Briefcase size={12} className="mr-1" />
+                {candidate.experience} years • {candidate.currentCompany}
+              </div>
+
+              <div className="flex items-center text-xs text-gray-500 mb-3">
+                <GraduationCap size={12} className="mr-1" />
+                {candidate.education}
+              </div>
+
+              <div className="flex flex-wrap gap-1 mb-3">
                 {candidate.skills.slice(0, 3).map((skill) => (
                   <span
                     key={skill}
-                    className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs"
+                    className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs"
                   >
                     {skill}
                   </span>
                 ))}
                 {candidate.skills.length > 3 && (
-                  <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs">
+                  <span className="text-xs text-gray-500">
                     +{candidate.skills.length - 3}
                   </span>
                 )}
+              </div>
+
+              <div className="flex items-center text-xs text-gray-500">
+                <Clock size={12} className="mr-1" />
+                Active {candidate.lastActive}
               </div>
             </div>
           ))}
         </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-center gap-2">
-            <Button
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              variant="outline"
-              size="sm"
+        {/* Select All and Pagination */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleSelectAll}
+              className="flex items-center gap-2 text-sm text-gray-600"
             >
-              Previous
-            </Button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <Button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                variant={currentPage === page ? "default" : "outline"}
-                size="sm"
-              >
-                {page}
-              </Button>
-            ))}
-            <Button
-              onClick={() =>
-                setCurrentPage(Math.min(totalPages, currentPage + 1))
-              }
-              disabled={currentPage === totalPages}
-              variant="outline"
-              size="sm"
-            >
-              Next
-            </Button>
+              {paginatedCandidates.every((c) => selectedIds.includes(c.id)) ? (
+                <CheckSquare size={16} className="text-blue-600" />
+              ) : (
+                <Square size={16} />
+              )}
+              Select All ({paginatedCandidates.length})
+            </button>
           </div>
-        )}
+
+          {totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-gray-600">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(totalPages, p + 1))
+                }
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Right Panel - Candidate Details */}
+      {/* Right Panel - Selected Candidate Details */}
       {selectedCandidate && (
-        <div className="w-1/3 bg-white shadow-lg p-6 overflow-y-auto">
+        <div className="w-96 bg-white border-l border-gray-200 p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold">Candidate Profile</h2>
+            <h2 className="text-lg font-semibold">Candidate Details</h2>
             <button
               onClick={() => handleSaveCandidate(selectedCandidate.id)}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-400 hover:text-blue-500"
             >
               {selectedCandidate.saved ? (
-                <BookmarkCheck size={24} className="text-blue-600" />
+                <BookmarkCheck size={24} className="text-blue-500" />
               ) : (
                 <Bookmark size={24} />
               )}
@@ -779,105 +785,87 @@ const SourceResume = () => {
                 className="w-20 h-20 rounded-full mx-auto mb-3"
               />
             ) : (
-              <div className="w-20 h-20 bg-gray-300 rounded-full flex items-center justify-center text-gray-600 font-medium text-2xl mx-auto mb-3">
+              <div className="w-20 h-20 bg-gray-300 rounded-full mx-auto mb-3 flex items-center justify-center text-gray-600 text-2xl font-medium">
                 {selectedCandidate.name.charAt(0)}
               </div>
             )}
-            <h3 className="font-bold text-xl text-gray-900">
+            <h3 className="text-xl font-semibold text-gray-900">
               {selectedCandidate.name}
             </h3>
             <p className="text-gray-600">{selectedCandidate.title}</p>
           </div>
 
-          <div className="space-y-4">
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Contact Info</h4>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <Phone size={16} className="text-gray-500" />
-                  <span>{selectedCandidate.phone}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail size={16} className="text-gray-500" />
-                  <span>{selectedCandidate.email}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <MapPin size={16} className="text-gray-500" />
-                  <span>{selectedCandidate.location}</span>
-                </div>
-              </div>
+          <div className="space-y-4 mb-6">
+            <div className="flex items-center gap-3">
+              <Mail size={16} className="text-gray-400" />
+              <span className="text-sm">{selectedCandidate.email}</span>
             </div>
-
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Experience</h4>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <Briefcase size={16} className="text-gray-500" />
-                  <span>{selectedCandidate.experience} years</span>
-                </div>
-                <p className="text-sm text-gray-600">
-                  <strong>Current:</strong> {selectedCandidate.currentCompany}
-                </p>
-                <p className="text-sm text-gray-600">
-                  <strong>Notice Period:</strong> {selectedCandidate.noticePeriod}
-                </p>
-              </div>
+            <div className="flex items-center gap-3">
+              <Phone size={16} className="text-gray-400" />
+              <span className="text-sm">{selectedCandidate.phone}</span>
             </div>
-
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Education</h4>
-              <div className="flex items-center gap-2 text-sm">
-                <GraduationCap size={16} className="text-gray-500" />
-                <span>{selectedCandidate.education}</span>
-              </div>
+            <div className="flex items-center gap-3">
+              <MapPin size={16} className="text-gray-400" />
+              <span className="text-sm">{selectedCandidate.location}</span>
             </div>
-
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Compensation</h4>
-              <div className="space-y-1 text-sm">
-                <p>
-                  <strong>Current CTC:</strong> {selectedCandidate.ctc}
-                </p>
-                <p>
-                  <strong>Expected CTC:</strong> {selectedCandidate.expectedCtc}
-                </p>
-              </div>
+            <div className="flex items-center gap-3">
+              <Briefcase size={16} className="text-gray-400" />
+              <span className="text-sm">
+                {selectedCandidate.experience} years at{" "}
+                {selectedCandidate.currentCompany}
+              </span>
             </div>
-
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Skills</h4>
-              <div className="flex flex-wrap gap-2">
-                {selectedCandidate.skills.map((skill) => (
-                  <span
-                    key={skill}
-                    className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
+            <div className="flex items-center gap-3">
+              <GraduationCap size={16} className="text-gray-400" />
+              <span className="text-sm">{selectedCandidate.education}</span>
             </div>
+          </div>
 
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Summary</h4>
-              <p className="text-sm text-gray-600">{selectedCandidate.summary}</p>
+          <div className="mb-6">
+            <h4 className="font-medium text-gray-900 mb-2">Summary</h4>
+            <p className="text-sm text-gray-600">{selectedCandidate.summary}</p>
+          </div>
+
+          <div className="mb-6">
+            <h4 className="font-medium text-gray-900 mb-2">Skills</h4>
+            <div className="flex flex-wrap gap-2">
+              {selectedCandidate.skills.map((skill) => (
+                <span
+                  key={skill}
+                  className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm"
+                >
+                  {skill}
+                </span>
+              ))}
             </div>
+          </div>
 
+          <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
             <div>
-              <h4 className="font-semibold text-gray-900 mb-2">Activity</h4>
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Clock size={16} className="text-gray-500" />
-                <span>Last active {selectedCandidate.lastActive}</span>
-              </div>
+              <span className="text-gray-500">Notice Period</span>
+              <p className="font-medium">{selectedCandidate.noticePeriod}</p>
             </div>
+            <div>
+              <span className="text-gray-500">Current CTC</span>
+              <p className="font-medium">{selectedCandidate.ctc}</p>
+            </div>
+            <div>
+              <span className="text-gray-500">Expected CTC</span>
+              <p className="font-medium">{selectedCandidate.expectedCtc}</p>
+            </div>
+            <div>
+              <span className="text-gray-500">Last Active</span>
+              <p className="font-medium">{selectedCandidate.lastActive}</p>
+            </div>
+          </div>
 
-            <Button
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-              onClick={() => window.open(selectedCandidate.resumeUrl, "_blank")}
-            >
-              <Download size={16} className="mr-2" />
-              Download Resume
-            </Button>
+          <div className="flex gap-2">
+            <button className="flex-1 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">
+              Contact
+            </button>
+            <button className="flex items-center justify-center px-3 py-2 border border-gray-300 rounded hover:bg-gray-50">
+              <Download size={16} />
+            </button>
           </div>
         </div>
       )}

@@ -14,6 +14,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, EditIcon, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, Upload, X } from "lucide-react";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
+import JobBoardTab from '@/components/dashboard/tabs/job-board-tab';
 
 interface RecruiterProfile {
   id: string;
@@ -378,7 +379,9 @@ export default function RecruiterDashboard() {
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Active Jobs Card */}
-              <button className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-shadow duration-300 text-left w-full">
+              <button 
+                onClick={() => setLocation('/recruiter-active-jobs')}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-shadow duration-300 text-left w-full">
                 <div className="text-center">
                   <div className="flex justify-center mb-4">
                     <i className="fas fa-briefcase text-2xl text-gray-600 dark:text-gray-400"></i>
@@ -392,7 +395,9 @@ export default function RecruiterDashboard() {
               </button>
 
               {/* New Applications Card */}
-              <button className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-shadow duration-300 text-left w-full">
+              <button 
+                onClick={() => setLocation('/recruiter-new-applications')}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-shadow duration-300 text-left w-full">
                 <div className="text-center">
                   <div className="flex justify-center mb-4">
                     <i className="fas fa-user text-2xl text-gray-600 dark:text-gray-400"></i>
@@ -1103,14 +1108,7 @@ export default function RecruiterDashboard() {
           </>
         );
       case 'job-board':
-        return (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Job Board</h2>
-              <p className="text-gray-600 dark:text-gray-400">Recruiter job board functionality will be implemented here</p>
-            </div>
-          </div>
-        );
+        return <JobBoardTab />;
       case 'settings':
         return (
           <div className="flex items-center justify-center h-full">
@@ -1795,7 +1793,7 @@ export default function RecruiterDashboard() {
 
       {/* Upload Resume Modal */}
       <Dialog open={isUploadResumeModalOpen} onOpenChange={setIsUploadResumeModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden">
+        <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden">
           <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(95vh - 4rem)' }}>
             <DialogHeader>
               <DialogTitle>Upload Resume</DialogTitle>

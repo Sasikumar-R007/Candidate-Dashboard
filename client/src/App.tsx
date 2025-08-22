@@ -10,6 +10,8 @@ import TeamLeaderDashboard from "@/pages/team-leader-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
 import RecruiterDashboard from "@/pages/recruiter-dashboard";
 import SourceResume from "@/pages/source-resume";
+import RecruiterActiveJobs from "@/pages/recruiter-active-jobs";
+import RecruiterNewApplications from "@/pages/recruiter-new-applications";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -21,6 +23,8 @@ function Router() {
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/recruiter" component={RecruiterDashboard} />
       <Route path="/source-resume" component={SourceResume} />
+      <Route path="/recruiter-active-jobs" component={RecruiterActiveJobs} />
+      <Route path="/recruiter-new-applications" component={RecruiterNewApplications} />
       <Route component={NotFound} />
     </Switch>
   );
