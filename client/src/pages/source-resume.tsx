@@ -812,22 +812,22 @@ const SourceResume = () => {
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-lg text-gray-900">{candidate.name}</h3>
                         <p className="text-blue-600 font-medium">{candidate.title}</p>
-                        <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
+                        <div className="flex items-center gap-6 mt-1 text-sm text-gray-500">
                           <span className="flex items-center gap-1">
-                            <Briefcase size={14} />
+                            <Briefcase size={16} />
                             {candidate.experience} years experience
                           </span>
                           <span className="flex items-center gap-1">
-                            <MapPin size={14} />
+                            <MapPin size={16} />
                             {candidate.location}
                           </span>
                           <span className="flex items-center gap-1">
-                            <GraduationCap size={14} />
+                            <GraduationCap size={16} />
                             {candidate.education}
                           </span>
                         </div>
                         <div className="flex items-center gap-1 mt-1 text-sm text-gray-500">
-                          <Briefcase size={14} />
+                          <Briefcase size={16} />
                           {candidate.currentCompany}
                         </div>
                         <div className="flex flex-wrap gap-1 mt-2">
