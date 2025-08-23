@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Users, FileText, GitBranch, BarChart3, Database, Trophy, FileBarChart, Settings, ChevronRight } from "lucide-react";
+import { Users, FileText, GitBranch, BarChart3, Database, Trophy, FileBarChart, Settings, ChevronRight, User } from "lucide-react";
 import { useState } from "react";
 // import scalingXLogo from "@/assets/images/scaling-x-logo.png";
 
@@ -13,7 +13,7 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
   const [isExpanded, setIsExpanded] = useState(false);
 
   const menuItems = [
-    { id: 'team', label: 'Team', icon: Users },
+    { id: 'dashboard', label: 'Dashboard', icon: Users },
     { id: 'requirements', label: 'Requirements', icon: FileText },
     { id: 'pipeline', label: 'Pipeline', icon: GitBranch },
     { id: 'metrics', label: 'Metrics', icon: BarChart3 },

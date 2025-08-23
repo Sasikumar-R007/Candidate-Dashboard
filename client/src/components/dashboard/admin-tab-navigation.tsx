@@ -11,7 +11,8 @@ export default function AdminTabNavigation({ activeTab, onTabChange }: AdminTabN
     { id: 'metrics', label: 'Metrics' },
     { id: 'master-data', label: 'Master data' },
     { id: 'performance', label: 'Performance' },
-    { id: 'user-management', label: 'User Management' }
+    { id: 'user-management', label: 'User Management' },
+    { id: 'profile-details', label: 'Profile Details' }
   ];
 
   return (
