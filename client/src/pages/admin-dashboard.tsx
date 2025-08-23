@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import AdminSidebar from '@/components/dashboard/admin-sidebar';
 import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
 import AdminTabNavigation from '@/components/dashboard/admin-tab-navigation';
+import AdminTopHeader from '@/components/dashboard/admin-top-header';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -1919,10 +1920,13 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="flex bg-gray-50 dark:bg-gray-900 min-h-screen">
-      <AdminSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
-      <div className="flex-1 ml-16 overflow-auto">
-        {renderSidebarContent()}
+    <div className="flex flex-col bg-gray-50 dark:bg-gray-900 min-h-screen">
+      <AdminTopHeader userName="Sasi Kumar" companyName="Gumlat Marketing Private Limited" />
+      <div className="flex flex-1">
+        <AdminSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
+        <div className="flex-1 ml-16 overflow-auto">
+          {renderSidebarContent()}
+        </div>
       </div>
 
       {/* Recruiter Details Modal */}
