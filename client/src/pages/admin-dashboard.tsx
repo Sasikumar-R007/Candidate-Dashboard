@@ -3,6 +3,8 @@ import AdminSidebar from '@/components/dashboard/admin-sidebar';
 import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
 import AdminTabNavigation from '@/components/dashboard/admin-tab-navigation';
 import AdminTopHeader from '@/components/dashboard/admin-top-header';
+import TeamBoxes from '@/components/dashboard/team-boxes';
+import TeamMembersSidebar from '@/components/dashboard/team-members-sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -1925,8 +1927,16 @@ export default function AdminDashboard() {
       <div className="flex flex-1">
         <AdminSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
         <div className="flex-1 ml-16 overflow-auto">
-          {renderSidebarContent()}
+          {sidebarTab === 'team' ? (
+            <div className="p-6">
+              <TeamBoxes />
+              {renderSidebarContent()}
+            </div>
+          ) : (
+            renderSidebarContent()
+          )}
         </div>
+        {sidebarTab === 'team' && <TeamMembersSidebar />}
       </div>
 
       {/* Recruiter Details Modal */}
