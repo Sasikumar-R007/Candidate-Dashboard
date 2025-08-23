@@ -13,7 +13,7 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
   const [isExpanded, setIsExpanded] = useState(false);
 
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: Users },
+    { id: 'dashboard', label: 'Team', icon: Users },
     { id: 'requirements', label: 'Requirements', icon: FileText },
     { id: 'pipeline', label: 'Pipeline', icon: GitBranch },
     { id: 'metrics', label: 'Metrics', icon: BarChart3 },

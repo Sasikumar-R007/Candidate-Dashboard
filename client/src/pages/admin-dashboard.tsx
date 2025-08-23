@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import AdminSidebar from '@/components/dashboard/admin-sidebar';
 import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
-import AdminTabNavigation from '@/components/dashboard/admin-tab-navigation';
 import AdminTopHeader from '@/components/dashboard/admin-top-header';
 import TeamBoxes from '@/components/dashboard/team-boxes';
 import TeamMembersSidebar from '@/components/dashboard/team-members-sidebar';
@@ -2013,24 +2012,299 @@ export default function AdminDashboard() {
   const renderSidebarContent = () => {
     switch (sidebarTab) {
       case 'dashboard':
+        return renderTeamSection();
+      case 'requirements':
         return (
-          <>
-            {activeTab === 'profile-details' && (
-              <AdminProfileHeader profile={adminProfile} onProfileUpdate={setAdminProfile} />
-            )}
-            <AdminTabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-            <div className="flex-1 min-h-0">
-              {renderTabContent()}
+          <div className="px-6 py-6 space-y-6">
+            {/* Priority Distribution Cards */}
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Priority Distribution</h2>
+              <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">
+                + Add Requirements
+              </Button>
             </div>
-          </>
+            
+            <div className="grid grid-cols-4 gap-4 mb-8">
+              <Card className="text-center p-4">
+                <CardContent className="p-0">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">HIGH</div>
+                  <div className="text-3xl font-bold text-red-600 dark:text-red-400">15</div>
+                </CardContent>
+              </Card>
+              
+              <Card className="text-center p-4">
+                <CardContent className="p-0">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">MEDIUM</div>
+                  <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">9</div>
+                </CardContent>
+              </Card>
+              
+              <Card className="text-center p-4">
+                <CardContent className="p-0">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">LOW</div>
+                  <div className="text-3xl font-bold text-gray-600 dark:text-gray-400">3</div>
+                </CardContent>
+              </Card>
+              
+              <Card className="text-center p-4">
+                <CardContent className="p-0">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">TOTAL</div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white">27</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Requirements Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Requirements</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Positions</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Criticality</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Company</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">SPOC</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Talent Advisor</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Team Lead</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-4 px-3 text-gray-900 dark:text-white">Mobile App Developer</td>
+                        <td className="py-4 px-3">
+                          <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded-full">HIGH</span>
+                        </td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Tesco</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Mel Gibson</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Mel Gibson</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Arun</td>
+                        <td className="py-4 px-3">
+                          <Button variant="ghost" size="sm">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                            </svg>
+                          </Button>
+                        </td>
+                      </tr>
+                      
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-4 px-3 text-gray-900 dark:text-white">Backend Developer</td>
+                        <td className="py-4 px-3">
+                          <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-3 py-1 rounded-full">LOW</span>
+                        </td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">CodeLabs</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Robert Kim</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Robert Kim</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Arun</td>
+                        <td className="py-4 px-3">
+                          <Button variant="ghost" size="sm">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                            </svg>
+                          </Button>
+                        </td>
+                      </tr>
+                      
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-4 px-3 text-gray-900 dark:text-white">Frontend Developer</td>
+                        <td className="py-4 px-3">
+                          <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full">MEDIUM</span>
+                        </td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">TechCorp</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">David Wilson</td>
+                        <td className="py-4 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Arun</td>
+                        <td className="py-4 px-3">
+                          <Button variant="ghost" size="sm">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                            </svg>
+                          </Button>
+                        </td>
+                      </tr>
+                      
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-4 px-3 text-gray-900 dark:text-white">QA Tester</td>
+                        <td className="py-4 px-3">
+                          <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded-full">HIGH</span>
+                        </td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">AppLogic</td>
+                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Kevin Brown</td>
+                        <td className="py-4 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
+                        <td className="py-4 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
+                        <td className="py-4 px-3">
+                          <Button variant="ghost" size="sm">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                            </svg>
+                          </Button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                
+                <div className="flex justify-end gap-2 mt-4">
+                  <Button variant="outline" className="btn-rounded">Archives</Button>
+                  <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">View More</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         );
-      case 'job-board':
+      case 'pipeline':
+        return (
+          <div className="px-6 py-6 space-y-6">
+            {/* Pipeline Header */}
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Pipeline</h2>
+              <div className="flex items-center gap-4">
+                <Select>
+                  <SelectTrigger className="w-48 input-styled btn-rounded">
+                    <SelectValue placeholder="Arun/Anusha/All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="arun">Arun</SelectItem>
+                    <SelectItem value="anusha">Anusha</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="btn-rounded input-styled">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {format(selectedDate, "dd-MMM-yyyy")}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => date && setSelectedDate(date)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            {/* Pipeline Stages */}
+            <Card>
+              <CardContent className="p-6">
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Level 1</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Level 2</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Level 3</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Final Round</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">HR Round</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Offer Stage</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Closure</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                            Keerthana
+                          </span>
+                        </td>
+                        <td className="p-3 w-32">
+                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                            Keerthana
+                          </span>
+                        </td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                        <td className="p-3 w-32"></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+      case 'metrics':
         return (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Job Board</h2>
-              <p className="text-gray-600 dark:text-gray-400">Admin job board functionality will be implemented here</p>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Metrics</h2>
+              <p className="text-gray-600 dark:text-gray-400">Performance metrics and analytics</p>
             </div>
+          </div>
+        );
+      case 'master-data':
+        return (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Master Data</h2>
+              <p className="text-gray-600 dark:text-gray-400">Manage master data and configurations</p>
+            </div>
+          </div>
+        );
+      case 'performance':
+        return (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Performance</h2>
+              <p className="text-gray-600 dark:text-gray-400">View performance analytics and reports</p>
+            </div>
+          </div>
+        );
+      case 'user-management':
+        return (
+          <div className="px-6 py-6 space-y-6">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">User Management</h2>
+            
+            {/* User Management Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>All Users</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">User ID</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Name</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Email</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Role</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Last Active</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTL001</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">arun@gmail.com</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Team Leader</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Active</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">2 mins ago</td>
+                        <td className="py-3 px-3">
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Edit</Button>
+                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">Delete</Button>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         );
       case 'report':
@@ -2038,31 +2312,12 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Report</h2>
-              <p className="text-gray-600 dark:text-gray-400">Generate and view comprehensive reports and analytics</p>
-            </div>
-          </div>
-        );
-      case 'settings':
-        return (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Settings</h2>
-              <p className="text-gray-600 dark:text-gray-400">Admin settings and system configuration</p>
+              <p className="text-gray-600 dark:text-gray-400">Generate and view comprehensive reports</p>
             </div>
           </div>
         );
       default:
-        return (
-          <>
-            {activeTab === 'profile-details' && (
-              <AdminProfileHeader profile={adminProfile} onProfileUpdate={setAdminProfile} />
-            )}
-            <AdminTabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-            <div className="flex-1 min-h-0">
-              {renderTabContent()}
-            </div>
-          </>
-        );
+        return renderTeamSection();
     }
   };
 
