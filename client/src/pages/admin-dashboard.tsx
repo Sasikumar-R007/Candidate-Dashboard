@@ -249,73 +249,13 @@ export default function AdminDashboard() {
       }
     };
 
-  const renderProfileDetailsSection = () => (
-    <div className="px-6 py-6 flex items-center justify-center h-full">
-      <div className="text-center">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Profile Details</h2>
-        <p className="text-gray-600 dark:text-gray-400">Your profile details are shown in the header above.</p>
-      </div>
-    </div>
-  );
-
     fetchAdminProfile();
   }, []);
 
   const renderTeamSection = () => (
     <div className="px-4 py-3 space-y-4 h-full overflow-y-auto">
-      {teamsData.map((team, teamIndex) => (
-        <div key={teamIndex} className="space-y-4">
-          {/* Team Header */}
-          <Card className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-amber-200 dark:border-amber-800">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-                  {team.teamName}
-                </h3>
-              </div>
-              
-              <div className="grid grid-cols-4 gap-3">
-                <div className="text-center p-2 bg-white dark:bg-gray-800 rounded shadow-sm">
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Team Members</div>
-                  <div className="text-xl font-bold text-blue-600 dark:text-blue-400">{team.teamMembers}</div>
-                </div>
-                
-                <div className="text-center p-2 bg-white dark:bg-gray-800 rounded shadow-sm border-l-2 border-blue-500">
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Tenure</div>
-                  <div className="text-xl font-bold text-blue-600 dark:text-blue-400">{team.tenure}</div>
-                </div>
-                
-                <div className="text-center p-2 bg-white dark:bg-gray-800 rounded shadow-sm border-l-2 border-blue-500">
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Quarters Achieved</div>
-                  <div className="text-xl font-bold text-blue-600 dark:text-blue-400">{team.quartersAchieved}</div>
-                </div>
-                
-                <div className="text-center p-2 bg-white dark:bg-gray-800 rounded shadow-sm border-l-2 border-blue-500">
-                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">Next Milestone</div>
-                  <div className="text-xl font-bold text-green-600 dark:text-green-400">{team.nextMilestone}</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Team Members Grid */}
-          <div className="grid grid-cols-6 gap-2">
-            {team.members.map((member, memberIndex) => (
-              <div 
-                key={memberIndex} 
-                onClick={() => handleMemberClick(member)}
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow cursor-pointer hover:border-blue-300 dark:hover:border-blue-600"
-              >
-                <div className="text-center">
-                  <h4 className="font-medium text-gray-900 dark:text-white mb-1 text-sm">{member.name}</h4>
-                  <p className="text-xs text-gray-600 dark:text-gray-400">{member.salary.split(' ')[0]}</p>
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400 block mt-1">{member.count}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
+      {/* Use the new TeamBoxes component - this replaces all the old team display logic */}
+      <TeamBoxes />
 
       {/* Target & Incentives Section */}
       <Card className="bg-gray-50 dark:bg-gray-800">
@@ -1896,16 +1836,9 @@ export default function AdminDashboard() {
       <div className="flex flex-1">
         <AdminSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
         <div className="flex-1 ml-16 h-screen flex flex-col overflow-hidden">
-          {sidebarTab === 'team' ? (
-            <div className="p-6">
-              <TeamBoxes />
-              {renderSidebarContent()}
-            </div>
-          ) : (
-            renderSidebarContent()
-          )}
+          {renderSidebarContent()}
         </div>
-        {sidebarTab === 'team' && <TeamMembersSidebar />}
+        {sidebarTab === 'dashboard' && <TeamMembersSidebar />}
       </div>
 
       {/* Recruiter Details Modal */}
