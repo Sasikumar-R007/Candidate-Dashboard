@@ -47,25 +47,50 @@ export default function AdminTopHeader({ userName = "Sasi Kumar", companyName = 
 
           {/* Dropdown Menu */}
           {showUserDropdown && (
-            <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-2 z-50">
-              <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150">
-                <User size={16} />
-                <span>Profile</span>
-              </button>
+            <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-4 z-50">
+              {/* Profile Section */}
+              <div className="px-4 pb-4 border-b border-gray-200 dark:border-gray-600">
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white text-xl font-medium flex-shrink-0">
+                    {userName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
+                      {userName}
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                      Admin Account - {companyName}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-full text-sm font-medium transition-colors duration-200">
+                    Manage Account
+                  </button>
+                </div>
+              </div>
               
-              <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150">
-                <Settings size={16} />
-                <span>Settings</span>
-              </button>
-              
-              <hr className="my-2 border-gray-200 dark:border-gray-600" />
-              
-              <Link href="/" data-testid="link-logout">
-                <button className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-150">
-                  <LogOut size={16} />
-                  <span>Log out</span>
+              {/* Menu Items */}
+              <div className="py-2">
+                <button className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150">
+                  <User size={16} />
+                  <span>Profile Settings</span>
                 </button>
-              </Link>
+                
+                <button className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150">
+                  <Settings size={16} />
+                  <span>Admin Settings</span>
+                </button>
+                
+                <hr className="my-2 border-gray-200 dark:border-gray-600" />
+                
+                <Link href="/" data-testid="link-logout">
+                  <button className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-150">
+                    <LogOut size={16} />
+                    <span>Sign out</span>
+                  </button>
+                </Link>
+              </div>
             </div>
           )}
         </div>

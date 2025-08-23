@@ -253,7 +253,7 @@ export default function AdminDashboard() {
   }, []);
 
   const renderTeamSection = () => (
-    <div className="px-4 py-3 space-y-3 h-screen overflow-hidden">
+    <div className="px-4 py-3 space-y-3 h-full overflow-y-auto">
       {/* Use the new TeamBoxes component - this replaces all the old team display logic */}
       <TeamBoxes />
 
@@ -291,7 +291,7 @@ export default function AdminDashboard() {
               </tbody>
             </table>
             <div className="mt-2 flex justify-end">
-              <Button variant="outline" size="sm" className="text-blue-600 border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-none text-xs px-2 py-1">
+              <Button variant="outline" size="sm" className="text-blue-600 border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-sm text-xs px-2 py-1">
                 View All
               </Button>
             </div>
@@ -382,7 +382,7 @@ export default function AdminDashboard() {
                   <p className="text-4xl font-bold mb-3">
                     {dailyMetricsData.dailyDeliveryDelivered}
                   </p>
-                  <Button size="sm" className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded-none">
+                  <Button size="sm" className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded-sm">
                     View
                   </Button>
                 </div>
@@ -391,7 +391,7 @@ export default function AdminDashboard() {
                   <p className="text-4xl font-bold mb-3">
                     {dailyMetricsData.dailyDeliveryDefaulted}
                   </p>
-                  <Button size="sm" className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded-none">
+                  <Button size="sm" className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded-sm">
                     View
                   </Button>
                 </div>
@@ -467,7 +467,7 @@ export default function AdminDashboard() {
         <Card className="bg-gray-50 dark:bg-gray-800">
           <CardHeader className="pb-3 flex flex-row items-center justify-between">
             <CardTitle className="text-lg text-gray-900 dark:text-white">Pending Meetings</CardTitle>
-            <Button variant="link" size="sm" className="text-blue-600 text-xs rounded-none">View More</Button>
+            <Button variant="link" size="sm" className="text-blue-600 text-xs rounded-sm">View More</Button>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
