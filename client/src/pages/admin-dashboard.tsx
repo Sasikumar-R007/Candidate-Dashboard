@@ -264,12 +264,12 @@ export default function AdminDashboard() {
   const renderTeamSection = () => (
     <div className="px-4 py-3 space-y-4 h-full overflow-y-auto">
       {teamsData.map((team, teamIndex) => (
-        <div key={teamIndex} className="space-y-6">
+        <div key={teamIndex} className="space-y-4">
           {/* Team Header */}
           <Card className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-amber-200 dark:border-amber-800">
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
                   {team.teamName}
                 </h3>
               </div>
@@ -318,39 +318,39 @@ export default function AdminDashboard() {
       ))}
 
       {/* Target & Incentives Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Target & Incentives</CardTitle>
+      <Card className="bg-gray-50 dark:bg-gray-800">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg text-gray-900 dark:text-white">Target & Incentives</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
+            <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
               <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Resource</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Role</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Quarter</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Minimum Target</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Target Achieved</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Closures</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-600 dark:text-gray-400">Incentives</th>
+                <tr className="bg-gray-200 dark:bg-gray-700">
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">Resource</th>
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">Role</th>
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">Quarter</th>
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">Minimum Target</th>
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">Target Achieved</th>
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">Closures</th>
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">Incentives</th>
                 </tr>
               </thead>
               <tbody>
                 {targetsData.map((target, index) => (
-                  <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
-                    <td className="py-3 px-4 text-sm text-gray-900 dark:text-white">{target.resource}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{target.role}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{target.quarter}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{target.minimumTarget}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{target.targetAchieved}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{target.closures}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{target.incentives}</td>
+                  <tr key={index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
+                    <td className="py-2 px-3 text-sm text-gray-900 dark:text-white font-medium">{target.resource}</td>
+                    <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.role}</td>
+                    <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.quarter}</td>
+                    <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.minimumTarget}</td>
+                    <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.targetAchieved}</td>
+                    <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.closures}</td>
+                    <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.incentives}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <div className="mt-4 flex justify-end">
+            <div className="mt-3 flex justify-end">
               <Button variant="outline" size="sm" className="text-blue-600 border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20">
                 View All
               </Button>
@@ -360,12 +360,12 @@ export default function AdminDashboard() {
       </Card>
 
       {/* Daily Metrics Section */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Daily Metrics</CardTitle>
+      <Card className="bg-gray-50 dark:bg-gray-800">
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <CardTitle className="text-lg text-gray-900 dark:text-white">Daily Metrics</CardTitle>
           <div className="flex items-center space-x-4">
             <Select defaultValue="overall">
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-24">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -377,9 +377,9 @@ export default function AdminDashboard() {
             
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="flex items-center space-x-2">
-                  <CalendarIcon className="h-4 w-4" />
-                  <span>{format(selectedDate, "dd-MMM-yyyy")}</span>
+                <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                  <CalendarIcon className="h-3 w-3" />
+                  <span className="text-xs">{format(selectedDate, "dd-MMM-yyyy")}</span>
                   <EditIcon className="h-3 w-3" />
                 </Button>
               </PopoverTrigger>
@@ -396,78 +396,88 @@ export default function AdminDashboard() {
         </CardHeader>
         
         <CardContent>
-          <div className="grid grid-cols-3 gap-6">
-            {/* Left side - 2x2 Grid */}
-            <div className="col-span-2 grid grid-cols-2 gap-4">
-              <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-6 border border-gray-200 dark:border-gray-700">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Total Requirements</p>
+          <div className="grid grid-cols-3 gap-4">
+            {/* Left side - Metrics */}
+            <div className="space-y-3">
+              <div className="bg-white dark:bg-gray-900 rounded p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total Requirements</p>
                 <div className="text-right">
-                  <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
+                  <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">
                     {dailyMetricsData.totalRequirements}
                   </span>
                 </div>
               </div>
-              <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-6 border border-gray-200 dark:border-gray-700">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Completed Requirements</p>
+              <div className="bg-white dark:bg-gray-900 rounded p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Avg. Resumes per Requirement</p>
                 <div className="text-right">
-                  <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
-                    {dailyMetricsData.completedRequirements}
-                  </span>
-                </div>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-6 border border-gray-200 dark:border-gray-700">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Avg. Resumes per Requirement</p>
-                <div className="text-right">
-                  <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
+                  <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">
                     {dailyMetricsData.avgResumesPerRequirement}
                   </span>
                 </div>
               </div>
-              <div className="bg-white dark:bg-gray-800 rounded shadow-sm p-6 border border-gray-200 dark:border-gray-700">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Requirements per Recruiter</p>
+              <div className="bg-white dark:bg-gray-900 rounded p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Requirements per Recruiter</p>
                 <div className="text-right">
-                  <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
+                  <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">
                     {dailyMetricsData.requirementsPerRecruiter}
+                  </span>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-gray-900 rounded p-3">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Completed Requirements</p>
+                <div className="text-right">
+                  <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                    {dailyMetricsData.completedRequirements}
                   </span>
                 </div>
               </div>
             </div>
             
-            {/* Right side - Daily Delivery */}
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded shadow-sm p-6 border border-yellow-200 dark:border-yellow-800">
-              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-300 mb-4">Daily Delivery</h3>
-              <div className="grid grid-cols-2 gap-4 mb-6">
+            {/* Center - Daily Delivery */}
+            <div className="bg-slate-800 dark:bg-slate-900 rounded p-4 text-white">
+              <h3 className="text-lg font-semibold text-center mb-4">Daily Delivery</h3>
+              <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="text-center">
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Delivered</p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
+                  <p className="text-sm text-gray-300 mb-2">Delivered</p>
+                  <p className="text-4xl font-bold mb-3">
                     {dailyMetricsData.dailyDeliveryDelivered}
                   </p>
-                  <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 text-white px-4">
+                  <Button size="sm" className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs">
                     View
                   </Button>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Defaulted</p>
-                  <p className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
+                  <p className="text-sm text-gray-300 mb-2">Defaulted</p>
+                  <p className="text-4xl font-bold mb-3">
                     {dailyMetricsData.dailyDeliveryDefaulted}
                   </p>
-                  <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 text-white px-4">
+                  <Button size="sm" className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs">
                     View
                   </Button>
                 </div>
               </div>
-              <Button variant="outline" size="sm" className="w-full">
-                View More
-              </Button>
             </div>
-          </div>
-          
-          {/* Overall Performance - Separate section below */}
-          <div className="mt-6 flex justify-center">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700 text-center min-w-48">
-              <div className="text-sm text-gray-600 dark:text-gray-400 mb-3">Overall Performance</div>
-              <div className="text-4xl font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900 w-16 h-16 rounded-full flex items-center justify-center mx-auto">
-                {dailyMetricsData.overallPerformance}
+            
+            {/* Right side - Overall Performance */}
+            <div className="bg-white dark:bg-gray-900 rounded p-4">
+              <div className="text-center">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Overall Performance</h3>
+                <div className="text-4xl font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                  {dailyMetricsData.overallPerformance}
+                </div>
+                <div className="flex justify-center space-x-2 mb-2">
+                  <div className="flex items-center space-x-1">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">Something</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">Romania</span>
+                  </div>
+                </div>
+                <div className="h-16 bg-gray-100 dark:bg-gray-800 rounded mt-2 flex items-end justify-center">
+                  <div className="text-xs text-gray-500">Chart placeholder</div>
+                </div>
               </div>
             </div>
           </div>
@@ -475,121 +485,63 @@ export default function AdminDashboard() {
       </Card>
 
       {/* Messages and Meetings Section */}
-      <div className="grid grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Messages</CardTitle>
+      <div className="grid grid-cols-2 gap-4">
+        {/* Message Status */}
+        <Card className="bg-gray-50 dark:bg-gray-800">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg text-gray-900 dark:text-white">Message Status</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4 mb-4">
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Arun" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="arun">Arun</SelectItem>
-                  <SelectItem value="anusha">Anusha</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Textarea placeholder="Enter text..." className="min-h-20" />
-              
-              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                Send ➤
-              </Button>
-            </div>
-            
-            <div className="border-t pt-4">
-              <h4 className="font-semibold mb-3">Message Status</h4>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2 text-white bg-blue-600 px-2">Name</th>
-                      <th className="text-left py-2 text-white bg-blue-600 px-2">Message</th>
-                      <th className="text-left py-2 text-white bg-blue-600 px-2">Date</th>
-                      <th className="text-left py-2 text-white bg-blue-600 px-2">Status</th>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm bg-white dark:bg-gray-900 rounded">
+                <thead>
+                  <tr className="bg-slate-800 text-white">
+                    <th className="text-left py-2 px-3 text-sm font-medium">Name</th>
+                    <th className="text-left py-2 px-3 text-sm font-medium">Message</th>
+                    <th className="text-left py-2 px-3 text-sm font-medium">Date</th>
+                    <th className="text-left py-2 px-3 text-sm font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {messagesData.map((message, index) => (
+                    <tr key={index} className="border-b border-gray-100 dark:border-gray-700">
+                      <td className="py-2 px-3 text-gray-900 dark:text-white font-medium">{message.name}</td>
+                      <td className="py-2 px-3 text-gray-600 dark:text-gray-400">{message.message}</td>
+                      <td className="py-2 px-3 text-gray-600 dark:text-gray-400">{message.date}</td>
+                      <td className="py-2 px-3">
+                        <span className={`w-3 h-3 rounded-full inline-block ${
+                          message.status === 'active' ? 'bg-green-500' : 'bg-red-500'
+                        }`}></span>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {messagesData.map((message, index) => (
-                      <tr key={index} className="border-b">
-                        <td className="py-2 px-2">{message.name}</td>
-                        <td className="py-2 px-2">{message.message}</td>
-                        <td className="py-2 px-2">{message.date}</td>
-                        <td className="py-2 px-2">
-                          <span className={`w-3 h-3 rounded-full inline-block ${
-                            message.status === 'active' ? 'bg-green-500' : 'bg-red-500'
-                          }`}></span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="mt-3 text-right">
-                <Button variant="link" size="sm" className="text-blue-600">See More...</Button>
-              </div>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </CardContent>
         </Card>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>Set Meetings</CardTitle>
+        {/* Pending Meetings */}
+        <Card className="bg-gray-50 dark:bg-gray-800">
+          <CardHeader className="pb-3 flex flex-row items-center justify-between">
+            <CardTitle className="text-lg text-gray-900 dark:text-white">Pending Meetings</CardTitle>
+            <Button variant="link" size="sm" className="text-blue-600 text-xs">View More</Button>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4 mb-4">
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Arun" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="arun">Arun</SelectItem>
-                  <SelectItem value="anusha">Anusha</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="CEO" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ceo">CEO</SelectItem>
-                  <SelectItem value="tl">TL</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Date" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="tomorrow">Tomorrow</SelectItem>
-                </SelectContent>
-              </Select>
-              
-              <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-                Set
-              </Button>
-            </div>
-            
-            <div className="border-t pt-4">
-              <h4 className="font-semibold mb-3">Pending Meetings</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">TL's Meeting</div>
-                  <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">3</div>
-                  <Button size="sm" className="mt-2 text-xs px-2 py-1 h-6">View</Button>
-                </div>
-                
-                <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">CEO's Meeting</div>
-                  <div className="text-3xl font-bold text-yellow-600 dark:text-yellow-400">1</div>
-                  <Button size="sm" variant="outline" className="mt-2 text-xs px-2 py-1 h-6">View</Button>
-                </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-4 text-center">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">TL's Meeting</h3>
+                <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">3</div>
+                <Button size="sm" className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs">
+                  View
+                </Button>
+              </div>
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-4 text-center">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">CEO's Meeting</h3>
+                <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">1</div>
+                <Button size="sm" className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs">
+                  View
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -1869,7 +1821,14 @@ export default function AdminDashboard() {
           </div>
         );
       case 'profile-details':
-        return renderProfileDetailsSection();
+        return (
+          <div className="px-6 py-6 flex items-center justify-center h-full">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Profile Details</h2>
+              <p className="text-gray-600 dark:text-gray-400">Your profile details are shown in the header above.</p>
+            </div>
+          </div>
+        );
       default:
         return renderTeamSection();
     }
