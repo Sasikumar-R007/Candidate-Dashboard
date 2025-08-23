@@ -11,7 +11,7 @@ export default function AdminTopHeader({ userName = "Sasi Kumar", companyName = 
   const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   return (
-    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 ml-16 relative z-30">
+    <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 ml-16 relative z-30 sticky top-0">
       {/* Left - Company Name */}
       <div className="flex items-center">
         <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">

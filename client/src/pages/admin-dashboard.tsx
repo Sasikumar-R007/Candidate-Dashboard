@@ -259,10 +259,10 @@ export default function AdminDashboard() {
 
       {/* Target & Incentives Section */}
       <Card className="bg-gray-50 dark:bg-gray-800">
-        <CardHeader className="pb-2">
+        <CardHeader className="pb-1 pt-2">
           <CardTitle className="text-lg text-gray-900 dark:text-white">Target & Incentives</CardTitle>
         </CardHeader>
-        <CardContent className="p-3">
+        <CardContent className="p-2">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
               <thead>
@@ -301,7 +301,7 @@ export default function AdminDashboard() {
 
       {/* Daily Metrics Section */}
       <Card className="bg-gray-50 dark:bg-gray-800">
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
+        <CardHeader className="flex flex-row items-center justify-between pb-2 pt-2">
           <CardTitle className="text-lg text-gray-900 dark:text-white">Daily Metrics</CardTitle>
           <div className="flex items-center space-x-4">
             <Select defaultValue="overall">
@@ -340,7 +340,7 @@ export default function AdminDashboard() {
             {/* Left side - Metrics */}
             <div className="space-y-3">
               <div className="bg-white dark:bg-gray-900 rounded p-3">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Total Requirements</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-0">Total Requirements</p>
                 <div className="text-right">
                   <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
                     {dailyMetricsData.totalRequirements}
@@ -348,7 +348,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
               <div className="bg-white dark:bg-gray-900 rounded p-3">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Avg. Resumes per Requirement</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-0">Avg. Resumes per Requirement</p>
                 <div className="text-right">
                   <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
                     {dailyMetricsData.avgResumesPerRequirement}
@@ -356,7 +356,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
               <div className="bg-white dark:bg-gray-900 rounded p-3">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Requirements per Recruiter</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-0">Requirements per Recruiter</p>
                 <div className="text-right">
                   <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
                     {dailyMetricsData.requirementsPerRecruiter}
@@ -364,7 +364,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
               <div className="bg-white dark:bg-gray-900 rounded p-3">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Completed Requirements</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-0">Completed Requirements</p>
                 <div className="text-right">
                   <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
                     {dailyMetricsData.completedRequirements}
@@ -1837,7 +1837,7 @@ export default function AdminDashboard() {
       <AdminTopHeader userName="Sasi Kumar" companyName="Gumlat Marketing Private Limited" />
       <div className="flex flex-1">
         <AdminSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
-        <div className="flex-1 ml-16 h-screen flex flex-col overflow-hidden">
+        <div className="flex-1 ml-16 flex flex-col overflow-hidden" style={{height: 'calc(100vh - 4rem)'}}>
           {renderSidebarContent()}
         </div>
         {sidebarTab === 'dashboard' && <TeamMembersSidebar />}

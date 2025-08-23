@@ -36,7 +36,7 @@ export default function TeamBoxes() {
               <img 
                 src={team.image} 
                 alt={team.name}
-                className="w-12 h-12 rounded object-cover border-2 border-blue-200 dark:border-blue-800"
+                className="w-12 h-12 rounded-sm object-cover border-2 border-blue-200 dark:border-blue-800"
               />
             </div>
             
