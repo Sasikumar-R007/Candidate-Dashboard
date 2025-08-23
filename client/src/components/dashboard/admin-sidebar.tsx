@@ -1,4 +1,6 @@
 import { Link } from "wouter";
+import { Users, FileText, GitBranch, BarChart3, Database, Trophy, FileBarChart, Settings, LogOut } from "lucide-react";
+import { useState } from "react";
 
 interface AdminSidebarProps {
   activeTab: string;
@@ -6,45 +8,92 @@ interface AdminSidebarProps {
 }
 
 export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'fas fa-tachometer-alt' },
-    { id: 'job-board', label: 'Job Board', icon: 'fas fa-briefcase' },
-    { id: 'report', label: 'Report', icon: 'fas fa-chart-bar' },
-    { id: 'settings', label: 'Settings', icon: 'fas fa-cog' }
+    { id: 'team', label: 'Team', icon: Users },
+    { id: 'requirements', label: 'Requirements', icon: FileText },
+    { id: 'pipeline', label: 'Pipeline', icon: GitBranch },
+    { id: 'metrics', label: 'Metrics', icon: BarChart3 },
+    { id: 'master-data', label: 'Master Data', icon: Database },
+    { id: 'performance', label: 'Performance', icon: Trophy },
+    { id: 'report', label: 'Report', icon: FileBarChart },
+    { id: 'user-management', label: 'User Management', icon: Settings }
   ];
 
   return (
-    <div className="w-64 bg-blue-900 dark:bg-gray-800 text-white flex-shrink-0 h-screen overflow-hidden fixed left-0 top-0 z-10">
-      <div className="p-6 h-full flex flex-col">
-        <h1 className="text-xl font-bold mb-8">Job Portal</h1>
-        <nav className="space-y-2 flex-1">
-          {menuItems.map((item) => (
-            <button
+    <div className="w-16 bg-slate-900 text-white flex-shrink-0 h-screen overflow-hidden fixed left-0 top-0 z-50 flex flex-col">
+      {/* Logo Section */}
+      <div className="h-16 flex items-center justify-center border-b border-slate-700">
+        <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center">
+          <span className="text-white font-bold text-sm">X</span>
+        </div>
+      </div>
+
+      {/* Navigation Items */}
+      <nav className="flex-1 py-4">
+        {menuItems.map((item) => {
+          const IconComponent = item.icon;
+          return (
+            <div
               key={item.id}
-              onClick={() => onTabChange(item.id)}
-              className={`w-full flex items-center px-4 py-3 rounded transition-colors text-left ${
-                activeTab === item.id 
-                  ? 'bg-blue-700 dark:bg-gray-700 font-medium' 
-                  : 'hover:bg-blue-700 dark:hover:bg-gray-700'
-              }`}
-              data-testid={`button-nav-${item.id}`}
+              className="relative"
+              onMouseEnter={() => setHoveredItem(item.id)}
+              onMouseLeave={() => setHoveredItem(null)}
             >
-              <i className={`${item.icon} mr-3`}></i>
-              {item.label}
-            </button>
-          ))}
-          
-          {/* Sign Out Link */}
+              <button
+                onClick={() => onTabChange(item.id)}
+                className={`w-full h-12 flex items-center justify-center transition-colors relative group ${
+                  activeTab === item.id 
+                    ? 'bg-slate-800 text-cyan-400' 
+                    : 'hover:bg-slate-800 text-slate-400 hover:text-white'
+                }`}
+                data-testid={`button-nav-${item.id}`}
+              >
+                {/* Active indicator */}
+                {activeTab === item.id && (
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-cyan-400"></div>
+                )}
+                
+                <IconComponent size={20} />
+                
+                {/* Tooltip */}
+                {hoveredItem === item.id && (
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-sm rounded whitespace-nowrap z-50 shadow-lg border border-slate-600">
+                    {item.label}
+                    <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-slate-800 rotate-45 border-l border-t border-slate-600"></div>
+                  </div>
+                )}
+              </button>
+            </div>
+          );
+        })}
+      </nav>
+
+      {/* Sign Out Section */}
+      <div className="border-t border-slate-700 py-4">
+        <div
+          className="relative"
+          onMouseEnter={() => setHoveredItem('signout')}
+          onMouseLeave={() => setHoveredItem(null)}
+        >
           <Link href="/" data-testid="link-sign-out-admin">
             <button
-              className="w-full flex items-center px-4 py-3 rounded-lg transition-colors text-left hover:bg-blue-700 dark:hover:bg-gray-700"
+              className="w-full h-12 flex items-center justify-center transition-colors text-slate-400 hover:text-red-400 hover:bg-slate-800"
               data-testid="button-nav-sign-out"
             >
-              <i className="fas fa-sign-out-alt mr-3"></i>
-              Sign Out
+              <LogOut size={20} />
+              
+              {/* Tooltip */}
+              {hoveredItem === 'signout' && (
+                <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-sm rounded whitespace-nowrap z-50 shadow-lg border border-slate-600">
+                  Sign Out
+                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-slate-800 rotate-45 border-l border-t border-slate-600"></div>
+                </div>
+              )}
             </button>
           </Link>
-        </nav>
+        </div>
       </div>
     </div>
   );
