@@ -252,16 +252,16 @@ export default function AdminDashboard() {
   }, []);
 
   const renderTeamSection = () => (
-    <div className="px-4 py-3 space-y-3 h-full overflow-y-auto">
+    <div className="px-3 py-2 space-y-2 h-full overflow-y-auto">
       {/* Use the new TeamBoxes component - this replaces all the old team display logic */}
       <TeamBoxes />
 
       {/* Target & Incentives Section */}
       <Card className="bg-gray-50 dark:bg-gray-800">
-        <CardHeader className="pb-1 pt-2">
+        <CardHeader className="pb-1 pt-1">
           <CardTitle className="text-lg text-gray-900 dark:text-white">Target & Incentives</CardTitle>
         </CardHeader>
-        <CardContent className="p-2">
+        <CardContent className="p-1">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
               <thead>
@@ -289,7 +289,7 @@ export default function AdminDashboard() {
                 ))}
               </tbody>
             </table>
-            <div className="mt-2 flex justify-end">
+            <div className="mt-1 flex justify-end">
               <Button variant="outline" size="sm" className="text-blue-600 border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-sm text-xs px-2 py-1">
                 View All
               </Button>
@@ -299,12 +299,12 @@ export default function AdminDashboard() {
       </Card>
 
       {/* Daily Metrics Section */}
-      <Card className="bg-gray-50 dark:bg-gray-800">
-        <CardHeader className="flex flex-row items-center justify-between pb-2 pt-2">
+      <Card className="bg-teal-50 dark:bg-teal-900/30">
+        <CardHeader className="flex flex-row items-center justify-between pb-1 pt-2">
           <CardTitle className="text-lg text-gray-900 dark:text-white">Daily Metrics</CardTitle>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
             <Select defaultValue="overall">
-              <SelectTrigger className="w-24">
+              <SelectTrigger className="w-20 h-7 text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -316,7 +316,7 @@ export default function AdminDashboard() {
             
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="flex items-center space-x-2">
+                <Button variant="outline" size="sm" className="flex items-center space-x-1 h-7 px-2">
                   <CalendarIcon className="h-3 w-3" />
                   <span className="text-xs">{format(selectedDate, "dd-MMM-yyyy")}</span>
                   <EditIcon className="h-3 w-3" />
@@ -334,91 +334,24 @@ export default function AdminDashboard() {
           </div>
         </CardHeader>
         
-        <CardContent>
-          <div className="grid grid-cols-3 gap-4">
-            {/* Left side - Metrics */}
-            <div className="space-y-3">
-              <div className="bg-white dark:bg-gray-900 rounded p-3">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-0">Total Requirements</p>
-                <div className="text-right">
-                  <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
-                    {dailyMetricsData.totalRequirements}
-                  </span>
-                </div>
+        <CardContent className="p-3">
+          <div className="bg-teal-100 dark:bg-teal-800/50 rounded p-4">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+              <div className="flex justify-between items-center py-1">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Requirements</span>
+                <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{dailyMetricsData.totalRequirements}</span>
               </div>
-              <div className="bg-white dark:bg-gray-900 rounded p-3">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-0">Avg. Resumes per Requirement</p>
-                <div className="text-right">
-                  <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
-                    {dailyMetricsData.avgResumesPerRequirement}
-                  </span>
-                </div>
+              <div className="flex justify-between items-center py-1">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Avg. Resumes per Requirement</span>
+                <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{dailyMetricsData.avgResumesPerRequirement}</span>
               </div>
-              <div className="bg-white dark:bg-gray-900 rounded p-3">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-0">Requirements per Recruiter</p>
-                <div className="text-right">
-                  <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
-                    {dailyMetricsData.requirementsPerRecruiter}
-                  </span>
-                </div>
+              <div className="flex justify-between items-center py-1">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Requirements per Recruiter</span>
+                <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{dailyMetricsData.requirementsPerRecruiter}</span>
               </div>
-              <div className="bg-white dark:bg-gray-900 rounded p-3">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-0">Completed Requirements</p>
-                <div className="text-right">
-                  <span className="text-4xl font-bold text-blue-600 dark:text-blue-400">
-                    {dailyMetricsData.completedRequirements}
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-            {/* Center - Daily Delivery */}
-            <div className="bg-slate-800 dark:bg-slate-900 rounded p-4 text-white">
-              <h3 className="text-lg font-semibold text-center mb-4">Daily Delivery</h3>
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="text-center">
-                  <p className="text-sm text-gray-300 mb-2">Delivered</p>
-                  <p className="text-4xl font-bold mb-3">
-                    {dailyMetricsData.dailyDeliveryDelivered}
-                  </p>
-                  <Button size="sm" className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded-sm">
-                    View
-                  </Button>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm text-gray-300 mb-2">Defaulted</p>
-                  <p className="text-4xl font-bold mb-3">
-                    {dailyMetricsData.dailyDeliveryDefaulted}
-                  </p>
-                  <Button size="sm" className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded-sm">
-                    View
-                  </Button>
-                </div>
-              </div>
-            </div>
-            
-            {/* Right side - Overall Performance */}
-            <div className="bg-white dark:bg-gray-900 rounded p-4">
-              <div className="text-left">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Overall Performance</h3>
-                  <div className="text-4xl font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900 w-16 h-16 rounded-sm flex items-center justify-center">
-                    {dailyMetricsData.overallPerformance}
-                  </div>
-                </div>
-                <div className="flex justify-start space-x-2 mb-2">
-                  <div className="flex items-center space-x-1">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-xs text-gray-600 dark:text-gray-400">Something</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
-                    <span className="text-xs text-gray-600 dark:text-gray-400">Romania</span>
-                  </div>
-                </div>
-                <div className="h-16 bg-gray-100 dark:bg-gray-800 rounded mt-2 flex items-center justify-center">
-                  <img src="/src/assets/sample-graph.png" alt="Performance Chart" className="h-full w-full object-contain" />
-                </div>
+              <div className="flex justify-between items-center py-1">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Completed Requirements</span>
+                <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{dailyMetricsData.completedRequirements}</span>
               </div>
             </div>
           </div>
@@ -426,10 +359,10 @@ export default function AdminDashboard() {
       </Card>
 
       {/* Messages and Meetings Section */}
-      <div className="grid grid-cols-2 gap-4 h-fit">
+      <div className="grid grid-cols-2 gap-3 h-fit">
         {/* Message Status */}
         <Card className="bg-gray-50 dark:bg-gray-800">
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-1 pt-2">
             <CardTitle className="text-lg text-gray-900 dark:text-white">Message Status</CardTitle>
           </CardHeader>
           <CardContent>
@@ -464,7 +397,7 @@ export default function AdminDashboard() {
         
         {/* Pending Meetings */}
         <Card className="bg-gray-50 dark:bg-gray-800">
-          <CardHeader className="pb-3 flex flex-row items-center justify-between">
+          <CardHeader className="pb-1 pt-2 flex flex-row items-center justify-between">
             <CardTitle className="text-lg text-gray-900 dark:text-white">Pending Meetings</CardTitle>
             <Button variant="link" size="sm" className="text-blue-600 text-xs rounded-sm">View More</Button>
           </CardHeader>
