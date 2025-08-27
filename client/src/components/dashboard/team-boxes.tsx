@@ -37,6 +37,7 @@ export default function TeamBoxes() {
                 src={team.image} 
                 alt={team.name}
                 className="w-12 h-12 rounded-sm object-cover border-2 border-blue-200 dark:border-blue-800"
+                style={{ borderRadius: '2px' }}
               />
             </div>
             

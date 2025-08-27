@@ -14,42 +14,68 @@ const teamMembers = [
 ];
 
 export default function TeamMembersSidebar() {
+  const leftBorderColors = [
+    'border-l-cyan-400',
+    'border-l-blue-400', 
+    'border-l-green-400',
+    'border-l-purple-400',
+    'border-l-pink-400',
+    'border-l-yellow-400',
+    'border-l-red-400',
+    'border-l-indigo-400',
+    'border-l-orange-400',
+    'border-l-teal-400'
+  ];
+
   return (
-    <div className="w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 h-screen overflow-y-auto">
+    <div className="w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 h-screen">
       <div className="p-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Team Members</h3>
         
-        <div className="space-y-2">
-          {teamMembers.map((member, index) => (
-            <Card key={index} className="p-3 hover:shadow-md transition-shadow duration-200 bg-cyan-50 dark:bg-cyan-900/20">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <img 
-                    src={member.image} 
-                    alt={member.name}
-                    className="w-10 h-10 rounded-full object-cover"
-                  />
-                  <div className="flex-1">
-                    <h4 className="font-medium text-gray-900 dark:text-gray-100 text-sm">
-                      {member.name}
-                    </h4>
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                      {member.salary}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-500">
-                      {member.year}
-                    </p>
+        <div className="space-y-1">
+          {teamMembers.map((member, index) => {
+            const isEven = index % 2 === 0;
+            const borderColor = leftBorderColors[index % leftBorderColors.length];
+            
+            return (
+              <Card 
+                key={index} 
+                className={`p-3 hover:shadow-md transition-shadow duration-200 border-l-4 ${borderColor} ${
+                  isEven 
+                    ? 'bg-blue-50 dark:bg-blue-900/20' 
+                    : 'bg-white dark:bg-gray-800'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <img 
+                      src={member.image} 
+                      alt={member.name}
+                      className="w-10 h-10 rounded-sm object-cover"
+                      style={{ borderRadius: '2px' }}
+                    />
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100 text-sm">
+                        {member.name}
+                      </h4>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        {member.salary}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500">
+                        {member.year}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-right">
+                    <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                      {member.count}
+                    </span>
                   </div>
                 </div>
-                
-                <div className="text-right">
-                  <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                    {member.count}
-                  </span>
-                </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       </div>
     </div>

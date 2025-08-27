@@ -252,14 +252,17 @@ export default function AdminDashboard() {
   }, []);
 
   const renderTeamSection = () => (
-    <div className="px-3 py-2 space-y-2 h-full overflow-y-auto">
+    <div className="px-3 py-2 space-y-2 h-full">
       {/* Use the new TeamBoxes component - this replaces all the old team display logic */}
       <TeamBoxes />
 
       {/* Target & Incentives Section */}
       <Card className="bg-gray-50 dark:bg-gray-800">
-        <CardHeader className="pb-1 pt-1">
+        <CardHeader className="pb-1 pt-1 flex flex-row items-center justify-between">
           <CardTitle className="text-lg text-gray-900 dark:text-white">Target & Incentives</CardTitle>
+          <Button variant="outline" size="sm" className="text-blue-600 border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-sm text-xs px-2 py-1">
+            View All
+          </Button>
         </CardHeader>
         <CardContent className="p-1">
           <div className="overflow-x-auto">
@@ -289,11 +292,6 @@ export default function AdminDashboard() {
                 ))}
               </tbody>
             </table>
-            <div className="mt-1 flex justify-end">
-              <Button variant="outline" size="sm" className="text-blue-600 border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-sm text-xs px-2 py-1">
-                View All
-              </Button>
-            </div>
           </div>
         </CardContent>
       </Card>
