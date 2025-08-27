@@ -252,7 +252,7 @@ export default function AdminDashboard() {
   }, []);
 
   const renderTeamSection = () => (
-    <div className="px-3 py-2 space-y-2 h-full overflow-y-auto scrollbar-hide">
+    <div className="px-3 py-2 space-y-2 flex-1 overflow-y-auto scrollbar-hide">
       {/* Use the new TeamBoxes component - this replaces all the old team display logic */}
       <TeamBoxes />
 

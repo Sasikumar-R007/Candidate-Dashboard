@@ -15,15 +15,18 @@ const teamMembers = [
 
 export default function TeamMembersSidebar() {
   return (
-    <div className="w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 h-screen">
-      <div className="p-4">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Team Members</h3>
+    <div className="w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700" style={{height: 'calc(100vh - 4rem)'}}>
+      <div className="h-full flex flex-col">
+        <div className="p-4 flex-shrink-0">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Team Members</h3>
+        </div>
         
-        <div className="space-y-1">
-          {teamMembers.map((member, index) => {
-            const isEven = index % 2 === 0;
-            
-            return (
+        <div className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide">
+          <div className="space-y-1">
+            {teamMembers.map((member, index) => {
+              const isEven = index % 2 === 0;
+              
+              return (
               <Card 
                 key={index} 
                 className={`p-3 hover:shadow-md transition-shadow duration-200 ${
@@ -60,8 +63,9 @@ export default function TeamMembersSidebar() {
                   </div>
                 </div>
               </Card>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
