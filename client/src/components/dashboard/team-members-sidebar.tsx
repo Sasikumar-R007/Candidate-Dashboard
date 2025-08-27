@@ -14,19 +14,6 @@ const teamMembers = [
 ];
 
 export default function TeamMembersSidebar() {
-  const leftBorderColors = [
-    'border-l-cyan-400',
-    'border-l-blue-400', 
-    'border-l-green-400',
-    'border-l-purple-400',
-    'border-l-pink-400',
-    'border-l-yellow-400',
-    'border-l-red-400',
-    'border-l-indigo-400',
-    'border-l-orange-400',
-    'border-l-teal-400'
-  ];
-
   return (
     <div className="w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 h-screen">
       <div className="p-4">
@@ -35,12 +22,11 @@ export default function TeamMembersSidebar() {
         <div className="space-y-1">
           {teamMembers.map((member, index) => {
             const isEven = index % 2 === 0;
-            const borderColor = leftBorderColors[index % leftBorderColors.length];
             
             return (
               <Card 
                 key={index} 
-                className={`p-3 hover:shadow-md transition-shadow duration-200 border-l-4 ${borderColor} ${
+                className={`p-3 hover:shadow-md transition-shadow duration-200 ${
                   isEven 
                     ? 'bg-blue-50 dark:bg-blue-900/20' 
                     : 'bg-white dark:bg-gray-800'
