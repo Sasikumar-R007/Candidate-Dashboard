@@ -2968,7 +2968,7 @@ export default function AdminDashboard() {
         );
       case 'performance':
         return (
-          <div className="px-6 py-6 space-y-6">
+          <div className="px-6 py-6 space-y-6 overflow-y-auto max-h-full">
             <div className="flex gap-6">
               {/* Left Side - Key Metrics and Cash Outflow */}
               <div className="flex-1 space-y-6">
@@ -3283,10 +3283,176 @@ export default function AdminDashboard() {
         );
       case 'report':
         return (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Report</h2>
-              <p className="text-gray-600 dark:text-gray-400">Generate and view comprehensive reports</p>
+          <div className="px-6 py-6 space-y-8 overflow-y-auto max-h-full">
+            {/* Teams Section */}
+            <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Teams</h3>
+              
+              <div className="flex items-center gap-4 mb-6">
+                <Select>
+                  <SelectTrigger className="w-48 input-styled rounded">
+                    <SelectValue placeholder="Target and Incentives" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="target-incentives">Target and Incentives</SelectItem>
+                    <SelectItem value="performance">Performance</SelectItem>
+                    <SelectItem value="metrics">Metrics</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Select>
+                  <SelectTrigger className="w-32 input-styled rounded">
+                    <SelectValue placeholder="Monthly" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="quarterly">Quarterly</SelectItem>
+                    <SelectItem value="yearly">Yearly</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="rounded input-styled">
+                      <CalendarIcon className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar mode="single" />
+                  </PopoverContent>
+                </Popover>
+                
+                <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded">
+                  Download
+                </Button>
+              </div>
+              
+              {/* Report Type Checkboxes */}
+              <div className="grid grid-cols-4 gap-4 mb-6">
+                <label className="flex items-center space-x-2">
+                  <input type="checkbox" className="rounded" defaultChecked />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Requirements</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input type="checkbox" className="rounded" defaultChecked />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Pipeline</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input type="checkbox" className="rounded" defaultChecked />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Closure Reports</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input type="checkbox" className="rounded" defaultChecked />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">Team Performance</span>
+                </label>
+              </div>
+              
+              {/* Second Row of Controls */}
+              <div className="flex items-center gap-4">
+                <Select>
+                  <SelectTrigger className="w-32 input-styled rounded">
+                    <SelectValue placeholder="Team" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="arun">Arun's Team</SelectItem>
+                    <SelectItem value="anusha">Anusha's Team</SelectItem>
+                    <SelectItem value="all">All Teams</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Select>
+                  <SelectTrigger className="w-32 input-styled rounded">
+                    <SelectValue placeholder="Priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="all">All</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Select>
+                  <SelectTrigger className="w-32 input-styled rounded">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="technical">Technical</SelectItem>
+                    <SelectItem value="non-technical">Non-Technical</SelectItem>
+                    <SelectItem value="all">All Types</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Select>
+                  <SelectTrigger className="w-32 input-styled rounded">
+                    <SelectValue placeholder="Monthly" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="quarterly">Quarterly</SelectItem>
+                    <SelectItem value="yearly">Yearly</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="rounded input-styled">
+                      <CalendarIcon className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar mode="single" />
+                  </PopoverContent>
+                </Popover>
+                
+                <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded">
+                  Download
+                </Button>
+              </div>
+            </div>
+            
+            {/* General Section */}
+            <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">General</h3>
+              
+              <div className="flex items-center gap-4">
+                <Select>
+                  <SelectTrigger className="w-48 input-styled rounded">
+                    <SelectValue placeholder="Employee Master" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="employee-master">Employee Master</SelectItem>
+                    <SelectItem value="client-master">Client Master</SelectItem>
+                    <SelectItem value="resume-database">Resume Database</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Select>
+                  <SelectTrigger className="w-32 input-styled rounded">
+                    <SelectValue placeholder="Monthly" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="quarterly">Quarterly</SelectItem>
+                    <SelectItem value="yearly">Yearly</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="rounded input-styled">
+                      <CalendarIcon className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar mode="single" />
+                  </PopoverContent>
+                </Popover>
+                
+                <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded">
+                  Download
+                </Button>
+              </div>
             </div>
           </div>
         );
