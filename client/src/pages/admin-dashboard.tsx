@@ -1316,23 +1316,21 @@ export default function AdminDashboard() {
                       <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Key Metrics</CardTitle>
                       <div className="flex gap-2">
                         <Select defaultValue="client">
-                          <SelectTrigger className="w-24 h-8 text-xs bg-teal-400 text-white border-teal-400">
+                          <SelectTrigger className="w-20 h-8 text-xs bg-cyan-400 hover:bg-cyan-500 text-white border-cyan-400">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="client">Client</SelectItem>
                             <SelectItem value="department">Department</SelectItem>
-                            <SelectItem value="team">Team</SelectItem>
                           </SelectContent>
                         </Select>
                         <Select defaultValue="monthly">
-                          <SelectTrigger className="w-24 h-8 text-xs bg-teal-400 text-white border-teal-400">
+                          <SelectTrigger className="w-20 h-8 text-xs bg-cyan-400 hover:bg-cyan-500 text-white border-cyan-400">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="monthly">Monthly</SelectItem>
                             <SelectItem value="quarterly">Quarterly</SelectItem>
-                            <SelectItem value="yearly">Yearly</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -1386,7 +1384,7 @@ export default function AdminDashboard() {
                     
                     {/* Show Data Button */}
                     <div className="flex justify-end">
-                      <Button size="sm" className="bg-teal-400 hover:bg-teal-500 text-white text-xs px-4">
+                      <Button className="bg-cyan-400 hover:bg-cyan-500 text-white text-xs px-4 py-2">
                         Show Data
                       </Button>
                     </div>
@@ -1401,36 +1399,46 @@ export default function AdminDashboard() {
                     <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Key Aspects</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div>
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">GROWTH</span>
-                        <span className="text-lg font-bold text-gray-900 dark:text-white">15%</span>
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-500">MoM</div>
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs text-gray-500 uppercase tracking-wider">GROWTH<sup className="text-xs">RATE</sup></div>
+                      <div className="text-2xl font-bold text-gray-900">15%</div>
                     </div>
                     
-                    <div>
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">GROWTH</span>
-                        <span className="text-lg font-bold text-gray-900 dark:text-white">9%</span>
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-500">YoY</div>
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs text-gray-500 uppercase tracking-wider">GROWTH<sup className="text-xs">YOY</sup></div>
+                      <div className="text-2xl font-bold text-gray-900">9%</div>
                     </div>
                     
-                    <div>
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">BURN</span>
-                        <span className="text-lg font-bold text-gray-900 dark:text-white">3%</span>
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-500">RATE</div>
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs text-gray-500 uppercase tracking-wider">BURN<sup className="text-xs">RATE</sup></div>
+                      <div className="text-2xl font-bold text-gray-900">3%</div>
                     </div>
                     
-                    <div>
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">CHURN</span>
-                        <span className="text-lg font-bold text-gray-900 dark:text-white">9%</span>
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-500">RATE</div>
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs text-gray-500 uppercase tracking-wider">CHURN<sup className="text-xs">RATE</sup></div>
+                      <div className="text-2xl font-bold text-gray-900">9%</div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs text-gray-500 uppercase tracking-wider">ATTRITION</div>
+                      <div className="text-2xl font-bold text-gray-900">3%</div>
+                    </div>
+                    
+                    <hr className="border-gray-200 my-4" />
+                    
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs text-gray-500 uppercase tracking-wider">NET PROFIT</div>
+                      <div className="text-xl font-bold text-gray-900">3,50,000</div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs text-gray-500 uppercase tracking-wider">REVENUE <sup className="text-xs">PER EMPLOYEE</sup></div>
+                      <div className="text-xl font-bold text-gray-900">75,000</div>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs text-gray-500 uppercase tracking-wider">CLIENT <sup className="text-xs">ACQUISITION COST</sup></div>
+                      <div className="text-xl font-bold text-gray-900">75,000</div>
                     </div>
                     
                     <div>
@@ -1486,7 +1494,7 @@ export default function AdminDashboard() {
                 </div>
                 
                 <div className="flex justify-end mb-4">
-                  <Button size="sm" className="bg-teal-400 hover:bg-teal-500 text-white text-xs px-4">+ Add</Button>
+                  <Button className="bg-cyan-400 hover:bg-cyan-500 text-white text-sm px-4 py-2">+ Add</Button>
                 </div>
 
                 {/* Cash Outflow Table */}
