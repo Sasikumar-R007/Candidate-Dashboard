@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import AdminSidebar from '@/components/dashboard/admin-sidebar';
 import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
-import AdminTabNavigation from '@/components/dashboard/admin-tab-navigation';
 import AdminTopHeader from '@/components/dashboard/admin-top-header';
 import TeamBoxes from '@/components/dashboard/team-boxes';
 import TeamMembersSidebar from '@/components/dashboard/team-members-sidebar';
@@ -1638,7 +1637,6 @@ export default function AdminDashboard() {
       case 'dashboard':
         return (
           <div className="flex flex-col h-full">
-            <AdminTabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
             <div className="flex-1 overflow-y-auto">
               {renderTabContent()}
             </div>
@@ -3127,6 +3125,12 @@ export default function AdminDashboard() {
                 </Button>
               </div>
             </div>
+          </div>
+        );
+      case 'metrics':
+        return (
+          <div className="flex items-center justify-center h-full min-h-[500px]">
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Metrics</h1>
           </div>
         );
       default:
