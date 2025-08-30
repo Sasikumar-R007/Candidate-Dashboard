@@ -1305,169 +1305,187 @@ export default function AdminDashboard() {
       case 'metrics':
         return (
           <div className="px-6 py-6 space-y-6">
-            {/* Year Selector */}
-            <div className="flex justify-end">
-              <Select>
-                <SelectTrigger className="w-32 input-styled btn-rounded">
-                  <SelectValue placeholder="2024-2025" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2024-2025">2024-2025</SelectItem>
-                  <SelectItem value="2023-2024">2023-2024</SelectItem>
-                  <SelectItem value="2022-2023">2022-2023</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Overall Performance */}
-            <Card className="bg-blue-50 dark:bg-blue-900/20">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Overall Performance</h3>
-                <div className="flex justify-center">
-                  <div className="relative w-48 h-24">
-                    <svg width="192" height="96" className="transform rotate-180">
-                      <path
-                        d="M 24 72 A 72 72 0 0 1 168 72"
-                        fill="none"
-                        stroke="#e5e7eb"
-                        strokeWidth="12"
-                        strokeLinecap="round"
-                      />
-                      <path
-                        d="M 24 72 A 72 72 0 0 1 96 24"
-                        fill="none"
-                        stroke="#10b981"
-                        strokeWidth="12"
-                        strokeLinecap="round"
-                      />
-                      <path
-                        d="M 96 24 A 72 72 0 0 1 144 36"
-                        fill="none"
-                        stroke="#f97316"
-                        strokeWidth="12"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="w-2 h-8 bg-gray-400 mx-auto transform rotate-45 origin-bottom"></div>
+            {/* Key Metrics and Key Aspects Layout */}
+            <div className="grid grid-cols-3 gap-6">
+              {/* Key Metrics Section - Takes 2/3 of the width */}
+              <div className="col-span-2">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Key Metrics</CardTitle>
+                      <div className="flex gap-2">
+                        <Select defaultValue="client">
+                          <SelectTrigger className="w-24 h-8 text-xs bg-teal-400 text-white border-teal-400">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="client">Client</SelectItem>
+                            <SelectItem value="department">Department</SelectItem>
+                            <SelectItem value="team">Team</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Select defaultValue="monthly">
+                          <SelectTrigger className="w-24 h-8 text-xs bg-teal-400 text-white border-teal-400">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                            <SelectItem value="quarterly">Quarterly</SelectItem>
+                            <SelectItem value="yearly">Yearly</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Metrics Grid */}
-            <div className="grid grid-cols-2 gap-6">
-              {/* Growth Metrics */}
-              <Card className="bg-green-50 dark:bg-green-900/20">
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Growth MoM</h4>
-                      <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">20%</div>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    {/* Chart Area with Sample Line Chart */}
+                    <div className="h-48 bg-gray-50 dark:bg-gray-800 rounded flex items-center justify-center mb-4">
+                      <svg width="100%" height="100%" viewBox="0 0 400 150" className="text-gray-400">
+                        {/* Chart Lines */}
+                        <polyline
+                          fill="none"
+                          stroke="#8b5cf6"
+                          strokeWidth="2"
+                          points="20,120 50,100 80,90 110,80 140,70 170,85 200,75 230,65 260,70 290,60 320,50 350,45 380,40"
+                        />
+                        <polyline
+                          fill="none"
+                          stroke="#10b981"
+                          strokeWidth="2"
+                          points="20,100 50,95 80,85 110,90 140,80 170,75 200,70 230,80 260,75 290,65 320,60 350,55 380,50"
+                        />
+                        <polyline
+                          fill="none"
+                          stroke="#f59e0b"
+                          strokeWidth="2"
+                          points="20,90 50,85 80,95 110,85 140,90 170,95 200,90 230,85 260,90 290,85 320,80 350,75 380,70"
+                        />
+                        <polyline
+                          fill="none"
+                          stroke="#ef4444"
+                          strokeWidth="2"
+                          points="20,80 50,75 80,80 110,75 140,70 170,80 200,85 230,75 260,80 290,75 320,70 350,65 380,60"
+                        />
+                        
+                        {/* Grid lines */}
+                        <g stroke="#e5e7eb" strokeWidth="1" opacity="0.3">
+                          <line x1="20" y1="30" x2="380" y2="30" />
+                          <line x1="20" y1="60" x2="380" y2="60" />
+                          <line x1="20" y1="90" x2="380" y2="90" />
+                          <line x1="20" y1="120" x2="380" y2="120" />
+                        </g>
+                        
+                        {/* Sample dots */}
+                        <circle cx="380" cy="40" r="3" fill="#8b5cf6" />
+                        <circle cx="380" cy="50" r="3" fill="#10b981" />
+                        <circle cx="380" cy="70" r="3" fill="#f59e0b" />
+                        <circle cx="380" cy="60" r="3" fill="#ef4444" />
+                      </svg>
                     </div>
-                    <div>
-                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Burn Rate</h4>
-                      <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">20%</div>
+                    
+                    {/* Show Data Button */}
+                    <div className="flex justify-end">
+                      <Button size="sm" className="bg-teal-400 hover:bg-teal-500 text-white text-xs px-4">
+                        Show Data
+                      </Button>
                     </div>
-                    <div>
-                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Growth YoY</h4>
-                      <div className="text-3xl font-bold text-red-600 dark:text-red-400">25%</div>
-                    </div>
-                    <div>
-                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Churn Rate</h4>
-                      <div className="text-3xl font-bold text-red-600 dark:text-red-400">25%</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Financial Metrics */}
-              <div className="space-y-4">
-                <Card>
-                  <CardContent className="p-4">
-                    <h4 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2">Net Profit</h4>
-                    <div className="text-2xl font-bold text-red-600 dark:text-red-400 mb-3">3,50,000</div>
-                    <Select>
-                      <SelectTrigger className="w-full input-styled btn-rounded">
-                        <SelectValue placeholder="Monthly" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                        <SelectItem value="quarterly">Quarterly</SelectItem>
-                        <SelectItem value="yearly">Yearly</SelectItem>
-                      </SelectContent>
-                    </Select>
                   </CardContent>
                 </Card>
+              </div>
 
+              {/* Key Aspects Section - Takes 1/3 of the width */}
+              <div>
                 <Card>
-                  <CardContent className="p-4">
-                    <h4 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2">Revenue Per Employee</h4>
-                    <div className="text-2xl font-bold text-red-600 dark:text-red-400 mb-3">75,000</div>
-                    <Select>
-                      <SelectTrigger className="w-full input-styled btn-rounded">
-                        <SelectValue placeholder="Monthly" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                        <SelectItem value="quarterly">Quarterly</SelectItem>
-                        <SelectItem value="yearly">Yearly</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Key Aspects</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">GROWTH</span>
+                        <span className="text-lg font-bold text-gray-900 dark:text-white">15%</span>
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-500">MoM</div>
+                    </div>
+                    
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">GROWTH</span>
+                        <span className="text-lg font-bold text-gray-900 dark:text-white">9%</span>
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-500">YoY</div>
+                    </div>
+                    
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">BURN</span>
+                        <span className="text-lg font-bold text-gray-900 dark:text-white">3%</span>
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-500">RATE</div>
+                    </div>
+                    
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">CHURN</span>
+                        <span className="text-lg font-bold text-gray-900 dark:text-white">9%</span>
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-500">RATE</div>
+                    </div>
+                    
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">ATTRITION</span>
+                        <span className="text-lg font-bold text-gray-900 dark:text-white">3%</span>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">NET PROFIT</span>
+                      </div>
+                      <div className="text-xl font-bold text-gray-900 dark:text-white">3,50,000</div>
+                    </div>
+                    
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">REVENUE</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-500">PER EMPLOYEE</span>
+                      </div>
+                      <div className="text-xl font-bold text-gray-900 dark:text-white">75,000</div>
+                    </div>
+                    
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">CLIENT</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-500">ACQUISITION COST</span>
+                      </div>
+                      <div className="text-xl font-bold text-gray-900 dark:text-white">75,000</div>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-6">
-              <Card>
-                <CardContent className="p-4">
-                  <h4 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2">Employee Attrition</h4>
-                  <div className="text-3xl font-bold text-red-600 dark:text-red-400">10%</div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <h4 className="text-lg font-semibold text-blue-600 dark:text-blue-400 mb-2">Customer Acquisition Cost</h4>
-                  <div className="text-2xl font-bold text-red-600 dark:text-red-400 mb-3">75,000</div>
-                  <Select>
-                    <SelectTrigger className="w-full input-styled btn-rounded">
-                      <SelectValue placeholder="Monthly" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                      <SelectItem value="quarterly">Quarterly</SelectItem>
-                      <SelectItem value="yearly">Yearly</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </CardContent>
-              </Card>
-            </div>
-
             {/* Cash Outflow Section */}
             <Card>
               <CardHeader>
-                <CardTitle>Cash Outflow</CardTitle>
+                <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Cash Outflow</CardTitle>
               </CardHeader>
               <CardContent>
                 {/* Input Fields */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <input type="text" placeholder="Month" className="p-3 input-styled btn-rounded border border-gray-300 dark:border-gray-600" />
-                  <input type="text" placeholder="Number of Employee" className="p-3 input-styled btn-rounded border border-gray-300 dark:border-gray-600" />
-                  <input type="text" placeholder="year" className="p-3 input-styled btn-rounded border border-gray-300 dark:border-gray-600" />
-                  <input type="text" placeholder="Total Salary" className="p-3 input-styled btn-rounded border border-gray-300 dark:border-gray-600" />
-                  <input type="text" placeholder="Incentive" className="p-3 input-styled btn-rounded border border-gray-300 dark:border-gray-600" />
-                  <input type="text" placeholder="Rent" className="p-3 input-styled btn-rounded border border-gray-300 dark:border-gray-600" />
-                  <input type="text" placeholder="Database & Tools cost" className="p-3 input-styled btn-rounded border border-gray-300 dark:border-gray-600" />
-                  <input type="text" placeholder="Other Expenses" className="p-3 input-styled btn-rounded border border-gray-300 dark:border-gray-600" />
+                <div className="grid grid-cols-4 gap-3 mb-6">
+                  <input type="text" placeholder="Month" className="p-2 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                  <input type="text" placeholder="Year" className="p-2 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                  <input type="text" placeholder="Number of Employees" className="p-2 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                  <input type="text" placeholder="Total Salary" className="p-2 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                  <input type="text" placeholder="Incentive" className="p-2 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                  <input type="text" placeholder="Rent" className="p-2 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                  <input type="text" placeholder="Database & Tools cost" className="p-2 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                  <input type="text" placeholder="Other Expenses" className="p-2 text-sm border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
                 </div>
                 
                 <div className="flex justify-end mb-4">
-                  <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">+ Add</Button>
+                  <Button size="sm" className="bg-teal-400 hover:bg-teal-500 text-white text-xs px-4">+ Add</Button>
                 </div>
 
                 {/* Cash Outflow Table */}
