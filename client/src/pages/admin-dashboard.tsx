@@ -2228,9 +2228,9 @@ export default function AdminDashboard() {
         );
       case 'pipeline':
         return (
-          <div className="px-6 py-6 space-y-6">
+          <div className="px-6 py-6 space-y-6 bg-white dark:bg-gray-900">
             {/* Pipeline Header */}
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Pipeline</h2>
               <div className="flex items-center gap-4">
                 <Select>
@@ -2262,42 +2262,227 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Pipeline Stages */}
-            <Card>
+            {/* Pipeline Stages with 11-stage green gradient */}
+            <Card className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
               <CardContent className="p-6">
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Level 1</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Level 2</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Level 3</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Final Round</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">HR Round</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Offer Stage</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Closure</th>
+                      <tr className="border-b-2 border-gray-300 dark:border-gray-600">
+                        <th className="text-left p-3 font-semibold text-gray-800 dark:text-gray-200 bg-[#E6F4EA] dark:bg-gray-700 min-w-[120px]">Sourced</th>
+                        <th className="text-left p-3 font-semibold text-gray-800 dark:text-gray-200 bg-[#D2E9D7] dark:bg-gray-700 min-w-[120px]">Contacted</th>
+                        <th className="text-left p-3 font-semibold text-gray-800 dark:text-gray-200 bg-[#BFDED3] dark:bg-gray-700 min-w-[120px]">Pre-qualified</th>
+                        <th className="text-left p-3 font-semibold text-gray-800 dark:text-gray-200 bg-[#ACD3C0] dark:bg-gray-700 min-w-[120px]">Level 1</th>
+                        <th className="text-left p-3 font-semibold text-gray-800 dark:text-gray-200 bg-[#98C8AC] dark:bg-gray-700 min-w-[120px]">Level 2</th>
+                        <th className="text-left p-3 font-semibold text-gray-800 dark:text-gray-200 bg-[#85BD99] dark:bg-gray-700 min-w-[120px]">Level 3</th>
+                        <th className="text-left p-3 font-semibold text-gray-800 dark:text-gray-200 bg-[#72B285] dark:bg-gray-700 min-w-[120px]">Final Round</th>
+                        <th className="text-left p-3 font-semibold text-gray-800 dark:text-gray-200 bg-[#5FA772] dark:bg-gray-700 min-w-[120px]">HR Round</th>
+                        <th className="text-left p-3 font-semibold text-gray-800 dark:text-gray-200 bg-[#4C9C5E] dark:bg-gray-700 min-w-[120px]">Offer Stage</th>
+                        <th className="text-left p-3 font-semibold text-gray-800 dark:text-gray-200 bg-[#42875B] dark:bg-gray-700 min-w-[120px]">Closure</th>
+                        <th className="text-left p-3 font-semibold text-gray-800 dark:text-gray-200 bg-[#C59445] dark:bg-gray-700 min-w-[120px]">Offer Drop</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="p-3 w-32">
-                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                            Keerthana
-                          </span>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <td className="p-3 bg-[#E6F4EA] dark:bg-gray-800">
+                          <div className="flex flex-col gap-2">
+                            <span className="inline-block w-full text-center px-2 py-1 rounded text-xs bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm border border-gray-300 dark:border-gray-600">
+                              Keerthana
+                            </span>
+                            <span className="inline-block w-full text-center px-2 py-1 rounded text-xs bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm border border-gray-300 dark:border-gray-600">
+                              Rajesh
+                            </span>
+                            <span className="inline-block w-full text-center px-2 py-1 rounded text-xs bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm border border-gray-300 dark:border-gray-600">
+                              Priya
+                            </span>
+                          </div>
                         </td>
-                        <td className="p-3 w-32">
-                          <span className="inline-block w-full text-center px-3 py-2 rounded text-sm bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                            Keerthana
-                          </span>
+                        <td className="p-3 bg-[#D2E9D7] dark:bg-gray-800">
+                          <div className="flex flex-col gap-2">
+                            <span className="inline-block w-full text-center px-2 py-1 rounded text-xs bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm border border-gray-300 dark:border-gray-600">
+                              Keerthana
+                            </span>
+                            <span className="inline-block w-full text-center px-2 py-1 rounded text-xs bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm border border-gray-300 dark:border-gray-600">
+                              Rajesh
+                            </span>
+                          </div>
                         </td>
-                        <td className="p-3 w-32"></td>
-                        <td className="p-3 w-32"></td>
-                        <td className="p-3 w-32"></td>
-                        <td className="p-3 w-32"></td>
-                        <td className="p-3 w-32"></td>
+                        <td className="p-3 bg-[#BFDED3] dark:bg-gray-800">
+                          <div className="flex flex-col gap-2">
+                            <span className="inline-block w-full text-center px-2 py-1 rounded text-xs bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm border border-gray-300 dark:border-gray-600">
+                              Keerthana
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-3 bg-[#ACD3C0] dark:bg-gray-800">
+                          <div className="flex flex-col gap-2">
+                            <span className="inline-block w-full text-center px-2 py-1 rounded text-xs bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm border border-gray-300 dark:border-gray-600">
+                              Keerthana
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-3 bg-[#98C8AC] dark:bg-gray-800">
+                          <div className="flex flex-col gap-2">
+                            <span className="inline-block w-full text-center px-2 py-1 rounded text-xs bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-sm border border-gray-300 dark:border-gray-600">
+                              Keerthana
+                            </span>
+                          </div>
+                        </td>
+                        <td className="p-3 bg-[#85BD99] dark:bg-gray-800"></td>
+                        <td className="p-3 bg-[#72B285] dark:bg-gray-800"></td>
+                        <td className="p-3 bg-[#5FA772] dark:bg-gray-800"></td>
+                        <td className="p-3 bg-[#4C9C5E] dark:bg-gray-800"></td>
+                        <td className="p-3 bg-[#42875B] dark:bg-gray-800"></td>
+                        <td className="p-3 bg-[#C59445] dark:bg-gray-800"></td>
+                      </tr>
+                      <tr className="border-b border-gray-200 dark:border-gray-700">
+                        <td className="p-3 bg-[#E6F4EA] dark:bg-gray-800">
+                          <div className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">5</div>
+                        </td>
+                        <td className="p-3 bg-[#D2E9D7] dark:bg-gray-800">
+                          <div className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">3</div>
+                        </td>
+                        <td className="p-3 bg-[#BFDED3] dark:bg-gray-800">
+                          <div className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">2</div>
+                        </td>
+                        <td className="p-3 bg-[#ACD3C0] dark:bg-gray-800">
+                          <div className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">2</div>
+                        </td>
+                        <td className="p-3 bg-[#98C8AC] dark:bg-gray-800">
+                          <div className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">1</div>
+                        </td>
+                        <td className="p-3 bg-[#85BD99] dark:bg-gray-800">
+                          <div className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">0</div>
+                        </td>
+                        <td className="p-3 bg-[#72B285] dark:bg-gray-800">
+                          <div className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">0</div>
+                        </td>
+                        <td className="p-3 bg-[#5FA772] dark:bg-gray-800">
+                          <div className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">0</div>
+                        </td>
+                        <td className="p-3 bg-[#4C9C5E] dark:bg-gray-800">
+                          <div className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">0</div>
+                        </td>
+                        <td className="p-3 bg-[#42875B] dark:bg-gray-800">
+                          <div className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">0</div>
+                        </td>
+                        <td className="p-3 bg-[#C59445] dark:bg-gray-800">
+                          <div className="text-center text-sm font-medium text-gray-700 dark:text-gray-300">0</div>
+                        </td>
                       </tr>
                     </tbody>
                   </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Closure Reports Table */}
+            <Card className="mt-8">
+              <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Closure Reports</CardTitle>
+                  <Button variant="outline" className="btn-rounded text-sm">
+                    Export Report
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                        <th className="text-left p-4 font-semibold text-gray-700 dark:text-gray-300">Candidate Name</th>
+                        <th className="text-left p-4 font-semibold text-gray-700 dark:text-gray-300">Position</th>
+                        <th className="text-left p-4 font-semibold text-gray-700 dark:text-gray-300">Client</th>
+                        <th className="text-left p-4 font-semibold text-gray-700 dark:text-gray-300">Recruiter</th>
+                        <th className="text-left p-4 font-semibold text-gray-700 dark:text-gray-300">Closure Date</th>
+                        <th className="text-left p-4 font-semibold text-gray-700 dark:text-gray-300">Package (LPA)</th>
+                        <th className="text-left p-4 font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <td className="p-4 text-gray-900 dark:text-white font-medium">Keerthana Srinivasan</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">Senior Frontend Developer</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">TechCorp Solutions</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">Arun Kumar</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">15-Jan-2024</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">12.5</td>
+                        <td className="p-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Closed
+                          </span>
+                        </td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <td className="p-4 text-gray-900 dark:text-white font-medium">Rajesh Patel</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">DevOps Engineer</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">CloudTech Inc</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">Deepika Sharma</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">12-Jan-2024</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">15.0</td>
+                        <td className="p-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Closed
+                          </span>
+                        </td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <td className="p-4 text-gray-900 dark:text-white font-medium">Priya Menon</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">Product Manager</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">InnovateLabs</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">Kavya Reddy</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">10-Jan-2024</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">18.5</td>
+                        <td className="p-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Closed
+                          </span>
+                        </td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <td className="p-4 text-gray-900 dark:text-white font-medium">Amit Singh</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">Backend Developer</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">DataFlow Systems</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">Thamarai Selvi</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">08-Jan-2024</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">11.0</td>
+                        <td className="p-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Closed
+                          </span>
+                        </td>
+                      </tr>
+                      <tr className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <td className="p-4 text-gray-900 dark:text-white font-medium">Sneha Krishnan</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">QA Engineer</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">QualityFirst</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">Dharshan Kumar</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">05-Jan-2024</td>
+                        <td className="p-4 text-gray-600 dark:text-gray-400">9.5</td>
+                        <td className="p-4">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                            Closed
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Showing 5 of 23 closure reports
+                    </p>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" className="btn-rounded">
+                        View All
+                      </Button>
+                      <Button size="sm" className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">
+                        Generate Report
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
