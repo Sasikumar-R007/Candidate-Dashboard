@@ -1484,7 +1484,289 @@ export default function AdminDashboard() {
       case 'performance':
         return (
           <div className="px-6 py-6 space-y-6">
-            {/* Empty performance page as requested */}
+            {/* Performance Header with Tabs */}
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Performance</h2>
+              <div className="flex gap-2">
+                <Button className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm">
+                  Target Mapping
+                </Button>
+                <Button className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm">
+                  Revenue Mapping
+                </Button>
+                <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-4 py-2 rounded text-sm">
+                  Quarterly/Yearly
+                </Button>
+              </div>
+            </div>
+
+            {/* Filters and Main Content */}
+            <div className="flex gap-6">
+              {/* Left Section with Chart */}
+              <div className="flex-1">
+                {/* Filter Dropdowns */}
+                <div className="flex gap-4 mb-4">
+                  <Select defaultValue="anusha-arun-all">
+                    <SelectTrigger className="w-48 bg-cyan-400 text-black">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="anusha-arun-all">Anusha/Arun/All</SelectItem>
+                      <SelectItem value="anusha">Anusha</SelectItem>
+                      <SelectItem value="arun">Arun</SelectItem>
+                      <SelectItem value="all">All</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  
+                  <Select defaultValue="monthly">
+                    <SelectTrigger className="w-32 bg-cyan-400 text-black">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="quarterly">Quarterly</SelectItem>
+                      <SelectItem value="yearly">Yearly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Chart Area */}
+                <div className="bg-white dark:bg-gray-900 rounded-lg p-6 flex gap-6">
+                  {/* Line Chart */}
+                  <div className="flex-1">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={[
+                        { year: 1960, blue: 600, red: 100 },
+                        { year: 1965, blue: 650, red: 200 },
+                        { year: 1970, blue: 580, red: 220 },
+                        { year: 1975, blue: 520, red: 300 },
+                        { year: 1980, blue: 480, red: 320 },
+                        { year: 1985, blue: 400, red: 300 },
+                        { year: 1990, blue: 360, red: 280 },
+                        { year: 1995, blue: 320, red: 240 },
+                        { year: 2000, blue: 280, red: 200 }
+                      ]}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="year" />
+                        <YAxis />
+                        <Tooltip />
+                        <Line type="monotone" dataKey="blue" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
+                        <Line type="monotone" dataKey="red" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444' }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Performance Gauge */}
+                  <div className="flex flex-col items-center justify-center w-80">
+                    <div className="relative w-64 h-64">
+                      {/* Gauge Background */}
+                      <svg viewBox="0 0 200 200" className="w-full h-full">
+                        {/* Background Arc */}
+                        <path
+                          d="M 30 170 A 70 70 0 1 1 170 170"
+                          fill="none"
+                          stroke="#E5E7EB"
+                          strokeWidth="20"
+                        />
+                        {/* Red Section (BEARISH) */}
+                        <path
+                          d="M 30 170 A 70 70 0 0 1 85 45"
+                          fill="none"
+                          stroke="#EF4444"
+                          strokeWidth="20"
+                        />
+                        {/* Yellow Section */}
+                        <path
+                          d="M 85 45 A 70 70 0 0 1 115 45"
+                          fill="none"
+                          stroke="#EAB308"
+                          strokeWidth="20"
+                        />
+                        {/* Green Section (BULLISH) */}
+                        <path
+                          d="M 115 45 A 70 70 0 0 1 170 170"
+                          fill="none"
+                          stroke="#22C55E"
+                          strokeWidth="20"
+                        />
+                        {/* Needle */}
+                        <line
+                          x1="100"
+                          y1="100"
+                          x2="60"
+                          y2="140"
+                          stroke="#1F2937"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                        />
+                        <circle cx="100" cy="100" r="8" fill="#1F2937" />
+                      </svg>
+                      
+                      {/* Labels */}
+                      <div className="absolute bottom-8 left-4 text-xs text-gray-600">BEARISH</div>
+                      <div className="absolute bottom-8 right-4 text-xs text-gray-600">BULLISH</div>
+                      <div className="absolute bottom-16 left-8 text-xs text-gray-600">BEAR</div>
+                      <div className="absolute bottom-16 right-8 text-xs text-gray-600">BULL</div>
+                      <div className="absolute top-20 left-2 text-xs text-gray-600">STRONG<br/>BEAR</div>
+                      <div className="absolute top-20 right-2 text-xs text-gray-600">STRONG<br/>BULL</div>
+                    </div>
+                    
+                    <Button className="bg-cyan-400 hover:bg-cyan-500 text-black mt-4 px-6 py-2 rounded">
+                      Show Data
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Sidebar - Quarterly Metrics */}
+              <div className="w-64 bg-teal-50 dark:bg-teal-900/30 rounded-lg p-4 space-y-4">
+                <div className="text-center">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">CURRENT QUARTER</div>
+                  <div className="text-xl font-bold text-gray-900 dark:text-white">ASO-2025</div>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">MINIMUM TARGET</div>
+                  <div className="text-xl font-bold text-gray-900 dark:text-white">27,00,000</div>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">TARGET ACHIEVED</div>
+                  <div className="text-xl font-bold text-gray-900 dark:text-white">21,00,000</div>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">CLOSURES MADE</div>
+                  <div className="text-xl font-bold text-gray-900 dark:text-white">8</div>
+                </div>
+                
+                <div className="text-center">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">INCENTIVES MADE</div>
+                  <div className="text-xl font-bold text-gray-900 dark:text-white">65,000</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Team Performance Table */}
+            <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
+              <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
+                <CardTitle className="text-lg text-gray-900 dark:text-white">Team Performance</CardTitle>
+                <Button variant="link" size="sm" className="text-blue-600 text-xs">view list</Button>
+              </CardHeader>
+              <CardContent className="p-3">
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
+                    <thead>
+                      <tr className="bg-gray-200 dark:bg-gray-700">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Talent Advisor</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Joining Date</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Tenure</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Closures</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Last Closure</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Qtrs Achieved</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-gray-100 dark:border-gray-700">
+                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">David Wilson</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">23-04-2023</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2 yrs,3 months</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">4</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">23-04-2023</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">3</td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-700">
+                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Tom Anderson</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">28-04-2023</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2 yrs,3 months</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">8</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">29-04-2023</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">6</td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-700">
+                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Robert Kim</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">04-05-2023</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2 yrs,2 months</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">9</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">02-05-2023</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">11</td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-700">
+                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Kevin Brown</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">12-05-2023</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2 yrs,2 months</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">13</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">18-05-2023</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">5</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* List of Closures Table */}
+            <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
+              <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
+                <CardTitle className="text-lg text-gray-900 dark:text-white">List Of Closures</CardTitle>
+                <Button variant="link" size="sm" className="text-blue-600 text-xs">view list</Button>
+              </CardHeader>
+              <CardContent className="p-3">
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
+                    <thead>
+                      <tr className="bg-gray-200 dark:bg-gray-700">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Candidate</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Positions</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Client</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Quarter</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Talent Advisor</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">CTC</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-gray-100 dark:border-gray-700">
+                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">David Wilson</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Frontend Developer</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">TechCorp</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">MJJ, 2025</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Kavitha</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">15,00,000</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">1,12,455</td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-700">
+                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Tom Anderson</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">UI/UX Designer</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Designify</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">ASO, 2025</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Rajesh</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,00,000</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">1,87,425</td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-700">
+                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Robert Kim</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Backend Developer</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">CodeLabs</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">MJJ, 2025</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Sowmiya</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">18,00,000</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">1,34,948</td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-700">
+                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Kevin Brown</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">QA Tester</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">AppLogic</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">FMA, 2025</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Kalaiselvi</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">30,00,000</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2,24,910</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         );
       case 'user-management':
