@@ -208,3 +208,31 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;  /* Safari and Chrome */
 }
+
+/* Custom thin blue scrollbar for admin page */
+.admin-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(203.8863 88.2845% 53.1373%) transparent;
+}
+
+.admin-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.admin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-scrollbar::-webkit-scrollbar-thumb {
+  background-color: hsl(203.8863 88.2845% 53.1373%);
+  border-radius: 2px;
+}
+
+.admin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(217 91% 60%);
+}
+
+.admin-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}

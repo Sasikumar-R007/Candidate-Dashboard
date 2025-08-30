@@ -254,7 +254,7 @@ export default function AdminDashboard() {
   }, []);
 
   const renderTeamSection = () => (
-    <div className="px-3 py-2 space-y-2 flex-1 overflow-y-auto scrollbar-hide">
+    <div className="px-3 py-2 space-y-2 flex-1 overflow-y-auto admin-scrollbar">
       {/* Use the new TeamBoxes component - this replaces all the old team display logic */}
       <TeamBoxes />
 
@@ -417,7 +417,7 @@ export default function AdminDashboard() {
             <CardTitle className="text-lg text-gray-900 dark:text-white">Message Status</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto admin-scrollbar">
               <table className="w-full text-sm bg-white dark:bg-gray-900 rounded">
                 <thead>
                   <tr className="bg-slate-800 text-white">
@@ -481,7 +481,7 @@ export default function AdminDashboard() {
         return renderTeamSection();
       case 'requirements':
         return (
-          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
+          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
             {/* Header with Requirements title and Add Requirements button */}
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Requirements</h2>
@@ -494,7 +494,7 @@ export default function AdminDashboard() {
               {/* Left Side - Requirements Table */}
               <div className="flex-1">
                 <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto admin-scrollbar">
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -811,7 +811,7 @@ export default function AdminDashboard() {
         );
       case 'pipeline':
         return (
-          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
+          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
             {/* Pipeline Header */}
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Pipeline</h2>
@@ -839,7 +839,7 @@ export default function AdminDashboard() {
               <div className="flex-1">
                 <Card>
                   <CardContent className="p-6">
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto admin-scrollbar">
                       <table className="w-full border-collapse">
                         <thead>
                           <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -1163,7 +1163,7 @@ export default function AdminDashboard() {
                 <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Closure Reports</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto admin-scrollbar">
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-gray-50 dark:bg-gray-800">
@@ -1279,7 +1279,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Resume Database Table */}
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto admin-scrollbar">
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -1337,7 +1337,7 @@ export default function AdminDashboard() {
                 <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">+ Add Employee</Button>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto admin-scrollbar">
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -1407,7 +1407,7 @@ export default function AdminDashboard() {
                 <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">+ Add Client</Button>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto admin-scrollbar">
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -1483,7 +1483,7 @@ export default function AdminDashboard() {
         );
       case 'performance':
         return (
-          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
+          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
             {/* Performance Header with Tabs */}
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Performance</h2>
@@ -1654,7 +1654,7 @@ export default function AdminDashboard() {
                 <Button variant="link" size="sm" className="text-blue-600 text-xs">view list</Button>
               </CardHeader>
               <CardContent className="p-3">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto admin-scrollbar">
                   <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
                     <thead>
                       <tr className="bg-gray-200 dark:bg-gray-700">
@@ -1712,7 +1712,7 @@ export default function AdminDashboard() {
                 <Button variant="link" size="sm" className="text-blue-600 text-xs">view list</Button>
               </CardHeader>
               <CardContent className="p-3">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto admin-scrollbar">
                   <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
                     <thead>
                       <tr className="bg-gray-200 dark:bg-gray-700">
@@ -1771,7 +1771,7 @@ export default function AdminDashboard() {
         );
       case 'user-management':
         return (
-          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
+          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
             {/* User Management Header */}
             <div className="flex gap-4 mb-6">
               <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">+ Add Recruiter</Button>
@@ -1781,7 +1781,7 @@ export default function AdminDashboard() {
             {/* User Management Table */}
             <Card>
               <CardContent className="p-6">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto admin-scrollbar">
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -1926,7 +1926,7 @@ export default function AdminDashboard() {
         );
       case 'requirements':
         return (
-          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
+          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
             {/* Header with Requirements title and Add Requirements button */}
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Requirements</h2>
@@ -1939,7 +1939,7 @@ export default function AdminDashboard() {
               {/* Left Side - Requirements Table */}
               <div className="flex-1">
                 <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto admin-scrollbar">
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -2296,7 +2296,7 @@ export default function AdminDashboard() {
                 {/* Pipeline Stages - matching image 1 design */}
                 <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                   <CardContent className="p-0">
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto admin-scrollbar">
                       <table className="w-full border-collapse">
                         <thead>
                           <tr>
@@ -2439,7 +2439,7 @@ export default function AdminDashboard() {
                     <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Closure Reports</CardTitle>
                   </CardHeader>
                   <CardContent className="p-0">
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto admin-scrollbar">
                       <table className="w-full border-collapse">
                         <thead>
                           <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
@@ -2590,7 +2590,7 @@ export default function AdminDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto admin-scrollbar">
                     <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
                       <thead>
                         <tr className="bg-gray-100 dark:bg-gray-700">
@@ -2652,7 +2652,7 @@ export default function AdminDashboard() {
                   </Button>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto admin-scrollbar">
                     <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
                       <thead>
                         <tr className="bg-gray-100 dark:bg-gray-700">
@@ -2720,7 +2720,7 @@ export default function AdminDashboard() {
                   </Button>
                 </CardHeader>
                 <CardContent>
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto admin-scrollbar">
                     <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
                       <thead>
                         <tr className="bg-gray-100 dark:bg-gray-700">
@@ -2840,7 +2840,7 @@ export default function AdminDashboard() {
         );
       case 'performance':
         return (
-          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
+          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
             {/* Performance Header with Tabs */}
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Performance</h2>
@@ -3011,7 +3011,7 @@ export default function AdminDashboard() {
                 <Button variant="link" size="sm" className="text-blue-600 text-xs">view list</Button>
               </CardHeader>
               <CardContent className="p-3">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto admin-scrollbar">
                   <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
                     <thead>
                       <tr className="bg-gray-200 dark:bg-gray-700">
@@ -3069,7 +3069,7 @@ export default function AdminDashboard() {
                 <Button variant="link" size="sm" className="text-blue-600 text-xs">view list</Button>
               </CardHeader>
               <CardContent className="p-3">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto admin-scrollbar">
                   <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
                     <thead>
                       <tr className="bg-gray-200 dark:bg-gray-700">
@@ -3139,7 +3139,7 @@ export default function AdminDashboard() {
 
               {/* User Management Table */}
               <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto admin-scrollbar">
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
@@ -3558,7 +3558,7 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* Data Table */}
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto admin-scrollbar">
                       <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
                         <thead>
                           <tr className="bg-gray-100 dark:bg-gray-700">
