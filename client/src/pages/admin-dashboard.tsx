@@ -481,7 +481,7 @@ export default function AdminDashboard() {
         return renderTeamSection();
       case 'requirements':
         return (
-          <div className="px-6 py-6 space-y-6">
+          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
             {/* Header with Requirements title and Add Requirements button */}
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Requirements</h2>
@@ -811,7 +811,7 @@ export default function AdminDashboard() {
         );
       case 'pipeline':
         return (
-          <div className="px-6 py-6 space-y-6">
+          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
             {/* Pipeline Header */}
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Pipeline</h2>
@@ -1483,7 +1483,7 @@ export default function AdminDashboard() {
         );
       case 'performance':
         return (
-          <div className="px-6 py-6 space-y-6">
+          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
             {/* Performance Header with Tabs */}
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Performance</h2>
@@ -1771,7 +1771,7 @@ export default function AdminDashboard() {
         );
       case 'user-management':
         return (
-          <div className="px-6 py-6 space-y-6">
+          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
             {/* User Management Header */}
             <div className="flex gap-4 mb-6">
               <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">+ Add Recruiter</Button>
@@ -1926,7 +1926,7 @@ export default function AdminDashboard() {
         );
       case 'requirements':
         return (
-          <div className="px-6 py-6 space-y-6">
+          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
             {/* Header with Requirements title and Add Requirements button */}
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Requirements</h2>
@@ -2840,7 +2840,7 @@ export default function AdminDashboard() {
         );
       case 'performance':
         return (
-          <div className="px-6 py-6 space-y-6">
+          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
             {/* Performance Header with Tabs */}
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Performance</h2>
