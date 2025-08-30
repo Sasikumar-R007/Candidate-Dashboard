@@ -2576,10 +2576,271 @@ export default function AdminDashboard() {
         );
       case 'master-data':
         return (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Master Data</h2>
-              <p className="text-gray-600 dark:text-gray-400">Manage master data and configurations</p>
+          <div className="flex h-full">
+            {/* Main Content */}
+            <div className="flex-1 px-6 py-6 space-y-6 overflow-y-auto">
+              {/* Resume Database */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg text-gray-900 dark:text-white">Resume Database</CardTitle>
+                  <div className="flex gap-2">
+                    <Button className="btn-rounded bg-purple-600 hover:bg-purple-700 text-white text-sm px-4">
+                      View Full Database
+                    </Button>
+                    <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white text-sm px-4">
+                      + Add Client
+                    </Button>
+                    <Button className="btn-rounded bg-green-600 hover:bg-green-700 text-white text-sm px-4">
+                      + Add Employee
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
+                      <thead>
+                        <tr className="bg-gray-100 dark:bg-gray-700">
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Employee ID</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Name</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Team</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Total Applicants</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Uploads</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-b border-gray-100 dark:border-gray-800 bg-blue-50 dark:bg-blue-900/20">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STTA001</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Sundhar Raj</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Arun</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">500</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">1000</td>
+                        </tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STTA002</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">kavitha</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Anusha</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">220</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">850</td>
+                        </tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-800 bg-blue-50 dark:bg-blue-900/20">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STTA003</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Vignesh</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Arun</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">600</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">1200</td>
+                        </tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STTA004</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Saran</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Anusha</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">780</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">1000</td>
+                        </tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-800 bg-blue-50 dark:bg-blue-900/20">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STTL005</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Helen</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Anusha</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">50</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">900</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Employees Master */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg text-gray-900 dark:text-white">Employees Master</CardTitle>
+                  <Button className="btn-rounded bg-cyan-400 hover:bg-cyan-500 text-slate-900 text-sm px-4">
+                    View More
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
+                      <thead>
+                        <tr className="bg-gray-100 dark:bg-gray-700">
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Employee ID</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Name</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Father's Name</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Employee Status</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Date of Joining</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Current CTC</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-b border-gray-100 dark:border-gray-800 bg-blue-50 dark:bg-blue-900/20">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STTA001</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Sundhar Raj</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">David Wilson</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Intern</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">12-05-2025</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">10,000</td>
+                        </tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STTA002</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">kavitha</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Tom Anderson</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Permanent</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">10-07-2025</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">15,000</td>
+                        </tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-800 bg-blue-50 dark:bg-blue-900/20">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STTA003</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Vignesh</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Robert Kim</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Probation</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">22-10-2025</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">12,000</td>
+                        </tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STTA004</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Saran</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Kevin Brown</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Probation</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">02-11-2025</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">9,500</td>
+                        </tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-800 bg-blue-50 dark:bg-blue-900/20">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STTL005</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Helen</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Mel Gibson</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Permanent</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">12-12-2025</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">14,000</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Client Master */}
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg text-gray-900 dark:text-white">Client Master</CardTitle>
+                  <Button className="btn-rounded bg-cyan-400 hover:bg-cyan-500 text-slate-900 text-sm px-4">
+                    View More
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
+                      <thead>
+                        <tr className="bg-gray-100 dark:bg-gray-700">
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Client Code</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Brand Name</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Location</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">SPOC</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Website</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Current Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-b border-gray-100 dark:border-gray-800 bg-blue-50 dark:bg-blue-900/20">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STCL001</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">WhatsIQ</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Bangalore</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">David Wilson</td>
+                          <td className="py-3 px-4 text-blue-600 dark:text-blue-400">www.whatsiq.com</td>
+                          <td className="py-3 px-4">
+                            <span className="bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">• ACTIVE</span>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STCL002</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Kombat</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Chennai</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Tom Anderson</td>
+                          <td className="py-3 px-4 text-blue-600 dark:text-blue-400">www.kombat.com</td>
+                          <td className="py-3 px-4">
+                            <span className="bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">• ACTIVE</span>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-800 bg-blue-50 dark:bg-blue-900/20">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STCL003</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Vertas</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Gurgaon</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Robert Kim</td>
+                          <td className="py-3 px-4 text-blue-600 dark:text-blue-400">www.vertas.com</td>
+                          <td className="py-3 px-4">
+                            <span className="bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">• ACTIVE</span>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STCL004</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Superlike</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Pune</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Kevin Brown</td>
+                          <td className="py-3 px-4 text-blue-600 dark:text-blue-400">www.superlike.com</td>
+                          <td className="py-3 px-4">
+                            <span className="bg-orange-100 text-orange-800 text-xs font-semibold px-3 py-1 rounded-full">• FROZEN</span>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-800 bg-blue-50 dark:bg-blue-900/20">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STCL005</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Hitchcock</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Mumbai</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Mel Gibson</td>
+                          <td className="py-3 px-4 text-blue-600 dark:text-blue-400">www.hitchcock.com</td>
+                          <td className="py-3 px-4">
+                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded-full">• CHURNED</span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Statistics Panel */}
+            <div className="w-80 bg-blue-50 dark:bg-blue-900/20 border-l border-gray-200 dark:border-gray-700 p-6 space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Totals</h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">DIRECT UPLOADS</div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white">5,000</div>
+                </div>
+                
+                <div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">RECRUITER UPLOADS</div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white">50,000</div>
+                </div>
+                
+                <div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">RESUMES</div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white">55,000</div>
+                </div>
+                
+                <div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">HEAD COUNT</div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white">50</div>
+                </div>
+                
+                <div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">SALARY PAID</div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white">65,000</div>
+                </div>
+                
+                <div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">OTHER EXPENSES</div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white">65,000</div>
+                </div>
+                
+                <div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">TOOLS & DATABASES</div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white">65,000</div>
+                </div>
+                
+                <div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">RENT PAID</div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white">65,000</div>
+                </div>
+              </div>
             </div>
           </div>
         );
