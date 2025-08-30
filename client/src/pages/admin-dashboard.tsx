@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import AdminSidebar from '@/components/dashboard/admin-sidebar';
 import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
+import AdminTabNavigation from '@/components/dashboard/admin-tab-navigation';
 import AdminTopHeader from '@/components/dashboard/admin-top-header';
 import TeamBoxes from '@/components/dashboard/team-boxes';
 import TeamMembersSidebar from '@/components/dashboard/team-members-sidebar';
@@ -2099,7 +2100,14 @@ export default function AdminDashboard() {
   const renderSidebarContent = () => {
     switch (sidebarTab) {
       case 'dashboard':
-        return renderTeamSection();
+        return (
+          <div className="flex flex-col h-full">
+            <AdminTabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+            <div className="flex-1 overflow-y-auto">
+              {renderTabContent()}
+            </div>
+          </div>
+        );
       case 'requirements':
         return (
           <div className="px-6 py-6 space-y-6">
