@@ -3129,8 +3129,271 @@ export default function AdminDashboard() {
         );
       case 'metrics':
         return (
-          <div className="flex items-center justify-center h-full min-h-[500px]">
-            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Metrics</h1>
+          <div className="px-6 py-6 space-y-6 overflow-y-auto max-h-full">
+            <div className="flex gap-6">
+              {/* Left Side - Key Metrics and Cash Outflow */}
+              <div className="flex-1 space-y-6">
+                {/* Key Metrics Section */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Key Metrics</CardTitle>
+                    <div className="flex gap-4 mt-4">
+                      <Select>
+                        <SelectTrigger className="w-48 input-styled rounded">
+                          <SelectValue placeholder="Client" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="client1">Client 1</SelectItem>
+                          <SelectItem value="client2">Client 2</SelectItem>
+                          <SelectItem value="all">All Clients</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      
+                      <Select>
+                        <SelectTrigger className="w-48 input-styled rounded">
+                          <SelectValue placeholder="Monthly" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="quarterly">Quarterly</SelectItem>
+                          <SelectItem value="yearly">Yearly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64 mb-4">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart
+                          data={[
+                            { name: 'Jan', revenue: 45000, growth: 38000, profit: 25000, clients: 15000 },
+                            { name: 'Feb', revenue: 35000, growth: 28000, profit: 18000, clients: 12000 },
+                            { name: 'Mar', revenue: 55000, growth: 45000, profit: 32000, clients: 22000 },
+                            { name: 'Apr', revenue: 48000, growth: 42000, profit: 28000, clients: 18000 },
+                            { name: 'May', revenue: 65000, growth: 52000, profit: 38000, clients: 28000 },
+                            { name: 'Jun', revenue: 58000, growth: 48000, profit: 35000, clients: 25000 },
+                            { name: 'Jul', revenue: 70000, growth: 58000, profit: 42000, clients: 32000 },
+                            { name: 'Aug', revenue: 75000, growth: 62000, profit: 45000, clients: 35000 },
+                          ]}
+                          margin={{
+                            top: 5,
+                            right: 30,
+                            left: 20,
+                            bottom: 5,
+                          }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend />
+                          <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} />
+                          <Line type="monotone" dataKey="growth" stroke="#82ca9d" strokeWidth={2} />
+                          <Line type="monotone" dataKey="profit" stroke="#ffc658" strokeWidth={2} />
+                          <Line type="monotone" dataKey="clients" stroke="#ff7c7c" strokeWidth={2} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                    
+                    <div className="flex justify-center">
+                      <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded">
+                        Show Data
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Cash Outflow Section */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Cash Outflow</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {/* Input Form */}
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Month</label>
+                        <Input placeholder="Month" className="input-styled rounded" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year</label>
+                        <Input placeholder="Year" className="input-styled rounded" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Number of Employees</label>
+                        <Input placeholder="Number of Employees" className="input-styled rounded" />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Total Salary</label>
+                        <Input placeholder="Total Salary" className="input-styled rounded" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Incentive</label>
+                        <Input placeholder="Incentive" className="input-styled rounded" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Database & Tools cost</label>
+                        <Input placeholder="Database & Tools cost" className="input-styled rounded" />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rent</label>
+                        <Input placeholder="Rent" className="input-styled rounded" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Other Expenses</label>
+                        <Input placeholder="Other Expenses" className="input-styled rounded" />
+                      </div>
+                      <div className="flex items-end">
+                        <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded w-full">
+                          Add
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Data Table */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
+                        <thead>
+                          <tr className="bg-gray-100 dark:bg-gray-700">
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Month</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Year</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Employees Count</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Total Salary</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Incentives</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Tools Cost</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Rent</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Others Cost</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="border-b border-gray-100 dark:border-gray-800">
+                            <td className="py-3 px-4 text-gray-900 dark:text-white">January</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2025</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">45</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">3,50,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">20,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">30,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
+                          </tr>
+                          <tr className="border-b border-gray-100 dark:border-gray-800">
+                            <td className="py-3 px-4 text-gray-900 dark:text-white">March</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2025</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">19</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2,40,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">15,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">10,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
+                          </tr>
+                          <tr className="border-b border-gray-100 dark:border-gray-800">
+                            <td className="py-3 px-4 text-gray-900 dark:text-white">August</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2025</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">45</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">4,00,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">30,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">30,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
+                          </tr>
+                          <tr className="border-b border-gray-100 dark:border-gray-800">
+                            <td className="py-3 px-4 text-gray-900 dark:text-white">September</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2025</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">39</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">4,35,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">32,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">32,500</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,500</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,500</td>
+                          </tr>
+                          <tr className="border-b border-gray-100 dark:border-gray-800">
+                            <td className="py-3 px-4 text-gray-900 dark:text-white">November</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2025</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">37</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">5,00,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">35,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">35,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    <div className="flex justify-center mt-4">
+                      <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded">
+                        View More
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Right Side - Key Aspects */}
+              <div className="w-80">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Key Aspects</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* Growth Metrics */}
+                      <div className="bg-teal-50 dark:bg-teal-900/20 p-4 rounded-lg">
+                        <div className="text-xs text-teal-600 dark:text-teal-400 mb-1">GROWTH</div>
+                        <div className="text-2xl font-bold text-teal-600 dark:text-teal-400">15%</div>
+                      </div>
+                      
+                      <div className="bg-teal-50 dark:bg-teal-900/20 p-4 rounded-lg">
+                        <div className="text-xs text-teal-600 dark:text-teal-400 mb-1">GROWTH</div>
+                        <div className="text-2xl font-bold text-teal-600 dark:text-teal-400">9%</div>
+                      </div>
+                      
+                      {/* Burn Rate */}
+                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                        <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">BURN <span className="text-xs">RATE</span></div>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">3%</div>
+                      </div>
+                      
+                      {/* Churn Rate */}
+                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                        <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">CHURN <span className="text-xs">RATE</span></div>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">9%</div>
+                      </div>
+                      
+                      {/* Attrition */}
+                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                        <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">ATTRITION</div>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">3%</div>
+                      </div>
+                      
+                      {/* Net Profit */}
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                        <div className="text-xs text-blue-600 dark:text-blue-400 mb-1">NET PROFIT</div>
+                        <div className="text-xl font-bold text-blue-900 dark:text-blue-300">2,50,000</div>
+                      </div>
+                      
+                      {/* Revenue */}
+                      <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                        <div className="text-xs text-green-600 dark:text-green-400 mb-1">REVENUE <span className="text-xs">PER EMPLOYEE</span></div>
+                        <div className="text-xl font-bold text-green-900 dark:text-green-300">75,000</div>
+                      </div>
+                      
+                      {/* Client */}
+                      <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">
+                        <div className="text-xs text-orange-600 dark:text-orange-400 mb-1">CLIENT <span className="text-xs">ACQUISITION COST</span></div>
+                        <div className="text-xl font-bold text-orange-900 dark:text-orange-300">75,000</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </div>
         );
       default:
