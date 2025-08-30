@@ -3237,36 +3237,94 @@ export default function AdminDashboard() {
         );
       case 'user-management':
         return (
-          <div className="px-6 py-6 space-y-6">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">User Management</h2>
-            
-            {/* User Management Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>All Users</CardTitle>
-              </CardHeader>
-              <CardContent>
+          <div className="flex h-full">
+            {/* Main Content */}
+            <div className="flex-1 px-6 py-6 space-y-6 overflow-y-auto">
+              {/* Action Buttons */}
+              <div className="flex gap-4 mb-6">
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">+ Add Recruiter</Button>
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">+ Add Team Leader</Button>
+              </div>
+
+              {/* User Management Table */}
+              <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">User ID</th>
+                      <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">ID</th>
                         <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Name</th>
                         <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Email</th>
                         <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Role</th>
                         <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Status</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Last Active</th>
+                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Last Login</th>
                         <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTL001</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">arun@gmail.com</td>
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTA001</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Sundhar Raj</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">raj@gmail.com</td>
                         <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Team Leader</td>
                         <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Active</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">2 mins ago</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">N/A</td>
+                        <td className="py-3 px-3">
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Edit</Button>
+                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">Delete</Button>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTA002</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">kavitha</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">kavi@gmail.com</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Team Leader</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Active</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">N/A</td>
+                        <td className="py-3 px-3">
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Edit</Button>
+                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">Delete</Button>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTA003</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Vignesh</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">vignesh@gmail.com</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Team Leader</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Active</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">N/A</td>
+                        <td className="py-3 px-3">
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Edit</Button>
+                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">Delete</Button>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTA004</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Saran</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">saran@gmail.com</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Team Leader</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Active</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">N/A</td>
+                        <td className="py-3 px-3">
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Edit</Button>
+                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">Delete</Button>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTL005</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Helen</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">helen@gmail.com</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Team Leader</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Active</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">N/A</td>
                         <td className="py-3 px-3">
                           <div className="flex gap-2">
                             <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Edit</Button>
@@ -3277,8 +3335,25 @@ export default function AdminDashboard() {
                     </tbody>
                   </table>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
+
+            {/* Right Sidebar - Online Activity */}
+            <div className="w-72 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Online Activity</h3>
+              
+              <div className="space-y-4">
+                <div className="bg-cyan-400 dark:bg-cyan-500 p-6 rounded-lg text-center">
+                  <div className="text-sm font-medium text-white mb-2">Online</div>
+                  <div className="text-4xl font-bold text-white">3</div>
+                </div>
+                
+                <div className="bg-pink-400 dark:bg-pink-500 p-6 rounded-lg text-center">
+                  <div className="text-sm font-medium text-white mb-2">Offline</div>
+                  <div className="text-4xl font-bold text-white">1</div>
+                </div>
+              </div>
+            </div>
           </div>
         );
       case 'report':
