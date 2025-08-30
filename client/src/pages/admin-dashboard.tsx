@@ -1240,7 +1240,11 @@ export default function AdminDashboard() {
           </div>
         );
       case 'metrics':
-        return renderTeamSection();
+        return (
+          <div className="flex items-center justify-center h-full min-h-[500px]">
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Metrics</h1>
+          </div>
+        );
       case 'master-data':
         return (
           <div className="px-6 py-6 space-y-8">
