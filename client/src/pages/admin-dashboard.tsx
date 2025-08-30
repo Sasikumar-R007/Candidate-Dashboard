@@ -2558,15 +2558,6 @@ export default function AdminDashboard() {
             </div>
           </div>
         );
-      case 'metrics':
-        return (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Metrics</h2>
-              <p className="text-gray-600 dark:text-gray-400">Performance metrics and analytics</p>
-            </div>
-          </div>
-        );
       case 'master-data':
         return (
           <div className="flex items-center justify-center h-full">
