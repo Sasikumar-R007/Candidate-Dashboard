@@ -267,7 +267,7 @@ export default function AdminDashboard() {
           </Button>
         </CardHeader>
         <CardContent className="p-1">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto admin-scrollbar">
             <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
               <thead>
                 <tr className="bg-gray-200 dark:bg-gray-700">
@@ -1919,7 +1919,7 @@ export default function AdminDashboard() {
       case 'dashboard':
         return (
           <div className="flex flex-col h-full">
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto admin-scrollbar">
               {renderTabContent()}
             </div>
           </div>
@@ -2514,7 +2514,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Right Sidebar with Stats - matching image 2 */}
-            <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 overflow-auto">
+            <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 overflow-auto admin-scrollbar">
               <div className="p-4 space-y-1">
                 <div className="flex justify-between items-center py-3 px-4 bg-green-100 dark:bg-green-900 rounded">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SOURCED</span>
