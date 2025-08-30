@@ -1246,7 +1246,7 @@ export default function AdminDashboard() {
         );
       case 'master-data':
         return (
-          <div className="px-6 py-6 space-y-8">
+          <div className="px-6 py-6 space-y-8 h-full overflow-y-auto admin-scrollbar">
             {/* Resume Database */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
@@ -2258,7 +2258,7 @@ export default function AdminDashboard() {
         return (
           <div className="flex h-full">
             {/* Main Pipeline Content */}
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 overflow-auto admin-scrollbar">
               <div className="p-6 space-y-6">
                 {/* Pipeline Header */}
                 <div className="flex justify-between items-center mb-6">
@@ -2572,7 +2572,7 @@ export default function AdminDashboard() {
         return (
           <div className="flex h-full">
             {/* Main Content */}
-            <div className="flex-1 px-6 py-6 space-y-6 overflow-y-auto">
+            <div className="flex-1 px-6 py-6 space-y-6 overflow-y-auto admin-scrollbar">
               {/* Resume Database */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
@@ -3130,7 +3130,7 @@ export default function AdminDashboard() {
         return (
           <div className="flex h-full">
             {/* Main Content */}
-            <div className="flex-1 px-6 py-6 space-y-6 overflow-y-auto">
+            <div className="flex-1 px-6 py-6 space-y-6 overflow-y-auto admin-scrollbar">
               {/* Action Buttons */}
               <div className="flex gap-4 mb-6">
                 <Button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">+ Add Recruiter</Button>
@@ -3249,7 +3249,7 @@ export default function AdminDashboard() {
         );
       case 'report':
         return (
-          <div className="px-6 py-6 space-y-6 overflow-y-auto max-h-full">
+          <div className="px-6 py-6 space-y-6 overflow-y-auto max-h-full admin-scrollbar">
             {/* Teams Section */}
             <div className="bg-cyan-50 dark:bg-cyan-900/20 p-6 rounded-lg">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Teams</h3>
@@ -3430,7 +3430,7 @@ export default function AdminDashboard() {
         );
       case 'metrics':
         return (
-          <div className="px-6 py-6 space-y-6 overflow-y-auto max-h-full">
+          <div className="px-6 py-6 space-y-6 overflow-y-auto max-h-full admin-scrollbar">
             <div className="flex gap-6">
               {/* Left Side - Key Metrics and Cash Outflow */}
               <div className="flex-1 space-y-6">
