@@ -12,8 +12,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { CalendarIcon, EditIcon, Mail, Phone } from "lucide-react";
 import { format } from "date-fns";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // Admin profile will be fetched from API - fallback data matching server
 const initialAdminProfile = {
@@ -2053,145 +2055,331 @@ export default function AdminDashboard() {
       case 'requirements':
         return (
           <div className="px-6 py-6 space-y-6">
-            {/* Priority Distribution Cards */}
+            {/* Header with Requirements title and Add Requirements button */}
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Priority Distribution</h2>
-              <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Requirements</h2>
+              <Button className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded">
                 + Add Requirements
               </Button>
             </div>
             
-            <div className="grid grid-cols-4 gap-4 mb-8">
-              <Card className="text-center p-4">
-                <CardContent className="p-0">
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">HIGH</div>
-                  <div className="text-3xl font-bold text-red-600 dark:text-red-400">15</div>
-                </CardContent>
-              </Card>
-              
-              <Card className="text-center p-4">
-                <CardContent className="p-0">
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">MEDIUM</div>
-                  <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">9</div>
-                </CardContent>
-              </Card>
-              
-              <Card className="text-center p-4">
-                <CardContent className="p-0">
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">LOW</div>
-                  <div className="text-3xl font-bold text-gray-600 dark:text-gray-400">3</div>
-                </CardContent>
-              </Card>
-              
-              <Card className="text-center p-4">
-                <CardContent className="p-0">
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">TOTAL</div>
-                  <div className="text-3xl font-bold text-gray-900 dark:text-white">27</div>
-                </CardContent>
-              </Card>
-            </div>
+            <div className="flex gap-6">
+              {/* Left Side - Requirements Table */}
+              <div className="flex-1">
+                <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b border-gray-200 dark:border-gray-700">
+                          <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Positions</th>
+                          <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Criticality</th>
+                          <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Company</th>
+                          <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">SPOC</th>
+                          <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Talent Advisor</th>
+                          <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Team Lead</th>
+                          <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Mobile App Developer</td>
+                          <td className="py-3 px-3">
+                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded">HIGH</span>
+                          </td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Tesco</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Mel Gibson</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Mel Gibson</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun</td>
+                          <td className="py-3 px-3">
+                            <Button variant="ghost" size="sm">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        
+                        <tr className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Backend Developer</td>
+                          <td className="py-3 px-3">
+                            <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-3 py-1 rounded">LOW</span>
+                          </td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">CodeLabs</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Robert Kim</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Robert Kim</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun</td>
+                          <td className="py-3 px-3">
+                            <Button variant="ghost" size="sm">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        
+                        <tr className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Frontend Developer</td>
+                          <td className="py-3 px-3">
+                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded">HIGH</span>
+                          </td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">TechCorp</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">David Wilson</td>
+                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun</td>
+                          <td className="py-3 px-3">
+                            <Button variant="ghost" size="sm">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        
+                        <tr className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">QA Tester</td>
+                          <td className="py-3 px-3">
+                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded">MEDIUM</span>
+                          </td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">AppLogic</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Kevin Brown</td>
+                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
+                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
+                          <td className="py-3 px-3">
+                            <Button variant="ghost" size="sm">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        
+                        <tr className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Mobile App Developer</td>
+                          <td className="py-3 px-3">
+                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded">MEDIUM</span>
+                          </td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Tesco</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Mel Gibson</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Mel Gibson</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun</td>
+                          <td className="py-3 px-3">
+                            <Button variant="ghost" size="sm">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        
+                        <tr className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Backend Developer</td>
+                          <td className="py-3 px-3">
+                            <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-3 py-1 rounded">LOW</span>
+                          </td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">CodeLabs</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Robert Kim</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Robert Kim</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun</td>
+                          <td className="py-3 px-3">
+                            <Button variant="ghost" size="sm">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        
+                        <tr className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">UI/UX Designer</td>
+                          <td className="py-3 px-3">
+                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded">MEDIUM</span>
+                          </td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Designify</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Tom Anderson</td>
+                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Anusha</td>
+                          <td className="py-3 px-3">
+                            <Button variant="ghost" size="sm">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        
+                        <tr className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Frontend Developer</td>
+                          <td className="py-3 px-3">
+                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded">HIGH</span>
+                          </td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">TechCorp</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">David Wilson</td>
+                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun</td>
+                          <td className="py-3 px-3">
+                            <Button variant="ghost" size="sm">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        
+                        <tr className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">UI/UX Designer</td>
+                          <td className="py-3 px-3">
+                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded">MEDIUM</span>
+                          </td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Designify</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Tom Anderson</td>
+                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Anusha</td>
+                          <td className="py-3 px-3">
+                            <Button variant="ghost" size="sm">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        
+                        <tr className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">QA Tester</td>
+                          <td className="py-3 px-3">
+                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded">MEDIUM</span>
+                          </td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">AppLogic</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Kevin Brown</td>
+                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
+                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
+                          <td className="py-3 px-3">
+                            <Button variant="ghost" size="sm">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        
+                        <tr className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Mobile App Developer</td>
+                          <td className="py-3 px-3">
+                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded">HIGH</span>
+                          </td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Designify</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Mel Gibson</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Mel Gibson</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun</td>
+                          <td className="py-3 px-3">
+                            <Button variant="ghost" size="sm">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        
+                        <tr className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Backend Developer</td>
+                          <td className="py-3 px-3">
+                            <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-3 py-1 rounded">LOW</span>
+                          </td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Tesco</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Robert Kim</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Robert Kim</td>
+                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
+                          <td className="py-3 px-3">
+                            <Button variant="ghost" size="sm">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        
+                        <tr className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Frontend Developer</td>
+                          <td className="py-3 px-3">
+                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded">HIGH</span>
+                          </td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">CodeLabs</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">David Wilson</td>
+                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Anusha</td>
+                          <td className="py-3 px-3">
+                            <Button variant="ghost" size="sm">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        
+                        <tr className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">QA Tester</td>
+                          <td className="py-3 px-3">
+                            <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-3 py-1 rounded">LOW</span>
+                          </td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">TechCorp</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Kevin Brown</td>
+                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun</td>
+                          <td className="py-3 px-3">
+                            <Button variant="ghost" size="sm">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  <div className="flex justify-center gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
+                    <Button variant="outline" className="px-6 py-2 rounded bg-red-100 hover:bg-red-200 text-red-800 border-red-200">
+                      Archives
+                    </Button>
+                    <Button className="px-6 py-2 rounded bg-cyan-400 hover:bg-cyan-500 text-black font-medium">
+                      View More
+                    </Button>
+                  </div>
+                </div>
+              </div>
 
-            {/* Requirements Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Requirements</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Positions</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Criticality</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Company</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">SPOC</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Talent Advisor</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Team Lead</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-4 px-3 text-gray-900 dark:text-white">Mobile App Developer</td>
-                        <td className="py-4 px-3">
-                          <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded-full">HIGH</span>
-                        </td>
-                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Tesco</td>
-                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Mel Gibson</td>
-                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Mel Gibson</td>
-                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Arun</td>
-                        <td className="py-4 px-3">
-                          <Button variant="ghost" size="sm">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                            </svg>
-                          </Button>
-                        </td>
-                      </tr>
-                      
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-4 px-3 text-gray-900 dark:text-white">Backend Developer</td>
-                        <td className="py-4 px-3">
-                          <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-3 py-1 rounded-full">LOW</span>
-                        </td>
-                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">CodeLabs</td>
-                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Robert Kim</td>
-                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Robert Kim</td>
-                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Arun</td>
-                        <td className="py-4 px-3">
-                          <Button variant="ghost" size="sm">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                            </svg>
-                          </Button>
-                        </td>
-                      </tr>
-                      
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-4 px-3 text-gray-900 dark:text-white">Frontend Developer</td>
-                        <td className="py-4 px-3">
-                          <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full">MEDIUM</span>
-                        </td>
-                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">TechCorp</td>
-                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">David Wilson</td>
-                        <td className="py-4 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
-                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Arun</td>
-                        <td className="py-4 px-3">
-                          <Button variant="ghost" size="sm">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                            </svg>
-                          </Button>
-                        </td>
-                      </tr>
-                      
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-4 px-3 text-gray-900 dark:text-white">QA Tester</td>
-                        <td className="py-4 px-3">
-                          <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded-full">HIGH</span>
-                        </td>
-                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">AppLogic</td>
-                        <td className="py-4 px-3 text-gray-600 dark:text-gray-400">Kevin Brown</td>
-                        <td className="py-4 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
-                        <td className="py-4 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
-                        <td className="py-4 px-3">
-                          <Button variant="ghost" size="sm">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                            </svg>
-                          </Button>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+              {/* Right Side - Priority Distribution */}
+              <div className="w-72">
+                <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Priority Distribution</h3>
+                  
+                  <div className="space-y-4">
+                    <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                      <div className="text-6xl font-bold text-red-600 dark:text-red-400 mb-2">H</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">IGH</div>
+                      <div className="text-2xl font-bold text-red-600 dark:text-red-400">15</div>
+                    </div>
+                    
+                    <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <div className="text-6xl font-bold text-blue-600 dark:text-blue-400 mb-2">M</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">EDIUM</div>
+                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">9</div>
+                    </div>
+                    
+                    <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <div className="text-6xl font-bold text-gray-600 dark:text-gray-400 mb-2">L</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">OW</div>
+                      <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">3</div>
+                    </div>
+                    
+                    <div className="text-center p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                      <div className="text-6xl font-bold text-gray-900 dark:text-white mb-2">T</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">OTAL</div>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">27</div>
+                    </div>
+                  </div>
                 </div>
-                
-                <div className="flex justify-end gap-2 mt-4">
-                  <Button variant="outline" className="btn-rounded">Archives</Button>
-                  <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">View More</Button>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         );
       case 'pipeline':
@@ -2780,10 +2968,270 @@ export default function AdminDashboard() {
         );
       case 'performance':
         return (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Performance</h2>
-              <p className="text-gray-600 dark:text-gray-400">View performance analytics and reports</p>
+          <div className="px-6 py-6 space-y-6">
+            <div className="flex gap-6">
+              {/* Left Side - Key Metrics and Cash Outflow */}
+              <div className="flex-1 space-y-6">
+                {/* Key Metrics Section */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Key Metrics</CardTitle>
+                    <div className="flex gap-4 mt-4">
+                      <Select>
+                        <SelectTrigger className="w-48 input-styled rounded">
+                          <SelectValue placeholder="Client" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="client1">Client 1</SelectItem>
+                          <SelectItem value="client2">Client 2</SelectItem>
+                          <SelectItem value="all">All Clients</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      
+                      <Select>
+                        <SelectTrigger className="w-48 input-styled rounded">
+                          <SelectValue placeholder="Monthly" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="quarterly">Quarterly</SelectItem>
+                          <SelectItem value="yearly">Yearly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64 mb-4">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart
+                          data={[
+                            { name: 'Jan', revenue: 45000, growth: 38000, profit: 25000, clients: 15000 },
+                            { name: 'Feb', revenue: 35000, growth: 28000, profit: 18000, clients: 12000 },
+                            { name: 'Mar', revenue: 55000, growth: 45000, profit: 32000, clients: 22000 },
+                            { name: 'Apr', revenue: 48000, growth: 42000, profit: 28000, clients: 18000 },
+                            { name: 'May', revenue: 65000, growth: 52000, profit: 38000, clients: 28000 },
+                            { name: 'Jun', revenue: 58000, growth: 48000, profit: 35000, clients: 25000 },
+                            { name: 'Jul', revenue: 70000, growth: 58000, profit: 42000, clients: 32000 },
+                            { name: 'Aug', revenue: 75000, growth: 62000, profit: 45000, clients: 35000 },
+                          ]}
+                          margin={{
+                            top: 5,
+                            right: 30,
+                            left: 20,
+                            bottom: 5,
+                          }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend />
+                          <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} />
+                          <Line type="monotone" dataKey="growth" stroke="#82ca9d" strokeWidth={2} />
+                          <Line type="monotone" dataKey="profit" stroke="#ffc658" strokeWidth={2} />
+                          <Line type="monotone" dataKey="clients" stroke="#ff7c7c" strokeWidth={2} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                    
+                    <div className="flex justify-center">
+                      <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded">
+                        Show Data
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Cash Outflow Section */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Cash Outflow</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {/* Input Form */}
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Month</label>
+                        <Input placeholder="Month" className="input-styled rounded" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year</label>
+                        <Input placeholder="Year" className="input-styled rounded" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Number of Employees</label>
+                        <Input placeholder="Number of Employees" className="input-styled rounded" />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Total Salary</label>
+                        <Input placeholder="Total Salary" className="input-styled rounded" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Incentive</label>
+                        <Input placeholder="Incentive" className="input-styled rounded" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Database & Tools cost</label>
+                        <Input placeholder="Database & Tools cost" className="input-styled rounded" />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rent</label>
+                        <Input placeholder="Rent" className="input-styled rounded" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Other Expenses</label>
+                        <Input placeholder="Other Expenses" className="input-styled rounded" />
+                      </div>
+                      <div className="flex items-end">
+                        <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded w-full">
+                          Add
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Data Table */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
+                        <thead>
+                          <tr className="bg-gray-100 dark:bg-gray-700">
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Month</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Year</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Employees Count</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Total Salary</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Incentives</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Tools Cost</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Rent</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Others Cost</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="border-b border-gray-100 dark:border-gray-800">
+                            <td className="py-3 px-4 text-gray-900 dark:text-white">January</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2025</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">45</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">3,50,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">20,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">30,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
+                          </tr>
+                          <tr className="border-b border-gray-100 dark:border-gray-800">
+                            <td className="py-3 px-4 text-gray-900 dark:text-white">March</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2025</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">19</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2,40,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">15,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">10,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
+                          </tr>
+                          <tr className="border-b border-gray-100 dark:border-gray-800">
+                            <td className="py-3 px-4 text-gray-900 dark:text-white">August</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2025</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">45</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">4,00,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">30,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">30,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
+                          </tr>
+                          <tr className="border-b border-gray-100 dark:border-gray-800">
+                            <td className="py-3 px-4 text-gray-900 dark:text-white">September</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2025</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">39</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">4,35,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">32,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">32,500</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,500</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,500</td>
+                          </tr>
+                          <tr className="border-b border-gray-100 dark:border-gray-800">
+                            <td className="py-3 px-4 text-gray-900 dark:text-white">November</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2025</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">37</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">5,00,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">35,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">35,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    <div className="flex justify-center mt-4">
+                      <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded">
+                        View More
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Right Side - Key Aspects */}
+              <div className="w-80">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Key Aspects</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {/* Growth Metrics */}
+                      <div className="bg-teal-50 dark:bg-teal-900/20 p-4 rounded-lg">
+                        <div className="text-xs text-teal-600 dark:text-teal-400 mb-1">GROWTH</div>
+                        <div className="text-2xl font-bold text-teal-600 dark:text-teal-400">15%</div>
+                      </div>
+                      
+                      <div className="bg-teal-50 dark:bg-teal-900/20 p-4 rounded-lg">
+                        <div className="text-xs text-teal-600 dark:text-teal-400 mb-1">GROWTH</div>
+                        <div className="text-2xl font-bold text-teal-600 dark:text-teal-400">9%</div>
+                      </div>
+                      
+                      {/* Burn Rate */}
+                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                        <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">BURN <span className="text-xs">RATE</span></div>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">3%</div>
+                      </div>
+                      
+                      {/* Churn Rate */}
+                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                        <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">CHURN <span className="text-xs">RATE</span></div>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">9%</div>
+                      </div>
+                      
+                      {/* Attrition */}
+                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                        <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">ATTRITION</div>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">3%</div>
+                      </div>
+                      
+                      {/* Net Profit */}
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                        <div className="text-xs text-blue-600 dark:text-blue-400 mb-1">NET PROFIT</div>
+                        <div className="text-xl font-bold text-blue-900 dark:text-blue-300">2,50,000</div>
+                      </div>
+                      
+                      {/* Revenue */}
+                      <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                        <div className="text-xs text-green-600 dark:text-green-400 mb-1">REVENUE <span className="text-xs">PER EMPLOYEE</span></div>
+                        <div className="text-xl font-bold text-green-900 dark:text-green-300">75,000</div>
+                      </div>
+                      
+                      {/* Client */}
+                      <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">
+                        <div className="text-xs text-orange-600 dark:text-orange-400 mb-1">CLIENT <span className="text-xs">ACQUISITION COST</span></div>
+                        <div className="text-xl font-bold text-orange-900 dark:text-orange-300">75,000</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         );
