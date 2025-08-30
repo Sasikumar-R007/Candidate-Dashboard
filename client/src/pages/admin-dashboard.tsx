@@ -2404,6 +2404,84 @@ export default function AdminDashboard() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Closure Reports Table */}
+                <Card className="mt-6">
+                  <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                    <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Closure Reports</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Candidate</th>
+                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Positions</th>
+                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Client</th>
+                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Talent Advisor</th>
+                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Fixed CTC</th>
+                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Offered Date</th>
+                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Joined Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <td className="p-3 text-gray-900 dark:text-white">David Johnson</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">Frontend Developer</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">TechCorp</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">Kavitha</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">MLJ, 2025</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">12-06-2025</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">12-04-2025</td>
+                          </tr>
+                          <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <td className="p-3 text-gray-900 dark:text-white">Tom Anderson</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">UI/UX Designer</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">Designify</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">Rajesh</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">ASO, 2025</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">18-06-2025</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">05-05-2025</td>
+                          </tr>
+                          <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <td className="p-3 text-gray-900 dark:text-white">Robert Kim</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">Backend Developer</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">CodeLabs</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">Sowmiya</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">MLJ, 2025</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">28-06-2025</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">19-08-2025</td>
+                          </tr>
+                          <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <td className="p-3 text-gray-900 dark:text-white">Kevin Brown</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">QA Tester</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">AppLogic</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">Kalaiselvi</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">FMA, 2025</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">03-07-2025</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">03-09-2025</td>
+                          </tr>
+                          <tr className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <td className="p-3 text-gray-900 dark:text-white">Mel Gibson</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">Mobile App Developer</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">Tesco</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">Malathi</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">NDJ, 2025</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">18-07-2025</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">10-10-2025</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                      <div className="flex justify-end">
+                        <Button variant="ghost" className="text-blue-600 hover:text-blue-700 text-sm">
+                          See More...
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
 
