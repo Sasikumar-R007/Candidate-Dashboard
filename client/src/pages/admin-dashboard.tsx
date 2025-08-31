@@ -407,31 +407,33 @@ export default function AdminDashboard() {
             </div>
             
             {/* Center - Daily Delivery */}
-            <div className="bg-slate-800 dark:bg-slate-900 rounded p-4 text-white">
-              <h3 className="text-lg font-semibold text-center mb-4">Daily Delivery</h3>
-              <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-slate-800 dark:bg-slate-900 rounded p-4 text-white relative">
+              <h3 className="text-lg font-semibold text-center mb-4 text-white">Daily Delivery</h3>
+              <div className="grid grid-cols-2 gap-3 mb-4 relative">
                 <div className="text-center">
-                  <p className="text-sm text-gray-300 mb-2">Delivered</p>
-                  <p className="text-4xl font-bold mb-3">
+                  <p className="text-sm text-cyan-300 mb-2">Delivered</p>
+                  <p className="text-4xl font-bold mb-3 text-white">
                     {dailyMetricsData.dailyDeliveryDelivered}
                   </p>
                   <Button 
                     size="sm" 
-                    className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded-sm"
+                    className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded"
                     onClick={() => setIsDeliveredModalOpen(true)}
                     data-testid="button-view-delivered"
                   >
                     View
                   </Button>
                 </div>
+                {/* Center vertical divider */}
+                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-cyan-300 transform -translate-x-0.5"></div>
                 <div className="text-center">
-                  <p className="text-sm text-gray-300 mb-2">Defaulted</p>
-                  <p className="text-4xl font-bold mb-3">
+                  <p className="text-sm text-cyan-300 mb-2">Defaulted</p>
+                  <p className="text-4xl font-bold mb-3 text-white">
                     {dailyMetricsData.dailyDeliveryDefaulted}
                   </p>
                   <Button 
                     size="sm" 
-                    className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded-sm"
+                    className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded"
                     onClick={() => setIsDefaultedModalOpen(true)}
                     data-testid="button-view-defaulted"
                   >
@@ -471,43 +473,49 @@ export default function AdminDashboard() {
 
       {/* Messages and Meetings Section */}
       <div className="grid grid-cols-3 gap-3 h-fit">
-        {/* Pending Meetings */}
-        <Card className="bg-gray-50 dark:bg-gray-800">
-          <CardHeader className="pb-1 pt-2">
-            <CardTitle className="text-lg text-gray-900 dark:text-white">Pending Meetings</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-4 text-center">
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">TL's Meeting</h3>
-                <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">3</div>
-                <Button 
-                  size="sm" 
-                  className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded-none"
-                  onClick={() => setIsTlMeetingsModalOpen(true)}
-                  data-testid="button-view-tl-meetings"
-                >
-                  View
-                </Button>
+        {/* Pending Meetings - Reduced Width */}
+        <div className="col-span-1">
+          <Card className="bg-gray-100 dark:bg-gray-700 max-w-sm">
+            <CardHeader className="pb-2 pt-3">
+              <CardTitle className="text-lg text-gray-900 dark:text-white text-center">Pending Meetings</CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 relative">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">TL's Meeting</h3>
+                    <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">3</div>
+                    <Button 
+                      size="sm" 
+                      className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded"
+                      onClick={() => setIsTlMeetingsModalOpen(true)}
+                      data-testid="button-view-tl-meetings"
+                    >
+                      View
+                    </Button>
+                  </div>
+                  {/* Center vertical divider */}
+                  <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-300 dark:bg-gray-600 transform -translate-x-0.5"></div>
+                  <div className="text-center">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">CEO's Meeting</h3>
+                    <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">1</div>
+                    <Button 
+                      size="sm" 
+                      className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded"
+                      onClick={() => setIsCeoMeetingsModalOpen(true)}
+                      data-testid="button-view-ceo-meetings"
+                    >
+                      View
+                    </Button>
+                  </div>
+                </div>
               </div>
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-4 text-center">
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">CEO's Meeting</h3>
-                <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">1</div>
-                <Button 
-                  size="sm" 
-                  className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded-none"
-                  onClick={() => setIsCeoMeetingsModalOpen(true)}
-                  data-testid="button-view-ceo-meetings"
-                >
-                  View
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Message Status */}
-        <Card className="bg-gray-50 dark:bg-gray-800">
+        <Card className="bg-gray-50 dark:bg-gray-800 col-span-2">
           <CardHeader className="pb-1 pt-2">
             <CardTitle className="text-lg text-gray-900 dark:text-white">Message Status</CardTitle>
           </CardHeader>
