@@ -200,16 +200,21 @@ const targetsData = [
 
 // Extended data for the modal with additional sample content
 const allTargetsData = [
-  { resource: "Arun KS", role: "TL", quarter: "ASO 2025", minimumTarget: "15,00,000", targetAchieved: "13,00,000", closures: 6, incentives: "15,000", performance: "87%", status: "On Track" },
-  { resource: "Anusha", role: "TL", quarter: "ASO 2025", minimumTarget: "12,00,000", targetAchieved: "8,00,000", closures: 3, incentives: "35,000", performance: "67%", status: "Needs Improvement" },
-  { resource: "Sudharshan", role: "RE", quarter: "ASO 2025", minimumTarget: "8,00,000", targetAchieved: "9,50,000", closures: 8, incentives: "12,000", performance: "119%", status: "Excellent" },
-  { resource: "Deepika", role: "SR", quarter: "ASO 2025", minimumTarget: "10,00,000", targetAchieved: "11,20,000", closures: 7, incentives: "18,000", performance: "112%", status: "Excellent" },
-  { resource: "Dharshan", role: "JR", quarter: "ASO 2025", minimumTarget: "5,00,000", targetAchieved: "4,80,000", closures: 4, incentives: "8,000", performance: "96%", status: "Good" },
-  { resource: "Kavya", role: "RE", quarter: "ASO 2025", minimumTarget: "8,00,000", targetAchieved: "10,50,000", closures: 9, incentives: "20,000", performance: "131%", status: "Outstanding" },
-  { resource: "Thamarai Selvi", role: "LR", quarter: "ASO 2025", minimumTarget: "12,00,000", targetAchieved: "14,80,000", closures: 10, incentives: "25,000", performance: "123%", status: "Outstanding" },
-  { resource: "Karthikayan", role: "RE", quarter: "ASO 2025", minimumTarget: "8,00,000", targetAchieved: "7,20,000", closures: 5, incentives: "9,000", performance: "90%", status: "Good" },
-  { resource: "Umar", role: "TL", quarter: "ASO 2025", minimumTarget: "14,00,000", targetAchieved: "12,30,000", closures: 5, incentives: "16,000", performance: "88%", status: "On Track" },
-  { resource: "Siva", role: "SR", quarter: "ASO 2025", minimumTarget: "10,00,000", targetAchieved: "8,90,000", closures: 6, incentives: "14,000", performance: "89%", status: "Good" }
+  { resource: "Arun KS", role: "TL", quarter: "ASO 2025", minimumTarget: "15,00,000", targetAchieved: "13,00,000", closures: 6, incentives: "15,000" },
+  { resource: "Anusha", role: "TL", quarter: "ASO 2025", minimumTarget: "12,00,000", targetAchieved: "8,00,000", closures: 3, incentives: "35,000" },
+  { resource: "Sudharshan", role: "RE", quarter: "ASO 2025", minimumTarget: "8,00,000", targetAchieved: "9,50,000", closures: 8, incentives: "12,000" },
+  { resource: "Deepika", role: "SR", quarter: "ASO 2025", minimumTarget: "10,00,000", targetAchieved: "11,20,000", closures: 7, incentives: "18,000" },
+  { resource: "Dharshan", role: "JR", quarter: "ASO 2025", minimumTarget: "5,00,000", targetAchieved: "4,80,000", closures: 4, incentives: "8,000" },
+  { resource: "Kavya", role: "RE", quarter: "ASO 2025", minimumTarget: "8,00,000", targetAchieved: "10,50,000", closures: 9, incentives: "20,000" },
+  { resource: "Thamarai Selvi", role: "LR", quarter: "ASO 2025", minimumTarget: "12,00,000", targetAchieved: "14,80,000", closures: 10, incentives: "25,000" },
+  { resource: "Karthikayan", role: "RE", quarter: "ASO 2025", minimumTarget: "8,00,000", targetAchieved: "7,20,000", closures: 5, incentives: "9,000" },
+  { resource: "Umar", role: "TL", quarter: "ASO 2025", minimumTarget: "14,00,000", targetAchieved: "12,30,000", closures: 5, incentives: "16,000" },
+  { resource: "Siva", role: "SR", quarter: "ASO 2025", minimumTarget: "10,00,000", targetAchieved: "8,90,000", closures: 6, incentives: "14,000" },
+  { resource: "Priya", role: "TA", quarter: "ASO 2025", minimumTarget: "6,00,000", targetAchieved: "7,20,000", closures: 5, incentives: "10,000" },
+  { resource: "Rajesh", role: "TA", quarter: "ASO 2025", minimumTarget: "6,50,000", targetAchieved: "5,80,000", closures: 4, incentives: "8,500" },
+  { resource: "Meera", role: "TA", quarter: "ASO 2025", minimumTarget: "6,00,000", targetAchieved: "6,90,000", closures: 6, incentives: "11,000" },
+  { resource: "Arjun", role: "TA", quarter: "ASO 2025", minimumTarget: "6,20,000", targetAchieved: "7,50,000", closures: 7, incentives: "12,500" },
+  { resource: "Nisha", role: "TA", quarter: "ASO 2025", minimumTarget: "5,80,000", targetAchieved: "6,40,000", closures: 5, incentives: "9,500" }
 ];
 
 const dailyMetricsData = {
@@ -3806,13 +3811,18 @@ export default function AdminDashboard() {
 
       {/* Target & Incentives View All Modal */}
       <Dialog open={isTargetModalOpen} onOpenChange={setIsTargetModalOpen}>
-        <DialogContent className="max-w-6xl mx-auto max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl mx-auto max-h-[80vh]" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
               All Target & Incentives Data
             </DialogTitle>
           </DialogHeader>
-          <div className="p-4">
+          <div className="p-4 overflow-y-auto" style={{scrollbarWidth: 'none', msOverflowStyle: 'none', maxHeight: '60vh'}}>
+            <style jsx>{`
+              div::-webkit-scrollbar {
+                display: none;
+              }
+            `}</style>
             <div className="overflow-x-auto">
               <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
                 <thead>
@@ -3824,8 +3834,6 @@ export default function AdminDashboard() {
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Target Achieved</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Closures</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Incentives</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Performance</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -3838,26 +3846,6 @@ export default function AdminDashboard() {
                       <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.targetAchieved}</td>
                       <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.closures}</td>
                       <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.incentives}</td>
-                      <td className="py-3 px-4 text-sm font-medium border-b border-gray-100 dark:border-gray-700">
-                        <span className={`${
-                          parseInt(target.performance) >= 120 ? 'text-green-600 dark:text-green-400' :
-                          parseInt(target.performance) >= 90 ? 'text-blue-600 dark:text-blue-400' :
-                          'text-orange-600 dark:text-orange-400'
-                        }`}>
-                          {target.performance}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          target.status === 'Outstanding' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
-                          target.status === 'Excellent' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' :
-                          target.status === 'Good' ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/20 dark:text-cyan-400' :
-                          target.status === 'On Track' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400' :
-                          'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
-                        }`}>
-                          {target.status}
-                        </span>
-                      </td>
                     </tr>
                   ))}
                 </tbody>
