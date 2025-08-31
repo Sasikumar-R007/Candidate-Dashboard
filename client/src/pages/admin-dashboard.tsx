@@ -198,6 +198,20 @@ const targetsData = [
   { resource: "Anusha", role: "TL", quarter: "ASO 2025", minimumTarget: "12,00,000", targetAchieved: "8,00,000", closures: 3, incentives: "35,000" }
 ];
 
+// Extended data for the modal with additional sample content
+const allTargetsData = [
+  { resource: "Arun KS", role: "TL", quarter: "ASO 2025", minimumTarget: "15,00,000", targetAchieved: "13,00,000", closures: 6, incentives: "15,000", performance: "87%", status: "On Track" },
+  { resource: "Anusha", role: "TL", quarter: "ASO 2025", minimumTarget: "12,00,000", targetAchieved: "8,00,000", closures: 3, incentives: "35,000", performance: "67%", status: "Needs Improvement" },
+  { resource: "Sudharshan", role: "RE", quarter: "ASO 2025", minimumTarget: "8,00,000", targetAchieved: "9,50,000", closures: 8, incentives: "12,000", performance: "119%", status: "Excellent" },
+  { resource: "Deepika", role: "SR", quarter: "ASO 2025", minimumTarget: "10,00,000", targetAchieved: "11,20,000", closures: 7, incentives: "18,000", performance: "112%", status: "Excellent" },
+  { resource: "Dharshan", role: "JR", quarter: "ASO 2025", minimumTarget: "5,00,000", targetAchieved: "4,80,000", closures: 4, incentives: "8,000", performance: "96%", status: "Good" },
+  { resource: "Kavya", role: "RE", quarter: "ASO 2025", minimumTarget: "8,00,000", targetAchieved: "10,50,000", closures: 9, incentives: "20,000", performance: "131%", status: "Outstanding" },
+  { resource: "Thamarai Selvi", role: "LR", quarter: "ASO 2025", minimumTarget: "12,00,000", targetAchieved: "14,80,000", closures: 10, incentives: "25,000", performance: "123%", status: "Outstanding" },
+  { resource: "Karthikayan", role: "RE", quarter: "ASO 2025", minimumTarget: "8,00,000", targetAchieved: "7,20,000", closures: 5, incentives: "9,000", performance: "90%", status: "Good" },
+  { resource: "Umar", role: "TL", quarter: "ASO 2025", minimumTarget: "14,00,000", targetAchieved: "12,30,000", closures: 5, incentives: "16,000", performance: "88%", status: "On Track" },
+  { resource: "Siva", role: "SR", quarter: "ASO 2025", minimumTarget: "10,00,000", targetAchieved: "8,90,000", closures: 6, incentives: "14,000", performance: "89%", status: "Good" }
+];
+
 const dailyMetricsData = {
   totalRequirements: 20,
   completedRequirements: 12,
@@ -222,6 +236,7 @@ export default function AdminDashboard() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedMember, setSelectedMember] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
 
   const handleMemberClick = (member: any) => {
     setSelectedMember(member);
@@ -262,7 +277,13 @@ export default function AdminDashboard() {
       <Card className="bg-gray-50 dark:bg-gray-800">
         <CardHeader className="pb-1 pt-1 flex flex-row items-center justify-between">
           <CardTitle className="text-lg text-gray-900 dark:text-white">Target & Incentives</CardTitle>
-          <Button variant="outline" size="sm" className="text-blue-600 border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-sm text-xs px-2 py-1">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="text-blue-600 border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-sm text-xs px-2 py-1"
+            onClick={() => setIsTargetModalOpen(true)}
+            data-testid="button-view-all-targets"
+          >
             View All
           </Button>
         </CardHeader>
@@ -3780,6 +3801,78 @@ export default function AdminDashboard() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Target & Incentives View All Modal */}
+      <Dialog open={isTargetModalOpen} onOpenChange={setIsTargetModalOpen}>
+        <DialogContent className="max-w-6xl mx-auto max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+              All Target & Incentives Data
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-4">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
+                <thead>
+                  <tr className="bg-gray-200 dark:bg-gray-700">
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Resource</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Role</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Quarter</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Minimum Target</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Target Achieved</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Closures</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Incentives</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Performance</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allTargetsData.map((target, index) => (
+                    <tr key={index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
+                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{target.resource}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.role}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.quarter}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.minimumTarget}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.targetAchieved}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.closures}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.incentives}</td>
+                      <td className="py-3 px-4 text-sm font-medium border-b border-gray-100 dark:border-gray-700">
+                        <span className={`${
+                          parseInt(target.performance) >= 120 ? 'text-green-600 dark:text-green-400' :
+                          parseInt(target.performance) >= 90 ? 'text-blue-600 dark:text-blue-400' :
+                          'text-orange-600 dark:text-orange-400'
+                        }`}>
+                          {target.performance}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          target.status === 'Outstanding' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
+                          target.status === 'Excellent' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' :
+                          target.status === 'Good' ? 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/20 dark:text-cyan-400' :
+                          target.status === 'On Track' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400' :
+                          'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400'
+                        }`}>
+                          {target.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <Button 
+                onClick={() => setIsTargetModalOpen(false)}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded"
+                data-testid="button-close-targets-modal"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
