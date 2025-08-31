@@ -198,6 +198,17 @@ const targetsData = [
   { resource: "Anusha", role: "TL", quarter: "ASO 2025", minimumTarget: "12,00,000", targetAchieved: "8,00,000", closures: 3, incentives: "35,000" }
 ];
 
+// All employees list from teams data
+const allEmployees = [
+  ...teamsData[0].members.map(member => ({ name: member.name, role: member.role, id: member.id })),
+  ...teamsData[1].members.map(member => ({ name: member.name, role: member.role, id: member.id })),
+  { name: "Arun KS", role: "TL", id: "TL001" },
+  { name: "Anusha", role: "TL", id: "TL002" }
+];
+
+const tlList = allEmployees.filter(emp => emp.role === 'TL' || emp.role === 'Lead Recruiter');
+const taList = allEmployees.filter(emp => emp.role === 'Senior Recruiter' || emp.role === 'Recruitment Executive' || emp.role === 'Junior Recruiter');
+
 // Extended data for the modal with additional sample content
 const allTargetsData = [
   { resource: "Arun KS", role: "TL", quarter: "ASO 2025", minimumTarget: "15,00,000", targetAchieved: "13,00,000", closures: 6, incentives: "15,000" },
@@ -268,6 +279,14 @@ export default function AdminDashboard() {
   const [isCeoMeetingsModalOpen, setIsCeoMeetingsModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createModalSession, setCreateModalSession] = useState<'message' | 'meeting'>('message');
+  const [selectedRecipient, setSelectedRecipient] = useState('');
+  const [messageContent, setMessageContent] = useState('');
+  const [meetingFor, setMeetingFor] = useState('');
+  const [meetingWith, setMeetingWith] = useState('');
+  const [meetingType, setMeetingType] = useState('');
+  const [meetingDate, setMeetingDate] = useState('');
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
 
   const handleMemberClick = (member: any) => {
     setSelectedMember(member);
@@ -280,6 +299,47 @@ export default function AdminDashboard() {
 
   const handleCallClick = (phone: string) => {
     window.open(`tel:${phone}`, '_blank');
+  };
+
+  const resetForm = () => {
+    setSelectedRecipient('');
+    setMessageContent('');
+    setMeetingFor('');
+    setMeetingWith('');
+    setMeetingType('');
+    setMeetingDate('');
+  };
+
+  const showSuccessAlert = (message: string) => {
+    setAlertMessage(message);
+    setShowAlert(true);
+    setTimeout(() => {
+      setShowAlert(false);
+    }, 3000);
+  };
+
+  const handleSendMessage = () => {
+    if (!selectedRecipient || !messageContent.trim()) {
+      return;
+    }
+    const recipientName = allEmployees.find(emp => emp.id === selectedRecipient)?.name || selectedRecipient;
+    showSuccessAlert(`Message sent to ${recipientName} successfully`);
+    resetForm();
+    setIsCreateModalOpen(false);
+  };
+
+  const handleSetMeeting = () => {
+    if (!meetingFor || !meetingWith || !meetingType || !meetingDate) {
+      return;
+    }
+    const personName = (meetingFor === 'TL' ? tlList : taList).find(emp => emp.id === meetingWith)?.name || meetingWith;
+    showSuccessAlert(`Meeting set with ${personName} successfully`);
+    resetForm();
+    setIsCreateModalOpen(false);
+  };
+
+  const getMeetingWithOptions = () => {
+    return meetingFor === 'TL' ? tlList : meetingFor === 'TA' ? taList : [];
   };
 
   // Fetch admin profile on component mount
@@ -4135,14 +4195,14 @@ export default function AdminDashboard() {
       </Dialog>
 
       {/* Create Modal (Message/Meeting) */}
-      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="max-w-md mx-auto">
+      <Dialog open={isCreateModalOpen} onOpenChange={(open) => { setIsCreateModalOpen(open); if (!open) resetForm(); }}>
+        <DialogContent className="max-w-md mx-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
           <DialogHeader>
             <DialogTitle className="sr-only">Create</DialogTitle>
           </DialogHeader>
-          <div className="p-6">
+          <div className="p-3">
             {/* Toggle Tabs */}
-            <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6">
+            <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4">
               <button
                 onClick={() => setCreateModalSession('message')}
                 className={`px-4 py-2 text-sm font-medium border-b-2 ${
@@ -4169,29 +4229,35 @@ export default function AdminDashboard() {
 
             {/* Message Form */}
             {createModalSession === 'message' && (
-              <div className="space-y-4">
-                <Select data-testid="select-message-recipient">
-                  <SelectTrigger className="w-full">
+              <div className="space-y-3">
+                <Select value={selectedRecipient} onValueChange={setSelectedRecipient} data-testid="select-message-recipient" required>
+                  <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
                     <SelectValue placeholder="Select recipient" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="acai">Acai</SelectItem>
-                    <SelectItem value="arun">Arun</SelectItem>
-                    <SelectItem value="anusha">Anusha</SelectItem>
-                    <SelectItem value="umar">Umar</SelectItem>
+                  <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                    {allEmployees.map((employee) => (
+                      <SelectItem key={employee.id} value={employee.id} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                        {employee.name} ({employee.role})
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 
                 <Textarea
                   placeholder="Enter here!"
                   rows={4}
-                  className="w-full resize-none"
+                  value={messageContent}
+                  onChange={(e) => setMessageContent(e.target.value)}
+                  className="w-full resize-none bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                   data-testid="textarea-message-content"
+                  required
                 />
                 
                 <div className="flex justify-end">
                   <Button 
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded flex items-center gap-2"
+                    onClick={handleSendMessage}
+                    disabled={!selectedRecipient || !messageContent.trim()}
+                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-2 rounded flex items-center gap-2"
                     data-testid="button-send-message"
                   >
                     Send 
@@ -4203,46 +4269,59 @@ export default function AdminDashboard() {
 
             {/* Meeting Form */}
             {createModalSession === 'meeting' && (
-              <div className="space-y-4">
-                <Select data-testid="select-meeting-with">
-                  <SelectTrigger className="w-full">
+              <div className="space-y-3">
+                <Select value={meetingFor} onValueChange={(value) => { setMeetingFor(value); setMeetingWith(''); }} data-testid="select-meeting-for" required>
+                  <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
+                    <SelectValue placeholder="Meeting for" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                    <SelectItem value="TL" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">TL</SelectItem>
+                    <SelectItem value="TA" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">TA</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={meetingWith} onValueChange={setMeetingWith} data-testid="select-meeting-with" required disabled={!meetingFor}>
+                  <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white disabled:opacity-50">
                     <SelectValue placeholder="Meeting with" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="acai">Acai</SelectItem>
-                    <SelectItem value="arun">Arun</SelectItem>
-                    <SelectItem value="anusha">Anusha</SelectItem>
-                    <SelectItem value="umar">Umar</SelectItem>
+                  <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                    {getMeetingWithOptions().map((employee) => (
+                      <SelectItem key={employee.id} value={employee.id} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                        {employee.name} ({employee.role})
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 
-                <Select data-testid="select-meeting-type">
-                  <SelectTrigger className="w-full">
+                <Select value={meetingType} onValueChange={setMeetingType} data-testid="select-meeting-type" required>
+                  <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
                     <SelectValue placeholder="Meeting type" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ceo">CEO</SelectItem>
-                    <SelectItem value="performance">Performance Review</SelectItem>
-                    <SelectItem value="planning">Team Planning</SelectItem>
-                    <SelectItem value="one-on-one">One-on-One</SelectItem>
+                  <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                    <SelectItem value="ceo" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">CEO</SelectItem>
+                    <SelectItem value="performance" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Performance Review</SelectItem>
+                    <SelectItem value="planning" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Team Planning</SelectItem>
+                    <SelectItem value="one-on-one" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">One-on-One</SelectItem>
                   </SelectContent>
                 </Select>
                 
-                <Select data-testid="select-meeting-date">
-                  <SelectTrigger className="w-full">
+                <Select value={meetingDate} onValueChange={setMeetingDate} data-testid="select-meeting-date" required>
+                  <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
                     <SelectValue placeholder="Date" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="today">Today</SelectItem>
-                    <SelectItem value="tomorrow">Tomorrow</SelectItem>
-                    <SelectItem value="next-week">Next Week</SelectItem>
-                    <SelectItem value="custom">Custom Date</SelectItem>
+                  <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                    <SelectItem value="today" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Today</SelectItem>
+                    <SelectItem value="tomorrow" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Tomorrow</SelectItem>
+                    <SelectItem value="next-week" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Next Week</SelectItem>
+                    <SelectItem value="custom" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Custom Date</SelectItem>
                   </SelectContent>
                 </Select>
                 
                 <div className="flex justify-end">
                   <Button 
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded"
+                    onClick={handleSetMeeting}
+                    disabled={!meetingFor || !meetingWith || !meetingType || !meetingDate}
+                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-2 rounded"
                     data-testid="button-set-meeting"
                   >
                     Set
@@ -4253,6 +4332,16 @@ export default function AdminDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Success Alert */}
+      {showAlert && (
+        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 animate-in slide-in-from-right duration-300">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          {alertMessage}
+        </div>
+      )}
     </div>
   );
 }
