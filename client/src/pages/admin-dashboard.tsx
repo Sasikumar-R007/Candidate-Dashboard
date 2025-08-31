@@ -244,6 +244,16 @@ const defaultedData = [
   { requirement: "Frontend Developer", candidate: "Alex Brown", client: "Microsoft", expectedDate: "28-Aug-2025", status: "Defaulted" }
 ];
 
+const tlMeetingsData = [
+  { meetingType: "Performance Review", date: "05-Sep-2025", time: "10:00 AM", person: "Arun KS", agenda: "Quarterly performance discussion", status: "Scheduled" },
+  { meetingType: "Team Planning", date: "06-Sep-2025", time: "02:30 PM", person: "Anusha", agenda: "Q4 strategy and targets", status: "Scheduled" },
+  { meetingType: "One-on-One", date: "07-Sep-2025", time: "11:15 AM", person: "Umar", agenda: "Career development discussion", status: "Pending" }
+];
+
+const ceoMeetingsData = [
+  { meetingType: "Board Review", date: "10-Sep-2025", time: "09:00 AM", person: "John Mathew", agenda: "Company strategy and vision", status: "Scheduled" }
+];
+
 export default function AdminDashboard() {
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [activeTab, setActiveTab] = useState('team');
@@ -254,6 +264,8 @@ export default function AdminDashboard() {
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [isDeliveredModalOpen, setIsDeliveredModalOpen] = useState(false);
   const [isDefaultedModalOpen, setIsDefaultedModalOpen] = useState(false);
+  const [isTlMeetingsModalOpen, setIsTlMeetingsModalOpen] = useState(false);
+  const [isCeoMeetingsModalOpen, setIsCeoMeetingsModalOpen] = useState(false);
 
   const handleMemberClick = (member: any) => {
     setSelectedMember(member);
@@ -469,14 +481,24 @@ export default function AdminDashboard() {
               <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-4 text-center">
                 <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">TL's Meeting</h3>
                 <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">3</div>
-                <Button size="sm" className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded-none">
+                <Button 
+                  size="sm" 
+                  className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded-none"
+                  onClick={() => setIsTlMeetingsModalOpen(true)}
+                  data-testid="button-view-tl-meetings"
+                >
                   View
                 </Button>
               </div>
               <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-4 text-center">
                 <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">CEO's Meeting</h3>
                 <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">1</div>
-                <Button size="sm" className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded-none">
+                <Button 
+                  size="sm" 
+                  className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded-none"
+                  onClick={() => setIsCeoMeetingsModalOpen(true)}
+                  data-testid="button-view-ceo-meetings"
+                >
                   View
                 </Button>
               </div>
@@ -3984,6 +4006,114 @@ export default function AdminDashboard() {
                 onClick={() => setIsDefaultedModalOpen(false)}
                 className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded"
                 data-testid="button-close-defaulted-modal"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* TL Meetings Modal */}
+      <Dialog open={isTlMeetingsModalOpen} onOpenChange={setIsTlMeetingsModalOpen}>
+        <DialogContent className="max-w-5xl mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+              TL's Pending Meetings
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-4">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
+                <thead>
+                  <tr className="bg-gray-200 dark:bg-gray-700">
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Meeting Type</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Date</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Time</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Person</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Agenda</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tlMeetingsData.map((meeting, index) => (
+                    <tr key={index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
+                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{meeting.meetingType}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.date}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.time}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.person}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.agenda}</td>
+                      <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          meeting.status === 'Scheduled' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                        }`}>
+                          {meeting.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <Button 
+                onClick={() => setIsTlMeetingsModalOpen(false)}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded"
+                data-testid="button-close-tl-meetings-modal"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* CEO Meetings Modal */}
+      <Dialog open={isCeoMeetingsModalOpen} onOpenChange={setIsCeoMeetingsModalOpen}>
+        <DialogContent className="max-w-5xl mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+              CEO's Pending Meetings
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-4">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
+                <thead>
+                  <tr className="bg-gray-200 dark:bg-gray-700">
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Meeting Type</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Date</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Time</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Person</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Agenda</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {ceoMeetingsData.map((meeting, index) => (
+                    <tr key={index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
+                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{meeting.meetingType}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.date}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.time}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.person}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.agenda}</td>
+                      <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          meeting.status === 'Scheduled' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                        }`}>
+                          {meeting.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <Button 
+                onClick={() => setIsCeoMeetingsModalOpen(false)}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded"
+                data-testid="button-close-ceo-meetings-modal"
               >
                 Close
               </Button>
