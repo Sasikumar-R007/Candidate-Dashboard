@@ -550,7 +550,7 @@ export default function AdminDashboard() {
         </Card>
         
         {/* Create Section - 1/10 width */}
-        <Card className="bg-slate-800 dark:bg-slate-900 col-span-1">
+        <Card className="bg-slate-800 dark:bg-slate-900 col-span-2">
           <CardContent className="flex flex-col items-center justify-center h-full p-3">
             <div className="bg-white rounded-lg p-4 mb-3">
               <Mail className="w-10 h-10 text-gray-600" />
