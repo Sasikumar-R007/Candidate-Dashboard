@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { CalendarIcon, EditIcon, Mail, Phone } from "lucide-react";
+import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck } from "lucide-react";
 import { format } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -206,8 +206,8 @@ const allEmployees = [
   { name: "Anusha", role: "TL", id: "TL002" }
 ];
 
-const tlList = allEmployees.filter(emp => emp.role === 'TL' || emp.role === 'Lead Recruiter');
-const taList = allEmployees.filter(emp => emp.role === 'Senior Recruiter' || emp.role === 'Recruitment Executive' || emp.role === 'Junior Recruiter');
+const tlList = allEmployees.filter(emp => emp.role === 'TL' || emp.role === 'Lead Recruiter').map(emp => ({ ...emp, displayRole: emp.role === 'TL' ? 'TL - Team Leader' : 'TL' }));
+const taList = allEmployees.filter(emp => emp.role === 'Senior Recruiter' || emp.role === 'Recruitment Executive' || emp.role === 'Junior Recruiter').map(emp => ({ ...emp, displayRole: 'TA' }));
 
 // Extended data for the modal with additional sample content
 const allTargetsData = [
@@ -285,8 +285,10 @@ export default function AdminDashboard() {
   const [meetingWith, setMeetingWith] = useState('');
   const [meetingType, setMeetingType] = useState('');
   const [meetingDate, setMeetingDate] = useState('');
+  const [meetingTime, setMeetingTime] = useState('');
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
+  const [isCustomDate, setIsCustomDate] = useState(false);
 
   const handleMemberClick = (member: any) => {
     setSelectedMember(member);
@@ -308,6 +310,8 @@ export default function AdminDashboard() {
     setMeetingWith('');
     setMeetingType('');
     setMeetingDate('');
+    setMeetingTime('');
+    setIsCustomDate(false);
   };
 
   const showSuccessAlert = (message: string) => {
@@ -329,13 +333,18 @@ export default function AdminDashboard() {
   };
 
   const handleSetMeeting = () => {
-    if (!meetingFor || !meetingWith || !meetingType || !meetingDate) {
+    if (!meetingFor || !meetingWith || !meetingType || !meetingDate || !meetingTime) {
       return;
     }
     const personName = (meetingFor === 'TL' ? tlList : taList).find(emp => emp.id === meetingWith)?.name || meetingWith;
     showSuccessAlert(`Meeting set with ${personName} successfully`);
     resetForm();
     setIsCreateModalOpen(false);
+  };
+
+  const handleDateChange = (value: string) => {
+    setMeetingDate(value);
+    setIsCustomDate(value === 'custom');
   };
 
   const getMeetingWithOptions = () => {
@@ -4200,9 +4209,9 @@ export default function AdminDashboard() {
           <DialogHeader>
             <DialogTitle className="sr-only">Create</DialogTitle>
           </DialogHeader>
-          <div className="p-3">
+          <div className="p-3 pt-2">
             {/* Toggle Tabs */}
-            <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4">
+            <div className="flex border-b border-gray-200 dark:border-gray-700 mb-3">
               <button
                 onClick={() => setCreateModalSession('message')}
                 className={`px-4 py-2 text-sm font-medium border-b-2 ${
@@ -4231,13 +4240,13 @@ export default function AdminDashboard() {
             {createModalSession === 'message' && (
               <div className="space-y-3">
                 <Select value={selectedRecipient} onValueChange={setSelectedRecipient} data-testid="select-message-recipient" required>
-                  <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
+                  <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded">
                     <SelectValue placeholder="Select recipient" />
                   </SelectTrigger>
                   <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                     {allEmployees.map((employee) => (
                       <SelectItem key={employee.id} value={employee.id} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
-                        {employee.name} ({employee.role})
+                        {employee.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -4248,7 +4257,7 @@ export default function AdminDashboard() {
                   rows={4}
                   value={messageContent}
                   onChange={(e) => setMessageContent(e.target.value)}
-                  className="w-full resize-none bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                  className="w-full resize-none bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded"
                   data-testid="textarea-message-content"
                   required
                 />
@@ -4261,7 +4270,7 @@ export default function AdminDashboard() {
                     data-testid="button-send-message"
                   >
                     Send 
-                    <span className="text-lg">→</span>
+                    <Send className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
@@ -4271,30 +4280,30 @@ export default function AdminDashboard() {
             {createModalSession === 'meeting' && (
               <div className="space-y-3">
                 <Select value={meetingFor} onValueChange={(value) => { setMeetingFor(value); setMeetingWith(''); }} data-testid="select-meeting-for" required>
-                  <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
+                  <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded">
                     <SelectValue placeholder="Meeting for" />
                   </SelectTrigger>
                   <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                    <SelectItem value="TL" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">TL</SelectItem>
-                    <SelectItem value="TA" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">TA</SelectItem>
+                    <SelectItem value="TL" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">TL - Team Leader</SelectItem>
+                    <SelectItem value="TA" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">TA - Talent Advisor</SelectItem>
                   </SelectContent>
                 </Select>
 
                 <Select value={meetingWith} onValueChange={setMeetingWith} data-testid="select-meeting-with" required disabled={!meetingFor}>
-                  <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white disabled:opacity-50">
+                  <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white disabled:opacity-50 rounded">
                     <SelectValue placeholder="Meeting with" />
                   </SelectTrigger>
                   <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                     {getMeetingWithOptions().map((employee) => (
                       <SelectItem key={employee.id} value={employee.id} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
-                        {employee.name} ({employee.role})
+                        {employee.name} {employee.displayRole && employee.displayRole.includes('Team Leader') ? `(${employee.displayRole})` : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 
                 <Select value={meetingType} onValueChange={setMeetingType} data-testid="select-meeting-type" required>
-                  <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
+                  <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded">
                     <SelectValue placeholder="Meeting type" />
                   </SelectTrigger>
                   <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
@@ -4305,26 +4314,46 @@ export default function AdminDashboard() {
                   </SelectContent>
                 </Select>
                 
-                <Select value={meetingDate} onValueChange={setMeetingDate} data-testid="select-meeting-date" required>
-                  <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white">
-                    <SelectValue placeholder="Date" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                    <SelectItem value="today" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Today</SelectItem>
-                    <SelectItem value="tomorrow" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Tomorrow</SelectItem>
-                    <SelectItem value="next-week" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Next Week</SelectItem>
-                    <SelectItem value="custom" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Custom Date</SelectItem>
-                  </SelectContent>
-                </Select>
+                {!isCustomDate ? (
+                  <Select value={meetingDate} onValueChange={handleDateChange} data-testid="select-meeting-date" required>
+                    <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded">
+                      <SelectValue placeholder="Date" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                      <SelectItem value="today" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Today</SelectItem>
+                      <SelectItem value="tomorrow" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Tomorrow</SelectItem>
+                      <SelectItem value="custom" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Other Date</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    type="date"
+                    value={meetingDate}
+                    onChange={(e) => setMeetingDate(e.target.value)}
+                    className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded"
+                    data-testid="input-custom-date"
+                    required
+                  />
+                )}
+                
+                <Input
+                  type="time"
+                  value={meetingTime}
+                  onChange={(e) => setMeetingTime(e.target.value)}
+                  className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded"
+                  data-testid="input-meeting-time"
+                  required
+                />
                 
                 <div className="flex justify-end">
                   <Button 
                     onClick={handleSetMeeting}
-                    disabled={!meetingFor || !meetingWith || !meetingType || !meetingDate}
-                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-2 rounded"
+                    disabled={!meetingFor || !meetingWith || !meetingType || !meetingDate || !meetingTime}
+                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-2 rounded flex items-center gap-2"
                     data-testid="button-set-meeting"
                   >
                     Set
+                    <CalendarCheck className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
@@ -4335,11 +4364,18 @@ export default function AdminDashboard() {
 
       {/* Success Alert */}
       {showAlert && (
-        <div className="fixed bottom-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 animate-in slide-in-from-right duration-300">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-          {alertMessage}
+        <div className="fixed bottom-4 right-4 bg-white border border-gray-200 shadow-lg z-50 rounded w-80 overflow-hidden animate-in slide-in-from-right duration-300">
+          <div className="p-4 text-gray-800">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span className="text-sm font-medium">{alertMessage}</span>
+            </div>
+          </div>
+          <div className="h-1 bg-green-500 animate-pulse"></div>
         </div>
       )}
     </div>
