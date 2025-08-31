@@ -472,21 +472,21 @@ export default function AdminDashboard() {
       </Card>
 
       {/* Messages and Meetings Section */}
-      <div className="grid grid-cols-4 gap-3 h-fit">
-        {/* Pending Meetings */}
-        <Card className="bg-gray-100 dark:bg-gray-700 col-span-1">
+      <div className="flex gap-3 h-fit">
+        {/* Pending Meetings - Proper Size */}
+        <Card className="bg-gray-100 dark:bg-gray-700 w-64">
           <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-sm text-gray-900 dark:text-white text-center">Pending Meetings</CardTitle>
+            <CardTitle className="text-lg text-gray-900 dark:text-white">Pending Meetings</CardTitle>
           </CardHeader>
-          <CardContent className="px-3 pb-3">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-3 relative">
-              <div className="grid grid-cols-2 gap-3">
+          <CardContent className="px-4 pb-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 relative">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="text-center">
-                  <h3 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">TL's Meeting</h3>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">3</div>
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">TL's Meeting</h3>
+                  <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">3</div>
                   <Button 
                     size="sm" 
-                    className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-2 text-xs rounded"
+                    className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded"
                     onClick={() => setIsTlMeetingsModalOpen(true)}
                     data-testid="button-view-tl-meetings"
                   >
@@ -496,11 +496,11 @@ export default function AdminDashboard() {
                 {/* Center vertical divider */}
                 <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-300 dark:bg-gray-600 transform -translate-x-0.5"></div>
                 <div className="text-center">
-                  <h3 className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">CEO's Meeting</h3>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white mb-2">1</div>
+                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">CEO's Meeting</h3>
+                  <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">1</div>
                   <Button 
                     size="sm" 
-                    className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-2 text-xs rounded"
+                    className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded"
                     onClick={() => setIsCeoMeetingsModalOpen(true)}
                     data-testid="button-view-ceo-meetings"
                   >
@@ -512,8 +512,8 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Message Status */}
-        <Card className="bg-gray-50 dark:bg-gray-800 col-span-2">
+        {/* Message Status - Flex Grow */}
+        <Card className="bg-gray-50 dark:bg-gray-800 flex-1">
           <CardHeader className="pb-1 pt-2">
             <CardTitle className="text-lg text-gray-900 dark:text-white">Message Status</CardTitle>
           </CardHeader>
@@ -547,13 +547,13 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
         
-        {/* Create Section - Minimized */}
-        <Card className="bg-slate-800 dark:bg-slate-900 col-span-1">
-          <CardContent className="flex flex-col items-center justify-center h-full p-3">
-            <div className="bg-white rounded-lg p-3 mb-3">
-              <Mail className="w-6 h-6 text-gray-600" />
+        {/* Create Section - Minimized Width Only */}
+        <Card className="bg-slate-800 dark:bg-slate-900 w-32">
+          <CardContent className="flex flex-col items-center justify-center h-full p-4">
+            <div className="bg-white rounded-lg p-4 mb-4">
+              <Mail className="w-8 h-8 text-gray-600" />
             </div>
-            <Button className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-1 rounded font-medium text-sm">
+            <Button className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm">
               Create
             </Button>
           </CardContent>
