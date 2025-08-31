@@ -458,7 +458,32 @@ export default function AdminDashboard() {
       </Card>
 
       {/* Messages and Meetings Section */}
-      <div className="grid grid-cols-2 gap-3 h-fit">
+      <div className="grid grid-cols-3 gap-3 h-fit">
+        {/* Pending Meetings */}
+        <Card className="bg-gray-50 dark:bg-gray-800">
+          <CardHeader className="pb-1 pt-2">
+            <CardTitle className="text-lg text-gray-900 dark:text-white">Pending Meetings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-4 text-center">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">TL's Meeting</h3>
+                <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">3</div>
+                <Button size="sm" className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded-none">
+                  View
+                </Button>
+              </div>
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-4 text-center">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">CEO's Meeting</h3>
+                <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">1</div>
+                <Button size="sm" className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded-none">
+                  View
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Message Status */}
         <Card className="bg-gray-50 dark:bg-gray-800">
           <CardHeader className="pb-1 pt-2">
@@ -494,29 +519,15 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
         
-        {/* Pending Meetings */}
-        <Card className="bg-gray-50 dark:bg-gray-800">
-          <CardHeader className="pb-1 pt-2 flex flex-row items-center justify-between">
-            <CardTitle className="text-lg text-gray-900 dark:text-white">Pending Meetings</CardTitle>
-            <Button variant="link" size="sm" className="text-blue-600 text-xs rounded-sm">View More</Button>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-4 text-center">
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">TL's Meeting</h3>
-                <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">3</div>
-                <Button size="sm" className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded-none">
-                  View
-                </Button>
-              </div>
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-4 text-center">
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">CEO's Meeting</h3>
-                <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">1</div>
-                <Button size="sm" className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded-none">
-                  View
-                </Button>
-              </div>
+        {/* Create Section */}
+        <Card className="bg-slate-800 dark:bg-slate-900">
+          <CardContent className="flex flex-col items-center justify-center h-full p-6">
+            <div className="bg-white rounded-lg p-6 mb-4">
+              <Mail className="w-8 h-8 text-gray-600" />
             </div>
+            <Button className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded font-medium">
+              Create
+            </Button>
           </CardContent>
         </Card>
       </div>
