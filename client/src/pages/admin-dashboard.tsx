@@ -472,9 +472,9 @@ export default function AdminDashboard() {
       </Card>
 
       {/* Messages and Meetings Section */}
-      <div className="flex gap-3 h-fit">
-        {/* Pending Meetings - Proper Size */}
-        <Card className="bg-gray-100 dark:bg-gray-700 w-64">
+      <div className="grid grid-cols-10 gap-3 h-fit">
+        {/* Pending Meetings - 4/10 width */}
+        <Card className="bg-gray-100 dark:bg-gray-700 col-span-4">
           <CardHeader className="pb-2 pt-3">
             <CardTitle className="text-lg text-gray-900 dark:text-white">Pending Meetings</CardTitle>
           </CardHeader>
@@ -512,8 +512,8 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Message Status - Flex Grow */}
-        <Card className="bg-gray-50 dark:bg-gray-800 flex-1">
+        {/* Message Status - 5/10 width */}
+        <Card className="bg-gray-50 dark:bg-gray-800 col-span-5">
           <CardHeader className="pb-1 pt-2">
             <CardTitle className="text-lg text-gray-900 dark:text-white">Message Status</CardTitle>
           </CardHeader>
@@ -547,13 +547,13 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
         
-        {/* Create Section - Minimized Width Only */}
-        <Card className="bg-slate-800 dark:bg-slate-900 w-32">
-          <CardContent className="flex flex-col items-center justify-center h-full p-4">
-            <div className="bg-white rounded-lg p-4 mb-4">
-              <Mail className="w-8 h-8 text-gray-600" />
+        {/* Create Section - 1/10 width */}
+        <Card className="bg-slate-800 dark:bg-slate-900 col-span-1">
+          <CardContent className="flex flex-col items-center justify-center h-full p-2">
+            <div className="bg-white rounded-lg p-2 mb-2">
+              <Mail className="w-6 h-6 text-gray-600" />
             </div>
-            <Button className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm">
+            <Button className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-2 py-1 rounded font-medium text-xs">
               Create
             </Button>
           </CardContent>
