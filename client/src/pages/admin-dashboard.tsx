@@ -240,6 +240,12 @@ const deliveredData = [
   { requirement: "UI/UX Designer", candidate: "Mike Wilson", client: "Google", deliveredDate: "29-Aug-2025", status: "Delivered" }
 ];
 
+const defaultedData = [
+  { requirement: "Frontend Developer", candidate: "Alex Brown", client: "Microsoft", expectedDate: "28-Aug-2025", status: "Defaulted" },
+  { requirement: "Data Scientist", candidate: "Emma Davis", client: "Netflix", expectedDate: "27-Aug-2025", status: "Defaulted" },
+  { requirement: "DevOps Engineer", candidate: "Chris Lee", client: "Spotify", expectedDate: "26-Aug-2025", status: "Defaulted" }
+];
+
 export default function AdminDashboard() {
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [activeTab, setActiveTab] = useState('team');
@@ -249,6 +255,7 @@ export default function AdminDashboard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [isDeliveredModalOpen, setIsDeliveredModalOpen] = useState(false);
+  const [isDefaultedModalOpen, setIsDefaultedModalOpen] = useState(false);
 
   const handleMemberClick = (member: any) => {
     setSelectedMember(member);
@@ -412,7 +419,12 @@ export default function AdminDashboard() {
                   <p className="text-4xl font-bold mb-3">
                     {dailyMetricsData.dailyDeliveryDefaulted}
                   </p>
-                  <Button size="sm" className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded-sm">
+                  <Button 
+                    size="sm" 
+                    className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded-sm"
+                    onClick={() => setIsDefaultedModalOpen(true)}
+                    data-testid="button-view-defaulted"
+                  >
                     View
                   </Button>
                 </div>
@@ -3913,6 +3925,56 @@ export default function AdminDashboard() {
                 onClick={() => setIsDeliveredModalOpen(false)}
                 className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded"
                 data-testid="button-close-delivered-modal"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Defaulted View Modal */}
+      <Dialog open={isDefaultedModalOpen} onOpenChange={setIsDefaultedModalOpen}>
+        <DialogContent className="max-w-4xl mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+              Defaulted Items
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-4">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
+                <thead>
+                  <tr className="bg-gray-200 dark:bg-gray-700">
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Requirement</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Candidate</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Client</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Expected Date</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {defaultedData.map((item, index) => (
+                    <tr key={index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
+                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{item.requirement}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.candidate}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.client}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.expectedDate}</td>
+                      <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
+                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <Button 
+                onClick={() => setIsDefaultedModalOpen(false)}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded"
+                data-testid="button-close-defaulted-modal"
               >
                 Close
               </Button>
