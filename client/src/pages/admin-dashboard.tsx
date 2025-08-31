@@ -241,9 +241,7 @@ const deliveredData = [
 ];
 
 const defaultedData = [
-  { requirement: "Frontend Developer", candidate: "Alex Brown", client: "Microsoft", expectedDate: "28-Aug-2025", status: "Defaulted" },
-  { requirement: "Data Scientist", candidate: "Emma Davis", client: "Netflix", expectedDate: "27-Aug-2025", status: "Defaulted" },
-  { requirement: "DevOps Engineer", candidate: "Chris Lee", client: "Spotify", expectedDate: "26-Aug-2025", status: "Defaulted" }
+  { requirement: "Frontend Developer", candidate: "Alex Brown", client: "Microsoft", expectedDate: "28-Aug-2025", status: "Defaulted" }
 ];
 
 export default function AdminDashboard() {
