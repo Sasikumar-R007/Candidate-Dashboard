@@ -4133,6 +4133,126 @@ export default function AdminDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Create Modal (Message/Meeting) */}
+      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+        <DialogContent className="max-w-md mx-auto">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Create</DialogTitle>
+          </DialogHeader>
+          <div className="p-6">
+            {/* Toggle Tabs */}
+            <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6">
+              <button
+                onClick={() => setCreateModalSession('message')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 ${
+                  createModalSession === 'message'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+                data-testid="button-message-tab"
+              >
+                Message
+              </button>
+              <button
+                onClick={() => setCreateModalSession('meeting')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 ${
+                  createModalSession === 'meeting'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+                data-testid="button-meeting-tab"
+              >
+                Meeting
+              </button>
+            </div>
+
+            {/* Message Form */}
+            {createModalSession === 'message' && (
+              <div className="space-y-4">
+                <Select data-testid="select-message-recipient">
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select recipient" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="acai">Acai</SelectItem>
+                    <SelectItem value="arun">Arun</SelectItem>
+                    <SelectItem value="anusha">Anusha</SelectItem>
+                    <SelectItem value="umar">Umar</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Textarea
+                  placeholder="Enter here!"
+                  rows={4}
+                  className="w-full resize-none"
+                  data-testid="textarea-message-content"
+                />
+                
+                <div className="flex justify-end">
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded flex items-center gap-2"
+                    data-testid="button-send-message"
+                  >
+                    Send 
+                    <span className="text-lg">→</span>
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Meeting Form */}
+            {createModalSession === 'meeting' && (
+              <div className="space-y-4">
+                <Select data-testid="select-meeting-with">
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Meeting with" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="acai">Acai</SelectItem>
+                    <SelectItem value="arun">Arun</SelectItem>
+                    <SelectItem value="anusha">Anusha</SelectItem>
+                    <SelectItem value="umar">Umar</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Select data-testid="select-meeting-type">
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Meeting type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ceo">CEO</SelectItem>
+                    <SelectItem value="performance">Performance Review</SelectItem>
+                    <SelectItem value="planning">Team Planning</SelectItem>
+                    <SelectItem value="one-on-one">One-on-One</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Select data-testid="select-meeting-date">
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Date" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="tomorrow">Tomorrow</SelectItem>
+                    <SelectItem value="next-week">Next Week</SelectItem>
+                    <SelectItem value="custom">Custom Date</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <div className="flex justify-end">
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded"
+                    data-testid="button-set-meeting"
+                  >
+                    Set
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
