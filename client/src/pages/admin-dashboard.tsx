@@ -266,6 +266,8 @@ export default function AdminDashboard() {
   const [isDefaultedModalOpen, setIsDefaultedModalOpen] = useState(false);
   const [isTlMeetingsModalOpen, setIsTlMeetingsModalOpen] = useState(false);
   const [isCeoMeetingsModalOpen, setIsCeoMeetingsModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createModalSession, setCreateModalSession] = useState<'message' | 'meeting'>('message');
 
   const handleMemberClick = (member: any) => {
     setSelectedMember(member);
@@ -474,7 +476,7 @@ export default function AdminDashboard() {
       {/* Messages and Meetings Section */}
       <div className="grid grid-cols-10 gap-3 h-fit">
         {/* Pending Meetings - 4/10 width */}
-        <Card className="bg-gray-100 dark:bg-gray-700 col-span-4">
+        <Card className="bg-gray-100 dark:bg-gray-700 col-span-3">
           <CardHeader className="pb-2 pt-3">
             <CardTitle className="text-lg text-gray-900 dark:text-white">Pending Meetings</CardTitle>
           </CardHeader>
@@ -549,11 +551,15 @@ export default function AdminDashboard() {
         
         {/* Create Section - 1/10 width */}
         <Card className="bg-slate-800 dark:bg-slate-900 col-span-1">
-          <CardContent className="flex flex-col items-center justify-center h-full p-2">
-            <div className="bg-white rounded-lg p-2 mb-2">
-              <Mail className="w-6 h-6 text-gray-600" />
+          <CardContent className="flex flex-col items-center justify-center h-full p-3">
+            <div className="bg-white rounded-lg p-4 mb-3">
+              <Mail className="w-10 h-10 text-gray-600" />
             </div>
-            <Button className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-2 py-1 rounded font-medium text-xs">
+            <Button 
+              className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
+              onClick={() => setIsCreateModalOpen(true)}
+              data-testid="button-create"
+            >
               Create
             </Button>
           </CardContent>
