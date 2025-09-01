@@ -10,7 +10,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck } from "lucide-react";
 import { format } from "date-fns";
@@ -290,6 +291,9 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('team');
   const [adminProfile, setAdminProfile] = useState(initialAdminProfile);
   const [requirementsVisible, setRequirementsVisible] = useState(10);
+  
+  // Pipeline modal state
+  const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
   const [, navigate] = useLocation();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedMember, setSelectedMember] = useState<any>(null);
@@ -746,11 +750,23 @@ export default function AdminDashboard() {
                               )}
                             </td>
                             <td className="py-3 px-3">
-                              <Button variant="ghost" size="sm">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                                </svg>
-                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                                    </svg>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-32">
+                                  <DropdownMenuItem>
+                                    Reassign
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    Archive
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </td>
                           </tr>
                         ))}
@@ -2057,11 +2073,23 @@ export default function AdminDashboard() {
                               )}
                             </td>
                             <td className="py-3 px-3">
-                              <Button variant="ghost" size="sm">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                                </svg>
-                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                                    </svg>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-32">
+                                  <DropdownMenuItem>
+                                    Reassign
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    Archive
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </td>
                           </tr>
                         ))}
@@ -2448,7 +2476,11 @@ export default function AdminDashboard() {
                     </div>
                     <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
                       <div className="flex justify-end">
-                        <Button variant="ghost" className="text-blue-600 hover:text-blue-700 text-sm">
+                        <Button 
+                          variant="ghost" 
+                          className="text-blue-600 hover:text-blue-700 text-sm"
+                          onClick={() => setIsClosureModalOpen(true)}
+                        >
                           See More...
                         </Button>
                       </div>
@@ -4141,6 +4173,117 @@ export default function AdminDashboard() {
                 </div>
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Closure Reports Modal */}
+      <Dialog open={isClosureModalOpen} onOpenChange={setIsClosureModalOpen}>
+        <DialogContent className="max-w-5xl mx-auto max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+              All Closure Reports
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-4 overflow-y-auto admin-scrollbar" style={{maxHeight: '60vh'}}>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Candidate</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Position</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Client</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Talent Advisor</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Fixed CTC</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Offered Date</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Joined Date</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-white">David Johnson</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Frontend Developer</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">TechCorp</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Kavitha</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹12,00,000</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">12-06-2025</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">12-04-2025</td>
+                    <td className="p-3"><span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Joined</span></td>
+                  </tr>
+                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-white">Tom Anderson</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">UI/UX Designer</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Designify</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Rajesh</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹15,00,000</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">18-06-2025</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">05-05-2025</td>
+                    <td className="p-3"><span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Joined</span></td>
+                  </tr>
+                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-white">Robert Kim</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Backend Developer</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">CodeLabs</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Sowmiya</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹18,00,000</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">28-06-2025</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">19-08-2025</td>
+                    <td className="p-3"><span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Joined</span></td>
+                  </tr>
+                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-white">Kevin Brown</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">QA Tester</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">AppLogic</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Kalaiselvi</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹10,00,000</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">03-07-2025</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">03-09-2025</td>
+                    <td className="p-3"><span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Joined</span></td>
+                  </tr>
+                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-white">Mel Gibson</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Mobile App Developer</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Tesco</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Malathi</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹16,00,000</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">18-07-2025</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">10-10-2025</td>
+                    <td className="p-3"><span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Joined</span></td>
+                  </tr>
+                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-white">Sarah Williams</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Product Manager</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">InnovateTech</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Priya</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹25,00,000</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">15-08-2025</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">01-11-2025</td>
+                    <td className="p-3"><span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">Pending</span></td>
+                  </tr>
+                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-white">Michael Chen</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Data Scientist</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">DataFlow</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Arun</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹22,00,000</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">25-08-2025</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">15-11-2025</td>
+                    <td className="p-3"><span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Joined</span></td>
+                  </tr>
+                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-white">Lisa Rodriguez</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">DevOps Engineer</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">CloudTech</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Anusha</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹20,00,000</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">10-09-2025</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">25-11-2025</td>
+                    <td className="p-3"><span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Joined</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
