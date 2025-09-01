@@ -13,6 +13,7 @@ import SourceResume from "@/pages/source-resume";
 import RecruiterActiveJobs from "@/pages/recruiter-active-jobs";
 import RecruiterNewApplications from "@/pages/recruiter-new-applications";
 import NotFound from "@/pages/not-found";
+import Archives from "@/pages/archives";
 
 function Router() {
   return (
@@ -25,6 +26,7 @@ function Router() {
       <Route path="/source-resume" component={SourceResume} />
       <Route path="/recruiter-active-jobs" component={RecruiterActiveJobs} />
       <Route path="/recruiter-new-applications" component={RecruiterNewApplications} />
+      <Route path="/archives" component={Archives} />
       <Route component={NotFound} />
     </Switch>
   );

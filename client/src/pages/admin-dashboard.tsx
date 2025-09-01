@@ -15,6 +15,26 @@ import { Input } from "@/components/ui/input";
 import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck } from "lucide-react";
 import { format } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useLocation } from "wouter";
+
+// Requirements data for pagination
+const requirementsData = [
+  { id: 1, position: "Mobile App Developer", criticality: "HIGH", company: "Tesco", spoc: "Mel Gibson", talentAdvisor: "Mel Gibson", teamLead: "Arun" },
+  { id: 2, position: "Backend Developer", criticality: "LOW", company: "CodeLabs", spoc: "Robert Kim", talentAdvisor: "Robert Kim", teamLead: "Arun" },
+  { id: 3, position: "Frontend Developer", criticality: "MEDIUM", company: "TechCorp", spoc: "David Wilson", talentAdvisor: "Unassigned", teamLead: "Arun" },
+  { id: 4, position: "QA Tester", criticality: "HIGH", company: "AppLogic", spoc: "Kevin Brown", talentAdvisor: "Unassigned", teamLead: "Unassigned" },
+  { id: 5, position: "Mobile App Developer", criticality: "MEDIUM", company: "Tesco", spoc: "Mel Gibson", talentAdvisor: "Mel Gibson", teamLead: "Arun" },
+  { id: 6, position: "Backend Developer", criticality: "LOW", company: "CodeLabs", spoc: "Robert Kim", talentAdvisor: "Robert Kim", teamLead: "Arun" },
+  { id: 7, position: "UI/UX Designer", criticality: "MEDIUM", company: "Designify", spoc: "Tom Anderson", talentAdvisor: "Unassigned", teamLead: "Anusha" },
+  { id: 8, position: "Frontend Developer", criticality: "HIGH", company: "TechCorp", spoc: "David Wilson", talentAdvisor: "Unassigned", teamLead: "Arun" },
+  { id: 9, position: "UI/UX Designer", criticality: "MEDIUM", company: "Designify", spoc: "Tom Anderson", talentAdvisor: "Unassigned", teamLead: "Anusha" },
+  { id: 10, position: "QA Tester", criticality: "MEDIUM", company: "AppLogic", spoc: "Kevin Brown", talentAdvisor: "Unassigned", teamLead: "Unassigned" },
+  { id: 11, position: "Mobile App Developer", criticality: "HIGH", company: "Designify", spoc: "Mel Gibson", talentAdvisor: "Mel Gibson", teamLead: "Arun" },
+  { id: 12, position: "Backend Developer", criticality: "LOW", company: "Tesco", spoc: "Robert Kim", talentAdvisor: "Robert Kim", teamLead: "Unassigned" },
+  { id: 13, position: "Frontend Developer", criticality: "HIGH", company: "CodeLabs", spoc: "David Wilson", talentAdvisor: "Unassigned", teamLead: "Anusha" },
+  { id: 14, position: "QA Tester", criticality: "LOW", company: "TechCorp", spoc: "Kevin Brown", talentAdvisor: "Unassigned", teamLead: "Arun" },
+  { id: 15, position: "DevOps Engineer", criticality: "HIGH", company: "Netflix", spoc: "Sarah Connor", talentAdvisor: "John Smith", teamLead: "Arun" }
+];
 
 // Admin profile will be fetched from API - fallback data matching server
 const initialAdminProfile = {
@@ -269,6 +289,8 @@ export default function AdminDashboard() {
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [activeTab, setActiveTab] = useState('team');
   const [adminProfile, setAdminProfile] = useState(initialAdminProfile);
+  const [requirementsVisible, setRequirementsVisible] = useState(10);
+  const [, navigate] = useLocation();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedMember, setSelectedMember] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -340,6 +362,35 @@ export default function AdminDashboard() {
     showSuccessAlert(`Meeting set with ${personName} successfully`);
     resetForm();
     setIsCreateModalOpen(false);
+  };
+
+  // Requirements pagination handlers
+  const handleRequirementsViewMore = () => {
+    if (requirementsVisible >= requirementsData.length) {
+      setRequirementsVisible(10);
+    } else {
+      setRequirementsVisible(prev => Math.min(prev + 5, requirementsData.length));
+    }
+  };
+
+  const handleArchivesClick = () => {
+    navigate('/archives');
+  };
+
+  const displayedRequirements = requirementsData.slice(0, requirementsVisible);
+  const isShowingAllRequirements = requirementsVisible >= requirementsData.length;
+
+  const getCriticalityColor = (criticality: string) => {
+    switch (criticality) {
+      case 'HIGH':
+        return 'bg-red-100 text-red-800';
+      case 'MEDIUM':
+        return 'bg-blue-100 text-blue-800';
+      case 'LOW':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
   };
 
   const handleDateChange = (value: string) => {
@@ -670,185 +721,44 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Mobile App Developer</td>
-                          <td className="py-3 px-3">
-                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded">HIGH</span>
-                          </td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Tesco</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Mel Gibson</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Mel Gibson</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun</td>
-                          <td className="py-3 px-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </Button>
-                          </td>
-                        </tr>
-                        
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Backend Developer</td>
-                          <td className="py-3 px-3">
-                            <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-3 py-1 rounded">LOW</span>
-                          </td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">CodeLabs</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Robert Kim</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Robert Kim</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun</td>
-                          <td className="py-3 px-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </Button>
-                          </td>
-                        </tr>
-                        
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Frontend Developer</td>
-                          <td className="py-3 px-3">
-                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded">HIGH</span>
-                          </td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">TechCorp</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">David Wilson</td>
-                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun</td>
-                          <td className="py-3 px-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </Button>
-                          </td>
-                        </tr>
-                        
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">QA Tester</td>
-                          <td className="py-3 px-3">
-                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded">MEDIUM</span>
-                          </td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">AppLogic</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Kevin Brown</td>
-                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
-                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
-                          <td className="py-3 px-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </Button>
-                          </td>
-                        </tr>
-                        
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Mobile App Developer</td>
-                          <td className="py-3 px-3">
-                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded">MEDIUM</span>
-                          </td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Tesco</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Mel Gibson</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Mel Gibson</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun</td>
-                          <td className="py-3 px-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </Button>
-                          </td>
-                        </tr>
-                        
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Backend Developer</td>
-                          <td className="py-3 px-3">
-                            <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-3 py-1 rounded">LOW</span>
-                          </td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">CodeLabs</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Robert Kim</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Robert Kim</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun</td>
-                          <td className="py-3 px-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </Button>
-                          </td>
-                        </tr>
-                        
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">UI/UX Designer</td>
-                          <td className="py-3 px-3">
-                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded">MEDIUM</span>
-                          </td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Designify</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Tom Anderson</td>
-                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Anusha</td>
-                          <td className="py-3 px-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </Button>
-                          </td>
-                        </tr>
-                        
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Frontend Developer</td>
-                          <td className="py-3 px-3">
-                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded">HIGH</span>
-                          </td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">TechCorp</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">David Wilson</td>
-                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun</td>
-                          <td className="py-3 px-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </Button>
-                          </td>
-                        </tr>
-                        
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">UI/UX Designer</td>
-                          <td className="py-3 px-3">
-                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded">MEDIUM</span>
-                          </td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Designify</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Tom Anderson</td>
-                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Anusha</td>
-                          <td className="py-3 px-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </Button>
-                          </td>
-                        </tr>
-                        
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">QA Tester</td>
-                          <td className="py-3 px-3">
-                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded">MEDIUM</span>
-                          </td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">AppLogic</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Kevin Brown</td>
-                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
-                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
-                          <td className="py-3 px-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </Button>
-                          </td>
-                        </tr>
+                        {displayedRequirements.map((requirement) => (
+                          <tr key={requirement.id} className="border-b border-gray-100 dark:border-gray-800">
+                            <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{requirement.position}</td>
+                            <td className="py-3 px-3">
+                              <span className={`text-xs font-semibold px-3 py-1 rounded ${getCriticalityColor(requirement.criticality)}`}>
+                                {requirement.criticality}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{requirement.company}</td>
+                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{requirement.spoc}</td>
+                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">
+                              {requirement.talentAdvisor === "Unassigned" ? (
+                                <span className="text-cyan-500 dark:text-cyan-400">{requirement.talentAdvisor}</span>
+                              ) : (
+                                requirement.talentAdvisor
+                              )}
+                            </td>
+                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">
+                              {requirement.teamLead === "Unassigned" ? (
+                                <span className="text-cyan-500 dark:text-cyan-400">{requirement.teamLead}</span>
+                              ) : (
+                                requirement.teamLead
+                              )}
+                            </td>
+                            <td className="py-3 px-3">
+                              <Button variant="ghost" size="sm">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                                </svg>
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+
+
+
+
+
                         
                         <tr className="border-b border-gray-100 dark:border-gray-800">
                           <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Mobile App Developer</td>
@@ -926,11 +836,18 @@ export default function AdminDashboard() {
                   </div>
                   
                   <div className="flex justify-center gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
-                    <Button variant="outline" className="px-6 py-2 rounded bg-red-100 hover:bg-red-200 text-red-800 border-red-200">
+                    <Button 
+                      variant="outline" 
+                      className="px-6 py-2 rounded bg-red-100 hover:bg-red-200 text-red-800 border-red-200"
+                      onClick={handleArchivesClick}
+                    >
                       Archives
                     </Button>
-                    <Button className="px-6 py-2 rounded bg-cyan-400 hover:bg-cyan-500 text-black font-medium">
-                      View More
+                    <Button 
+                      className="px-6 py-2 rounded bg-cyan-400 hover:bg-cyan-500 text-black font-medium"
+                      onClick={handleRequirementsViewMore}
+                    >
+                      {isShowingAllRequirements ? 'View Less' : 'View More'}
                     </Button>
                   </div>
                 </div>
@@ -2115,185 +2032,44 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Mobile App Developer</td>
-                          <td className="py-3 px-3">
-                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded">HIGH</span>
-                          </td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Tesco</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Mel Gibson</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Mel Gibson</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun</td>
-                          <td className="py-3 px-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </Button>
-                          </td>
-                        </tr>
-                        
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Backend Developer</td>
-                          <td className="py-3 px-3">
-                            <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-3 py-1 rounded">LOW</span>
-                          </td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">CodeLabs</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Robert Kim</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Robert Kim</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun</td>
-                          <td className="py-3 px-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </Button>
-                          </td>
-                        </tr>
-                        
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Frontend Developer</td>
-                          <td className="py-3 px-3">
-                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded">HIGH</span>
-                          </td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">TechCorp</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">David Wilson</td>
-                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun</td>
-                          <td className="py-3 px-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </Button>
-                          </td>
-                        </tr>
-                        
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">QA Tester</td>
-                          <td className="py-3 px-3">
-                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded">MEDIUM</span>
-                          </td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">AppLogic</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Kevin Brown</td>
-                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
-                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
-                          <td className="py-3 px-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </Button>
-                          </td>
-                        </tr>
-                        
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Mobile App Developer</td>
-                          <td className="py-3 px-3">
-                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded">MEDIUM</span>
-                          </td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Tesco</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Mel Gibson</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Mel Gibson</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun</td>
-                          <td className="py-3 px-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </Button>
-                          </td>
-                        </tr>
-                        
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Backend Developer</td>
-                          <td className="py-3 px-3">
-                            <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-3 py-1 rounded">LOW</span>
-                          </td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">CodeLabs</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Robert Kim</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Robert Kim</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun</td>
-                          <td className="py-3 px-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </Button>
-                          </td>
-                        </tr>
-                        
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">UI/UX Designer</td>
-                          <td className="py-3 px-3">
-                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded">MEDIUM</span>
-                          </td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Designify</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Tom Anderson</td>
-                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Anusha</td>
-                          <td className="py-3 px-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </Button>
-                          </td>
-                        </tr>
-                        
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Frontend Developer</td>
-                          <td className="py-3 px-3">
-                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded">HIGH</span>
-                          </td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">TechCorp</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">David Wilson</td>
-                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun</td>
-                          <td className="py-3 px-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </Button>
-                          </td>
-                        </tr>
-                        
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">UI/UX Designer</td>
-                          <td className="py-3 px-3">
-                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded">MEDIUM</span>
-                          </td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Designify</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Tom Anderson</td>
-                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Anusha</td>
-                          <td className="py-3 px-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </Button>
-                          </td>
-                        </tr>
-                        
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">QA Tester</td>
-                          <td className="py-3 px-3">
-                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded">MEDIUM</span>
-                          </td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">AppLogic</td>
-                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Kevin Brown</td>
-                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
-                          <td className="py-3 px-3 text-cyan-500 dark:text-cyan-400">Unassigned</td>
-                          <td className="py-3 px-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                              </svg>
-                            </Button>
-                          </td>
-                        </tr>
+                        {displayedRequirements.map((requirement) => (
+                          <tr key={requirement.id} className="border-b border-gray-100 dark:border-gray-800">
+                            <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{requirement.position}</td>
+                            <td className="py-3 px-3">
+                              <span className={`text-xs font-semibold px-3 py-1 rounded ${getCriticalityColor(requirement.criticality)}`}>
+                                {requirement.criticality}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{requirement.company}</td>
+                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{requirement.spoc}</td>
+                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">
+                              {requirement.talentAdvisor === "Unassigned" ? (
+                                <span className="text-cyan-500 dark:text-cyan-400">{requirement.talentAdvisor}</span>
+                              ) : (
+                                requirement.talentAdvisor
+                              )}
+                            </td>
+                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">
+                              {requirement.teamLead === "Unassigned" ? (
+                                <span className="text-cyan-500 dark:text-cyan-400">{requirement.teamLead}</span>
+                              ) : (
+                                requirement.teamLead
+                              )}
+                            </td>
+                            <td className="py-3 px-3">
+                              <Button variant="ghost" size="sm">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                                </svg>
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+
+
+
+
+
                         
                         <tr className="border-b border-gray-100 dark:border-gray-800">
                           <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Mobile App Developer</td>
@@ -2371,11 +2147,18 @@ export default function AdminDashboard() {
                   </div>
                   
                   <div className="flex justify-center gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
-                    <Button variant="outline" className="px-6 py-2 rounded bg-red-100 hover:bg-red-200 text-red-800 border-red-200">
+                    <Button 
+                      variant="outline" 
+                      className="px-6 py-2 rounded bg-red-100 hover:bg-red-200 text-red-800 border-red-200"
+                      onClick={handleArchivesClick}
+                    >
                       Archives
                     </Button>
-                    <Button className="px-6 py-2 rounded bg-cyan-400 hover:bg-cyan-500 text-black font-medium">
-                      View More
+                    <Button 
+                      className="px-6 py-2 rounded bg-cyan-400 hover:bg-cyan-500 text-black font-medium"
+                      onClick={handleRequirementsViewMore}
+                    >
+                      {isShowingAllRequirements ? 'View Less' : 'View More'}
                     </Button>
                   </div>
                 </div>
