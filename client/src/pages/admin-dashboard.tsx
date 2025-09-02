@@ -789,49 +789,60 @@ export default function AdminDashboard() {
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Requirements</h2>
             </div>
             
-            <div className="flex gap-6">
-              {/* Left Side - Requirements Table */}
-              <div className="flex-1">
+            <div className="flex gap-6 h-full">
+              {/* Middle Section - Requirements Table */}
+              <div className="flex-1 overflow-y-auto admin-scrollbar">
+                {/* Add Requirements Button */}
+                <div className="mb-4">
+                  <Button 
+                    className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded text-sm"
+                    onClick={() => setIsAddRequirementModalOpen(true)}
+                    data-testid="button-add-requirements"
+                  >
+                    + Add Requirements
+                  </Button>
+                </div>
+                
                 <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
                   <div className="overflow-x-auto admin-scrollbar">
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="border-b border-gray-200 dark:border-gray-700">
-                          <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Positions</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Criticality</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Company</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">SPOC</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Talent Advisor</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Team Lead</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Actions</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Positions</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Criticality</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Company</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">SPOC</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Talent Advisor</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Team Lead</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {displayedRequirements.map((requirement) => (
                           <tr key={requirement.id} className="border-b border-gray-100 dark:border-gray-800">
-                            <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{requirement.position}</td>
-                            <td className="py-3 px-3">
-                              <span className={`text-xs font-semibold px-3 py-1 rounded ${getCriticalityColor(requirement.criticality)}`}>
+                            <td className="py-2 px-2 text-gray-900 dark:text-white font-medium text-xs">{requirement.position}</td>
+                            <td className="py-2 px-2">
+                              <span className={`text-xs font-medium px-2 py-1 rounded ${getCriticalityColor(requirement.criticality)}`}>
                                 {requirement.criticality}
                               </span>
                             </td>
-                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{requirement.company}</td>
-                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{requirement.spoc}</td>
-                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">
+                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-xs">{requirement.company}</td>
+                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-xs">{requirement.spoc}</td>
+                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-xs">
                               {requirement.talentAdvisor === "Unassigned" ? (
                                 <span className="text-cyan-500 dark:text-cyan-400">{requirement.talentAdvisor}</span>
                               ) : (
                                 requirement.talentAdvisor
                               )}
                             </td>
-                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">
+                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-xs">
                               {requirement.teamLead === "Unassigned" ? (
                                 <span className="text-cyan-500 dark:text-cyan-400">{requirement.teamLead}</span>
                               ) : (
                                 requirement.teamLead
                               )}
                             </td>
-                            <td className="py-3 px-3">
+                            <td className="py-2 px-2">
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button variant="ghost" size="sm">
@@ -842,7 +853,7 @@ export default function AdminDashboard() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-32">
                                   <DropdownMenuItem onClick={() => handleReassign(requirement)}>
-                                    View Details
+                                    Reassign
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => handleArchive(requirement)}>
                                     Archive
@@ -884,44 +895,43 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Right Side - Priority Distribution */}
-              <div className="w-72">
+              {/* Right Section - Priority Distribution */}
+              <div className="w-72 overflow-y-auto admin-scrollbar">
                 <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Priority Distribution</h3>
-                    <div className="flex justify-end">
-                      <Button 
-                        className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-3 py-2 rounded text-sm"
-                        onClick={() => setIsAddRequirementModalOpen(true)}
-                        data-testid="button-add-requirements"
-                      >
-                        + Add Requirements
-                      </Button>
-                    </div>
                   </div>
                   
                   <div className="space-y-4">
-                    <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                      <div className="text-6xl font-bold text-red-600 dark:text-red-400 mb-2">H</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">IGH</div>
+                    <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <div className="text-4xl font-bold text-red-600 dark:text-red-400">H</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">IGH</div>
+                      </div>
                       <div className="text-2xl font-bold text-red-600 dark:text-red-400">15</div>
                     </div>
                     
-                    <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <div className="text-6xl font-bold text-blue-600 dark:text-blue-400 mb-2">M</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">EDIUM</div>
+                    <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <div className="text-4xl font-bold text-blue-600 dark:text-blue-400">M</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">EDIUM</div>
+                      </div>
                       <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">9</div>
                     </div>
                     
-                    <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <div className="text-6xl font-bold text-gray-600 dark:text-gray-400 mb-2">L</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">OW</div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <div className="text-4xl font-bold text-gray-600 dark:text-gray-400">L</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">OW</div>
+                      </div>
                       <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">3</div>
                     </div>
                     
-                    <div className="text-center p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                      <div className="text-6xl font-bold text-gray-900 dark:text-white mb-2">T</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">OTAL</div>
+                    <div className="flex items-center justify-between p-3 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <div className="text-4xl font-bold text-gray-900 dark:text-white">T</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">OTAL</div>
+                      </div>
                       <div className="text-2xl font-bold text-gray-900 dark:text-white">27</div>
                     </div>
                   </div>
@@ -2053,49 +2063,60 @@ export default function AdminDashboard() {
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Requirements</h2>
             </div>
             
-            <div className="flex gap-6">
-              {/* Left Side - Requirements Table */}
-              <div className="flex-1">
+            <div className="flex gap-6 h-full">
+              {/* Middle Section - Requirements Table */}
+              <div className="flex-1 overflow-y-auto admin-scrollbar">
+                {/* Add Requirements Button */}
+                <div className="mb-4">
+                  <Button 
+                    className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded text-sm"
+                    onClick={() => setIsAddRequirementModalOpen(true)}
+                    data-testid="button-add-requirements"
+                  >
+                    + Add Requirements
+                  </Button>
+                </div>
+                
                 <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
                   <div className="overflow-x-auto admin-scrollbar">
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="border-b border-gray-200 dark:border-gray-700">
-                          <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Positions</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Criticality</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Company</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">SPOC</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Talent Advisor</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Team Lead</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Actions</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Positions</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Criticality</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Company</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">SPOC</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Talent Advisor</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Team Lead</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {displayedRequirements.map((requirement) => (
                           <tr key={requirement.id} className="border-b border-gray-100 dark:border-gray-800">
-                            <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{requirement.position}</td>
-                            <td className="py-3 px-3">
-                              <span className={`text-xs font-semibold px-3 py-1 rounded ${getCriticalityColor(requirement.criticality)}`}>
+                            <td className="py-2 px-2 text-gray-900 dark:text-white font-medium text-xs">{requirement.position}</td>
+                            <td className="py-2 px-2">
+                              <span className={`text-xs font-medium px-2 py-1 rounded ${getCriticalityColor(requirement.criticality)}`}>
                                 {requirement.criticality}
                               </span>
                             </td>
-                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{requirement.company}</td>
-                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{requirement.spoc}</td>
-                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">
+                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-xs">{requirement.company}</td>
+                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-xs">{requirement.spoc}</td>
+                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-xs">
                               {requirement.talentAdvisor === "Unassigned" ? (
                                 <span className="text-cyan-500 dark:text-cyan-400">{requirement.talentAdvisor}</span>
                               ) : (
                                 requirement.talentAdvisor
                               )}
                             </td>
-                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">
+                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-xs">
                               {requirement.teamLead === "Unassigned" ? (
                                 <span className="text-cyan-500 dark:text-cyan-400">{requirement.teamLead}</span>
                               ) : (
                                 requirement.teamLead
                               )}
                             </td>
-                            <td className="py-3 px-3">
+                            <td className="py-2 px-2">
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button variant="ghost" size="sm">
@@ -2106,7 +2127,7 @@ export default function AdminDashboard() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-32">
                                   <DropdownMenuItem onClick={() => handleReassign(requirement)}>
-                                    View Details
+                                    Reassign
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => handleArchive(requirement)}>
                                     Archive
@@ -2148,44 +2169,43 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Right Side - Priority Distribution */}
-              <div className="w-72">
+              {/* Right Section - Priority Distribution */}
+              <div className="w-72 overflow-y-auto admin-scrollbar">
                 <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Priority Distribution</h3>
-                    <div className="flex justify-end">
-                      <Button 
-                        className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-3 py-2 rounded text-sm"
-                        onClick={() => setIsAddRequirementModalOpen(true)}
-                        data-testid="button-add-requirements"
-                      >
-                        + Add Requirements
-                      </Button>
-                    </div>
                   </div>
                   
                   <div className="space-y-4">
-                    <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                      <div className="text-6xl font-bold text-red-600 dark:text-red-400 mb-2">H</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">IGH</div>
+                    <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <div className="text-4xl font-bold text-red-600 dark:text-red-400">H</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">IGH</div>
+                      </div>
                       <div className="text-2xl font-bold text-red-600 dark:text-red-400">15</div>
                     </div>
                     
-                    <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <div className="text-6xl font-bold text-blue-600 dark:text-blue-400 mb-2">M</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">EDIUM</div>
+                    <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <div className="text-4xl font-bold text-blue-600 dark:text-blue-400">M</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">EDIUM</div>
+                      </div>
                       <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">9</div>
                     </div>
                     
-                    <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <div className="text-6xl font-bold text-gray-600 dark:text-gray-400 mb-2">L</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">OW</div>
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <div className="text-4xl font-bold text-gray-600 dark:text-gray-400">L</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">OW</div>
+                      </div>
                       <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">3</div>
                     </div>
                     
-                    <div className="text-center p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                      <div className="text-6xl font-bold text-gray-900 dark:text-white mb-2">T</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">OTAL</div>
+                    <div className="flex items-center justify-between p-3 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <div className="text-4xl font-bold text-gray-900 dark:text-white">T</div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400">OTAL</div>
+                      </div>
                       <div className="text-2xl font-bold text-gray-900 dark:text-white">27</div>
                     </div>
                   </div>
