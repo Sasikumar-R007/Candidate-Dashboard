@@ -322,6 +322,7 @@ export default function AdminDashboard() {
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [isCustomDate, setIsCustomDate] = useState(false);
+  const [isAllRequirementsModalOpen, setIsAllRequirementsModalOpen] = useState(false);
 
   // Requirements API queries
   const { data: requirements = [], isLoading: isLoadingRequirements } = useQuery({
@@ -456,10 +457,8 @@ export default function AdminDashboard() {
   };
 
   const handleRequirementsViewMore = () => {
-    if (requirementsVisible >= requirements.length) {
-      setRequirementsVisible(10);
-    } else {
-      setRequirementsVisible(prev => Math.min(prev + 5, requirements.length));
+    if (requirements.length > 10) {
+      setIsAllRequirementsModalOpen(true);
     }
   };
 
@@ -785,12 +784,9 @@ export default function AdminDashboard() {
       case 'requirements':
         return (
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
-            {/* Header with Requirements title and Add Requirements button */}
-            <div className="flex justify-between items-center mb-6">
+            {/* Header with Requirements title only */}
+            <div className="mb-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Requirements</h2>
-              <Button className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded">
-                + Add Requirements
-              </Button>
             </div>
             
             <div className="flex gap-6">
@@ -846,7 +842,7 @@ export default function AdminDashboard() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-32">
                                   <DropdownMenuItem onClick={() => handleReassign(requirement)}>
-                                    Reassign
+                                    View Details
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => handleArchive(requirement)}>
                                     Archive
@@ -880,8 +876,9 @@ export default function AdminDashboard() {
                     <Button 
                       className="px-6 py-2 rounded bg-cyan-400 hover:bg-cyan-500 text-black font-medium"
                       onClick={handleRequirementsViewMore}
+                      disabled={requirements.length <= 10}
                     >
-                      {isShowingAllRequirements ? 'View Less' : 'View More'}
+                      View More
                     </Button>
                   </div>
                 </div>
@@ -890,15 +887,17 @@ export default function AdminDashboard() {
               {/* Right Side - Priority Distribution */}
               <div className="w-72">
                 <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Priority Distribution</h3>
-                    <Button 
-                      className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-3 py-2 rounded text-sm"
-                      onClick={() => setIsAddRequirementModalOpen(true)}
-                      data-testid="button-add-requirements"
-                    >
-                      + Add Requirements
-                    </Button>
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Priority Distribution</h3>
+                    <div className="flex justify-end">
+                      <Button 
+                        className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-3 py-2 rounded text-sm"
+                        onClick={() => setIsAddRequirementModalOpen(true)}
+                        data-testid="button-add-requirements"
+                      >
+                        + Add Requirements
+                      </Button>
+                    </div>
                   </div>
                   
                   <div className="space-y-4">
@@ -2049,12 +2048,9 @@ export default function AdminDashboard() {
       case 'requirements':
         return (
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
-            {/* Header with Requirements title and Add Requirements button */}
-            <div className="flex justify-between items-center mb-6">
+            {/* Header with Requirements title only */}
+            <div className="mb-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Requirements</h2>
-              <Button className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded">
-                + Add Requirements
-              </Button>
             </div>
             
             <div className="flex gap-6">
@@ -2110,7 +2106,7 @@ export default function AdminDashboard() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-32">
                                   <DropdownMenuItem onClick={() => handleReassign(requirement)}>
-                                    Reassign
+                                    View Details
                                   </DropdownMenuItem>
                                   <DropdownMenuItem onClick={() => handleArchive(requirement)}>
                                     Archive
@@ -2144,8 +2140,9 @@ export default function AdminDashboard() {
                     <Button 
                       className="px-6 py-2 rounded bg-cyan-400 hover:bg-cyan-500 text-black font-medium"
                       onClick={handleRequirementsViewMore}
+                      disabled={requirements.length <= 10}
                     >
-                      {isShowingAllRequirements ? 'View Less' : 'View More'}
+                      View More
                     </Button>
                   </div>
                 </div>
@@ -2154,15 +2151,17 @@ export default function AdminDashboard() {
               {/* Right Side - Priority Distribution */}
               <div className="w-72">
                 <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                  <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Priority Distribution</h3>
-                    <Button 
-                      className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-3 py-2 rounded text-sm"
-                      onClick={() => setIsAddRequirementModalOpen(true)}
-                      data-testid="button-add-requirements"
-                    >
-                      + Add Requirements
-                    </Button>
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Priority Distribution</h3>
+                    <div className="flex justify-end">
+                      <Button 
+                        className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-3 py-2 rounded text-sm"
+                        onClick={() => setIsAddRequirementModalOpen(true)}
+                        data-testid="button-add-requirements"
+                      >
+                        + Add Requirements
+                      </Button>
+                    </div>
                   </div>
                   
                   <div className="space-y-4">
@@ -3655,7 +3654,38 @@ export default function AdminDashboard() {
         <div className="flex-1 ml-16 flex flex-col overflow-hidden" style={{height: 'calc(100vh - 4rem)'}}>
           {renderSidebarContent()}
         </div>
-        {sidebarTab === 'dashboard' && <TeamMembersSidebar />}
+        {sidebarTab === 'dashboard' && (
+          <div className="w-64 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Priority Distribution</h3>
+              <div className="space-y-4">
+                <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                  <div className="text-6xl font-bold text-red-600 dark:text-red-400 mb-2">H</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">IGH</div>
+                  <div className="text-2xl font-bold text-red-600 dark:text-red-400">15</div>
+                </div>
+                
+                <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <div className="text-6xl font-bold text-blue-600 dark:text-blue-400 mb-2">M</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">EDIUM</div>
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">9</div>
+                </div>
+                
+                <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div className="text-6xl font-bold text-gray-600 dark:text-gray-400 mb-2">L</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">OW</div>
+                  <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">3</div>
+                </div>
+                
+                <div className="text-center p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                  <div className="text-6xl font-bold text-gray-900 dark:text-white mb-2">T</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">OTAL</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">27</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Recruiter Details Modal */}
@@ -4320,19 +4350,94 @@ export default function AdminDashboard() {
               <Button
                 onClick={() => {
                   // Update the requirement with new assignments
-                  updateRequirementMutation.mutate({
-                    id: selectedRequirement?.id,
-                    updates: {
-                      // This would include the new team lead and talent advisor
-                      // For now, just close the modal
-                    }
-                  });
+                  if (selectedRequirement) {
+                    updateRequirementMutation.mutate({
+                      id: selectedRequirement.id,
+                      updates: {
+                        talentAdvisor: "Updated TA", // This would be from form state
+                        teamLead: "Updated TL"       // This would be from form state  
+                      }
+                    });
+                  }
                 }}
                 className="bg-cyan-400 hover:bg-cyan-500 text-black btn-rounded"
                 disabled={updateRequirementMutation.isPending}
               >
-                {updateRequirementMutation.isPending ? 'Updating...' : 'Reassign'}
+                {updateRequirementMutation.isPending ? 'Updating...' : 'Update Details'}
               </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* All Requirements Modal */}
+      <Dialog open={isAllRequirementsModalOpen} onOpenChange={setIsAllRequirementsModalOpen}>
+        <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>All Requirements ({requirements.length})</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[60vh]">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead className="sticky top-0 bg-gray-50 dark:bg-gray-800">
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Positions</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Criticality</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Company</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">SPOC</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Talent Advisor</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Team Lead</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {requirements.map((requirement) => (
+                    <tr key={requirement.id} className="border-b border-gray-100 dark:border-gray-800">
+                      <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{requirement.position}</td>
+                      <td className="py-3 px-3">
+                        <span className={`text-xs font-semibold px-3 py-1 rounded ${getCriticalityColor(requirement.criticality)}`}>
+                          {requirement.criticality}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{requirement.company}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{requirement.spoc}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">
+                        {requirement.talentAdvisor === "Unassigned" ? (
+                          <span className="text-cyan-500 dark:text-cyan-400">{requirement.talentAdvisor}</span>
+                        ) : (
+                          requirement.talentAdvisor
+                        )}
+                      </td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">
+                        {requirement.teamLead === "Unassigned" ? (
+                          <span className="text-cyan-500 dark:text-cyan-400">{requirement.teamLead}</span>
+                        ) : (
+                          requirement.teamLead
+                        )}
+                      </td>
+                      <td className="py-3 px-3">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                              </svg>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-32">
+                            <DropdownMenuItem onClick={() => handleReassign(requirement)}>
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleArchive(requirement)}>
+                              Archive
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </DialogContent>
