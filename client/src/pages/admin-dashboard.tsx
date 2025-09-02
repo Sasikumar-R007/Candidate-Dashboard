@@ -558,9 +558,7 @@ export default function AdminDashboard() {
         <CardHeader className="pb-1 pt-1 flex flex-row items-center justify-between">
           <CardTitle className="text-lg text-gray-900 dark:text-white">Target & Incentives</CardTitle>
           <Button 
-            variant="outline" 
-            size="sm" 
-            className="text-blue-600 border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-sm text-sm px-2 py-1"
+            className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2"
             onClick={() => setIsTargetModalOpen(true)}
             data-testid="button-view-all-targets"
           >
@@ -637,23 +635,26 @@ export default function AdminDashboard() {
         
         <CardContent className="p-3">
           <div className="grid grid-cols-3 gap-4">
-            {/* Left side - Metrics with teal background */}
-            <div className="bg-teal-100 dark:bg-teal-800/50 rounded p-3 space-y-2">
-              <div className="flex justify-between items-center py-1">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Requirements</span>
-                <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{dailyMetricsData.totalRequirements}</span>
+            {/* Left side - Metrics with simplified design matching image 2 */}
+            <div className="bg-white rounded p-4 space-y-3">
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm font-medium text-gray-700">Total Requirements</span>
+                <span className="text-2xl font-bold text-blue-600">{dailyMetricsData.totalRequirements}</span>
               </div>
-              <div className="flex justify-between items-center py-1">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Avg. Resumes per Requirement</span>
-                <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{dailyMetricsData.avgResumesPerRequirement}</span>
+              <div className="border-t border-gray-200"></div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm font-medium text-gray-700">Avg. Resumes per Requirement</span>
+                <span className="text-2xl font-bold text-blue-600">{dailyMetricsData.avgResumesPerRequirement}</span>
               </div>
-              <div className="flex justify-between items-center py-1">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Requirements per Recruiter</span>
-                <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{dailyMetricsData.requirementsPerRecruiter}</span>
+              <div className="border-t border-gray-200"></div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm font-medium text-gray-700">Requirements per Recruiter</span>
+                <span className="text-2xl font-bold text-blue-600">{dailyMetricsData.requirementsPerRecruiter}</span>
               </div>
-              <div className="flex justify-between items-center py-1">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Completed Requirements</span>
-                <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">{dailyMetricsData.completedRequirements}</span>
+              <div className="border-t border-gray-200"></div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm font-medium text-gray-700">Completed Requirements</span>
+                <span className="text-2xl font-bold text-blue-600">{dailyMetricsData.completedRequirements}</span>
               </div>
             </div>
             
@@ -801,8 +802,8 @@ export default function AdminDashboard() {
         {/* Create Section - 1/10 width */}
         <Card className="bg-slate-800 dark:bg-slate-900 col-span-2">
           <CardContent className="flex flex-col items-center justify-center h-full p-3">
-            <div className="bg-white  p-4 mb-3">
-              <Mail className="w-10 h-10 text-gray-600" />
+            <div className="p-4 mb-3">
+              <Mail className="w-10 h-10 text-white" />
             </div>
             <Button 
               className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
@@ -921,7 +922,7 @@ export default function AdminDashboard() {
                       Archives
                     </Button>
                     <Button 
-                      className="px-6 py-2 rounded bg-cyan-400 hover:bg-cyan-500 text-black font-medium"
+                      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
                       onClick={handleRequirementsViewMore}
                       disabled={requirements.length <= 10}
                     >
@@ -1496,7 +1497,7 @@ export default function AdminDashboard() {
                 </div>
                 
                 <div className="flex justify-end mt-4">
-                  <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">View More</Button>
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2">View More</Button>
                 </div>
               </CardContent>
             </Card>
@@ -1566,7 +1567,7 @@ export default function AdminDashboard() {
                 </div>
                 
                 <div className="flex justify-end mt-4">
-                  <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">View More</Button>
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2">View More</Button>
                 </div>
               </CardContent>
             </Card>
@@ -1646,7 +1647,7 @@ export default function AdminDashboard() {
                 </div>
                 
                 <div className="flex justify-end mt-4">
-                  <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">View More</Button>
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2">View More</Button>
                 </div>
               </CardContent>
             </Card>
@@ -2099,9 +2100,6 @@ export default function AdminDashboard() {
         return (
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
             {/* Header with Requirements title */}
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Requirements</h2>
-            </div>
             
             <div className="flex gap-6 h-full">
               {/* Middle Section - Requirements Table */}
@@ -2110,7 +2108,7 @@ export default function AdminDashboard() {
                 <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
                   {/* Table Header with Add Button */}
                   <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">Requirements List</h3>
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">Requirements</h3>
                     <Button 
                       className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded text-sm"
                       onClick={() => setIsAddRequirementModalOpen(true)}
@@ -2200,7 +2198,7 @@ export default function AdminDashboard() {
                       Archives
                     </Button>
                     <Button 
-                      className="px-6 py-2 rounded bg-cyan-400 hover:bg-cyan-500 text-black font-medium"
+                      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
                       onClick={handleRequirementsViewMore}
                       disabled={requirements.length <= 10}
                     >

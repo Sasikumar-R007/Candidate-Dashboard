@@ -24,44 +24,40 @@ export default function TeamBoxes() {
   return (
     <div className="grid grid-cols-2 gap-6 mb-6">
       {teams.map((team, index) => (
-        <Card key={index} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow duration-200">
+        <Card key={index} className="bg-white border border-gray-200 hover:shadow-lg transition-shadow duration-200">
           <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <Shield className="h-6 w-6 text-blue-500" />
-                <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Shield className="h-5 w-5 text-blue-500" />
+                <h3 className="text-base font-semibold text-gray-900">
                   {team.name}
                 </h3>
               </div>
               <img 
                 src={team.image} 
                 alt={team.name}
-                className="w-12 h-12 rounded-sm object-cover border-2 border-blue-200 dark:border-blue-800"
-                style={{ borderRadius: '2px' }}
+                className="w-12 h-12 rounded object-cover border-2 border-teal-400"
               />
             </div>
             
-            <div className="flex items-center justify-center text-center">
+            <div className="flex items-center justify-between mt-4 text-center">
               <div>
-                <p className="text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wider">Members</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{team.members}</p>
+                <p className="text-xs font-medium text-red-500 uppercase tracking-wider">Members</p>
+                <p className="text-2xl font-bold text-gray-900">{team.members}</p>
               </div>
-              <div className="mx-4 text-gray-400">|</div>
               <div>
-                <p className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wider">Tenure</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                  {team.tenure} <span className="text-sm font-normal">years</span>
+                <p className="text-xs font-medium text-blue-500 uppercase tracking-wider">Tenure</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {team.tenure} <span className="text-sm font-normal text-gray-500">years</span>
                 </p>
               </div>
-              <div className="mx-4 text-gray-400">|</div>
               <div>
-                <p className="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wider">Qtrs Achieved</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{team.qtrsAchieved}</p>
+                <p className="text-xs font-medium text-green-500 uppercase tracking-wider">Qtrs Achieved</p>
+                <p className="text-2xl font-bold text-gray-900">{team.qtrsAchieved}</p>
               </div>
-              <div className="mx-4 text-gray-400">|</div>
               <div>
-                <p className="text-xs font-medium text-orange-600 dark:text-orange-400 uppercase tracking-wider">Next Milestone</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{team.nextMilestone}</p>
+                <p className="text-xs font-medium text-orange-500 uppercase tracking-wider">Next Milestone</p>
+                <p className="text-2xl font-bold text-gray-900">{team.nextMilestone}</p>
               </div>
             </div>
           </CardContent>
