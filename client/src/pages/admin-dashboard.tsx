@@ -20,6 +20,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
+import type { Requirement } from '@/shared/schema';
 
 // Requirements data for pagination
 const requirementsData = [
@@ -445,12 +446,12 @@ export default function AdminDashboard() {
   };
 
   // Requirements handlers
-  const handleReassign = (requirement: any) => {
+  const handleReassign = (requirement: Requirement) => {
     setSelectedRequirement(requirement);
     setIsReassignModalOpen(true);
   };
 
-  const handleArchive = (requirement: any) => {
+  const handleArchive = (requirement: Requirement) => {
     if (window.confirm(`Are you sure you want to archive "${requirement.position}" requirement?`)) {
       archiveRequirementMutation.mutate(requirement.id);
     }
@@ -793,7 +794,7 @@ export default function AdminDashboard() {
               {/* Middle Section - Requirements Table */}
               <div className="flex-1 overflow-y-auto admin-scrollbar">
                 {/* Add Requirements Button */}
-                <div className="mb-4">
+                <div className="mb-4 flex justify-end">
                   <Button 
                     className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded text-sm"
                     onClick={() => setIsAddRequirementModalOpen(true)}
@@ -2067,7 +2068,7 @@ export default function AdminDashboard() {
               {/* Middle Section - Requirements Table */}
               <div className="flex-1 overflow-y-auto admin-scrollbar">
                 {/* Add Requirements Button */}
-                <div className="mb-4">
+                <div className="mb-4 flex justify-end">
                   <Button 
                     className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded text-sm"
                     onClick={() => setIsAddRequirementModalOpen(true)}
