@@ -303,6 +303,8 @@ export default function AdminDashboard() {
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
   const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
   const [isDatabaseModalOpen, setIsDatabaseModalOpen] = useState(false);
+  const [isClientMasterModalOpen, setIsClientMasterModalOpen] = useState(false);
+  const [isEmployeeMasterModalOpen, setIsEmployeeMasterModalOpen] = useState(false);
   const [cashoutData, setCashoutData] = useState([
     { month: 'Jan', year: '2025', employees: 50, salary: 500000, incentive: 25000, tools: 15000, rent: 50000, others: 10000 },
     { month: 'Feb', year: '2025', employees: 52, salary: 520000, incentive: 28000, tools: 15000, rent: 50000, others: 12000 },
@@ -2096,23 +2098,27 @@ export default function AdminDashboard() {
       case 'requirements':
         return (
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
-            {/* Header with Requirements title and Add Req button in same row */}
-            <div className="mb-6 flex items-center justify-between">
+            {/* Header with Requirements title */}
+            <div className="mb-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Requirements</h2>
-              <Button 
-                className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded text-sm"
-                onClick={() => setIsAddRequirementModalOpen(true)}
-                data-testid="button-add-requirements"
-              >
-                + Add Requirements
-              </Button>
             </div>
             
             <div className="flex gap-6 h-full">
               {/* Middle Section - Requirements Table */}
               <div className="flex-1 overflow-y-auto admin-scrollbar">
                 
-                <div className="bg-white dark:bg-gray-900  border border-gray-200 dark:border-gray-700">
+                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
+                  {/* Table Header with Add Button */}
+                  <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">Requirements List</h3>
+                    <Button 
+                      className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded text-sm"
+                      onClick={() => setIsAddRequirementModalOpen(true)}
+                      data-testid="button-add-requirements"
+                    >
+                      + Add Requirements
+                    </Button>
+                  </div>
                   <div className="overflow-x-auto admin-scrollbar">
                     <table className="w-full border-collapse">
                       <thead>
@@ -2515,14 +2521,6 @@ export default function AdminDashboard() {
             {/* Right Sidebar with Stats - matching image 2 */}
             <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700">
               <div className="p-4 space-y-1">
-                <div className="flex justify-center mb-4">
-                  <Button 
-                    className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded text-sm"
-                    onClick={() => setIsPipelineModalOpen(true)}
-                  >
-                    See More
-                  </Button>
-                </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-green-100 dark:bg-green-900 rounded">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SOURCED</span>
                   <span className="text-lg font-bold text-gray-900 dark:text-white">15</span>
@@ -2570,6 +2568,16 @@ export default function AdminDashboard() {
                 <div className="flex justify-between items-center py-3 px-4 bg-amber-500 dark:bg-amber-600 rounded">
                   <span className="text-sm font-medium text-white">OFFER DROP</span>
                   <span className="text-lg font-bold text-white">3</span>
+                </div>
+                
+                {/* See More button moved to bottom right */}
+                <div className="flex justify-end mt-4">
+                  <Button 
+                    className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded text-sm"
+                    onClick={() => setIsPipelineModalOpen(true)}
+                  >
+                    See More
+                  </Button>
                 </div>
               </div>
             </div>
@@ -2643,7 +2651,10 @@ export default function AdminDashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="text-lg text-gray-900 dark:text-white">Employees Master</CardTitle>
-                  <Button className="btn-rounded bg-cyan-400 hover:bg-cyan-500 text-slate-900 text-sm px-4">
+                  <Button 
+                    className="btn-rounded bg-cyan-400 hover:bg-cyan-500 text-slate-900 text-sm px-4"
+                    onClick={() => setIsEmployeeMasterModalOpen(true)}
+                  >
                     View More
                   </Button>
                 </CardHeader>
@@ -2687,7 +2698,10 @@ export default function AdminDashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="text-lg text-gray-900 dark:text-white">Client Master</CardTitle>
-                  <Button className="btn-rounded bg-cyan-400 hover:bg-cyan-500 text-slate-900 text-sm px-4">
+                  <Button 
+                    className="btn-rounded bg-cyan-400 hover:bg-cyan-500 text-slate-900 text-sm px-4"
+                    onClick={() => setIsClientMasterModalOpen(true)}
+                  >
                     View More
                   </Button>
                 </CardHeader>
@@ -3371,7 +3385,7 @@ export default function AdminDashboard() {
       case 'metrics':
         return (
           <div className="px-6 py-6 space-y-6 overflow-y-auto max-h-full admin-scrollbar">
-            <div className="flex gap-6">
+            <div className="flex gap-8">
               {/* Left Side - Key Metrics and Cash Outflow */}
               <div className="flex-1 space-y-6">
                 {/* Key Metrics Section */}
@@ -3593,9 +3607,9 @@ export default function AdminDashboard() {
                 </Card>
               </div>
 
-              {/* Right Side - Key Aspects */}
-              <div className="w-80">
-                <Card>
+              {/* Right Side - Key Aspects - Separated */}
+              <div className="w-80 border-l-2 border-gray-300 dark:border-gray-600 pl-6">
+                <Card className="shadow-lg border-2 border-cyan-200 dark:border-cyan-700">
                   <CardHeader>
                     <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Key Aspects</CardTitle>
                   </CardHeader>
@@ -4576,50 +4590,131 @@ export default function AdminDashboard() {
 
       {/* Add Client Modal */}
       <Dialog open={isClientModalOpen} onOpenChange={setIsClientModalOpen}>
-        <DialogContent className="max-w-md w-[90vw]">
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add New Client</DialogTitle>
+            <DialogTitle>Client Details</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Code</label>
-              <Input placeholder="Client Code" className="input-styled rounded" />
+            {/* Row 1 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Code</label>
+                <Input placeholder="Client Code" className="input-styled rounded" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Brand Name</label>
+                <Input placeholder="Brand Name" className="input-styled rounded" />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Brand Name</label>
-              <Input placeholder="Brand Name" className="input-styled rounded" />
+
+            {/* Row 2 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Incorporated Name</label>
+                <Input placeholder="Incorporated Name" className="input-styled rounded" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">GSTIN</label>
+                <Input placeholder="GSTIN" className="input-styled rounded" />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Location</label>
-              <Input placeholder="Location" className="input-styled rounded" />
+
+            {/* Row 3 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>
+                <Input placeholder="Address" className="input-styled rounded" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Location</label>
+                <Input placeholder="Location" className="input-styled rounded" />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SPOC</label>
-              <Input placeholder="SPOC" className="input-styled rounded" />
+
+            {/* Row 4 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SPOC</label>
+                <Input placeholder="SPOC" className="input-styled rounded" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                <Input placeholder="Email" type="email" className="input-styled rounded" />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Website</label>
-              <Input placeholder="Website" className="input-styled rounded" />
+
+            {/* Row 5 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Website</label>
+                <Input placeholder="Website" className="input-styled rounded" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">LinkedIn</label>
+                <Input placeholder="LinkedIn" className="input-styled rounded" />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
-              <Select>
-                <SelectTrigger className="input-styled rounded">
-                  <SelectValue placeholder="Select Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="frozen">Frozen</SelectItem>
-                  <SelectItem value="churned">Churned</SelectItem>
-                </SelectContent>
-              </Select>
+
+            {/* Row 6 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Agreement</label>
+                <Input placeholder="Agreement" className="input-styled rounded" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Percentage</label>
+                <Input placeholder="Percentage" className="input-styled rounded" />
+              </div>
             </div>
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => setIsClientModalOpen(false)}>
-                Cancel
-              </Button>
-              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                Add Client
+
+            {/* Row 7 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
+                <Input placeholder="Category" className="input-styled rounded" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment terms</label>
+                <Input placeholder="Payment terms" className="input-styled rounded" />
+              </div>
+            </div>
+
+            {/* Row 8 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Source</label>
+                <Input placeholder="Source" className="input-styled rounded" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+                <Input placeholder="Start Date" className="input-styled rounded" />
+              </div>
+            </div>
+
+            {/* Row 9 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Referral</label>
+                <Input placeholder="Referral" className="input-styled rounded" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Status</label>
+                <Select>
+                  <SelectTrigger className="input-styled rounded">
+                    <SelectValue placeholder="Select Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="frozen">Frozen</SelectItem>
+                    <SelectItem value="churned">Churned</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex justify-center pt-6">
+              <Button className="bg-cyan-400 hover:bg-cyan-500 text-white px-8 py-2 rounded">
+                Submit
               </Button>
             </div>
           </div>
@@ -4628,51 +4723,361 @@ export default function AdminDashboard() {
 
       {/* Add Employee Modal */}
       <Dialog open={isEmployeeModalOpen} onOpenChange={setIsEmployeeModalOpen}>
-        <DialogContent className="max-w-md w-[90vw]">
+        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add New Employee</DialogTitle>
+            <DialogTitle>Employee Details</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee ID</label>
-              <Input placeholder="Employee ID" className="input-styled rounded" />
+          <div className="space-y-6">
+            {/* Employee Details Section */}
+            <div className="space-y-4">
+              {/* Row 1 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee ID</label>
+                  <Input placeholder="Employee ID" className="input-styled rounded" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee Name</label>
+                  <Input placeholder="Employee Name" className="input-styled rounded" />
+                </div>
+              </div>
+
+              {/* Row 2 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>
+                  <Input placeholder="Address" className="input-styled rounded" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Designation</label>
+                  <Input placeholder="Designation" className="input-styled rounded" />
+                </div>
+              </div>
+
+              {/* Row 3 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                  <Input placeholder="Email" type="email" className="input-styled rounded" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mobile Number</label>
+                  <Input placeholder="Mobile Number" className="input-styled rounded" />
+                </div>
+              </div>
+
+              {/* Row 4 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date of Joining</label>
+                  <Input placeholder="Date of Joining" className="input-styled rounded" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employment Status</label>
+                  <Select>
+                    <SelectTrigger className="input-styled rounded">
+                      <SelectValue placeholder="Select Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="intern">Intern</SelectItem>
+                      <SelectItem value="permanent">Permanent</SelectItem>
+                      <SelectItem value="probation">Probation</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Row 5 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bank</label>
+                  <Select>
+                    <SelectTrigger className="input-styled rounded">
+                      <SelectValue placeholder="Select Bank" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sbi">State Bank of India</SelectItem>
+                      <SelectItem value="hdfc">HDFC Bank</SelectItem>
+                      <SelectItem value="icici">ICICI Bank</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">EPFO</label>
+                  <Input placeholder="EPFO" className="input-styled rounded" />
+                </div>
+              </div>
+
+              {/* Row 6 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">PF ACC No</label>
+                  <Input placeholder="PF ACC No" className="input-styled rounded" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">EPFUAN</label>
+                  <Input placeholder="EPFUAN" className="input-styled rounded" />
+                </div>
+              </div>
+
+              {/* Row 7 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Father Name</label>
+                  <Input placeholder="Father Name" className="input-styled rounded" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mother Name</label>
+                  <Input placeholder="Mother Name" className="input-styled rounded" />
+                </div>
+              </div>
+
+              {/* Row 8 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Father's Number</label>
+                  <Input placeholder="Father's Number" className="input-styled rounded" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mother's Number</label>
+                  <Input placeholder="Mother's Number" className="input-styled rounded" />
+                </div>
+              </div>
+
+              {/* Row 9 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Official CTC</label>
+                  <Input placeholder="Official CTC" className="input-styled rounded" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Salary</label>
+                  <Select>
+                    <SelectTrigger className="input-styled rounded">
+                      <SelectValue placeholder="Select Salary" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10000">10,000</SelectItem>
+                      <SelectItem value="15000">15,000</SelectItem>
+                      <SelectItem value="20000">20,000</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Row 10 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Recruitment Count</label>
+                  <Select>
+                    <SelectTrigger className="input-styled rounded">
+                      <SelectValue placeholder="Select Count" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1</SelectItem>
+                      <SelectItem value="2">2</SelectItem>
+                      <SelectItem value="3">3</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Appraisal Remarks</label>
+                  <Select>
+                    <SelectTrigger className="input-styled rounded">
+                      <SelectValue placeholder="Select Remarks" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="excellent">Excellent</SelectItem>
+                      <SelectItem value="good">Good</SelectItem>
+                      <SelectItem value="average">Average</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Row 11 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Appraisal Amount</label>
+                  <Input placeholder="Appraisal Amount" className="input-styled rounded" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Yearly CTC</label>
+                  <Input placeholder="Yearly CTC" className="input-styled rounded" />
+                </div>
+              </div>
+
+              {/* Row 12 */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Monthly CTC</label>
+                  <Input placeholder="Current Monthly CTC" className="input-styled rounded" />
+                </div>
+                <div></div>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
-              <Input placeholder="Name" className="input-styled rounded" />
+
+            {/* Bank Details Section */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Bank Details</h3>
+              <div className="space-y-4">
+                {/* Row 1 */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name as per Bank</label>
+                    <Input placeholder="Name as per Bank" className="input-styled rounded" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Account Number</label>
+                    <Input placeholder="Account Number" className="input-styled rounded" />
+                  </div>
+                </div>
+
+                {/* Row 2 */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">IFSC Code</label>
+                    <Input placeholder="IFSC Code" className="input-styled rounded" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Base Name</label>
+                    <Input placeholder="Base Name" className="input-styled rounded" />
+                  </div>
+                </div>
+
+                {/* Row 3 */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Branch</label>
+                    <Select>
+                      <SelectTrigger className="input-styled rounded">
+                        <SelectValue placeholder="Select Branch" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="main">Main Branch</SelectItem>
+                        <SelectItem value="sub">Sub Branch</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City</label>
+                    <Select>
+                      <SelectTrigger className="input-styled rounded">
+                        <SelectValue placeholder="Select City" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="bangalore">Bangalore</SelectItem>
+                        <SelectItem value="chennai">Chennai</SelectItem>
+                        <SelectItem value="mumbai">Mumbai</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Father's Name</label>
-              <Input placeholder="Father's Name" className="input-styled rounded" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee Status</label>
-              <Select>
-                <SelectTrigger className="input-styled rounded">
-                  <SelectValue placeholder="Select Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="intern">Intern</SelectItem>
-                  <SelectItem value="permanent">Permanent</SelectItem>
-                  <SelectItem value="probation">Probation</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date of Joining</label>
-              <Input placeholder="DD-MM-YYYY" className="input-styled rounded" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current CTC</label>
-              <Input placeholder="Current CTC" className="input-styled rounded" />
-            </div>
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={() => setIsEmployeeModalOpen(false)}>
-                Cancel
+
+            <div className="flex justify-center pt-6">
+              <Button className="bg-cyan-400 hover:bg-cyan-500 text-white px-8 py-2 rounded">
+                Submit
               </Button>
-              <Button className="bg-green-600 hover:bg-green-700 text-white">
-                Add Employee
-              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Client Master View More Modal */}
+      <Dialog open={isClientMasterModalOpen} onOpenChange={setIsClientMasterModalOpen}>
+        <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Client Master - Full Table</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto pr-2">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Client Code</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Brand Name</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Location</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">SPOC</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Website</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Current Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { code: "STCL001", brand: "WhatsIQ", location: "Bangalore", spoc: "David Wilson", website: "www.whatsiq.com", status: "ACTIVE", statusClass: "bg-green-100 text-green-800" },
+                    { code: "STCL002", brand: "Kombat", location: "Chennai", spoc: "Tom Anderson", website: "www.kombat.com", status: "ACTIVE", statusClass: "bg-green-100 text-green-800" },
+                    { code: "STCL003", brand: "Vertas", location: "Gurgaon", spoc: "Robert Kim", website: "www.vertas.com", status: "ACTIVE", statusClass: "bg-green-100 text-green-800" },
+                    { code: "STCL004", brand: "Superlike", location: "Pune", spoc: "Kevin Brown", website: "www.superlike.com", status: "FROZEN", statusClass: "bg-orange-100 text-orange-800" },
+                    { code: "STCL005", brand: "Hitchcock", location: "Mumbai", spoc: "Mel Gibson", website: "www.hitchcock.com", status: "CHURNED", statusClass: "bg-red-100 text-red-800" },
+                    { code: "STCL006", brand: "TechCorp", location: "Hyderabad", spoc: "Alice Johnson", website: "www.techcorp.com", status: "ACTIVE", statusClass: "bg-green-100 text-green-800" },
+                    { code: "STCL007", brand: "DataFlow", location: "Kolkata", spoc: "Bob Smith", website: "www.dataflow.com", status: "FROZEN", statusClass: "bg-orange-100 text-orange-800" },
+                    { code: "STCL008", brand: "CloudNine", location: "Delhi", spoc: "Charlie Brown", website: "www.cloudnine.com", status: "ACTIVE", statusClass: "bg-green-100 text-green-800" },
+                    { code: "STCL009", brand: "NetSecure", location: "Ahmedabad", spoc: "Diana Prince", website: "www.netsecure.com", status: "CHURNED", statusClass: "bg-red-100 text-red-800" },
+                    { code: "STCL010", brand: "WebDev", location: "Jaipur", spoc: "Eric Wayne", website: "www.webdev.com", status: "ACTIVE", statusClass: "bg-green-100 text-green-800" }
+                  ].map((row, index) => (
+                    <tr key={index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                      <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.code}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.brand}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.location}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.spoc}</td>
+                      <td className="py-3 px-3 text-blue-600 dark:text-blue-400">{row.website}</td>
+                      <td className="py-3 px-3">
+                        <span className={`${row.statusClass} text-sm font-semibold px-3 py-1 rounded-full`}>• {row.status}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Employee Master View More Modal */}
+      <Dialog open={isEmployeeMasterModalOpen} onOpenChange={setIsEmployeeMasterModalOpen}>
+        <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Employee Master - Full Table</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto pr-2">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Employee ID</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Name</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Father's Name</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Employee Status</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Date of Joining</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Current CTC</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { id: "STTA001", name: "Sundhar Raj", father: "David Wilson", status: "Intern", joining: "12-05-2025", ctc: "10,000" },
+                    { id: "STTA002", name: "kavitha", father: "Tom Anderson", status: "Permanent", joining: "10-07-2025", ctc: "15,000" },
+                    { id: "STTA003", name: "Vignesh", father: "Robert Kim", status: "Probation", joining: "22-10-2025", ctc: "12,000" },
+                    { id: "STTA004", name: "Saran", father: "Kevin Brown", status: "Probation", joining: "02-11-2025", ctc: "9,500" },
+                    { id: "STTL005", name: "Helen", father: "Mel Gibson", status: "Permanent", joining: "12-12-2025", ctc: "14,000" },
+                    { id: "STTA006", name: "Priya", father: "John Smith", status: "Intern", joining: "15-01-2025", ctc: "8,000" },
+                    { id: "STTA007", name: "Rajesh", father: "Michael Johnson", status: "Permanent", joining: "20-03-2025", ctc: "18,000" },
+                    { id: "STTA008", name: "Sneha", father: "William Brown", status: "Probation", joining: "05-06-2025", ctc: "11,500" },
+                    { id: "STTA009", name: "Arjun", father: "James Davis", status: "Permanent", joining: "25-08-2025", ctc: "16,000" },
+                    { id: "STTA010", name: "Lakshmi", father: "Robert Wilson", status: "Intern", joining: "30-09-2025", ctc: "9,000" }
+                  ].map((row, index) => (
+                    <tr key={index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                      <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.id}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.name}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.father}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.status}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.joining}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.ctc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </DialogContent>
