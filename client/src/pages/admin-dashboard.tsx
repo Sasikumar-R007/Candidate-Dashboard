@@ -845,6 +845,7 @@ export default function AdminDashboard() {
                     <table className="w-full border-collapse rounded-lg">
                       <thead>
                         <tr className="border-b border-gray-200 dark:border-gray-700">
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Req ID</th>
                           <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Positions</th>
                           <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Criticality</th>
                           <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Company</th>
@@ -857,6 +858,7 @@ export default function AdminDashboard() {
                       <tbody>
                         {displayedRequirements.map((requirement) => (
                           <tr key={requirement.id} className="border-b border-gray-100 dark:border-gray-800">
+                            <td className="py-2 px-2 text-gray-900 dark:text-white font-medium text-sm">REQ-{String(requirement.id).padStart(3, '0')}</td>
                             <td className="py-2 px-2 text-gray-900 dark:text-white font-medium text-sm">{requirement.position}</td>
                             <td className="py-2 px-2">
                               <span className={`text-sm font-medium px-2 py-1 rounded ${getCriticalityColor(requirement.criticality)}`}>
@@ -933,7 +935,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Right Section - Priority Distribution */}
-              <div className="w-72">
+              <div className="w-60">
                 <div className="bg-white dark:bg-gray-900  border border-gray-200 dark:border-gray-700 px-6 pb-6">
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Priority Distribution</h3>
@@ -1335,13 +1337,13 @@ export default function AdminDashboard() {
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-gray-50 dark:bg-gray-800">
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Candidate</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Positions</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Client</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Talent Advisor</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Fixed CTC</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Offered Date</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Joined Date</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Candidate</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Positions</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Client</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Fixed CTC</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Offered Date</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Joined Date</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1455,10 +1457,10 @@ export default function AdminDashboard() {
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Employee ID</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Name</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Total Applicants</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Uploads</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Employee ID</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Name</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Total Applicants</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Uploads</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1513,12 +1515,12 @@ export default function AdminDashboard() {
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Employee ID</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Name</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Father's Name</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Employee Status</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Date of Joining</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Current CTC</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Employee ID</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Name</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Father's Name</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Employee Status</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Date of Joining</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Current CTC</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1583,12 +1585,12 @@ export default function AdminDashboard() {
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Client Code</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Brand Name</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Location</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">SPOC</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Website</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Current Status</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Client Code</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Brand Name</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Location</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">SPOC</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Website</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Current Status</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1957,13 +1959,13 @@ export default function AdminDashboard() {
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">ID</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Name</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Email</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Role</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Status</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Last Login</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Actions</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">ID</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Name</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Email</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Role</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Status</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Last Login</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2209,7 +2211,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Right Section - Priority Distribution */}
-              <div className="w-72">
+              <div className="w-60">
                 <div className="bg-white dark:bg-gray-900  border border-gray-200 dark:border-gray-700 px-6 pb-6">
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Priority Distribution</h3>
@@ -2442,13 +2444,13 @@ export default function AdminDashboard() {
                       <table className="w-full border-collapse">
                         <thead>
                           <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Candidate</th>
-                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Positions</th>
-                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Client</th>
-                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Talent Advisor</th>
-                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Fixed CTC</th>
-                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Offered Date</th>
-                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Joined Date</th>
+                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Candidate</th>
+                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Positions</th>
+                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Client</th>
+                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
+                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Fixed CTC</th>
+                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Offered Date</th>
+                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Joined Date</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -3095,13 +3097,13 @@ export default function AdminDashboard() {
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">ID</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Name</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Email</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Role</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Status</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Last Login</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Actions</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">ID</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Name</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Email</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Role</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Status</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Last Login</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -3551,7 +3553,7 @@ export default function AdminDashboard() {
                       </div>
                       <div className="flex items-end">
                         <Button 
-                          className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded w-full"
+                          className="bg-cyan-400 hover:bg-cyan-500 text-black px-4 py-2 rounded w-20"
                           onClick={handleAddCashoutData}
                         >
                           Add
@@ -4182,14 +4184,14 @@ export default function AdminDashboard() {
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Candidate</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Position</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Client</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Talent Advisor</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Fixed CTC</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Offered Date</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Joined Date</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Status</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Candidate</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Position</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Client</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Fixed CTC</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Offered Date</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Joined Date</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -4316,23 +4318,6 @@ export default function AdminDashboard() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Reassign to Talent Advisor
-              </label>
-              <Select>
-                <SelectTrigger className="input-styled">
-                  <SelectValue placeholder="Select Talent Advisor" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="sudharshan">Sudharshan</SelectItem>
-                  <SelectItem value="deepika">Deepika</SelectItem>
-                  <SelectItem value="dharshan">Dharshan</SelectItem>
-                  <SelectItem value="kavya">Kavya</SelectItem>
-                  <SelectItem value="thamarai">Thamarai Selvi</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             <div className="flex justify-end gap-2 pt-4">
               <Button
                 variant="outline"
@@ -4375,13 +4360,13 @@ export default function AdminDashboard() {
               <table className="w-full border-collapse">
                 <thead className="sticky top-0 bg-gray-50 dark:bg-gray-800">
                   <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Positions</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Criticality</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Company</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">SPOC</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Talent Advisor</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Team Lead</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Actions</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Positions</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Criticality</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Company</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">SPOC</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Team Lead</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -4448,11 +4433,11 @@ export default function AdminDashboard() {
               <table className="w-full border-collapse bg-white dark:bg-gray-900">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Month</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Revenue</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Growth</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Profit</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Clients</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Month</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Revenue</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Growth</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Profit</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Clients</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -4479,10 +4464,10 @@ export default function AdminDashboard() {
               <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Stage</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Count</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Candidates</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Progress</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Stage</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Count</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Candidates</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Progress</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -4525,14 +4510,14 @@ export default function AdminDashboard() {
               <table className="w-full border-collapse bg-white dark:bg-gray-900">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Month</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Year</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Employees Count</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Total Salary</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Incentives</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Tools Cost</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Rent</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Others Cost</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Month</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Year</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Employees Count</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Total Salary</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Incentives</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Tools Cost</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Rent</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Others Cost</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -4566,11 +4551,11 @@ export default function AdminDashboard() {
               <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Employee ID</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Name</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Team</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Total Applicants</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Uploads</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Employee ID</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Name</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Team</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Total Applicants</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Uploads</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -4994,12 +4979,12 @@ export default function AdminDashboard() {
               <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Client Code</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Brand Name</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Location</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">SPOC</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Website</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Current Status</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Client Code</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Brand Name</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Location</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">SPOC</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Website</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Current Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -5044,12 +5029,12 @@ export default function AdminDashboard() {
               <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Employee ID</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Name</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Father's Name</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Employee Status</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Date of Joining</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Current CTC</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Employee ID</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Name</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Father's Name</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Employee Status</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Date of Joining</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Current CTC</th>
                   </tr>
                 </thead>
                 <tbody>

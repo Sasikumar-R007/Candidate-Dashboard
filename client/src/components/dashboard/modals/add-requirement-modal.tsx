@@ -178,46 +178,24 @@ export default function AddRequirementModal({ isOpen, onClose }: AddRequirementM
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="talentAdvisor" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Talent Advisor (View Only)
-              </Label>
-              <Select 
-                value={formData.talentAdvisor} 
-                onValueChange={(value) => handleInputChange('talentAdvisor', value)}
-                disabled
-              >
-                <SelectTrigger className="input-styled opacity-60" data-testid="select-talent-advisor">
-                  <SelectValue placeholder="Auto-assigned" />
-                </SelectTrigger>
-                <SelectContent>
-                  {talentAdvisors.map(advisor => (
-                    <SelectItem key={advisor} value={advisor}>{advisor}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="teamLead" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Team Lead
-              </Label>
-              <Select 
-                value={formData.teamLead} 
-                onValueChange={(value) => handleInputChange('teamLead', value)}
-              >
-                <SelectTrigger className="input-styled" data-testid="select-team-lead">
-                  <SelectValue placeholder="Select team lead" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Unassigned">Unassigned</SelectItem>
-                  {teamLeads.map(lead => (
-                    <SelectItem key={lead} value={lead}>{lead}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="teamLead" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Team Lead
+            </Label>
+            <Select 
+              value={formData.teamLead} 
+              onValueChange={(value) => handleInputChange('teamLead', value)}
+            >
+              <SelectTrigger className="input-styled" data-testid="select-team-lead">
+                <SelectValue placeholder="Select team lead" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Unassigned">Unassigned</SelectItem>
+                {teamLeads.map(lead => (
+                  <SelectItem key={lead} value={lead}>{lead}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
