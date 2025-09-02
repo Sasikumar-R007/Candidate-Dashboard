@@ -1,7 +1,7 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema } from "@shared/schema";
+import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertRequirementSchema } from "@shared/schema";
 import multer from "multer";
 import path from "path";
 
@@ -577,6 +577,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ url });
   });
 
+  // Requirements API endpoints
+  app.get("/api/admin/requirements", async (req, res) => {
+    try {
+      const requirements = await storage.getRequirements();
+      res.json(requirements);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/admin/requirements", async (req, res) => {
+    try {
+      const validatedData = insertRequirementSchema.parse(req.body);
+      const requirement = await storage.createRequirement(validatedData);
+      res.status(201).json(requirement);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid requirement data" });
+    }
+  });
+
+  app.patch("/api/admin/requirements/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updatedRequirement = await storage.updateRequirement(id, req.body);
+      if (!updatedRequirement) {
+        return res.status(404).json({ message: "Requirement not found" });
+      }
+      res.json(updatedRequirement);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/admin/requirements/:id/archive", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const archivedRequirement = await storage.archiveRequirement(id);
+      if (!archivedRequirement) {
+        return res.status(404).json({ message: "Requirement not found" });
+      }
+      res.json(archivedRequirement);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/admin/archived-requirements", async (req, res) => {
+    try {
+      const archivedRequirements = await storage.getArchivedRequirements();
+      res.json(archivedRequirements);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

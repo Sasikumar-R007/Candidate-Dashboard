@@ -4,6 +4,7 @@ import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
 import AdminTopHeader from '@/components/dashboard/admin-top-header';
 import TeamBoxes from '@/components/dashboard/team-boxes';
 import TeamMembersSidebar from '@/components/dashboard/team-members-sidebar';
+import AddRequirementModal from '@/components/dashboard/modals/add-requirement-modal';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -17,6 +18,8 @@ import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck } from "lucide
 import { format } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useLocation } from "wouter";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from "@/hooks/use-toast";
 
 // Requirements data for pagination
 const requirementsData = [
@@ -291,6 +294,10 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('team');
   const [adminProfile, setAdminProfile] = useState(initialAdminProfile);
   const [requirementsVisible, setRequirementsVisible] = useState(10);
+  const [isAddRequirementModalOpen, setIsAddRequirementModalOpen] = useState(false);
+  const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
+  const [selectedRequirement, setSelectedRequirement] = useState<any>(null);
+  const queryClient = useQueryClient();
   
   // Pipeline modal state
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
@@ -315,6 +322,74 @@ export default function AdminDashboard() {
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [isCustomDate, setIsCustomDate] = useState(false);
+
+  // Requirements API queries
+  const { data: requirements = [], isLoading: isLoadingRequirements } = useQuery({
+    queryKey: ['admin', 'requirements'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/requirements');
+      if (!response.ok) throw new Error('Failed to fetch requirements');
+      return response.json();
+    }
+  });
+
+  // Archive requirement mutation
+  const archiveRequirementMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/admin/requirements/${id}/archive`, {
+        method: 'POST',
+      });
+      if (!response.ok) throw new Error('Failed to archive requirement');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'requirements'] });
+      toast({
+        title: "Success",
+        description: "Requirement archived successfully!",
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to archive requirement. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Update requirement mutation
+  const updateRequirementMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
+      const response = await fetch(`/api/admin/requirements/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+      });
+      if (!response.ok) throw new Error('Failed to update requirement');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'requirements'] });
+      toast({
+        title: "Success",
+        description: "Requirement updated successfully!",
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+      setIsReassignModalOpen(false);
+      setSelectedRequirement(null);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update requirement. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
 
   const handleMemberClick = (member: any) => {
     setSelectedMember(member);
@@ -368,12 +443,23 @@ export default function AdminDashboard() {
     setIsCreateModalOpen(false);
   };
 
-  // Requirements pagination handlers
+  // Requirements handlers
+  const handleReassign = (requirement: any) => {
+    setSelectedRequirement(requirement);
+    setIsReassignModalOpen(true);
+  };
+
+  const handleArchive = (requirement: any) => {
+    if (window.confirm(`Are you sure you want to archive "${requirement.position}" requirement?`)) {
+      archiveRequirementMutation.mutate(requirement.id);
+    }
+  };
+
   const handleRequirementsViewMore = () => {
-    if (requirementsVisible >= requirementsData.length) {
+    if (requirementsVisible >= requirements.length) {
       setRequirementsVisible(10);
     } else {
-      setRequirementsVisible(prev => Math.min(prev + 5, requirementsData.length));
+      setRequirementsVisible(prev => Math.min(prev + 5, requirements.length));
     }
   };
 
@@ -381,8 +467,17 @@ export default function AdminDashboard() {
     navigate('/archives');
   };
 
-  const displayedRequirements = requirementsData.slice(0, requirementsVisible);
-  const isShowingAllRequirements = requirementsVisible >= requirementsData.length;
+  const handleReassign = (requirement: any) => {
+    setSelectedRequirement(requirement);
+    setIsReassignModalOpen(true);
+  };
+
+  const handleArchive = (requirement: any) => {
+    archiveRequirementMutation.mutate(requirement.id);
+  };
+
+  const displayedRequirements = requirements.slice(0, Math.min(requirementsVisible, 10));
+  const isShowingAllRequirements = requirementsVisible >= requirements.length;
 
   const getCriticalityColor = (criticality: string) => {
     switch (criticality) {
@@ -759,10 +854,10 @@ export default function AdminDashboard() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-32">
-                                  <DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleReassign(requirement)}>
                                     Reassign
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleArchive(requirement)}>
                                     Archive
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
@@ -872,7 +967,16 @@ export default function AdminDashboard() {
               {/* Right Side - Priority Distribution */}
               <div className="w-72">
                 <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Priority Distribution</h3>
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Priority Distribution</h3>
+                    <Button 
+                      className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-3 py-2 rounded text-sm"
+                      onClick={() => setIsAddRequirementModalOpen(true)}
+                      data-testid="button-add-requirements"
+                    >
+                      + Add Requirements
+                    </Button>
+                  </div>
                   
                   <div className="space-y-4">
                     <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
@@ -2082,10 +2186,10 @@ export default function AdminDashboard() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-32">
-                                  <DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleReassign(requirement)}>
                                     Reassign
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleArchive(requirement)}>
                                     Archive
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
@@ -2195,7 +2299,16 @@ export default function AdminDashboard() {
               {/* Right Side - Priority Distribution */}
               <div className="w-72">
                 <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Priority Distribution</h3>
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Priority Distribution</h3>
+                    <Button 
+                      className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-3 py-2 rounded text-sm"
+                      onClick={() => setIsAddRequirementModalOpen(true)}
+                      data-testid="button-add-requirements"
+                    >
+                      + Add Requirements
+                    </Button>
+                  </div>
                   
                   <div className="space-y-4">
                     <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">

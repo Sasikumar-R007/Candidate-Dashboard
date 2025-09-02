@@ -12,7 +12,11 @@ import {
   type JobApplication,
   type InsertJobApplication,
   type SavedJob,
-  type InsertSavedJob
+  type InsertSavedJob,
+  type Requirement,
+  type InsertRequirement,
+  type ArchivedRequirement,
+  type InsertArchivedRequirement
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -42,6 +46,13 @@ export interface IStorage {
   getSavedJobsByProfile(profileId: string): Promise<SavedJob[]>;
   createSavedJob(savedJob: InsertSavedJob): Promise<SavedJob>;
   removeSavedJob(profileId: string, jobTitle: string, company: string): Promise<boolean>;
+  
+  // Requirements methods
+  getRequirements(): Promise<Requirement[]>;
+  createRequirement(requirement: InsertRequirement): Promise<Requirement>;
+  updateRequirement(id: string, updates: Partial<Requirement>): Promise<Requirement | undefined>;
+  archiveRequirement(id: string): Promise<ArchivedRequirement | undefined>;
+  getArchivedRequirements(): Promise<ArchivedRequirement[]>;
 }
 
 export class MemStorage implements IStorage {
@@ -52,6 +63,8 @@ export class MemStorage implements IStorage {
   private activities: Map<string, Activity>;
   private jobApplications: Map<string, JobApplication>;
   private savedJobs: Map<string, SavedJob>;
+  private requirements: Map<string, Requirement>;
+  private archivedRequirements: Map<string, ArchivedRequirement>;
 
   constructor() {
     this.users = new Map();
@@ -61,6 +74,8 @@ export class MemStorage implements IStorage {
     this.activities = new Map();
     this.jobApplications = new Map();
     this.savedJobs = new Map();
+    this.requirements = new Map();
+    this.archivedRequirements = new Map();
     
     // Initialize with sample data
     this.initSampleData();
@@ -189,6 +204,35 @@ export class MemStorage implements IStorage {
         daysAgo: app.daysAgo
       };
       this.jobApplications.set(application.id, application);
+    });
+
+    // Sample requirements data
+    const sampleRequirements = [
+      { position: "Mobile App Developer", criticality: "HIGH", company: "Tesco", spoc: "Mel Gibson", talentAdvisor: "Mel Gibson", teamLead: "Arun" },
+      { position: "Backend Developer", criticality: "LOW", company: "CodeLabs", spoc: "Robert Kim", talentAdvisor: "Robert Kim", teamLead: "Arun" },
+      { position: "Frontend Developer", criticality: "MEDIUM", company: "TechCorp", spoc: "David Wilson", talentAdvisor: "Unassigned", teamLead: "Arun" },
+      { position: "QA Tester", criticality: "HIGH", company: "AppLogic", spoc: "Kevin Brown", talentAdvisor: "Unassigned", teamLead: "Unassigned" },
+      { position: "Mobile App Developer", criticality: "MEDIUM", company: "Tesco", spoc: "Mel Gibson", talentAdvisor: "Mel Gibson", teamLead: "Arun" },
+      { position: "Backend Developer", criticality: "LOW", company: "CodeLabs", spoc: "Robert Kim", talentAdvisor: "Robert Kim", teamLead: "Arun" },
+      { position: "UI/UX Designer", criticality: "MEDIUM", company: "Designify", spoc: "Tom Anderson", talentAdvisor: "Unassigned", teamLead: "Anusha" },
+      { position: "Frontend Developer", criticality: "HIGH", company: "TechCorp", spoc: "David Wilson", talentAdvisor: "Unassigned", teamLead: "Arun" },
+      { position: "UI/UX Designer", criticality: "MEDIUM", company: "Designify", spoc: "Tom Anderson", talentAdvisor: "Unassigned", teamLead: "Anusha" },
+      { position: "QA Tester", criticality: "MEDIUM", company: "AppLogic", spoc: "Kevin Brown", talentAdvisor: "Unassigned", teamLead: "Unassigned" }
+    ];
+
+    sampleRequirements.forEach(req => {
+      const requirement: Requirement = {
+        id: randomUUID(),
+        position: req.position,
+        criticality: req.criticality,
+        company: req.company,
+        spoc: req.spoc,
+        talentAdvisor: req.talentAdvisor,
+        teamLead: req.teamLead,
+        isArchived: false,
+        createdAt: new Date().toISOString()
+      };
+      this.requirements.set(requirement.id, requirement);
     });
   }
 
@@ -359,6 +403,63 @@ export class MemStorage implements IStorage {
       return true;
     }
     return false;
+  }
+
+  // Requirements methods implementation
+  async getRequirements(): Promise<Requirement[]> {
+    return Array.from(this.requirements.values()).filter(req => !req.isArchived);
+  }
+
+  async createRequirement(insertRequirement: InsertRequirement): Promise<Requirement> {
+    const id = randomUUID();
+    const requirement: Requirement = {
+      ...insertRequirement,
+      id,
+      isArchived: false,
+      createdAt: new Date().toISOString()
+    };
+    this.requirements.set(id, requirement);
+    return requirement;
+  }
+
+  async updateRequirement(id: string, updates: Partial<Requirement>): Promise<Requirement | undefined> {
+    const existing = this.requirements.get(id);
+    if (!existing) return undefined;
+    
+    const updated: Requirement = { ...existing, ...updates };
+    this.requirements.set(id, updated);
+    return updated;
+  }
+
+  async archiveRequirement(id: string): Promise<ArchivedRequirement | undefined> {
+    const requirement = this.requirements.get(id);
+    if (!requirement) return undefined;
+
+    // Create archived version
+    const archivedId = randomUUID();
+    const archived: ArchivedRequirement = {
+      id: archivedId,
+      position: requirement.position,
+      criticality: requirement.criticality,
+      company: requirement.company,
+      spoc: requirement.spoc,
+      talentAdvisor: requirement.talentAdvisor,
+      teamLead: requirement.teamLead,
+      archivedAt: new Date().toISOString(),
+      originalId: requirement.id
+    };
+
+    this.archivedRequirements.set(archivedId, archived);
+    
+    // Mark original as archived
+    const updated = { ...requirement, isArchived: true };
+    this.requirements.set(id, updated);
+    
+    return archived;
+  }
+
+  async getArchivedRequirements(): Promise<ArchivedRequirement[]> {
+    return Array.from(this.archivedRequirements.values());
   }
 }
 

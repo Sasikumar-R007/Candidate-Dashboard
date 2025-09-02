@@ -147,6 +147,30 @@ export const ceoComments = pgTable("ceo_comments", {
   date: text("date").notNull(),
 });
 
+export const requirements = pgTable("requirements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  position: text("position").notNull(),
+  criticality: text("criticality").notNull(), // HIGH, MEDIUM, LOW
+  company: text("company").notNull(),
+  spoc: text("spoc").notNull(),
+  talentAdvisor: text("talent_advisor"),
+  teamLead: text("team_lead"),
+  isArchived: boolean("is_archived").default(false),
+  createdAt: text("created_at").notNull(),
+});
+
+export const archivedRequirements = pgTable("archived_requirements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  position: text("position").notNull(),
+  criticality: text("criticality").notNull(),
+  company: text("company").notNull(),
+  spoc: text("spoc").notNull(),
+  talentAdvisor: text("talent_advisor"),
+  teamLead: text("team_lead"),
+  archivedAt: text("archived_at").notNull(),
+  originalId: varchar("original_id").notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
 });
@@ -199,6 +223,14 @@ export const insertCeoCommentSchema = createInsertSchema(ceoComments).omit({
   id: true,
 });
 
+export const insertRequirementSchema = createInsertSchema(requirements).omit({
+  id: true,
+});
+
+export const insertArchivedRequirementSchema = createInsertSchema(archivedRequirements).omit({
+  id: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
@@ -225,3 +257,7 @@ export type InsertMeeting = z.infer<typeof insertMeetingSchema>;
 export type Meeting = typeof meetings.$inferSelect;
 export type InsertCeoComment = z.infer<typeof insertCeoCommentSchema>;
 export type CeoComment = typeof ceoComments.$inferSelect;
+export type InsertRequirement = z.infer<typeof insertRequirementSchema>;
+export type Requirement = typeof requirements.$inferSelect;
+export type InsertArchivedRequirement = z.infer<typeof insertArchivedRequirementSchema>;
+export type ArchivedRequirement = typeof archivedRequirements.$inferSelect;
