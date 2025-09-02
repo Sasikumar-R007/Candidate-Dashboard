@@ -3654,38 +3654,7 @@ export default function AdminDashboard() {
         <div className="flex-1 ml-16 flex flex-col overflow-hidden" style={{height: 'calc(100vh - 4rem)'}}>
           {renderSidebarContent()}
         </div>
-        {sidebarTab === 'dashboard' && (
-          <div className="w-64 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 flex-shrink-0">
-            <div className="p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Priority Distribution</h3>
-              <div className="space-y-4">
-                <div className="text-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                  <div className="text-6xl font-bold text-red-600 dark:text-red-400 mb-2">H</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">IGH</div>
-                  <div className="text-2xl font-bold text-red-600 dark:text-red-400">15</div>
-                </div>
-                
-                <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <div className="text-6xl font-bold text-blue-600 dark:text-blue-400 mb-2">M</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">EDIUM</div>
-                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">9</div>
-                </div>
-                
-                <div className="text-center p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <div className="text-6xl font-bold text-gray-600 dark:text-gray-400 mb-2">L</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">OW</div>
-                  <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">3</div>
-                </div>
-                
-                <div className="text-center p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
-                  <div className="text-6xl font-bold text-gray-900 dark:text-white mb-2">T</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">OTAL</div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">27</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {sidebarTab === 'dashboard' && <TeamMembersSidebar />}
       </div>
 
       {/* Recruiter Details Modal */}
