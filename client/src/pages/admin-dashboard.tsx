@@ -20,7 +20,16 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
-import type { Requirement } from '@/shared/schema';
+// TypeScript interfaces
+interface Requirement {
+  id: number;
+  position: string;
+  criticality: string;
+  company: string;
+  spoc: string;
+  talentAdvisor: string;
+  teamLead: string;
+}
 
 // Requirements data for pagination
 const requirementsData = [
@@ -473,7 +482,7 @@ export default function AdminDashboard() {
 
   const handleArchive = (requirement: Requirement) => {
     if (window.confirm(`Are you sure you want to archive "${requirement.position}" requirement?`)) {
-      archiveRequirementMutation.mutate(requirement.id);
+      archiveRequirementMutation.mutate(String(requirement.id));
     }
   };
 
@@ -856,7 +865,7 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {displayedRequirements.map((requirement) => (
+                        {displayedRequirements.map((requirement: Requirement) => (
                           <tr key={requirement.id} className="border-b border-gray-100 dark:border-gray-800">
                             <td className="py-2 px-2 text-gray-900 dark:text-white font-medium text-sm">REQ-{String(requirement.id).padStart(3, '0')}</td>
                             <td className="py-2 px-2 text-gray-900 dark:text-white font-medium text-sm">{requirement.position}</td>
@@ -2133,7 +2142,7 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {displayedRequirements.map((requirement) => (
+                        {displayedRequirements.map((requirement: Requirement) => (
                           <tr key={requirement.id} className="border-b border-gray-100 dark:border-gray-800">
                             <td className="py-2 px-2 text-gray-900 dark:text-white font-medium text-sm">{requirement.position}</td>
                             <td className="py-2 px-2">
@@ -4370,7 +4379,7 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {requirements.map((requirement) => (
+                  {requirements.map((requirement: Requirement) => (
                     <tr key={requirement.id} className="border-b border-gray-100 dark:border-gray-800">
                       <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{requirement.position}</td>
                       <td className="py-3 px-3">
