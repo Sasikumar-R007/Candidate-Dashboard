@@ -415,6 +415,8 @@ export class MemStorage implements IStorage {
     const requirement: Requirement = {
       ...insertRequirement,
       id,
+      talentAdvisor: insertRequirement.talentAdvisor || null,
+      teamLead: insertRequirement.teamLead || null,
       isArchived: false,
       createdAt: new Date().toISOString()
     };
