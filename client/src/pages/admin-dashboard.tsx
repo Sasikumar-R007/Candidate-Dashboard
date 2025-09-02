@@ -300,6 +300,9 @@ export default function AdminDashboard() {
   const [isMetricsModalOpen, setIsMetricsModalOpen] = useState(false);
   const [isPipelineModalOpen, setIsPipelineModalOpen] = useState(false);
   const [isCashoutModalOpen, setIsCashoutModalOpen] = useState(false);
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [isEmployeeModalOpen, setIsEmployeeModalOpen] = useState(false);
+  const [isDatabaseModalOpen, setIsDatabaseModalOpen] = useState(false);
   const [cashoutData, setCashoutData] = useState([
     { month: 'Jan', year: '2025', employees: 50, salary: 500000, incentive: 25000, tools: 15000, rent: 50000, others: 10000 },
     { month: 'Feb', year: '2025', employees: 52, salary: 520000, incentive: 28000, tools: 15000, rent: 50000, others: 12000 },
@@ -819,28 +822,24 @@ export default function AdminDashboard() {
       case 'requirements':
         return (
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
-            {/* Header with Requirements title only */}
-            <div className="mb-6">
+            {/* Header with Requirements title and Add button */}
+            <div className="mb-6 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Requirements</h2>
+              <Button 
+                className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded text-sm"
+                onClick={() => setIsAddRequirementModalOpen(true)}
+                data-testid="button-add-requirements"
+              >
+                + Add Requirements
+              </Button>
             </div>
             
             <div className="flex gap-6 h-full">
               {/* Middle Section - Requirements Table */}
               <div className="flex-1 overflow-y-auto admin-scrollbar">
-                {/* Add Requirements Button */}
-                <div className="mb-4 flex justify-end">
-                  <Button 
-                    className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded text-sm"
-                    onClick={() => setIsAddRequirementModalOpen(true)}
-                    data-testid="button-add-requirements"
-                  >
-                    + Add Requirements
-                  </Button>
-                </div>
-                
-                <div className="bg-white dark:bg-gray-900  border border-gray-200 dark:border-gray-700">
+                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
                   <div className="overflow-x-auto admin-scrollbar">
-                    <table className="w-full border-collapse">
+                    <table className="w-full border-collapse rounded-lg">
                       <thead>
                         <tr className="border-b border-gray-200 dark:border-gray-700">
                           <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Positions</th>
@@ -1396,7 +1395,11 @@ export default function AdminDashboard() {
                   </table>
                 </div>
                 <div className="flex justify-end mt-4">
-                  <Button variant="link" className="text-blue-600 hover:text-blue-700">
+                  <Button 
+                    variant="link" 
+                    className="text-blue-600 hover:text-blue-700"
+                    onClick={() => setIsPipelineModalOpen(true)}
+                  >
                     See More...
                   </Button>
                 </div>
@@ -2582,13 +2585,22 @@ export default function AdminDashboard() {
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="text-lg text-gray-900 dark:text-white">Resume Database</CardTitle>
                   <div className="flex gap-2">
-                    <Button className="btn-rounded bg-purple-600 hover:bg-purple-700 text-white text-sm px-4">
+                    <Button 
+                      className="btn-rounded bg-purple-600 hover:bg-purple-700 text-white text-sm px-4"
+                      onClick={() => setIsDatabaseModalOpen(true)}
+                    >
                       View Full Database
                     </Button>
-                    <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white text-sm px-4">
+                    <Button 
+                      className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white text-sm px-4"
+                      onClick={() => setIsClientModalOpen(true)}
+                    >
                       + Add Client
                     </Button>
-                    <Button className="btn-rounded bg-green-600 hover:bg-green-700 text-white text-sm px-4">
+                    <Button 
+                      className="btn-rounded bg-green-600 hover:bg-green-700 text-white text-sm px-4"
+                      onClick={() => setIsEmployeeModalOpen(true)}
+                    >
                       + Add Employee
                     </Button>
                   </div>
@@ -2606,41 +2618,21 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        <tr className="border-b border-gray-100 dark:border-gray-800 bg-blue-50 dark:bg-blue-900/20">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STTA001</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Sundhar Raj</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Arun</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">500</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">1000</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STTA002</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">kavitha</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Anusha</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">220</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">850</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-800 bg-blue-50 dark:bg-blue-900/20">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STTA003</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Vignesh</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Arun</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">600</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">1200</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STTA004</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Saran</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Anusha</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">780</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">1000</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-800 bg-blue-50 dark:bg-blue-900/20">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STTL005</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Helen</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Anusha</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">50</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">900</td>
-                        </tr>
+                        {[
+                          { id: "STTA001", name: "Sundhar Raj", team: "Arun", applicants: 500, uploads: 1000 },
+                          { id: "STTA002", name: "kavitha", team: "Anusha", applicants: 220, uploads: 850 },
+                          { id: "STTA003", name: "Vignesh", team: "Arun", applicants: 600, uploads: 1200 },
+                          { id: "STTA004", name: "Saran", team: "Anusha", applicants: 780, uploads: 1000 },
+                          { id: "STTL005", name: "Helen", team: "Anusha", applicants: 50, uploads: 900 }
+                        ].slice(0, 5).map((row, index) => (
+                          <tr key={index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                            <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{row.id}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.name}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.team}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.applicants}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.uploads}</td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -2669,46 +2661,22 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        <tr className="border-b border-gray-100 dark:border-gray-800 bg-blue-50 dark:bg-blue-900/20">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STTA001</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Sundhar Raj</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">David Wilson</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Intern</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">12-05-2025</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">10,000</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STTA002</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">kavitha</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Tom Anderson</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Permanent</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">10-07-2025</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">15,000</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-800 bg-blue-50 dark:bg-blue-900/20">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STTA003</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Vignesh</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Robert Kim</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Probation</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">22-10-2025</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">12,000</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STTA004</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Saran</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Kevin Brown</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Probation</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">02-11-2025</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">9,500</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-800 bg-blue-50 dark:bg-blue-900/20">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STTL005</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Helen</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Mel Gibson</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Permanent</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">12-12-2025</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">14,000</td>
-                        </tr>
+                        {[
+                          { id: "STTA001", name: "Sundhar Raj", father: "David Wilson", status: "Intern", joining: "12-05-2025", ctc: "10,000" },
+                          { id: "STTA002", name: "kavitha", father: "Tom Anderson", status: "Permanent", joining: "10-07-2025", ctc: "15,000" },
+                          { id: "STTA003", name: "Vignesh", father: "Robert Kim", status: "Probation", joining: "22-10-2025", ctc: "12,000" },
+                          { id: "STTA004", name: "Saran", father: "Kevin Brown", status: "Probation", joining: "02-11-2025", ctc: "9,500" },
+                          { id: "STTL005", name: "Helen", father: "Mel Gibson", status: "Permanent", joining: "12-12-2025", ctc: "14,000" }
+                        ].slice(0, 5).map((row, index) => (
+                          <tr key={index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                            <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{row.id}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.name}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.father}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.status}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.joining}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.ctc}</td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -2737,56 +2705,24 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        <tr className="border-b border-gray-100 dark:border-gray-800 bg-blue-50 dark:bg-blue-900/20">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STCL001</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">WhatsIQ</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Bangalore</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">David Wilson</td>
-                          <td className="py-3 px-4 text-blue-600 dark:text-blue-400">www.whatsiq.com</td>
-                          <td className="py-3 px-4">
-                            <span className="bg-green-100 text-green-800 text-sm font-semibold px-3 py-1 rounded-full">• ACTIVE</span>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STCL002</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Kombat</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Chennai</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Tom Anderson</td>
-                          <td className="py-3 px-4 text-blue-600 dark:text-blue-400">www.kombat.com</td>
-                          <td className="py-3 px-4">
-                            <span className="bg-green-100 text-green-800 text-sm font-semibold px-3 py-1 rounded-full">• ACTIVE</span>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-800 bg-blue-50 dark:bg-blue-900/20">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STCL003</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Vertas</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Gurgaon</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Robert Kim</td>
-                          <td className="py-3 px-4 text-blue-600 dark:text-blue-400">www.vertas.com</td>
-                          <td className="py-3 px-4">
-                            <span className="bg-green-100 text-green-800 text-sm font-semibold px-3 py-1 rounded-full">• ACTIVE</span>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STCL004</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Superlike</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Pune</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Kevin Brown</td>
-                          <td className="py-3 px-4 text-blue-600 dark:text-blue-400">www.superlike.com</td>
-                          <td className="py-3 px-4">
-                            <span className="bg-orange-100 text-orange-800 text-sm font-semibold px-3 py-1 rounded-full">• FROZEN</span>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-800 bg-blue-50 dark:bg-blue-900/20">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">STCL005</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Hitchcock</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Mumbai</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Mel Gibson</td>
-                          <td className="py-3 px-4 text-blue-600 dark:text-blue-400">www.hitchcock.com</td>
-                          <td className="py-3 px-4">
-                            <span className="bg-red-100 text-red-800 text-sm font-semibold px-3 py-1 rounded-full">• CHURNED</span>
-                          </td>
-                        </tr>
+                        {[
+                          { code: "STCL001", brand: "WhatsIQ", location: "Bangalore", spoc: "David Wilson", website: "www.whatsiq.com", status: "ACTIVE", statusClass: "bg-green-100 text-green-800" },
+                          { code: "STCL002", brand: "Kombat", location: "Chennai", spoc: "Tom Anderson", website: "www.kombat.com", status: "ACTIVE", statusClass: "bg-green-100 text-green-800" },
+                          { code: "STCL003", brand: "Vertas", location: "Gurgaon", spoc: "Robert Kim", website: "www.vertas.com", status: "ACTIVE", statusClass: "bg-green-100 text-green-800" },
+                          { code: "STCL004", brand: "Superlike", location: "Pune", spoc: "Kevin Brown", website: "www.superlike.com", status: "FROZEN", statusClass: "bg-orange-100 text-orange-800" },
+                          { code: "STCL005", brand: "Hitchcock", location: "Mumbai", spoc: "Mel Gibson", website: "www.hitchcock.com", status: "CHURNED", statusClass: "bg-red-100 text-red-800" }
+                        ].slice(0, 5).map((row, index) => (
+                          <tr key={index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                            <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{row.code}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.brand}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.location}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.spoc}</td>
+                            <td className="py-3 px-4 text-blue-600 dark:text-blue-400">{row.website}</td>
+                            <td className="py-3 px-4">
+                              <span className={`${row.statusClass} text-sm font-semibold px-3 py-1 rounded-full`}>• {row.status}</span>
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -3466,12 +3402,6 @@ export default function AdminDashboard() {
                           </SelectContent>
                         </Select>
                         
-                        <Button 
-                          className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded"
-                          onClick={() => setIsMetricsModalOpen(true)}
-                        >
-                          Show Data
-                        </Button>
                       </div>
                     </div>
                   </CardHeader>
@@ -3509,6 +3439,15 @@ export default function AdminDashboard() {
                       </ResponsiveContainer>
                     </div>
                     
+                    {/* Show More Button positioned below graph on the right */}
+                    <div className="flex justify-end mt-4">
+                      <Button 
+                        className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded"
+                        onClick={() => setIsMetricsModalOpen(true)}
+                      >
+                        Show More
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -3524,7 +3463,7 @@ export default function AdminDashboard() {
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Month</label>
                         <Input 
                           placeholder="Month" 
-                          className="input-styled rounded bg-gray-50 dark:bg-gray-700 border-2" 
+                          className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
                           value={cashoutForm.month}
                           onChange={(e) => setCashoutForm({...cashoutForm, month: e.target.value})}
                         />
@@ -3533,7 +3472,7 @@ export default function AdminDashboard() {
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year</label>
                         <Input 
                           placeholder="Year" 
-                          className="input-styled rounded bg-gray-50 dark:bg-gray-700 border-2" 
+                          className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
                           value={cashoutForm.year}
                           onChange={(e) => setCashoutForm({...cashoutForm, year: e.target.value})}
                         />
@@ -3542,7 +3481,7 @@ export default function AdminDashboard() {
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Number of Employees</label>
                         <Input 
                           placeholder="Number of Employees" 
-                          className="input-styled rounded bg-gray-50 dark:bg-gray-700 border-2" 
+                          className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
                           value={cashoutForm.employees}
                           onChange={(e) => setCashoutForm({...cashoutForm, employees: e.target.value})}
                         />
@@ -3554,7 +3493,7 @@ export default function AdminDashboard() {
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Total Salary</label>
                         <Input 
                           placeholder="Total Salary" 
-                          className="input-styled rounded bg-gray-50 dark:bg-gray-700 border-2" 
+                          className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
                           value={cashoutForm.salary}
                           onChange={(e) => setCashoutForm({...cashoutForm, salary: e.target.value})}
                         />
@@ -3563,7 +3502,7 @@ export default function AdminDashboard() {
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Incentive</label>
                         <Input 
                           placeholder="Incentive" 
-                          className="input-styled rounded bg-gray-50 dark:bg-gray-700 border-2" 
+                          className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
                           value={cashoutForm.incentive}
                           onChange={(e) => setCashoutForm({...cashoutForm, incentive: e.target.value})}
                         />
@@ -3572,7 +3511,7 @@ export default function AdminDashboard() {
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Database & Tools cost</label>
                         <Input 
                           placeholder="Database & Tools cost" 
-                          className="input-styled rounded bg-gray-50 dark:bg-gray-700 border-2" 
+                          className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
                           value={cashoutForm.tools}
                           onChange={(e) => setCashoutForm({...cashoutForm, tools: e.target.value})}
                         />
@@ -3584,7 +3523,7 @@ export default function AdminDashboard() {
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rent</label>
                         <Input 
                           placeholder="Rent" 
-                          className="input-styled rounded bg-gray-50 dark:bg-gray-700 border-2" 
+                          className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
                           value={cashoutForm.rent}
                           onChange={(e) => setCashoutForm({...cashoutForm, rent: e.target.value})}
                         />
@@ -3593,7 +3532,7 @@ export default function AdminDashboard() {
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Other Expenses</label>
                         <Input 
                           placeholder="Other Expenses" 
-                          className="input-styled rounded bg-gray-50 dark:bg-gray-700 border-2" 
+                          className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
                           value={cashoutForm.others}
                           onChange={(e) => setCashoutForm({...cashoutForm, others: e.target.value})}
                         />
@@ -3641,7 +3580,7 @@ export default function AdminDashboard() {
                     </div>
                     
                     {cashoutData.length > 5 && (
-                      <div className="flex justify-center mt-4">
+                      <div className="flex justify-end mt-4">
                         <Button 
                           className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded"
                           onClick={() => setIsCashoutModalOpen(true)}
@@ -4505,24 +4444,11 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { name: 'Jan', revenue: 45000, growth: 38000, profit: 25000, clients: 15000 },
-                    { name: 'Feb', revenue: 35000, growth: 28000, profit: 18000, clients: 12000 },
-                    { name: 'Mar', revenue: 55000, growth: 45000, profit: 32000, clients: 22000 },
-                    { name: 'Apr', revenue: 48000, growth: 42000, profit: 28000, clients: 18000 },
-                    { name: 'May', revenue: 65000, growth: 52000, profit: 38000, clients: 28000 },
-                    { name: 'Jun', revenue: 58000, growth: 48000, profit: 35000, clients: 25000 },
-                    { name: 'Jul', revenue: 70000, growth: 58000, profit: 42000, clients: 32000 },
-                    { name: 'Aug', revenue: 75000, growth: 62000, profit: 45000, clients: 35000 },
-                  ].map((row, index) => (
-                    <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
-                      <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.name}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.revenue.toLocaleString()}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.growth.toLocaleString()}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.profit.toLocaleString()}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.clients.toLocaleString()}</td>
-                    </tr>
-                  ))}
+                  <tr>
+                    <td colSpan={5} className="py-8 px-3 text-center text-gray-500 dark:text-gray-400">
+                      No data available
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -4532,13 +4458,13 @@ export default function AdminDashboard() {
 
       {/* Pipeline Modal */}
       <Dialog open={isPipelineModalOpen} onOpenChange={setIsPipelineModalOpen}>
-        <DialogContent className="max-w-6xl max-h-[80vh]">
+        <DialogContent className="max-w-4xl w-[90vw] max-h-[85vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Pipeline Details</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto">
+          <div className="overflow-y-auto pr-2">
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse bg-white dark:bg-gray-900">
+              <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
                     <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Stage</th>
@@ -4612,6 +4538,141 @@ export default function AdminDashboard() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Database View Modal */}
+      <Dialog open={isDatabaseModalOpen} onOpenChange={setIsDatabaseModalOpen}>
+        <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Full Database View</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto pr-2">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Employee ID</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Name</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Team</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Total Applicants</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Uploads</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colSpan={5} className="py-8 px-3 text-center text-gray-500 dark:text-gray-400">
+                      No database records available
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Client Modal */}
+      <Dialog open={isClientModalOpen} onOpenChange={setIsClientModalOpen}>
+        <DialogContent className="max-w-md w-[90vw]">
+          <DialogHeader>
+            <DialogTitle>Add New Client</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Code</label>
+              <Input placeholder="Client Code" className="input-styled rounded" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Brand Name</label>
+              <Input placeholder="Brand Name" className="input-styled rounded" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Location</label>
+              <Input placeholder="Location" className="input-styled rounded" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SPOC</label>
+              <Input placeholder="SPOC" className="input-styled rounded" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Website</label>
+              <Input placeholder="Website" className="input-styled rounded" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+              <Select>
+                <SelectTrigger className="input-styled rounded">
+                  <SelectValue placeholder="Select Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="frozen">Frozen</SelectItem>
+                  <SelectItem value="churned">Churned</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setIsClientModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                Add Client
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Employee Modal */}
+      <Dialog open={isEmployeeModalOpen} onOpenChange={setIsEmployeeModalOpen}>
+        <DialogContent className="max-w-md w-[90vw]">
+          <DialogHeader>
+            <DialogTitle>Add New Employee</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee ID</label>
+              <Input placeholder="Employee ID" className="input-styled rounded" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
+              <Input placeholder="Name" className="input-styled rounded" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Father's Name</label>
+              <Input placeholder="Father's Name" className="input-styled rounded" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee Status</label>
+              <Select>
+                <SelectTrigger className="input-styled rounded">
+                  <SelectValue placeholder="Select Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="intern">Intern</SelectItem>
+                  <SelectItem value="permanent">Permanent</SelectItem>
+                  <SelectItem value="probation">Probation</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date of Joining</label>
+              <Input placeholder="DD-MM-YYYY" className="input-styled rounded" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current CTC</label>
+              <Input placeholder="Current CTC" className="input-styled rounded" />
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={() => setIsEmployeeModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button className="bg-green-600 hover:bg-green-700 text-white">
+                Add Employee
+              </Button>
             </div>
           </div>
         </DialogContent>
