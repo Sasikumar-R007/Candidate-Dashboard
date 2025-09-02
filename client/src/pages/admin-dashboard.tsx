@@ -297,6 +297,21 @@ export default function AdminDashboard() {
   const [requirementsVisible, setRequirementsVisible] = useState(10);
   const [isAddRequirementModalOpen, setIsAddRequirementModalOpen] = useState(false);
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
+  const [isMetricsModalOpen, setIsMetricsModalOpen] = useState(false);
+  const [isPipelineModalOpen, setIsPipelineModalOpen] = useState(false);
+  const [isCashoutModalOpen, setIsCashoutModalOpen] = useState(false);
+  const [cashoutData, setCashoutData] = useState([
+    { month: 'Jan', year: '2025', employees: 50, salary: 500000, incentive: 25000, tools: 15000, rent: 50000, others: 10000 },
+    { month: 'Feb', year: '2025', employees: 52, salary: 520000, incentive: 28000, tools: 15000, rent: 50000, others: 12000 },
+    { month: 'Mar', year: '2025', employees: 55, salary: 550000, incentive: 32000, tools: 18000, rent: 50000, others: 15000 },
+    { month: 'Apr', year: '2025', employees: 58, salary: 580000, incentive: 35000, tools: 20000, rent: 50000, others: 18000 },
+    { month: 'May', year: '2025', employees: 60, salary: 600000, incentive: 38000, tools: 22000, rent: 50000, others: 20000 },
+    { month: 'Jun', year: '2025', employees: 62, salary: 620000, incentive: 42000, tools: 25000, rent: 50000, others: 22000 },
+    { month: 'Jul', year: '2025', employees: 65, salary: 650000, incentive: 45000, tools: 28000, rent: 50000, others: 25000 },
+  ]);
+  const [cashoutForm, setCashoutForm] = useState({
+    month: '', year: '', employees: '', salary: '', incentive: '', tools: '', rent: '', others: ''
+  });
   const [selectedRequirement, setSelectedRequirement] = useState<any>(null);
   const queryClient = useQueryClient();
   
@@ -488,6 +503,25 @@ export default function AdminDashboard() {
     setIsCustomDate(value === 'custom');
   };
 
+  const handleAddCashoutData = () => {
+    if (cashoutForm.month && cashoutForm.year && cashoutForm.employees && cashoutForm.salary) {
+      const newEntry = {
+        month: cashoutForm.month,
+        year: cashoutForm.year,
+        employees: parseInt(cashoutForm.employees) || 0,
+        salary: parseInt(cashoutForm.salary) || 0,
+        incentive: parseInt(cashoutForm.incentive) || 0,
+        tools: parseInt(cashoutForm.tools) || 0,
+        rent: parseInt(cashoutForm.rent) || 0,
+        others: parseInt(cashoutForm.others) || 0,
+      };
+      setCashoutData(prev => [newEntry, ...prev]);
+      setCashoutForm({
+        month: '', year: '', employees: '', salary: '', incentive: '', tools: '', rent: '', others: ''
+      });
+    }
+  };
+
   const getMeetingWithOptions = () => {
     return meetingFor === 'TL' ? tlList : meetingFor === 'TA' ? taList : [];
   };
@@ -521,7 +555,7 @@ export default function AdminDashboard() {
           <Button 
             variant="outline" 
             size="sm" 
-            className="text-blue-600 border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-sm text-xs px-2 py-1"
+            className="text-blue-600 border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-sm text-sm px-2 py-1"
             onClick={() => setIsTargetModalOpen(true)}
             data-testid="button-view-all-targets"
           >
@@ -566,7 +600,7 @@ export default function AdminDashboard() {
           <CardTitle className="text-lg text-gray-900 dark:text-white">Daily Metrics</CardTitle>
           <div className="flex items-center space-x-2">
             <Select defaultValue="overall">
-              <SelectTrigger className="w-20 h-7 text-xs">
+              <SelectTrigger className="w-20 h-7 text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -580,7 +614,7 @@ export default function AdminDashboard() {
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="flex items-center space-x-1 h-7 px-2">
                   <CalendarIcon className="h-3 w-3" />
-                  <span className="text-xs">{format(selectedDate, "dd-MMM-yyyy")}</span>
+                  <span className="text-sm">{format(selectedDate, "dd-MMM-yyyy")}</span>
                   <EditIcon className="h-3 w-3" />
                 </Button>
               </PopoverTrigger>
@@ -629,7 +663,7 @@ export default function AdminDashboard() {
                   </p>
                   <Button 
                     size="sm" 
-                    className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded"
+                    className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-sm rounded"
                     onClick={() => setIsDeliveredModalOpen(true)}
                     data-testid="button-view-delivered"
                   >
@@ -645,7 +679,7 @@ export default function AdminDashboard() {
                   </p>
                   <Button 
                     size="sm" 
-                    className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded"
+                    className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-sm rounded"
                     onClick={() => setIsDefaultedModalOpen(true)}
                     data-testid="button-view-defaulted"
                   >
@@ -667,11 +701,11 @@ export default function AdminDashboard() {
                 <div className="flex justify-start space-x-2 mb-2">
                   <div className="flex items-center space-x-1">
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-xs text-gray-600 dark:text-gray-400">Something</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Something</span>
                   </div>
                   <div className="flex items-center space-x-1">
                     <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
-                    <span className="text-xs text-gray-600 dark:text-gray-400">Romania</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Romania</span>
                   </div>
                 </div>
                 <div className="h-16 bg-gray-100 dark:bg-gray-800 rounded mt-2 flex items-center justify-center">
@@ -691,14 +725,14 @@ export default function AdminDashboard() {
             <CardTitle className="text-lg text-gray-900 dark:text-white">Pending Meetings</CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-4 relative">
+            <div className="bg-white dark:bg-gray-800  p-4 relative">
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center">
                   <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">TL's Meeting</h3>
                   <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">3</div>
                   <Button 
                     size="sm" 
-                    className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded"
+                    className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-sm rounded"
                     onClick={() => setIsTlMeetingsModalOpen(true)}
                     data-testid="button-view-tl-meetings"
                   >
@@ -712,7 +746,7 @@ export default function AdminDashboard() {
                   <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">1</div>
                   <Button 
                     size="sm" 
-                    className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-xs rounded"
+                    className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-sm rounded"
                     onClick={() => setIsCeoMeetingsModalOpen(true)}
                     data-testid="button-view-ceo-meetings"
                   >
@@ -762,7 +796,7 @@ export default function AdminDashboard() {
         {/* Create Section - 1/10 width */}
         <Card className="bg-slate-800 dark:bg-slate-900 col-span-2">
           <CardContent className="flex flex-col items-center justify-center h-full p-3">
-            <div className="bg-white rounded-lg p-4 mb-3">
+            <div className="bg-white  p-4 mb-3">
               <Mail className="w-10 h-10 text-gray-600" />
             </div>
             <Button 
@@ -804,39 +838,39 @@ export default function AdminDashboard() {
                   </Button>
                 </div>
                 
-                <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="bg-white dark:bg-gray-900  border border-gray-200 dark:border-gray-700">
                   <div className="overflow-x-auto admin-scrollbar">
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="border-b border-gray-200 dark:border-gray-700">
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Positions</th>
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Criticality</th>
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Company</th>
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">SPOC</th>
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Talent Advisor</th>
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Team Lead</th>
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Actions</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Positions</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Criticality</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Company</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">SPOC</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Team Lead</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {displayedRequirements.map((requirement) => (
                           <tr key={requirement.id} className="border-b border-gray-100 dark:border-gray-800">
-                            <td className="py-2 px-2 text-gray-900 dark:text-white font-medium text-xs">{requirement.position}</td>
+                            <td className="py-2 px-2 text-gray-900 dark:text-white font-medium text-sm">{requirement.position}</td>
                             <td className="py-2 px-2">
-                              <span className={`text-xs font-medium px-2 py-1 rounded ${getCriticalityColor(requirement.criticality)}`}>
+                              <span className={`text-sm font-medium px-2 py-1 rounded ${getCriticalityColor(requirement.criticality)}`}>
                                 {requirement.criticality}
                               </span>
                             </td>
-                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-xs">{requirement.company}</td>
-                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-xs">{requirement.spoc}</td>
-                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-xs">
+                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-sm">{requirement.company}</td>
+                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-sm">{requirement.spoc}</td>
+                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-sm">
                               {requirement.talentAdvisor === "Unassigned" ? (
                                 <span className="text-cyan-500 dark:text-cyan-400">{requirement.talentAdvisor}</span>
                               ) : (
                                 requirement.talentAdvisor
                               )}
                             </td>
-                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-xs">
+                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-sm">
                               {requirement.teamLead === "Unassigned" ? (
                                 <span className="text-cyan-500 dark:text-cyan-400">{requirement.teamLead}</span>
                               ) : (
@@ -897,14 +931,14 @@ export default function AdminDashboard() {
               </div>
 
               {/* Right Section - Priority Distribution */}
-              <div className="w-72 overflow-y-auto admin-scrollbar">
-                <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+              <div className="w-72">
+                <div className="bg-white dark:bg-gray-900  border border-gray-200 dark:border-gray-700 px-6 pb-6">
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Priority Distribution</h3>
                   </div>
                   
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 ">
                       <div className="flex items-center space-x-2">
                         <div className="text-4xl font-bold text-red-600 dark:text-red-400">H</div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">IGH</div>
@@ -912,7 +946,7 @@ export default function AdminDashboard() {
                       <div className="text-2xl font-bold text-red-600 dark:text-red-400">15</div>
                     </div>
                     
-                    <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 ">
                       <div className="flex items-center space-x-2">
                         <div className="text-4xl font-bold text-blue-600 dark:text-blue-400">M</div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">EDIUM</div>
@@ -920,7 +954,7 @@ export default function AdminDashboard() {
                       <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">9</div>
                     </div>
                     
-                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 ">
                       <div className="flex items-center space-x-2">
                         <div className="text-4xl font-bold text-gray-600 dark:text-gray-400">L</div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">OW</div>
@@ -928,7 +962,7 @@ export default function AdminDashboard() {
                       <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">3</div>
                     </div>
                     
-                    <div className="flex items-center justify-between p-3 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-slate-100 dark:bg-slate-800 ">
                       <div className="flex items-center space-x-2">
                         <div className="text-4xl font-bold text-gray-900 dark:text-white">T</div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">OTAL</div>
@@ -1559,7 +1593,7 @@ export default function AdminDashboard() {
                         <td className="py-3 px-3 text-gray-600 dark:text-gray-400">David Wilson</td>
                         <td className="py-3 px-3 text-gray-600 dark:text-gray-400">www.whatfix.com</td>
                         <td className="py-3 px-3">
-                          <span className="bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">• ACTIVE</span>
+                          <span className="bg-green-100 text-green-800 text-sm font-semibold px-3 py-1 rounded-full">• ACTIVE</span>
                         </td>
                       </tr>
                       <tr className="border-b border-gray-100 dark:border-gray-800">
@@ -1569,7 +1603,7 @@ export default function AdminDashboard() {
                         <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Tom Anderson</td>
                         <td className="py-3 px-3 text-gray-600 dark:text-gray-400">www.kombal.com</td>
                         <td className="py-3 px-3">
-                          <span className="bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">• ACTIVE</span>
+                          <span className="bg-green-100 text-green-800 text-sm font-semibold px-3 py-1 rounded-full">• ACTIVE</span>
                         </td>
                       </tr>
                       <tr className="border-b border-gray-100 dark:border-gray-800">
@@ -1579,7 +1613,7 @@ export default function AdminDashboard() {
                         <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Robert Kim</td>
                         <td className="py-3 px-3 text-gray-600 dark:text-gray-400">www.vertas.com</td>
                         <td className="py-3 px-3">
-                          <span className="bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">• ACTIVE</span>
+                          <span className="bg-green-100 text-green-800 text-sm font-semibold px-3 py-1 rounded-full">• ACTIVE</span>
                         </td>
                       </tr>
                       <tr className="border-b border-gray-100 dark:border-gray-800">
@@ -1589,7 +1623,7 @@ export default function AdminDashboard() {
                         <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Kevin Brown</td>
                         <td className="py-3 px-3 text-gray-600 dark:text-gray-400">www.superhire.com</td>
                         <td className="py-3 px-3">
-                          <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full">• FROZEN</span>
+                          <span className="bg-blue-100 text-blue-800 text-sm font-semibold px-3 py-1 rounded-full">• FROZEN</span>
                         </td>
                       </tr>
                       <tr className="border-b border-gray-100 dark:border-gray-800">
@@ -1599,7 +1633,7 @@ export default function AdminDashboard() {
                         <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Mel Gibson</td>
                         <td className="py-3 px-3 text-gray-600 dark:text-gray-400">www.hitchcock.com</td>
                         <td className="py-3 px-3">
-                          <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded-full">• CHURNED</span>
+                          <span className="bg-red-100 text-red-800 text-sm font-semibold px-3 py-1 rounded-full">• CHURNED</span>
                         </td>
                       </tr>
                     </tbody>
@@ -1663,7 +1697,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Chart Area */}
-                <div className="bg-white dark:bg-gray-900 rounded-lg p-6 flex gap-6">
+                <div className="bg-white dark:bg-gray-900  px-6 pb-6 flex gap-6">
                   {/* Line Chart */}
                   <div className="flex-1">
                     <ResponsiveContainer width="100%" height={300}>
@@ -1735,12 +1769,12 @@ export default function AdminDashboard() {
                       </svg>
                       
                       {/* Labels */}
-                      <div className="absolute bottom-8 left-4 text-xs text-gray-600">BEARISH</div>
-                      <div className="absolute bottom-8 right-4 text-xs text-gray-600">BULLISH</div>
-                      <div className="absolute bottom-16 left-8 text-xs text-gray-600">BEAR</div>
-                      <div className="absolute bottom-16 right-8 text-xs text-gray-600">BULL</div>
-                      <div className="absolute top-20 left-2 text-xs text-gray-600">STRONG<br/>BEAR</div>
-                      <div className="absolute top-20 right-2 text-xs text-gray-600">STRONG<br/>BULL</div>
+                      <div className="absolute bottom-8 left-4 text-sm text-gray-600">BEARISH</div>
+                      <div className="absolute bottom-8 right-4 text-sm text-gray-600">BULLISH</div>
+                      <div className="absolute bottom-16 left-8 text-sm text-gray-600">BEAR</div>
+                      <div className="absolute bottom-16 right-8 text-sm text-gray-600">BULL</div>
+                      <div className="absolute top-20 left-2 text-sm text-gray-600">STRONG<br/>BEAR</div>
+                      <div className="absolute top-20 right-2 text-sm text-gray-600">STRONG<br/>BULL</div>
                     </div>
                     
                     <Button className="bg-cyan-400 hover:bg-cyan-500 text-black mt-4 px-6 py-2 rounded">
@@ -1751,7 +1785,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Right Sidebar - Quarterly Metrics */}
-              <div className="w-64 bg-teal-50 dark:bg-teal-900/30 rounded-lg p-4 space-y-4">
+              <div className="w-64 bg-teal-50 dark:bg-teal-900/30  p-4 space-y-4">
                 <div className="text-center">
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">CURRENT QUARTER</div>
                   <div className="text-xl font-bold text-gray-900 dark:text-white">ASO-2025</div>
@@ -1783,7 +1817,7 @@ export default function AdminDashboard() {
             <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
               <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-lg text-gray-900 dark:text-white">Team Performance</CardTitle>
-                <Button variant="link" size="sm" className="text-blue-600 text-xs">view list</Button>
+                <Button variant="link" size="sm" className="text-blue-600 text-sm">view list</Button>
               </CardHeader>
               <CardContent className="p-3">
                 <div className="overflow-x-auto admin-scrollbar">
@@ -1841,7 +1875,7 @@ export default function AdminDashboard() {
             <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
               <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-lg text-gray-900 dark:text-white">List Of Closures</CardTitle>
-                <Button variant="link" size="sm" className="text-blue-600 text-xs">view list</Button>
+                <Button variant="link" size="sm" className="text-blue-600 text-sm">view list</Button>
               </CardHeader>
               <CardContent className="p-3">
                 <div className="overflow-x-auto admin-scrollbar">
@@ -2059,58 +2093,55 @@ export default function AdminDashboard() {
       case 'requirements':
         return (
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
-            {/* Header with Requirements title only */}
-            <div className="mb-6">
+            {/* Header with Requirements title and Add Req button in same row */}
+            <div className="mb-6 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Requirements</h2>
+              <Button 
+                className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded text-sm"
+                onClick={() => setIsAddRequirementModalOpen(true)}
+                data-testid="button-add-requirements"
+              >
+                + Add Requirements
+              </Button>
             </div>
             
             <div className="flex gap-6 h-full">
               {/* Middle Section - Requirements Table */}
               <div className="flex-1 overflow-y-auto admin-scrollbar">
-                {/* Add Requirements Button */}
-                <div className="mb-4 flex justify-end">
-                  <Button 
-                    className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded text-sm"
-                    onClick={() => setIsAddRequirementModalOpen(true)}
-                    data-testid="button-add-requirements"
-                  >
-                    + Add Requirements
-                  </Button>
-                </div>
                 
-                <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="bg-white dark:bg-gray-900  border border-gray-200 dark:border-gray-700">
                   <div className="overflow-x-auto admin-scrollbar">
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="border-b border-gray-200 dark:border-gray-700">
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Positions</th>
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Criticality</th>
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Company</th>
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">SPOC</th>
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Talent Advisor</th>
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Team Lead</th>
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-xs">Actions</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Positions</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Criticality</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Company</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">SPOC</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Team Lead</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {displayedRequirements.map((requirement) => (
                           <tr key={requirement.id} className="border-b border-gray-100 dark:border-gray-800">
-                            <td className="py-2 px-2 text-gray-900 dark:text-white font-medium text-xs">{requirement.position}</td>
+                            <td className="py-2 px-2 text-gray-900 dark:text-white font-medium text-sm">{requirement.position}</td>
                             <td className="py-2 px-2">
-                              <span className={`text-xs font-medium px-2 py-1 rounded ${getCriticalityColor(requirement.criticality)}`}>
+                              <span className={`text-sm font-medium px-2 py-1 rounded ${getCriticalityColor(requirement.criticality)}`}>
                                 {requirement.criticality}
                               </span>
                             </td>
-                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-xs">{requirement.company}</td>
-                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-xs">{requirement.spoc}</td>
-                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-xs">
+                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-sm">{requirement.company}</td>
+                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-sm">{requirement.spoc}</td>
+                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-sm">
                               {requirement.talentAdvisor === "Unassigned" ? (
                                 <span className="text-cyan-500 dark:text-cyan-400">{requirement.talentAdvisor}</span>
                               ) : (
                                 requirement.talentAdvisor
                               )}
                             </td>
-                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-xs">
+                            <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-sm">
                               {requirement.teamLead === "Unassigned" ? (
                                 <span className="text-cyan-500 dark:text-cyan-400">{requirement.teamLead}</span>
                               ) : (
@@ -2171,14 +2202,14 @@ export default function AdminDashboard() {
               </div>
 
               {/* Right Section - Priority Distribution */}
-              <div className="w-72 overflow-y-auto admin-scrollbar">
-                <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+              <div className="w-72">
+                <div className="bg-white dark:bg-gray-900  border border-gray-200 dark:border-gray-700 px-6 pb-6">
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Priority Distribution</h3>
                   </div>
                   
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 ">
                       <div className="flex items-center space-x-2">
                         <div className="text-4xl font-bold text-red-600 dark:text-red-400">H</div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">IGH</div>
@@ -2186,7 +2217,7 @@ export default function AdminDashboard() {
                       <div className="text-2xl font-bold text-red-600 dark:text-red-400">15</div>
                     </div>
                     
-                    <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 ">
                       <div className="flex items-center space-x-2">
                         <div className="text-4xl font-bold text-blue-600 dark:text-blue-400">M</div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">EDIUM</div>
@@ -2194,7 +2225,7 @@ export default function AdminDashboard() {
                       <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">9</div>
                     </div>
                     
-                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 ">
                       <div className="flex items-center space-x-2">
                         <div className="text-4xl font-bold text-gray-600 dark:text-gray-400">L</div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">OW</div>
@@ -2202,7 +2233,7 @@ export default function AdminDashboard() {
                       <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">3</div>
                     </div>
                     
-                    <div className="flex items-center justify-between p-3 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                    <div className="flex items-center justify-between p-3 bg-slate-100 dark:bg-slate-800 ">
                       <div className="flex items-center space-x-2">
                         <div className="text-4xl font-bold text-gray-900 dark:text-white">T</div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">OTAL</div>
@@ -2479,8 +2510,16 @@ export default function AdminDashboard() {
             </div>
 
             {/* Right Sidebar with Stats - matching image 2 */}
-            <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 overflow-auto admin-scrollbar">
+            <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700">
               <div className="p-4 space-y-1">
+                <div className="flex justify-center mb-4">
+                  <Button 
+                    className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded text-sm"
+                    onClick={() => setIsPipelineModalOpen(true)}
+                  >
+                    See More
+                  </Button>
+                </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-green-100 dark:bg-green-900 rounded">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SOURCED</span>
                   <span className="text-lg font-bold text-gray-900 dark:text-white">15</span>
@@ -2705,7 +2744,7 @@ export default function AdminDashboard() {
                           <td className="py-3 px-4 text-gray-600 dark:text-gray-400">David Wilson</td>
                           <td className="py-3 px-4 text-blue-600 dark:text-blue-400">www.whatsiq.com</td>
                           <td className="py-3 px-4">
-                            <span className="bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">• ACTIVE</span>
+                            <span className="bg-green-100 text-green-800 text-sm font-semibold px-3 py-1 rounded-full">• ACTIVE</span>
                           </td>
                         </tr>
                         <tr className="border-b border-gray-100 dark:border-gray-800">
@@ -2715,7 +2754,7 @@ export default function AdminDashboard() {
                           <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Tom Anderson</td>
                           <td className="py-3 px-4 text-blue-600 dark:text-blue-400">www.kombat.com</td>
                           <td className="py-3 px-4">
-                            <span className="bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">• ACTIVE</span>
+                            <span className="bg-green-100 text-green-800 text-sm font-semibold px-3 py-1 rounded-full">• ACTIVE</span>
                           </td>
                         </tr>
                         <tr className="border-b border-gray-100 dark:border-gray-800 bg-blue-50 dark:bg-blue-900/20">
@@ -2725,7 +2764,7 @@ export default function AdminDashboard() {
                           <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Robert Kim</td>
                           <td className="py-3 px-4 text-blue-600 dark:text-blue-400">www.vertas.com</td>
                           <td className="py-3 px-4">
-                            <span className="bg-green-100 text-green-800 text-xs font-semibold px-3 py-1 rounded-full">• ACTIVE</span>
+                            <span className="bg-green-100 text-green-800 text-sm font-semibold px-3 py-1 rounded-full">• ACTIVE</span>
                           </td>
                         </tr>
                         <tr className="border-b border-gray-100 dark:border-gray-800">
@@ -2735,7 +2774,7 @@ export default function AdminDashboard() {
                           <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Kevin Brown</td>
                           <td className="py-3 px-4 text-blue-600 dark:text-blue-400">www.superlike.com</td>
                           <td className="py-3 px-4">
-                            <span className="bg-orange-100 text-orange-800 text-xs font-semibold px-3 py-1 rounded-full">• FROZEN</span>
+                            <span className="bg-orange-100 text-orange-800 text-sm font-semibold px-3 py-1 rounded-full">• FROZEN</span>
                           </td>
                         </tr>
                         <tr className="border-b border-gray-100 dark:border-gray-800 bg-blue-50 dark:bg-blue-900/20">
@@ -2745,7 +2784,7 @@ export default function AdminDashboard() {
                           <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Mel Gibson</td>
                           <td className="py-3 px-4 text-blue-600 dark:text-blue-400">www.hitchcock.com</td>
                           <td className="py-3 px-4">
-                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded-full">• CHURNED</span>
+                            <span className="bg-red-100 text-red-800 text-sm font-semibold px-3 py-1 rounded-full">• CHURNED</span>
                           </td>
                         </tr>
                       </tbody>
@@ -2756,7 +2795,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Statistics Panel */}
-            <div className="w-80 bg-blue-50 dark:bg-blue-900/20 border-l border-gray-200 dark:border-gray-700 p-6 space-y-4">
+            <div className="w-80 bg-blue-50 dark:bg-blue-900/20 border-l border-gray-200 dark:border-gray-700 px-6 pb-6 space-y-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Totals</h3>
               
               <div className="space-y-4">
@@ -2853,7 +2892,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Chart Area */}
-                <div className="bg-white dark:bg-gray-900 rounded-lg p-6 flex gap-6">
+                <div className="bg-white dark:bg-gray-900  px-6 pb-6 flex gap-6">
                   {/* Line Chart */}
                   <div className="flex-1">
                     <ResponsiveContainer width="100%" height={300}>
@@ -2925,12 +2964,12 @@ export default function AdminDashboard() {
                       </svg>
                       
                       {/* Labels */}
-                      <div className="absolute bottom-8 left-4 text-xs text-gray-600">BEARISH</div>
-                      <div className="absolute bottom-8 right-4 text-xs text-gray-600">BULLISH</div>
-                      <div className="absolute bottom-16 left-8 text-xs text-gray-600">BEAR</div>
-                      <div className="absolute bottom-16 right-8 text-xs text-gray-600">BULL</div>
-                      <div className="absolute top-20 left-2 text-xs text-gray-600">STRONG<br/>BEAR</div>
-                      <div className="absolute top-20 right-2 text-xs text-gray-600">STRONG<br/>BULL</div>
+                      <div className="absolute bottom-8 left-4 text-sm text-gray-600">BEARISH</div>
+                      <div className="absolute bottom-8 right-4 text-sm text-gray-600">BULLISH</div>
+                      <div className="absolute bottom-16 left-8 text-sm text-gray-600">BEAR</div>
+                      <div className="absolute bottom-16 right-8 text-sm text-gray-600">BULL</div>
+                      <div className="absolute top-20 left-2 text-sm text-gray-600">STRONG<br/>BEAR</div>
+                      <div className="absolute top-20 right-2 text-sm text-gray-600">STRONG<br/>BULL</div>
                     </div>
                     
                     <Button className="bg-cyan-400 hover:bg-cyan-500 text-black mt-4 px-6 py-2 rounded">
@@ -2941,7 +2980,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Right Sidebar - Quarterly Metrics */}
-              <div className="w-64 bg-teal-50 dark:bg-teal-900/30 rounded-lg p-4 space-y-4">
+              <div className="w-64 bg-teal-50 dark:bg-teal-900/30  p-4 space-y-4">
                 <div className="text-center">
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">CURRENT QUARTER</div>
                   <div className="text-xl font-bold text-gray-900 dark:text-white">ASO-2025</div>
@@ -2973,7 +3012,7 @@ export default function AdminDashboard() {
             <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
               <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-lg text-gray-900 dark:text-white">Team Performance</CardTitle>
-                <Button variant="link" size="sm" className="text-blue-600 text-xs">view list</Button>
+                <Button variant="link" size="sm" className="text-blue-600 text-sm">view list</Button>
               </CardHeader>
               <CardContent className="p-3">
                 <div className="overflow-x-auto admin-scrollbar">
@@ -3031,7 +3070,7 @@ export default function AdminDashboard() {
             <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
               <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-lg text-gray-900 dark:text-white">List Of Closures</CardTitle>
-                <Button variant="link" size="sm" className="text-blue-600 text-xs">view list</Button>
+                <Button variant="link" size="sm" className="text-blue-600 text-sm">view list</Button>
               </CardHeader>
               <CardContent className="p-3">
                 <div className="overflow-x-auto admin-scrollbar">
@@ -3103,7 +3142,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* User Management Table */}
-              <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-900  border border-gray-200 dark:border-gray-700">
                 <div className="overflow-x-auto admin-scrollbar">
                   <table className="w-full border-collapse">
                     <thead>
@@ -3195,16 +3234,16 @@ export default function AdminDashboard() {
             </div>
 
             {/* Right Sidebar - Online Activity */}
-            <div className="w-72 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 p-6">
+            <div className="w-72 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 px-6 pb-6">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Online Activity</h3>
               
               <div className="space-y-4">
-                <div className="bg-cyan-400 dark:bg-cyan-500 p-6 rounded-lg text-center">
+                <div className="bg-cyan-400 dark:bg-cyan-500 px-6 pb-6  text-center">
                   <div className="text-sm font-medium text-white mb-2">Online</div>
                   <div className="text-4xl font-bold text-white">3</div>
                 </div>
                 
-                <div className="bg-pink-400 dark:bg-pink-500 p-6 rounded-lg text-center">
+                <div className="bg-pink-400 dark:bg-pink-500 px-6 pb-6  text-center">
                   <div className="text-sm font-medium text-white mb-2">Offline</div>
                   <div className="text-4xl font-bold text-white">1</div>
                 </div>
@@ -3216,7 +3255,7 @@ export default function AdminDashboard() {
         return (
           <div className="px-6 py-6 space-y-6 overflow-y-auto max-h-full admin-scrollbar">
             {/* Teams Section */}
-            <div className="bg-cyan-50 dark:bg-cyan-900/20 p-6 rounded-lg">
+            <div className="bg-cyan-50 dark:bg-cyan-900/20 px-6 pb-6 ">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Teams</h3>
               
               <div className="flex items-center justify-between mb-4">
@@ -3347,7 +3386,7 @@ export default function AdminDashboard() {
             </div>
             
             {/* General Section */}
-            <div className="bg-cyan-50 dark:bg-cyan-900/20 p-6 rounded-lg">
+            <div className="bg-cyan-50 dark:bg-cyan-900/20 px-6 pb-6 ">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">General</h3>
               
               <div className="flex items-center justify-between">
@@ -3402,29 +3441,38 @@ export default function AdminDashboard() {
                 {/* Key Metrics Section */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Key Metrics</CardTitle>
-                    <div className="flex gap-4 mt-4">
-                      <Select>
-                        <SelectTrigger className="w-48 input-styled rounded">
-                          <SelectValue placeholder="Client" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="client1">Client 1</SelectItem>
-                          <SelectItem value="client2">Client 2</SelectItem>
-                          <SelectItem value="all">All Clients</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      
-                      <Select>
-                        <SelectTrigger className="w-48 input-styled rounded">
-                          <SelectValue placeholder="Monthly" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="monthly">Monthly</SelectItem>
-                          <SelectItem value="quarterly">Quarterly</SelectItem>
-                          <SelectItem value="yearly">Yearly</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Key Metrics</CardTitle>
+                      <div className="flex gap-4">
+                        <Select>
+                          <SelectTrigger className="w-48 input-styled rounded">
+                            <SelectValue placeholder="Client" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="client1">Client 1</SelectItem>
+                            <SelectItem value="client2">Client 2</SelectItem>
+                            <SelectItem value="all">All Clients</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        
+                        <Select>
+                          <SelectTrigger className="w-48 input-styled rounded">
+                            <SelectValue placeholder="Monthly" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                            <SelectItem value="quarterly">Quarterly</SelectItem>
+                            <SelectItem value="yearly">Yearly</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        
+                        <Button 
+                          className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded"
+                          onClick={() => setIsMetricsModalOpen(true)}
+                        >
+                          Show Data
+                        </Button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -3461,11 +3509,6 @@ export default function AdminDashboard() {
                       </ResponsiveContainer>
                     </div>
                     
-                    <div className="flex justify-center">
-                      <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded">
-                        Show Data
-                      </Button>
-                    </div>
                   </CardContent>
                 </Card>
 
@@ -3479,44 +3522,87 @@ export default function AdminDashboard() {
                     <div className="grid grid-cols-3 gap-4 mb-6">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Month</label>
-                        <Input placeholder="Month" className="input-styled rounded" />
+                        <Input 
+                          placeholder="Month" 
+                          className="input-styled rounded bg-gray-50 dark:bg-gray-700 border-2" 
+                          value={cashoutForm.month}
+                          onChange={(e) => setCashoutForm({...cashoutForm, month: e.target.value})}
+                        />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year</label>
-                        <Input placeholder="Year" className="input-styled rounded" />
+                        <Input 
+                          placeholder="Year" 
+                          className="input-styled rounded bg-gray-50 dark:bg-gray-700 border-2" 
+                          value={cashoutForm.year}
+                          onChange={(e) => setCashoutForm({...cashoutForm, year: e.target.value})}
+                        />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Number of Employees</label>
-                        <Input placeholder="Number of Employees" className="input-styled rounded" />
+                        <Input 
+                          placeholder="Number of Employees" 
+                          className="input-styled rounded bg-gray-50 dark:bg-gray-700 border-2" 
+                          value={cashoutForm.employees}
+                          onChange={(e) => setCashoutForm({...cashoutForm, employees: e.target.value})}
+                        />
                       </div>
                     </div>
                     
                     <div className="grid grid-cols-3 gap-4 mb-6">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Total Salary</label>
-                        <Input placeholder="Total Salary" className="input-styled rounded" />
+                        <Input 
+                          placeholder="Total Salary" 
+                          className="input-styled rounded bg-gray-50 dark:bg-gray-700 border-2" 
+                          value={cashoutForm.salary}
+                          onChange={(e) => setCashoutForm({...cashoutForm, salary: e.target.value})}
+                        />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Incentive</label>
-                        <Input placeholder="Incentive" className="input-styled rounded" />
+                        <Input 
+                          placeholder="Incentive" 
+                          className="input-styled rounded bg-gray-50 dark:bg-gray-700 border-2" 
+                          value={cashoutForm.incentive}
+                          onChange={(e) => setCashoutForm({...cashoutForm, incentive: e.target.value})}
+                        />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Database & Tools cost</label>
-                        <Input placeholder="Database & Tools cost" className="input-styled rounded" />
+                        <Input 
+                          placeholder="Database & Tools cost" 
+                          className="input-styled rounded bg-gray-50 dark:bg-gray-700 border-2" 
+                          value={cashoutForm.tools}
+                          onChange={(e) => setCashoutForm({...cashoutForm, tools: e.target.value})}
+                        />
                       </div>
                     </div>
                     
                     <div className="grid grid-cols-3 gap-4 mb-6">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rent</label>
-                        <Input placeholder="Rent" className="input-styled rounded" />
+                        <Input 
+                          placeholder="Rent" 
+                          className="input-styled rounded bg-gray-50 dark:bg-gray-700 border-2" 
+                          value={cashoutForm.rent}
+                          onChange={(e) => setCashoutForm({...cashoutForm, rent: e.target.value})}
+                        />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Other Expenses</label>
-                        <Input placeholder="Other Expenses" className="input-styled rounded" />
+                        <Input 
+                          placeholder="Other Expenses" 
+                          className="input-styled rounded bg-gray-50 dark:bg-gray-700 border-2" 
+                          value={cashoutForm.others}
+                          onChange={(e) => setCashoutForm({...cashoutForm, others: e.target.value})}
+                        />
                       </div>
                       <div className="flex items-end">
-                        <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded w-full">
+                        <Button 
+                          className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded w-full"
+                          onClick={handleAddCashoutData}
+                        >
                           Add
                         </Button>
                       </div>
@@ -3538,65 +3624,32 @@ export default function AdminDashboard() {
                           </tr>
                         </thead>
                         <tbody>
-                          <tr className="border-b border-gray-100 dark:border-gray-800">
-                            <td className="py-3 px-4 text-gray-900 dark:text-white">January</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2025</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">45</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">3,50,000</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">20,000</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">30,000</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
-                          </tr>
-                          <tr className="border-b border-gray-100 dark:border-gray-800">
-                            <td className="py-3 px-4 text-gray-900 dark:text-white">March</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2025</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">19</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2,40,000</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">15,000</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">10,000</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
-                          </tr>
-                          <tr className="border-b border-gray-100 dark:border-gray-800">
-                            <td className="py-3 px-4 text-gray-900 dark:text-white">August</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2025</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">45</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">4,00,000</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">30,000</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">30,000</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
-                          </tr>
-                          <tr className="border-b border-gray-100 dark:border-gray-800">
-                            <td className="py-3 px-4 text-gray-900 dark:text-white">September</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2025</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">39</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">4,35,000</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">32,000</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">32,500</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,500</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,500</td>
-                          </tr>
-                          <tr className="border-b border-gray-100 dark:border-gray-800">
-                            <td className="py-3 px-4 text-gray-900 dark:text-white">November</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2025</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">37</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">5,00,000</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">35,000</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">35,000</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,000</td>
-                          </tr>
+                          {cashoutData.slice(0, 5).map((row, index) => (
+                            <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
+                              <td className="py-3 px-4 text-gray-900 dark:text-white">{row.month}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.year}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.employees}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.salary.toLocaleString()}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.incentive.toLocaleString()}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.tools.toLocaleString()}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.rent.toLocaleString()}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.others.toLocaleString()}</td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>
                     
-                    <div className="flex justify-center mt-4">
-                      <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded">
-                        View More
-                      </Button>
-                    </div>
+                    {cashoutData.length > 5 && (
+                      <div className="flex justify-center mt-4">
+                        <Button 
+                          className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded"
+                          onClick={() => setIsCashoutModalOpen(true)}
+                        >
+                          View More
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -3610,49 +3663,49 @@ export default function AdminDashboard() {
                   <CardContent>
                     <div className="space-y-4">
                       {/* Growth Metrics */}
-                      <div className="bg-teal-50 dark:bg-teal-900/20 p-4 rounded-lg">
-                        <div className="text-xs text-teal-600 dark:text-teal-400 mb-1">GROWTH</div>
+                      <div className="bg-teal-50 dark:bg-teal-900/20 p-4 ">
+                        <div className="text-sm text-teal-600 dark:text-teal-400 mb-1">GROWTH</div>
                         <div className="text-2xl font-bold text-teal-600 dark:text-teal-400">15%</div>
                       </div>
                       
-                      <div className="bg-teal-50 dark:bg-teal-900/20 p-4 rounded-lg">
-                        <div className="text-xs text-teal-600 dark:text-teal-400 mb-1">GROWTH</div>
+                      <div className="bg-teal-50 dark:bg-teal-900/20 p-4 ">
+                        <div className="text-sm text-teal-600 dark:text-teal-400 mb-1">GROWTH</div>
                         <div className="text-2xl font-bold text-teal-600 dark:text-teal-400">9%</div>
                       </div>
                       
                       {/* Burn Rate */}
-                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                        <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">BURN <span className="text-xs">RATE</span></div>
+                      <div className="bg-gray-50 dark:bg-gray-800 p-4 ">
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">BURN <span className="text-sm">RATE</span></div>
                         <div className="text-2xl font-bold text-gray-900 dark:text-white">3%</div>
                       </div>
                       
                       {/* Churn Rate */}
-                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                        <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">CHURN <span className="text-xs">RATE</span></div>
+                      <div className="bg-gray-50 dark:bg-gray-800 p-4 ">
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">CHURN <span className="text-sm">RATE</span></div>
                         <div className="text-2xl font-bold text-gray-900 dark:text-white">9%</div>
                       </div>
                       
                       {/* Attrition */}
-                      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                        <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">ATTRITION</div>
+                      <div className="bg-gray-50 dark:bg-gray-800 p-4 ">
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">ATTRITION</div>
                         <div className="text-2xl font-bold text-gray-900 dark:text-white">3%</div>
                       </div>
                       
                       {/* Net Profit */}
-                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                        <div className="text-xs text-blue-600 dark:text-blue-400 mb-1">NET PROFIT</div>
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 ">
+                        <div className="text-sm text-blue-600 dark:text-blue-400 mb-1">NET PROFIT</div>
                         <div className="text-xl font-bold text-blue-900 dark:text-blue-300">2,50,000</div>
                       </div>
                       
                       {/* Revenue */}
-                      <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-                        <div className="text-xs text-green-600 dark:text-green-400 mb-1">REVENUE <span className="text-xs">PER EMPLOYEE</span></div>
+                      <div className="bg-green-50 dark:bg-green-900/20 p-4 ">
+                        <div className="text-sm text-green-600 dark:text-green-400 mb-1">REVENUE <span className="text-sm">PER EMPLOYEE</span></div>
                         <div className="text-xl font-bold text-green-900 dark:text-green-300">75,000</div>
                       </div>
                       
                       {/* Client */}
-                      <div className="bg-orange-50 dark:bg-orange-900/20 p-4 rounded-lg">
-                        <div className="text-xs text-orange-600 dark:text-orange-400 mb-1">CLIENT <span className="text-xs">ACQUISITION COST</span></div>
+                      <div className="bg-orange-50 dark:bg-orange-900/20 p-4 ">
+                        <div className="text-sm text-orange-600 dark:text-orange-400 mb-1">CLIENT <span className="text-sm">ACQUISITION COST</span></div>
                         <div className="text-xl font-bold text-orange-900 dark:text-orange-300">75,000</div>
                       </div>
                     </div>
@@ -3826,7 +3879,7 @@ export default function AdminDashboard() {
                       <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.client}</td>
                       <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.deliveredDate}</td>
                       <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
-                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                        <span className="px-2 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
                           {item.status}
                         </span>
                       </td>
@@ -3876,7 +3929,7 @@ export default function AdminDashboard() {
                       <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.client}</td>
                       <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.expectedDate}</td>
                       <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
-                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
+                        <span className="px-2 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
                           {item.status}
                         </span>
                       </td>
@@ -3928,7 +3981,7 @@ export default function AdminDashboard() {
                       <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.person}</td>
                       <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.agenda}</td>
                       <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        <span className={`px-2 py-1 rounded-full text-sm font-medium ${
                           meeting.status === 'Scheduled' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
                         }`}>
                           {meeting.status}
@@ -3982,7 +4035,7 @@ export default function AdminDashboard() {
                       <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.person}</td>
                       <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.agenda}</td>
                       <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        <span className={`px-2 py-1 rounded-full text-sm font-medium ${
                           meeting.status === 'Scheduled' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
                         }`}>
                           {meeting.status}
@@ -4197,7 +4250,7 @@ export default function AdminDashboard() {
                     <td className="p-3 text-gray-600 dark:text-gray-400">₹12,00,000</td>
                     <td className="p-3 text-gray-600 dark:text-gray-400">12-06-2025</td>
                     <td className="p-3 text-gray-600 dark:text-gray-400">12-04-2025</td>
-                    <td className="p-3"><span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Joined</span></td>
+                    <td className="p-3"><span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded">Joined</span></td>
                   </tr>
                   <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="p-3 text-gray-900 dark:text-white">Tom Anderson</td>
@@ -4207,7 +4260,7 @@ export default function AdminDashboard() {
                     <td className="p-3 text-gray-600 dark:text-gray-400">₹15,00,000</td>
                     <td className="p-3 text-gray-600 dark:text-gray-400">18-06-2025</td>
                     <td className="p-3 text-gray-600 dark:text-gray-400">05-05-2025</td>
-                    <td className="p-3"><span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Joined</span></td>
+                    <td className="p-3"><span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded">Joined</span></td>
                   </tr>
                   <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="p-3 text-gray-900 dark:text-white">Robert Kim</td>
@@ -4217,7 +4270,7 @@ export default function AdminDashboard() {
                     <td className="p-3 text-gray-600 dark:text-gray-400">₹18,00,000</td>
                     <td className="p-3 text-gray-600 dark:text-gray-400">28-06-2025</td>
                     <td className="p-3 text-gray-600 dark:text-gray-400">19-08-2025</td>
-                    <td className="p-3"><span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Joined</span></td>
+                    <td className="p-3"><span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded">Joined</span></td>
                   </tr>
                   <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="p-3 text-gray-900 dark:text-white">Kevin Brown</td>
@@ -4227,7 +4280,7 @@ export default function AdminDashboard() {
                     <td className="p-3 text-gray-600 dark:text-gray-400">₹10,00,000</td>
                     <td className="p-3 text-gray-600 dark:text-gray-400">03-07-2025</td>
                     <td className="p-3 text-gray-600 dark:text-gray-400">03-09-2025</td>
-                    <td className="p-3"><span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Joined</span></td>
+                    <td className="p-3"><span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded">Joined</span></td>
                   </tr>
                   <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="p-3 text-gray-900 dark:text-white">Mel Gibson</td>
@@ -4237,7 +4290,7 @@ export default function AdminDashboard() {
                     <td className="p-3 text-gray-600 dark:text-gray-400">₹16,00,000</td>
                     <td className="p-3 text-gray-600 dark:text-gray-400">18-07-2025</td>
                     <td className="p-3 text-gray-600 dark:text-gray-400">10-10-2025</td>
-                    <td className="p-3"><span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Joined</span></td>
+                    <td className="p-3"><span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded">Joined</span></td>
                   </tr>
                   <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="p-3 text-gray-900 dark:text-white">Sarah Williams</td>
@@ -4247,7 +4300,7 @@ export default function AdminDashboard() {
                     <td className="p-3 text-gray-600 dark:text-gray-400">₹25,00,000</td>
                     <td className="p-3 text-gray-600 dark:text-gray-400">15-08-2025</td>
                     <td className="p-3 text-gray-600 dark:text-gray-400">01-11-2025</td>
-                    <td className="p-3"><span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">Pending</span></td>
+                    <td className="p-3"><span className="bg-yellow-100 text-yellow-800 text-sm px-2 py-1 rounded">Pending</span></td>
                   </tr>
                   <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="p-3 text-gray-900 dark:text-white">Michael Chen</td>
@@ -4257,7 +4310,7 @@ export default function AdminDashboard() {
                     <td className="p-3 text-gray-600 dark:text-gray-400">₹22,00,000</td>
                     <td className="p-3 text-gray-600 dark:text-gray-400">25-08-2025</td>
                     <td className="p-3 text-gray-600 dark:text-gray-400">15-11-2025</td>
-                    <td className="p-3"><span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Joined</span></td>
+                    <td className="p-3"><span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded">Joined</span></td>
                   </tr>
                   <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="p-3 text-gray-900 dark:text-white">Lisa Rodriguez</td>
@@ -4267,7 +4320,7 @@ export default function AdminDashboard() {
                     <td className="p-3 text-gray-600 dark:text-gray-400">₹20,00,000</td>
                     <td className="p-3 text-gray-600 dark:text-gray-400">10-09-2025</td>
                     <td className="p-3 text-gray-600 dark:text-gray-400">25-11-2025</td>
-                    <td className="p-3"><span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Joined</span></td>
+                    <td className="p-3"><span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded">Joined</span></td>
                   </tr>
                 </tbody>
               </table>
@@ -4385,7 +4438,7 @@ export default function AdminDashboard() {
                     <tr key={requirement.id} className="border-b border-gray-100 dark:border-gray-800">
                       <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{requirement.position}</td>
                       <td className="py-3 px-3">
-                        <span className={`text-xs font-semibold px-3 py-1 rounded ${getCriticalityColor(requirement.criticality)}`}>
+                        <span className={`text-sm font-semibold px-3 py-1 rounded ${getCriticalityColor(requirement.criticality)}`}>
                           {requirement.criticality}
                         </span>
                       </td>
@@ -4424,6 +4477,137 @@ export default function AdminDashboard() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Metrics Modal */}
+      <Dialog open={isMetricsModalOpen} onOpenChange={setIsMetricsModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Metrics Data</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse bg-white dark:bg-gray-900">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Month</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Revenue</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Growth</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Profit</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Clients</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { name: 'Jan', revenue: 45000, growth: 38000, profit: 25000, clients: 15000 },
+                    { name: 'Feb', revenue: 35000, growth: 28000, profit: 18000, clients: 12000 },
+                    { name: 'Mar', revenue: 55000, growth: 45000, profit: 32000, clients: 22000 },
+                    { name: 'Apr', revenue: 48000, growth: 42000, profit: 28000, clients: 18000 },
+                    { name: 'May', revenue: 65000, growth: 52000, profit: 38000, clients: 28000 },
+                    { name: 'Jun', revenue: 58000, growth: 48000, profit: 35000, clients: 25000 },
+                    { name: 'Jul', revenue: 70000, growth: 58000, profit: 42000, clients: 32000 },
+                    { name: 'Aug', revenue: 75000, growth: 62000, profit: 45000, clients: 35000 },
+                  ].map((row, index) => (
+                    <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
+                      <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.name}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.revenue.toLocaleString()}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.growth.toLocaleString()}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.profit.toLocaleString()}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.clients.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Pipeline Modal */}
+      <Dialog open={isPipelineModalOpen} onOpenChange={setIsPipelineModalOpen}>
+        <DialogContent className="max-w-6xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Pipeline Details</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse bg-white dark:bg-gray-900">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Stage</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Count</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Candidates</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Progress</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { stage: 'SOURCED', count: 15, candidates: 'John Smith, Alice Johnson, Bob Wilson', progress: '100%' },
+                    { stage: 'SHORTLISTED', count: 9, candidates: 'John Smith, Alice Johnson, Bob Wilson', progress: '60%' },
+                    { stage: 'INTRO CALL', count: 7, candidates: 'John Smith, Alice Johnson', progress: '47%' },
+                    { stage: 'ASSIGNMENT', count: 9, candidates: 'John Smith, Alice Johnson, Carol Brown', progress: '60%' },
+                    { stage: 'L1', count: 15, candidates: 'John Smith, Alice Johnson, Carol Brown', progress: '100%' },
+                    { stage: 'L2', count: 9, candidates: 'John Smith, Alice Johnson', progress: '60%' },
+                    { stage: 'L3', count: 3, candidates: 'John Smith', progress: '20%' },
+                    { stage: 'FINAL ROUND', count: 9, candidates: 'John Smith, Alice Johnson, Carol Brown', progress: '60%' },
+                    { stage: 'HR ROUND', count: 9, candidates: 'John Smith, Alice Johnson', progress: '60%' },
+                    { stage: 'OFFER STAGE', count: 9, candidates: 'John Smith, Alice Johnson', progress: '60%' },
+                    { stage: 'CLOSURE', count: 3, candidates: 'John Smith', progress: '20%' },
+                    { stage: 'OFFER DROP', count: 3, candidates: 'Alice Johnson', progress: '20%' },
+                  ].map((row, index) => (
+                    <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
+                      <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.stage}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.count}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.candidates}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.progress}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cashout Modal */}
+      <Dialog open={isCashoutModalOpen} onOpenChange={setIsCashoutModalOpen}>
+        <DialogContent className="max-w-6xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>All Cash Outflow Data</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse bg-white dark:bg-gray-900">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Month</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Year</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Employees Count</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Total Salary</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Incentives</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Tools Cost</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Rent</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Others Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cashoutData.map((row, index) => (
+                    <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
+                      <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.month}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.year}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.employees}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.salary.toLocaleString()}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.incentive.toLocaleString()}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.tools.toLocaleString()}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.rent.toLocaleString()}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.others.toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
