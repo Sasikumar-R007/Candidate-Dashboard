@@ -364,7 +364,7 @@ export default function AdminDashboard() {
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
   const [isAddTeamLeaderModalOpen, setIsAddTeamLeaderModalOpen] = useState(false);
   const [isAddTalentAdvisorModalOpen, setIsAddTalentAdvisorModalOpen] = useState(false);
-  const [userList, setUserList] = useState([]);
+  const [userList, setUserList] = useState<any[]>([]);
 
   // Requirements API queries
   const { data: requirements = [], isLoading: isLoadingRequirements } = useQuery({
