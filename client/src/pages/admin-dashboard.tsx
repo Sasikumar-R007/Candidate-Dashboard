@@ -5,6 +5,8 @@ import AdminTopHeader from '@/components/dashboard/admin-top-header';
 import TeamBoxes from '@/components/dashboard/team-boxes';
 import TeamMembersSidebar from '@/components/dashboard/team-members-sidebar';
 import AddRequirementModal from '@/components/dashboard/modals/add-requirement-modal';
+import TargetMappingModal from '@/components/dashboard/modals/target-mapping-modal';
+import RevenueMappingModal from '@/components/dashboard/modals/revenue-mapping-modal';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -353,6 +355,8 @@ export default function AdminDashboard() {
   const [alertMessage, setAlertMessage] = useState('');
   const [isCustomDate, setIsCustomDate] = useState(false);
   const [isAllRequirementsModalOpen, setIsAllRequirementsModalOpen] = useState(false);
+  const [isTargetMappingModalOpen, setIsTargetMappingModalOpen] = useState(false);
+  const [isRevenueMappingModalOpen, setIsRevenueMappingModalOpen] = useState(false);
 
   // Requirements API queries
   const { data: requirements = [], isLoading: isLoadingRequirements } = useQuery({
@@ -1671,10 +1675,16 @@ export default function AdminDashboard() {
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Performance</h2>
               <div className="flex gap-2">
-                <Button className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm">
+                <Button 
+                  className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm"
+                  onClick={() => setIsTargetMappingModalOpen(true)}
+                >
                   Target Mapping
                 </Button>
-                <Button className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm">
+                <Button 
+                  className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm"
+                  onClick={() => setIsRevenueMappingModalOpen(true)}
+                >
                   Revenue Mapping
                 </Button>
                 <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-4 py-2 rounded text-sm">
@@ -1801,31 +1811,55 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Right Sidebar - Quarterly Metrics */}
-              <div className="w-64 bg-teal-50 dark:bg-teal-900/30  p-4 space-y-4">
-                <div className="text-center">
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">CURRENT QUARTER</div>
-                  <div className="text-xl font-bold text-gray-900 dark:text-white">ASO-2025</div>
+              {/* Right Sidebar - Quarterly/Yearly Metrics */}
+              <div className="w-64 bg-teal-50 dark:bg-teal-900/30 p-4">
+                {/* Quarterly/Yearly Selector */}
+                <div className="mb-4">
+                  <Select defaultValue="quarterly">
+                    <SelectTrigger className="w-full bg-teal-400 text-black">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="quarterly">Quarterly/Yearly</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                
-                <div className="text-center">
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">MINIMUM TARGET</div>
-                  <div className="text-xl font-bold text-gray-900 dark:text-white">27,00,000</div>
+
+                {/* Current Quarter Section */}
+                <div className="bg-gray-200 text-black p-3 mb-2">
+                  <div className="text-sm font-bold mb-1">CURRENT</div>
+                  <div className="text-xs text-gray-700">QUARTER</div>
+                  <div className="text-right text-lg font-bold">ASO-2025</div>
                 </div>
-                
-                <div className="text-center">
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">TARGET ACHIEVED</div>
-                  <div className="text-xl font-bold text-gray-900 dark:text-white">21,00,000</div>
+
+                {/* Minimum Target */}
+                <div className="bg-gray-200 text-black p-3 mb-2">
+                  <div className="text-sm font-bold mb-1">MINIMUM</div>
+                  <div className="text-xs text-gray-700">TARGET</div>
+                  <div className="text-right text-lg font-bold">27,00,000</div>
                 </div>
-                
-                <div className="text-center">
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">CLOSURES MADE</div>
-                  <div className="text-xl font-bold text-gray-900 dark:text-white">8</div>
+
+                {/* Target Achieved */}
+                <div className="bg-gray-200 text-black p-3 mb-2">
+                  <div className="text-sm font-bold mb-1">TARGET</div>
+                  <div className="text-xs text-gray-700">ACHIEVED</div>
+                  <div className="text-right text-lg font-bold">21,00,000</div>
                 </div>
-                
-                <div className="text-center">
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">INCENTIVES MADE</div>
-                  <div className="text-xl font-bold text-gray-900 dark:text-white">65,000</div>
+
+                {/* Closures Made */}
+                <div className="bg-gray-200 text-black p-3 mb-2">
+                  <div className="text-sm font-bold mb-1">CLOSURES</div>
+                  <div className="text-xs text-gray-700">MADE</div>
+                  <div className="text-right text-lg font-bold">8</div>
+                </div>
+
+                {/* Incentives Made */}
+                <div className="bg-gray-200 text-black p-3">
+                  <div className="text-sm font-bold mb-1">INCENTIVES</div>
+                  <div className="text-xs text-gray-700">MADE</div>
+                  <div className="text-right text-lg font-bold">65,000</div>
                 </div>
               </div>
             </div>
@@ -2808,10 +2842,16 @@ export default function AdminDashboard() {
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Performance</h2>
               <div className="flex gap-2">
-                <Button className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm">
+                <Button 
+                  className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm"
+                  onClick={() => setIsTargetMappingModalOpen(true)}
+                >
                   Target Mapping
                 </Button>
-                <Button className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm">
+                <Button 
+                  className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm"
+                  onClick={() => setIsRevenueMappingModalOpen(true)}
+                >
                   Revenue Mapping
                 </Button>
                 <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-4 py-2 rounded text-sm">
@@ -2938,31 +2978,55 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Right Sidebar - Quarterly Metrics */}
-              <div className="w-64 bg-teal-50 dark:bg-teal-900/30  p-4 space-y-4">
-                <div className="text-center">
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">CURRENT QUARTER</div>
-                  <div className="text-xl font-bold text-gray-900 dark:text-white">ASO-2025</div>
+              {/* Right Sidebar - Quarterly/Yearly Metrics */}
+              <div className="w-64 bg-teal-50 dark:bg-teal-900/30 p-4">
+                {/* Quarterly/Yearly Selector */}
+                <div className="mb-4">
+                  <Select defaultValue="quarterly">
+                    <SelectTrigger className="w-full bg-teal-400 text-black">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="quarterly">Quarterly/Yearly</SelectItem>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                
-                <div className="text-center">
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">MINIMUM TARGET</div>
-                  <div className="text-xl font-bold text-gray-900 dark:text-white">27,00,000</div>
+
+                {/* Current Quarter Section */}
+                <div className="bg-gray-200 text-black p-3 mb-2">
+                  <div className="text-sm font-bold mb-1">CURRENT</div>
+                  <div className="text-xs text-gray-700">QUARTER</div>
+                  <div className="text-right text-lg font-bold">ASO-2025</div>
                 </div>
-                
-                <div className="text-center">
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">TARGET ACHIEVED</div>
-                  <div className="text-xl font-bold text-gray-900 dark:text-white">21,00,000</div>
+
+                {/* Minimum Target */}
+                <div className="bg-gray-200 text-black p-3 mb-2">
+                  <div className="text-sm font-bold mb-1">MINIMUM</div>
+                  <div className="text-xs text-gray-700">TARGET</div>
+                  <div className="text-right text-lg font-bold">27,00,000</div>
                 </div>
-                
-                <div className="text-center">
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">CLOSURES MADE</div>
-                  <div className="text-xl font-bold text-gray-900 dark:text-white">8</div>
+
+                {/* Target Achieved */}
+                <div className="bg-gray-200 text-black p-3 mb-2">
+                  <div className="text-sm font-bold mb-1">TARGET</div>
+                  <div className="text-xs text-gray-700">ACHIEVED</div>
+                  <div className="text-right text-lg font-bold">21,00,000</div>
                 </div>
-                
-                <div className="text-center">
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">INCENTIVES MADE</div>
-                  <div className="text-xl font-bold text-gray-900 dark:text-white">65,000</div>
+
+                {/* Closures Made */}
+                <div className="bg-gray-200 text-black p-3 mb-2">
+                  <div className="text-sm font-bold mb-1">CLOSURES</div>
+                  <div className="text-xs text-gray-700">MADE</div>
+                  <div className="text-right text-lg font-bold">8</div>
+                </div>
+
+                {/* Incentives Made */}
+                <div className="bg-gray-200 text-black p-3">
+                  <div className="text-sm font-bold mb-1">INCENTIVES</div>
+                  <div className="text-xs text-gray-700">MADE</div>
+                  <div className="text-right text-lg font-bold">65,000</div>
                 </div>
               </div>
             </div>
@@ -4295,6 +4359,18 @@ export default function AdminDashboard() {
       <AddRequirementModal
         isOpen={isAddRequirementModalOpen}
         onClose={() => setIsAddRequirementModalOpen(false)}
+      />
+
+      {/* Target Mapping Modal */}
+      <TargetMappingModal
+        isOpen={isTargetMappingModalOpen}
+        onClose={() => setIsTargetMappingModalOpen(false)}
+      />
+
+      {/* Revenue Mapping Modal */}
+      <RevenueMappingModal
+        isOpen={isRevenueMappingModalOpen}
+        onClose={() => setIsRevenueMappingModalOpen(false)}
       />
 
       {/* Reassign Requirement Modal */}
