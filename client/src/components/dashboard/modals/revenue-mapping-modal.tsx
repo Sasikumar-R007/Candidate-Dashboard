@@ -33,7 +33,7 @@ export default function RevenueMappingModal({ isOpen, onClose }: RevenueMappingM
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Select>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full bg-gray-50 rounded">
                   <SelectValue placeholder="Talent Advisor" />
                 </SelectTrigger>
                 <SelectContent>
@@ -44,7 +44,7 @@ export default function RevenueMappingModal({ isOpen, onClose }: RevenueMappingM
             </div>
             <div>
               <Select>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full bg-gray-100 rounded">
                   <SelectValue placeholder="Team Lead" />
                 </SelectTrigger>
                 <SelectContent>
@@ -59,7 +59,7 @@ export default function RevenueMappingModal({ isOpen, onClose }: RevenueMappingM
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Select>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full bg-gray-50 rounded">
                   <SelectValue placeholder="Year" />
                 </SelectTrigger>
                 <SelectContent>
@@ -71,7 +71,7 @@ export default function RevenueMappingModal({ isOpen, onClose }: RevenueMappingM
             </div>
             <div>
               <Select>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full bg-gray-100 rounded">
                   <SelectValue placeholder="Quarter" />
                 </SelectTrigger>
                 <SelectContent>
@@ -88,7 +88,7 @@ export default function RevenueMappingModal({ isOpen, onClose }: RevenueMappingM
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Select>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full bg-gray-50 rounded">
                   <SelectValue placeholder="Position" />
                 </SelectTrigger>
                 <SelectContent>
@@ -100,7 +100,7 @@ export default function RevenueMappingModal({ isOpen, onClose }: RevenueMappingM
             </div>
             <div>
               <Select>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full bg-gray-100 rounded">
                   <SelectValue placeholder="Client" />
                 </SelectTrigger>
                 <SelectContent>
@@ -115,7 +115,7 @@ export default function RevenueMappingModal({ isOpen, onClose }: RevenueMappingM
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Select>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full bg-gray-50 rounded">
                   <SelectValue placeholder="Client Type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -125,18 +125,18 @@ export default function RevenueMappingModal({ isOpen, onClose }: RevenueMappingM
               </Select>
             </div>
             <div>
-              <Input placeholder="Offered Date" />
+              <Input placeholder="Offered Date" className="bg-gray-100 rounded" />
             </div>
           </div>
 
           {/* Fifth Row */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Input placeholder="Closure Date" />
+              <Input placeholder="Closure Date" className="bg-gray-50 rounded" />
             </div>
             <div>
               <Select>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full bg-gray-100 rounded">
                   <SelectValue placeholder="Percentage" />
                 </SelectTrigger>
                 <SelectContent>
@@ -153,11 +153,11 @@ export default function RevenueMappingModal({ isOpen, onClose }: RevenueMappingM
             <div className="flex items-center gap-1">
               <span className="text-red-500 text-sm">*</span>
               <span className="text-sm text-gray-600">₹</span>
-              <Input placeholder="Revenue" className="flex-1" />
+              <Input placeholder="Revenue" className="flex-1 bg-gray-50 rounded" />
             </div>
             <div>
               <Select>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full bg-gray-100 rounded">
                   <SelectValue placeholder="Incentive Plan" />
                 </SelectTrigger>
                 <SelectContent>
@@ -171,11 +171,11 @@ export default function RevenueMappingModal({ isOpen, onClose }: RevenueMappingM
           {/* Seventh Row */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Input placeholder="Incentive" />
+              <Input placeholder="Incentive" className="bg-gray-50 rounded" />
             </div>
             <div>
               <Select>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full bg-gray-100 rounded">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -191,7 +191,7 @@ export default function RevenueMappingModal({ isOpen, onClose }: RevenueMappingM
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Select>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full bg-gray-50 rounded">
                   <SelectValue placeholder="Source" />
                 </SelectTrigger>
                 <SelectContent>
@@ -203,7 +203,7 @@ export default function RevenueMappingModal({ isOpen, onClose }: RevenueMappingM
             </div>
             <div>
               <Select>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full bg-gray-100 rounded">
                   <SelectValue placeholder="Invoice Date" />
                 </SelectTrigger>
                 <SelectContent>
@@ -218,20 +218,20 @@ export default function RevenueMappingModal({ isOpen, onClose }: RevenueMappingM
           {/* Ninth Row */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Input placeholder="Invoice Number" />
+              <Input placeholder="Invoice Number" className="bg-gray-50 rounded" />
             </div>
             <div>
-              <Input placeholder="Received Payment" />
+              <Input placeholder="Received Payment" className="bg-gray-100 rounded" />
             </div>
           </div>
 
           {/* Tenth Row */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Input placeholder="Payment Details" />
+              <Input placeholder="Payment Details" className="bg-gray-50 rounded" />
             </div>
             <div>
-              <Input placeholder="Incentive Disbursed Date" />
+              <Input placeholder="Incentive Disbursed Date" className="bg-gray-100 rounded" />
             </div>
           </div>
 

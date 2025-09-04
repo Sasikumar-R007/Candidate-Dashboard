@@ -45,25 +45,25 @@ export default function ClosureModal({ isOpen, onClose }: ClosureModalProps) {
             <table className="w-full border-collapse bg-white rounded">
               <thead>
                 <tr className="bg-gray-200">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Candidate</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Position</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Client</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Quarter</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Talent Advisor</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">CTC</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Revenue</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Candidate</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Position</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Client</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Quarter</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Talent Advisor</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">CTC</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Revenue</th>
                 </tr>
               </thead>
               <tbody>
                 {closureData.map((closure, index) => (
                   <tr key={index} className="border-b border-gray-100">
-                    <td className="py-3 px-4 text-gray-900 font-medium">{closure.candidate}</td>
-                    <td className="py-3 px-4 text-gray-600">{closure.position}</td>
-                    <td className="py-3 px-4 text-gray-600">{closure.client}</td>
-                    <td className="py-3 px-4 text-gray-600">{closure.quarter}</td>
-                    <td className="py-3 px-4 text-gray-600">{closure.talentAdvisor}</td>
-                    <td className="py-3 px-4 text-gray-600">{closure.ctc}</td>
-                    <td className="py-3 px-4 text-gray-600">{closure.revenue}</td>
+                    <td className="py-2 px-3 text-xs text-gray-900 font-medium">{closure.candidate}</td>
+                    <td className="py-2 px-3 text-xs text-gray-600">{closure.position}</td>
+                    <td className="py-2 px-3 text-xs text-gray-600">{closure.client}</td>
+                    <td className="py-2 px-3 text-xs text-gray-600">{closure.quarter}</td>
+                    <td className="py-2 px-3 text-xs text-gray-600">{closure.talentAdvisor}</td>
+                    <td className="py-2 px-3 text-xs text-gray-600">{closure.ctc}</td>
+                    <td className="py-2 px-3 text-xs text-gray-600">{closure.revenue}</td>
                   </tr>
                 ))}
               </tbody>

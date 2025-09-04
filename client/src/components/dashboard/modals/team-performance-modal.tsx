@@ -43,23 +43,23 @@ export default function TeamPerformanceModal({ isOpen, onClose }: TeamPerformanc
             <table className="w-full border-collapse bg-white rounded">
               <thead>
                 <tr className="bg-gray-200">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Talent Advisor</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Joining Date</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Tenure</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Closures</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Last Closure</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Qtrs Achieved</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Talent Advisor</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Joining Date</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Tenure</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Closures</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Last Closure</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Qtrs Achieved</th>
                 </tr>
               </thead>
               <tbody>
                 {teamPerformanceData.map((member, index) => (
                   <tr key={index} className="border-b border-gray-100">
-                    <td className="py-3 px-4 text-gray-900 font-medium">{member.talentAdvisor}</td>
-                    <td className="py-3 px-4 text-gray-600">{member.joiningDate}</td>
-                    <td className="py-3 px-4 text-gray-600">{member.tenure}</td>
-                    <td className="py-3 px-4 text-gray-600">{member.closures}</td>
-                    <td className="py-3 px-4 text-gray-600">{member.lastClosure}</td>
-                    <td className="py-3 px-4 text-gray-600">{member.qtrsAchieved}</td>
+                    <td className="py-2 px-3 text-xs text-gray-900 font-medium">{member.talentAdvisor}</td>
+                    <td className="py-2 px-3 text-xs text-gray-600">{member.joiningDate}</td>
+                    <td className="py-2 px-3 text-xs text-gray-600">{member.tenure}</td>
+                    <td className="py-2 px-3 text-xs text-gray-600">{member.closures}</td>
+                    <td className="py-2 px-3 text-xs text-gray-600">{member.lastClosure}</td>
+                    <td className="py-2 px-3 text-xs text-gray-600">{member.qtrsAchieved}</td>
                   </tr>
                 ))}
               </tbody>

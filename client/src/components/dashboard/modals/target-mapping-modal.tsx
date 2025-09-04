@@ -34,7 +34,7 @@ export default function TargetMappingModal({ isOpen, onClose }: TargetMappingMod
             <div>
               <Label className="text-sm text-gray-600 mb-2 block">Team: Arun/Anusha</Label>
               <Select>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full bg-gray-50 rounded">
                   <SelectValue placeholder="Select Team" />
                 </SelectTrigger>
                 <SelectContent>
@@ -55,7 +55,7 @@ export default function TargetMappingModal({ isOpen, onClose }: TargetMappingMod
                   <span className="text-sm text-gray-800 font-medium">Umar</span>
                   <div className="ml-auto flex items-center gap-2">
                     <Select>
-                      <SelectTrigger className="w-20 h-8">
+                      <SelectTrigger className="w-20 h-8 bg-gray-100 rounded">
                         <SelectValue placeholder="Quarter" />
                       </SelectTrigger>
                       <SelectContent>
@@ -72,7 +72,7 @@ export default function TargetMappingModal({ isOpen, onClose }: TargetMappingMod
                   <span className="w-6"></span>
                   <div className="flex items-center gap-2 flex-1">
                     <Select>
-                      <SelectTrigger className="flex-1">
+                      <SelectTrigger className="flex-1 bg-gray-50 rounded">
                         <SelectValue placeholder="Sarah" />
                       </SelectTrigger>
                       <SelectContent>
@@ -82,7 +82,7 @@ export default function TargetMappingModal({ isOpen, onClose }: TargetMappingMod
                       </SelectContent>
                     </Select>
                     <Select>
-                      <SelectTrigger className="flex-1">
+                      <SelectTrigger className="flex-1 bg-gray-100 rounded">
                         <SelectValue placeholder="Year" />
                       </SelectTrigger>
                       <SelectContent>
@@ -98,7 +98,7 @@ export default function TargetMappingModal({ isOpen, onClose }: TargetMappingMod
                   <span className="w-6"></span>
                   <Input 
                     placeholder="Skill Required"
-                    className="flex-1"
+                    className="flex-1 bg-gray-50 rounded"
                   />
                 </div>
 
@@ -108,7 +108,7 @@ export default function TargetMappingModal({ isOpen, onClose }: TargetMappingMod
                     <span className="text-sm text-gray-600">₹</span>
                     <Input 
                       placeholder="Number(INR)"
-                      className="flex-1"
+                      className="flex-1 bg-gray-100 rounded"
                     />
                   </div>
                 </div>

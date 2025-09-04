@@ -1714,9 +1714,6 @@ export default function AdminDashboard() {
                 >
                   Revenue Mapping
                 </Button>
-                <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-4 py-2 rounded text-sm">
-                  Quarterly/Yearly
-                </Button>
               </div>
             </div>
 
@@ -2904,9 +2901,6 @@ export default function AdminDashboard() {
                   onClick={() => setIsRevenueMappingModalOpen(true)}
                 >
                   Revenue Mapping
-                </Button>
-                <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-4 py-2 rounded text-sm">
-                  Quarterly/Yearly
                 </Button>
               </div>
             </div>
