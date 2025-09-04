@@ -7,6 +7,10 @@ import TeamMembersSidebar from '@/components/dashboard/team-members-sidebar';
 import AddRequirementModal from '@/components/dashboard/modals/add-requirement-modal';
 import TargetMappingModal from '@/components/dashboard/modals/target-mapping-modal';
 import RevenueMappingModal from '@/components/dashboard/modals/revenue-mapping-modal';
+import TeamPerformanceModal from '@/components/dashboard/modals/team-performance-modal';
+import ClosureModal from '@/components/dashboard/modals/closure-modal';
+import AddTeamLeaderModal from '@/components/dashboard/modals/add-team-leader-modal';
+import AddTalentAdvisorModal from '@/components/dashboard/modals/add-talent-advisor-modal';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -332,7 +336,6 @@ export default function AdminDashboard() {
   const queryClient = useQueryClient();
   
   // Pipeline modal state
-  const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
   const [, navigate] = useLocation();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedMember, setSelectedMember] = useState<any>(null);
@@ -357,6 +360,11 @@ export default function AdminDashboard() {
   const [isAllRequirementsModalOpen, setIsAllRequirementsModalOpen] = useState(false);
   const [isTargetMappingModalOpen, setIsTargetMappingModalOpen] = useState(false);
   const [isRevenueMappingModalOpen, setIsRevenueMappingModalOpen] = useState(false);
+  const [isTeamPerformanceModalOpen, setIsTeamPerformanceModalOpen] = useState(false);
+  const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
+  const [isAddTeamLeaderModalOpen, setIsAddTeamLeaderModalOpen] = useState(false);
+  const [isAddTalentAdvisorModalOpen, setIsAddTalentAdvisorModalOpen] = useState(false);
+  const [userList, setUserList] = useState([]);
 
   // Requirements API queries
   const { data: requirements = [], isLoading: isLoadingRequirements } = useQuery({
@@ -494,6 +502,25 @@ export default function AdminDashboard() {
     if (requirements.length > 10) {
       setIsAllRequirementsModalOpen(true);
     }
+  };
+
+  // User management functions
+  const handleAddUser = (userData: any) => {
+    setUserList(prev => [...prev, userData]);
+    toast({
+      title: "Success",
+      description: `${userData.role} added successfully!`,
+      className: "bg-green-50 border-green-200 text-green-800",
+    });
+  };
+
+  const handleEditUser = (userData: any) => {
+    setUserList(prev => prev.map(user => user.id === userData.id ? userData : user));
+    toast({
+      title: "Success",
+      description: `${userData.role} updated successfully!`,
+      className: "bg-green-50 border-green-200 text-green-800",
+    });
   };
 
   const handleArchivesClick = () => {
@@ -1868,7 +1895,14 @@ export default function AdminDashboard() {
             <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
               <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-lg text-gray-900 dark:text-white">Team Performance</CardTitle>
-                <Button variant="link" size="sm" className="text-blue-600 text-sm">view list</Button>
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  className="text-blue-600 text-sm"
+                  onClick={() => setIsTeamPerformanceModalOpen(true)}
+                >
+                  view list
+                </Button>
               </CardHeader>
               <CardContent className="p-3">
                 <div className="overflow-x-auto admin-scrollbar">
@@ -1926,7 +1960,14 @@ export default function AdminDashboard() {
             <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
               <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-lg text-gray-900 dark:text-white">List Of Closures</CardTitle>
-                <Button variant="link" size="sm" className="text-blue-600 text-sm">view list</Button>
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  className="text-blue-600 text-sm"
+                  onClick={() => setIsClosureModalOpen(true)}
+                >
+                  view list
+                </Button>
               </CardHeader>
               <CardContent className="p-3">
                 <div className="overflow-x-auto admin-scrollbar">
@@ -1991,8 +2032,18 @@ export default function AdminDashboard() {
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
             {/* User Management Header */}
             <div className="flex gap-4 mb-6">
-              <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">+ Add Recruiter</Button>
-              <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">+ Add Team Leader</Button>
+              <Button 
+                className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => setIsAddTalentAdvisorModalOpen(true)}
+              >
+                + Add Recruiter
+              </Button>
+              <Button 
+                className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => setIsAddTeamLeaderModalOpen(true)}
+              >
+                + Add Team Leader
+              </Button>
             </div>
 
             {/* User Management Table */}
@@ -3035,7 +3086,14 @@ export default function AdminDashboard() {
             <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
               <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-lg text-gray-900 dark:text-white">Team Performance</CardTitle>
-                <Button variant="link" size="sm" className="text-blue-600 text-sm">view list</Button>
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  className="text-blue-600 text-sm"
+                  onClick={() => setIsTeamPerformanceModalOpen(true)}
+                >
+                  view list
+                </Button>
               </CardHeader>
               <CardContent className="p-3">
                 <div className="overflow-x-auto admin-scrollbar">
@@ -3093,7 +3151,14 @@ export default function AdminDashboard() {
             <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
               <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-lg text-gray-900 dark:text-white">List Of Closures</CardTitle>
-                <Button variant="link" size="sm" className="text-blue-600 text-sm">view list</Button>
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  className="text-blue-600 text-sm"
+                  onClick={() => setIsClosureModalOpen(true)}
+                >
+                  view list
+                </Button>
               </CardHeader>
               <CardContent className="p-3">
                 <div className="overflow-x-auto admin-scrollbar">
@@ -4371,6 +4436,32 @@ export default function AdminDashboard() {
       <RevenueMappingModal
         isOpen={isRevenueMappingModalOpen}
         onClose={() => setIsRevenueMappingModalOpen(false)}
+      />
+
+      {/* Team Performance Modal */}
+      <TeamPerformanceModal
+        isOpen={isTeamPerformanceModalOpen}
+        onClose={() => setIsTeamPerformanceModalOpen(false)}
+      />
+
+      {/* Closure Modal */}
+      <ClosureModal
+        isOpen={isClosureModalOpen}
+        onClose={() => setIsClosureModalOpen(false)}
+      />
+
+      {/* Add Team Leader Modal */}
+      <AddTeamLeaderModal
+        isOpen={isAddTeamLeaderModalOpen}
+        onClose={() => setIsAddTeamLeaderModalOpen(false)}
+        onSubmit={handleAddUser}
+      />
+
+      {/* Add Talent Advisor Modal */}
+      <AddTalentAdvisorModal
+        isOpen={isAddTalentAdvisorModalOpen}
+        onClose={() => setIsAddTalentAdvisorModalOpen(false)}
+        onSubmit={handleAddUser}
       />
 
       {/* Reassign Requirement Modal */}
