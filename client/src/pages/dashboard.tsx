@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Sidebar from '@/components/dashboard/sidebar';
-import ClientProfileHeader from '@/components/dashboard/client-profile-header';
+import SimpleClientHeader from '@/components/dashboard/simple-client-header';
 import TabNavigation from '@/components/dashboard/tab-navigation';
 import MyProfileTab from '@/components/dashboard/tabs/my-profile-tab';
 import ResumeTab from '@/components/dashboard/tabs/resume-tab';
@@ -40,14 +40,11 @@ export default function Dashboard() {
         // Render dashboard with tab navigation
         return (
           <>
-            <ClientProfileHeader profile={{
-              name: profile?.name || 'User',
-              company: 'Gumlet Marketing Private Limited',
-              email: profile?.email || 'user@example.com',
-              phone: profile?.phone || '+91 9876543210',
-              bannerImage: profile?.bannerImage || null,
-              profilePicture: profile?.profilePicture || null
-            }} />
+            <SimpleClientHeader 
+              companyName="Gumlet Marketing Private Limited"
+              userName={profile?.name || 'Sasi Kumar'}
+              userImage={profile?.profilePicture || '/api/placeholder/32/32'}
+            />
             <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
             <div className="flex-1 overflow-y-auto">
               {renderDashboardTabContent()}
@@ -69,14 +66,11 @@ export default function Dashboard() {
       default:
         return (
           <>
-            <ClientProfileHeader profile={{
-              name: profile?.name || 'User',
-              company: 'Gumlet Marketing Private Limited',
-              email: profile?.email || 'user@example.com',
-              phone: profile?.phone || '+91 9876543210',
-              bannerImage: profile?.bannerImage || null,
-              profilePicture: profile?.profilePicture || null
-            }} />
+            <SimpleClientHeader 
+              companyName="Gumlet Marketing Private Limited"
+              userName={profile?.name || 'Sasi Kumar'}
+              userImage={profile?.profilePicture || '/api/placeholder/32/32'}
+            />
             <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
             <div className="flex-1 overflow-y-auto">
               {renderDashboardTabContent()}

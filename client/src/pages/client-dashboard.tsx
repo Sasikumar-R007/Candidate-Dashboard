@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, MessageSquare, Minus, Users, Play, Trophy, ArrowLeft, Send, Calendar as CalendarIcon, MoreVertical } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import ClientProfileHeader from '@/components/dashboard/client-profile-header';
+import SimpleClientHeader from '@/components/dashboard/simple-client-header';
 
 interface ChatUser {
   id: number;
@@ -188,15 +188,12 @@ export default function ClientDashboard() {
       case 'dashboard':
         return (
           <div className="h-full overflow-y-auto">
-            {/* Client Profile Header */}
-            <ClientProfileHeader profile={{
-              name: 'Client User',
-              company: 'Gumlet Marketing Private Limited',
-              email: 'client@gumlet.com',
-              phone: '+91 9876543210',
-              bannerImage: null,
-              profilePicture: null
-            }} />
+            {/* Simple Client Header */}
+            <SimpleClientHeader 
+              companyName="Gumlet Marketing Private Limited"
+              userName="Sasi Kumar"
+              userImage="/api/placeholder/32/32"
+            />
             
             <div className="px-6 py-6 space-y-6">
               {/* Stats Cards - Dark Blue Theme */}

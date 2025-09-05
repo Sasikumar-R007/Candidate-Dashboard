@@ -16,7 +16,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useLocation } from "wouter";
-import ClientProfileHeader from '@/components/dashboard/client-profile-header';
+import SimpleClientHeader from '@/components/dashboard/simple-client-header';
 
 const mockCandidates = [
   {
@@ -547,14 +547,11 @@ const SourceResume = () => {
   // Step 2: Results UI - Three section layout
   return (
     <div className="flex flex-col h-screen bg-gray-50">
-      <ClientProfileHeader profile={{
-        name: 'Recruiter',
-        company: 'Gumlet Marketing Private Limited',
-        email: 'recruiter@gumlet.com',
-        phone: '+91 9876543210',
-        bannerImage: null,
-        profilePicture: null
-      }} />
+      <SimpleClientHeader 
+        companyName="Gumlet Marketing Private Limited"
+        userName="Sasi Kumar"
+        userImage="/api/placeholder/32/32"
+      />
       <div className="flex flex-1 overflow-hidden">
       {/* Left Section - Filters */}
       <aside className="bg-white border-r w-80 flex-shrink-0 flex flex-col p-4">
