@@ -4483,15 +4483,17 @@ export default function AdminDashboard() {
       {/* Add Recruiter Modal */}
       <AddRecruiterModal
         isOpen={isAddRecruiterModalOpen}
-        onClose={() => setIsAddRecruiterModalOpen(false)}
-        onSubmit={handleAddUser}
+        onClose={() => { setIsAddRecruiterModalOpen(false); setEditingUser(null); }}
+        editData={editingUser && editingUser.role === 'Recruiter' ? editingUser : null}
+        onSubmit={editingUser ? handleUpdateUser : handleAddUser}
       />
 
       {/* Add Team Leader Modal New */}
       <AddTeamLeaderModalNew
         isOpen={isAddTeamLeaderModalNewOpen}
-        onClose={() => setIsAddTeamLeaderModalNewOpen(false)}
-        onSubmit={handleAddUser}
+        onClose={() => { setIsAddTeamLeaderModalNewOpen(false); setEditingUser(null); }}
+        editData={editingUser && editingUser.role === 'Team Leader' ? editingUser : null}
+        onSubmit={editingUser ? handleUpdateUser : handleAddUser}
       />
 
       {/* Reassign Requirement Modal */}

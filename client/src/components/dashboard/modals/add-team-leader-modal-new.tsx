@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface AddTeamLeaderModalNewProps {
   isOpen: boolean;
@@ -14,14 +14,29 @@ interface AddTeamLeaderModalNewProps {
 
 export default function AddTeamLeaderModalNew({ isOpen, onClose, editData, onSubmit }: AddTeamLeaderModalNewProps) {
   const [formData, setFormData] = useState({
-    firstName: editData?.firstName || "",
-    lastName: editData?.lastName || "",
+    firstName: editData?.name?.split(' ')[0] || editData?.firstName || "",
+    lastName: editData?.name?.split(' ').slice(1).join(' ') || editData?.lastName || "",
     phoneNumber: editData?.phoneNumber || "",
     email: editData?.email || "",
     password: editData?.password || "",
     joiningDate: editData?.joiningDate || "",
     linkedinProfile: editData?.linkedinProfile || "",
   });
+
+  // Update form data when editData changes
+  useEffect(() => {
+    if (editData) {
+      setFormData({
+        firstName: editData?.name?.split(' ')[0] || editData?.firstName || "",
+        lastName: editData?.name?.split(' ').slice(1).join(' ') || editData?.lastName || "",
+        phoneNumber: editData?.phoneNumber || "",
+        email: editData?.email || "",
+        password: editData?.password || "",
+        joiningDate: editData?.joiningDate || "",
+        linkedinProfile: editData?.linkedinProfile || "",
+      });
+    }
+  }, [editData]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,10 +67,10 @@ export default function AddTeamLeaderModalNew({ isOpen, onClose, editData, onSub
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg mx-auto bg-white rounded-lg shadow-lg">
+      <DialogContent className="max-w-lg mx-auto bg-white rounded-lg shadow-lg my-8 max-h-[90vh] overflow-y-auto">
         <DialogHeader className="p-6 pb-4">
           <DialogTitle className="text-xl font-semibold text-gray-900">
-            Add New Team Leader
+            {editData ? "Edit Team Leader" : "Add New Team Leader"}
           </DialogTitle>
         </DialogHeader>
         
@@ -189,7 +204,7 @@ export default function AddTeamLeaderModalNew({ isOpen, onClose, editData, onSub
               className="flex-1 rounded bg-green-600 hover:bg-green-700 text-white"
               data-testid="button-add"
             >
-              Add
+{editData ? "Update" : "Add"}
             </Button>
           </div>
         </form>
