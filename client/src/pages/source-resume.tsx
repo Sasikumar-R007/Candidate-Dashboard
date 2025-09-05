@@ -13,8 +13,10 @@ import {
   BookmarkCheck,
   Phone,
   Mail,
+  ChevronDown,
 } from "lucide-react";
 import { useLocation } from "wouter";
+import ClientProfileHeader from '@/components/dashboard/client-profile-header';
 
 const mockCandidates = [
   {
@@ -207,7 +209,8 @@ function exportToCSV(data: any[]) {
 }
 
 const SourceResume = () => {
-  const [step, setStep] = useState(1); // 1: filter, 2: results
+  const [step, setStep] = useState(1);
+  const [showDownloadDropdown, setShowDownloadDropdown] = useState(false); // 1: filter, 2: results
   const [searchQuery, setSearchQuery] = useState("");
   const [booleanMode, setBooleanMode] = useState(false);
   const [filters, setFilters] = useState(initialFilters);
@@ -543,7 +546,16 @@ const SourceResume = () => {
 
   // Step 2: Results UI - Three section layout
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex flex-col h-screen bg-gray-50">
+      <ClientProfileHeader profile={{
+        name: 'Recruiter',
+        company: 'Gumlet Marketing Private Limited',
+        email: 'recruiter@gumlet.com',
+        phone: '+91 9876543210',
+        bannerImage: null,
+        profilePicture: null
+      }} />
+      <div className="flex flex-1 overflow-hidden">
       {/* Left Section - Filters */}
       <aside className="bg-white border-r w-80 flex-shrink-0 flex flex-col p-4">
         <div className="flex items-center justify-between mb-4">
@@ -943,10 +955,6 @@ const SourceResume = () => {
             </div>
 
             <div className="flex gap-2 mt-4">
-              <button className="flex-1 bg-blue-600 text-white py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 hover:bg-blue-700">
-                <Download size={16} />
-                Resume
-              </button>
               <button className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
                 <Bookmark size={16} />
               </button>
@@ -960,6 +968,58 @@ const SourceResume = () => {
           </div>
         </aside>
       )}
+
+      {/* Fixed Download Button with Dropdown - Bottom Right */}
+      {selectedCandidate && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className="relative">
+            <button 
+              onClick={() => setShowDownloadDropdown(!showDownloadDropdown)}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors shadow-lg"
+            >
+              <Download size={20} />
+              Download
+              <ChevronDown size={16} className={`transition-transform ${showDownloadDropdown ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {showDownloadDropdown && (
+              <div className="absolute bottom-full right-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-xl py-2 min-w-48">
+                <button 
+                  onClick={() => {
+                    // Handle resume download
+                    setShowDownloadDropdown(false);
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
+                >
+                  <Download size={16} />
+                  Resume (PDF)
+                </button>
+                <button 
+                  onClick={() => {
+                    // Handle profile download
+                    setShowDownloadDropdown(false);
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
+                >
+                  <Download size={16} />
+                  Profile Summary
+                </button>
+                <button 
+                  onClick={() => {
+                    // Handle contact details download
+                    setShowDownloadDropdown(false);
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
+                >
+                  <Download size={16} />
+                  Contact Details
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      </div>
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Sidebar from '@/components/dashboard/sidebar';
-import ProfileHeader from '@/components/dashboard/profile-header';
+import ClientProfileHeader from '@/components/dashboard/client-profile-header';
 import TabNavigation from '@/components/dashboard/tab-navigation';
 import MyProfileTab from '@/components/dashboard/tabs/my-profile-tab';
 import ResumeTab from '@/components/dashboard/tabs/resume-tab';
@@ -40,7 +40,14 @@ export default function Dashboard() {
         // Render dashboard with tab navigation
         return (
           <>
-            <ProfileHeader profile={profile} />
+            <ClientProfileHeader profile={{
+              name: profile?.name || 'User',
+              company: 'Gumlet Marketing Private Limited',
+              email: profile?.email || 'user@example.com',
+              phone: profile?.phone || '+91 9876543210',
+              bannerImage: profile?.bannerImage || null,
+              profilePicture: profile?.profilePicture || null
+            }} />
             <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
             <div className="flex-1 overflow-y-auto">
               {renderDashboardTabContent()}
@@ -62,7 +69,14 @@ export default function Dashboard() {
       default:
         return (
           <>
-            <ProfileHeader profile={profile} />
+            <ClientProfileHeader profile={{
+              name: profile?.name || 'User',
+              company: 'Gumlet Marketing Private Limited',
+              email: profile?.email || 'user@example.com',
+              phone: profile?.phone || '+91 9876543210',
+              bannerImage: profile?.bannerImage || null,
+              profilePicture: profile?.profilePicture || null
+            }} />
             <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
             <div className="flex-1 overflow-y-auto">
               {renderDashboardTabContent()}
