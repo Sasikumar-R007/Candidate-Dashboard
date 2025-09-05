@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, MessageSquare, Minus } from "lucide-react";
 
 export default function ClientDashboard() {
   const [sidebarTab, setSidebarTab] = useState('dashboard');
@@ -17,6 +18,34 @@ export default function ClientDashboard() {
     pausedRoles: 1,
     withdrawnRoles: 1
   };
+
+  // Recent chats data
+  const recentChats = [
+    {
+      id: 1,
+      name: 'Deepika',
+      requirements: 5,
+      closures: 6,
+      avatar: '/api/placeholder/40/40',
+      status: 'online'
+    },
+    {
+      id: 2,
+      name: 'Priyanka',
+      requirements: 7,
+      closures: 12,
+      avatar: '/api/placeholder/40/40',
+      status: 'online'
+    },
+    {
+      id: 3,
+      name: 'Thamarai Selvi',
+      requirements: 3,
+      closures: 7,
+      avatar: '/api/placeholder/40/40',
+      status: 'online'
+    }
+  ];
 
   const rolesData = [
     {
@@ -71,189 +100,178 @@ export default function ClientDashboard() {
     switch (sidebarTab) {
       case 'dashboard':
         return (
-          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-6 gap-4">
-              <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-                <CardContent className="p-4 text-center">
-                  <div className="flex items-center justify-center mb-2">
-                    <Briefcase className="h-8 w-8 text-blue-600" />
-                  </div>
-                  <div className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-1">Roles Assigned</div>
-                  <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">{dashboardStats.rolesAssigned}</div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-                <CardContent className="p-4 text-center">
-                  <div className="flex items-center justify-center mb-2">
-                    <FileText className="h-8 w-8 text-gray-600" />
-                  </div>
-                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Total Positions</div>
-                  <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">{dashboardStats.totalPositions}</div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
-                <CardContent className="p-4 text-center">
-                  <div className="flex items-center justify-center mb-2">
-                    <CheckCircle className="h-8 w-8 text-green-600" />
-                  </div>
-                  <div className="text-sm font-medium text-green-700 dark:text-green-300 mb-1">Active Roles</div>
-                  <div className="text-3xl font-bold text-green-900 dark:text-green-100">{dashboardStats.activeRoles}</div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-teal-50 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800">
-                <CardContent className="p-4 text-center">
-                  <div className="flex items-center justify-center mb-2">
-                    <CheckCircle className="h-8 w-8 text-teal-600" />
-                  </div>
-                  <div className="text-sm font-medium text-teal-700 dark:text-teal-300 mb-1">Successful Hires</div>
-                  <div className="text-3xl font-bold text-teal-900 dark:text-teal-100">{dashboardStats.successfulHires}</div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
-                <CardContent className="p-4 text-center">
-                  <div className="flex items-center justify-center mb-2">
-                    <Pause className="h-8 w-8 text-yellow-600" />
-                  </div>
-                  <div className="text-sm font-medium text-yellow-700 dark:text-yellow-300 mb-1">Paused Roles</div>
-                  <div className="text-3xl font-bold text-yellow-900 dark:text-yellow-100">{dashboardStats.pausedRoles}</div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
-                <CardContent className="p-4 text-center">
-                  <div className="flex items-center justify-center mb-2">
-                    <XCircle className="h-8 w-8 text-red-600" />
-                  </div>
-                  <div className="text-sm font-medium text-red-700 dark:text-red-300 mb-1">Withdrawn Roles</div>
-                  <div className="text-3xl font-bold text-red-900 dark:text-red-100">{dashboardStats.withdrawnRoles}</div>
-                </CardContent>
-              </Card>
+          <div className="h-full overflow-y-auto">
+            {/* Company Header */}
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h1 className="text-xl font-semibold text-gray-900">Gumlet Marketing Private Limited</h1>
             </div>
+            
+            <div className="px-6 py-6 space-y-6">
+              {/* Stats Cards - Blue Theme */}
+              <div className="bg-blue-600 rounded-lg p-6">
+                <div className="grid grid-cols-6 gap-6 text-white">
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-2">
+                      <Briefcase className="h-8 w-8" />
+                    </div>
+                    <div className="text-sm font-medium mb-1">Roles Assigned</div>
+                    <div className="text-2xl font-bold">{dashboardStats.rolesAssigned}</div>
+                  </div>
 
-            {/* Roles & Status Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Roles & Status</CardTitle>
-              </CardHeader>
-              <CardContent>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-2">
+                      <FileText className="h-8 w-8" />
+                    </div>
+                    <div className="text-sm font-medium mb-1">Total Positions</div>
+                    <div className="text-2xl font-bold">{dashboardStats.totalPositions}</div>
+                  </div>
+
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-2">
+                      <CheckCircle className="h-8 w-8" />
+                    </div>
+                    <div className="text-sm font-medium mb-1">Active Roles</div>
+                    <div className="text-2xl font-bold">{dashboardStats.activeRoles}</div>
+                  </div>
+
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-2">
+                      <CheckCircle className="h-8 w-8 text-green-300" />
+                    </div>
+                    <div className="text-sm font-medium mb-1 text-green-300">Successful Hires</div>
+                    <div className="text-2xl font-bold text-green-300">{dashboardStats.successfulHires}</div>
+                  </div>
+
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-2">
+                      <Pause className="h-8 w-8" />
+                    </div>
+                    <div className="text-sm font-medium mb-1">Paused Roles</div>
+                    <div className="text-2xl font-bold">{dashboardStats.pausedRoles}</div>
+                  </div>
+
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-2">
+                      <Minus className="h-8 w-8 text-orange-300" />
+                    </div>
+                    <div className="text-sm font-medium mb-1 text-orange-300">Withdrawn Roles</div>
+                    <div className="text-2xl font-bold text-orange-300">{dashboardStats.withdrawnRoles}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Roles & Status Table */}
+              <div className="bg-white rounded-lg border border-gray-200">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900">Roles & Status</h3>
+                  <div className="flex justify-end">
+                    <span className="text-sm text-blue-600 cursor-pointer hover:underline">View All</span>
+                  </div>
+                </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Role ID</th>
-                        <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Roles</th>
-                        <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Team</th>
-                        <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Recruiter</th>
-                        <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Shared on</th>
-                        <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Status</th>
-                        <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Profiles Shared</th>
-                        <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Last Active</th>
+                  <table className="w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Role ID</th>
+                        <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Roles</th>
+                        <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Team</th>
+                        <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Recruiter</th>
+                        <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Shared on</th>
+                        <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Profiles Shared</th>
+                        <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Last Active</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="bg-white divide-y divide-gray-200">
                       {rolesData.map((role, index) => (
-                        <tr key={index} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-                          <td className="p-3 text-gray-900 dark:text-white font-medium text-sm">{role.roleId}</td>
-                          <td className="p-3 text-gray-600 dark:text-gray-400 text-sm">{role.role}</td>
-                          <td className="p-3 text-gray-600 dark:text-gray-400 text-sm">{role.team}</td>
-                          <td className="p-3 text-gray-600 dark:text-gray-400 text-sm">{role.recruiter}</td>
-                          <td className="p-3 text-gray-600 dark:text-gray-400 text-sm">{role.sharedOn}</td>
-                          <td className="p-3">
-                            <div className="flex items-center gap-2">
-                              {getStatusIcon(role.status)}
-                              <Badge variant="secondary" className={`text-xs ${getStatusColor(role.status)}`}>
-                                {role.status}
-                              </Badge>
-                            </div>
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{role.roleId}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.role}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.team}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.recruiter}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.sharedOn}</td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <Badge variant="secondary" className={`text-xs ${getStatusColor(role.status)}`}>
+                              {role.status}
+                            </Badge>
                           </td>
-                          <td className="p-3 text-gray-600 dark:text-gray-400 text-sm text-center">{role.profilesShared}</td>
-                          <td className="p-3 text-gray-600 dark:text-gray-400 text-sm">{role.lastActive}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">{role.profilesShared}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.lastActive}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
 
-            {/* JD Upload Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">JD Upload</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-6">
-                  {/* Drag & Drop Upload */}
-                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center">
-                    <div className="mb-4">
-                      <div className="mx-auto w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
-                        <FileText className="h-8 w-8 text-gray-400" />
+              {/* JD Upload Section */}
+              <div className="bg-white rounded-lg border border-gray-200">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900">JD Upload</h3>
+                  <div className="flex justify-end">
+                    <span className="text-red-500 text-sm">●</span>
+                  </div>
+                </div>
+                <div className="p-6">
+                  <div className="grid grid-cols-2 gap-6 mb-6">
+                    {/* Drag & Drop Upload */}
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors cursor-pointer">
+                      <div className="mb-4">
+                        <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                          <Upload className="h-8 w-8 text-gray-400" />
+                        </div>
                       </div>
+                      <p className="text-gray-600 mb-2 font-medium">Drag & Drop A file here or Click to Browse</p>
+                      <p className="text-sm text-gray-500 mb-1">Supported PDF,Docx</p>
+                      <p className="text-sm text-gray-500">Max File Size 5MB</p>
                     </div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-2">Drag & Drop A file here or Click to Browse</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-500 mb-2">Supported PDF, Docx</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-500">Max File Size 5MB</p>
-                  </div>
 
-                  {/* Copy & Paste */}
-                  <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center">
-                    <div className="mb-4">
-                      <div className="mx-auto w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center">
-                        <FileText className="h-8 w-8 text-gray-400" />
+                    {/* Copy & Paste */}
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors cursor-pointer">
+                      <div className="mb-4">
+                        <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                          <Edit3 className="h-8 w-8 text-gray-400" />
+                        </div>
                       </div>
+                      <p className="text-gray-600 font-medium">Copy & Paste Or Write Your Own JD</p>
                     </div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-4">Copy & Paste Or Write Your Own JD</p>
                   </div>
-                </div>
 
-                {/* Skills Section */}
-                <div className="grid grid-cols-3 gap-6 mt-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Primary Skills</label>
+                  {/* Skills Section */}
+                  <div className="grid grid-cols-3 gap-6 mb-6">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Primary Skills</label>
+                      <Input 
+                        placeholder="Enter here..." 
+                        className="bg-white border-gray-300"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Secondary Skills</label>
+                      <Input 
+                        placeholder="Enter here..." 
+                        className="bg-white border-gray-300"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Knowledge Only</label>
+                      <Input 
+                        placeholder="Enter here..." 
+                        className="bg-white border-gray-300"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Special Instructions</label>
                     <Input 
-                      placeholder="Enter here..." 
-                      className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                      placeholder="" 
+                      className="bg-white border-gray-300"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Secondary Skills</label>
-                    <Input 
-                      placeholder="Enter here..." 
-                      className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Knowledge Only</label>
-                    <Input 
-                      placeholder="Enter here..." 
-                      className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
-                    />
-                  </div>
                 </div>
-
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Special Instructions</label>
-                  <Input 
-                    placeholder="" 
-                    className="bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
-                  />
-                </div>
-
-                <div className="flex gap-4 mt-6">
-                  <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-8">
-                    Preview & Submit
-                  </Button>
-                  <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-8">
-                    Chat Box
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         );
       
@@ -291,67 +309,98 @@ export default function ClientDashboard() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Left Sidebar */}
-      <div className="w-64 bg-white dark:bg-gray-800 shadow-sm border-r border-gray-200 dark:border-gray-700">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Client Portal</h2>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Gumlet Marketing Private Limited</p>
+    <div className="flex h-screen bg-gray-100">
+      {/* Left Sidebar - Blue Theme */}
+      <div className="w-16 bg-blue-600 flex flex-col items-center py-6 space-y-6">
+        {/* Logo */}
+        <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
+          <span className="text-blue-600 font-bold text-lg">X</span>
         </div>
         
-        <nav className="p-6">
-          <div className="space-y-2">
-            <button
-              onClick={() => setSidebarTab('dashboard')}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
-                sidebarTab === 'dashboard' 
-                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300' 
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-              data-testid="sidebar-dashboard"
-            >
-              <div className="flex items-center gap-3">
-                <Briefcase className="h-5 w-5" />
-                Dashboard
-              </div>
-            </button>
-
-            <button
-              onClick={() => setSidebarTab('requirements')}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
-                sidebarTab === 'requirements' 
-                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300' 
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-              data-testid="sidebar-requirements"
-            >
-              <div className="flex items-center gap-3">
-                <FileText className="h-5 w-5" />
-                Requirements
-              </div>
-            </button>
-
-            <button
-              onClick={() => setSidebarTab('reports')}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
-                sidebarTab === 'reports' 
-                  ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300' 
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-              data-testid="sidebar-reports"
-            >
-              <div className="flex items-center gap-3">
-                <FileText className="h-5 w-5" />
-                Reports
-              </div>
-            </button>
-          </div>
-        </nav>
+        {/* Navigation Icons */}
+        <div className="flex flex-col space-y-4">
+          <button 
+            onClick={() => setSidebarTab('dashboard')}
+            className={`p-3 rounded-lg transition-colors ${
+              sidebarTab === 'dashboard' ? 'bg-blue-700' : 'hover:bg-blue-700'
+            }`}
+          >
+            <User className="h-6 w-6 text-white" />
+          </button>
+          
+          <button 
+            onClick={() => setSidebarTab('requirements')}
+            className={`p-3 rounded-lg transition-colors ${
+              sidebarTab === 'requirements' ? 'bg-blue-700' : 'hover:bg-blue-700'
+            }`}
+          >
+            <MapPin className="h-6 w-6 text-white" />
+          </button>
+          
+          <button 
+            onClick={() => setSidebarTab('reports')}
+            className={`p-3 rounded-lg transition-colors ${
+              sidebarTab === 'reports' ? 'bg-blue-700' : 'hover:bg-blue-700'
+            }`}
+          >
+            <HandHeart className="h-6 w-6 text-white" />
+          </button>
+        </div>
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden">
-        {renderMainContent()}
+      <div className="flex-1 flex">
+        {/* Middle Section */}
+        <div className="flex-1 bg-white">
+          {renderMainContent()}
+        </div>
+        
+        {/* Right Sidebar - Chats */}
+        <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
+          {/* Recent Chats Header */}
+          <div className="p-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-800">Recent Chats</h3>
+          </div>
+          
+          {/* Chat List */}
+          <div className="flex-1 overflow-y-auto">
+            {recentChats.map((chat) => (
+              <div key={chat.id} className="p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer">
+                <div className="flex items-center space-x-3">
+                  <div className="relative">
+                    <Avatar className="w-10 h-10">
+                      <AvatarImage src={chat.avatar} alt={chat.name} />
+                      <AvatarFallback className="bg-blue-100 text-blue-600">
+                        {chat.name.charAt(0)}
+                      </AvatarFallback>
+                    </Avatar>
+                    {chat.status === 'online' && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-gray-900">{chat.name}</h4>
+                      <span className="text-lg font-bold text-gray-900">{chat.closures}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-gray-500">{chat.requirements} Requirements</p>
+                      <span className="text-xs text-gray-400">Closures</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          {/* Chat Box Button */}
+          <div className="p-4 border-t border-gray-200">
+            <Button className="w-full bg-cyan-400 hover:bg-cyan-500 text-black font-medium py-3">
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Chat Box
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );
