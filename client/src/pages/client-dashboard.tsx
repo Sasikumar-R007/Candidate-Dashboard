@@ -433,7 +433,14 @@ export default function ClientDashboard() {
       
       case 'requirements':
         return (
-          <div className="flex h-full">
+          <div className="flex flex-col h-full">
+            {/* Simple Client Header */}
+            <SimpleClientHeader 
+              companyName="Gumlet Marketing Private Limited"
+              userName="Sasi Kumar"
+              userImage="/api/placeholder/32/32"
+            />
+            <div className="flex flex-1 overflow-hidden">
             {/* Main Pipeline Content */}
             <div className="flex-1 overflow-auto">
               <div className="p-6 space-y-6">
@@ -659,12 +666,20 @@ export default function ClientDashboard() {
                 ))}
               </div>
             </div>
+            </div>
           </div>
         );
       
       case 'reports':
         return (
-          <div className="flex h-full">
+          <div className="flex flex-col h-full">
+            {/* Simple Client Header */}
+            <SimpleClientHeader 
+              companyName="Gumlet Marketing Private Limited"
+              userName="Sasi Kumar"
+              userImage="/api/placeholder/32/32"
+            />
+            <div className="flex flex-1 overflow-hidden">
             {/* Main Content Area */}
             <div className="flex-1 p-6 space-y-6 overflow-y-auto bg-gray-50">
               {/* Header with controls */}
@@ -828,13 +843,10 @@ export default function ClientDashboard() {
                     <div className="text-sm text-gray-600 mt-1">%</div>
                   </div>
                   
-                  <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200 relative">
+                  <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
                     <h3 className="text-sm font-medium text-yellow-700 mb-2">Revenue Recovered</h3>
                     <div className="text-3xl font-bold text-yellow-600">1.5 <span className="text-2xl">L</span></div>
                     <div className="text-sm text-gray-600 mt-1">Gained per hire*</div>
-                    <Button className="absolute bottom-4 right-4 bg-cyan-400 hover:bg-cyan-500 text-black text-xs px-3 py-1 h-8 rounded">
-                      Download
-                    </Button>
                   </div>
                 </div>
               </div>
@@ -899,6 +911,14 @@ export default function ClientDashboard() {
                   <div className="text-2xl font-bold text-gray-900">20%</div>
                 </div>
               </div>
+            </div>
+            
+            {/* Fixed Download Button - Bottom Right */}
+            <div className="fixed bottom-6 right-6 z-50">
+              <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded shadow-lg">
+                Download
+              </Button>
+            </div>
             </div>
           </div>
         );
