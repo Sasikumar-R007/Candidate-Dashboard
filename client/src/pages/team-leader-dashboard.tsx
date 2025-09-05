@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, EditIcon, MoreVertical } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CalendarIcon, EditIcon, MoreVertical, Mail } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 
@@ -91,19 +92,259 @@ export default function TeamLeaderDashboard() {
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
           <AdminTopHeader />
-          <AdminProfileHeader profile={{
-            name: teamLeaderProfile?.name || "Team Leader",
-            role: "Team Leader",
-            email: teamLeaderProfile?.email || "",
-            phone: teamLeaderProfile?.phone || "",
-            bannerImage: null,
-            profilePicture: null
-          }} />
           <div className="flex">
-            {/* Main Content */}
-            <div className="flex-1 p-6">
+            {/* Main Content - Exact copy from admin team section */}
+            <div className="px-3 py-2 space-y-2 flex-1 overflow-y-auto">
               <TeamBoxes />
+
+              {/* Target & Incentives Section */}
+              <Card className="bg-gray-50">
+                <CardHeader className="pb-1 pt-1 flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg text-gray-900">Target & Incentives</CardTitle>
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2"
+                  >
+                    View All
+                  </Button>
+                </CardHeader>
+                <CardContent className="p-1">
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse bg-white rounded">
+                      <thead>
+                        <tr className="bg-gray-200">
+                          <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Resource</th>
+                          <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Role</th>
+                          <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Quarter</th>
+                          <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Minimum Target</th>
+                          <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Target Achieved</th>
+                          <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Closures</th>
+                          <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Incentives</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="bg-blue-50">
+                          <td className="py-2 px-3 text-sm text-gray-900 font-medium">kavitha</td>
+                          <td className="py-2 px-3 text-sm text-gray-600">Talent Advisor</td>
+                          <td className="py-2 px-3 text-sm text-gray-600">Q4 2024</td>
+                          <td className="py-2 px-3 text-sm text-gray-600">12</td>
+                          <td className="py-2 px-3 text-sm text-gray-600">15</td>
+                          <td className="py-2 px-3 text-sm text-gray-600">8</td>
+                          <td className="py-2 px-3 text-sm text-gray-600">₹45,000</td>
+                        </tr>
+                        <tr className="bg-white">
+                          <td className="py-2 px-3 text-sm text-gray-900 font-medium">Rajesh</td>
+                          <td className="py-2 px-3 text-sm text-gray-600">Senior Recruiter</td>
+                          <td className="py-2 px-3 text-sm text-gray-600">Q4 2024</td>
+                          <td className="py-2 px-3 text-sm text-gray-600">8</td>
+                          <td className="py-2 px-3 text-sm text-gray-600">10</td>
+                          <td className="py-2 px-3 text-sm text-gray-600">6</td>
+                          <td className="py-2 px-3 text-sm text-gray-600">₹30,000</td>
+                        </tr>
+                        <tr className="bg-blue-50">
+                          <td className="py-2 px-3 text-sm text-gray-900 font-medium">Sowmiya</td>
+                          <td className="py-2 px-3 text-sm text-gray-600">Recruiter</td>
+                          <td className="py-2 px-3 text-sm text-gray-600">Q4 2024</td>
+                          <td className="py-2 px-3 text-sm text-gray-600">6</td>
+                          <td className="py-2 px-3 text-sm text-gray-600">7</td>
+                          <td className="py-2 px-3 text-sm text-gray-600">4</td>
+                          <td className="py-2 px-3 text-sm text-gray-600">₹25,000</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Daily Metrics Section */}
+              <Card className="bg-teal-50">
+                <CardHeader className="flex flex-row items-center justify-between pb-1 pt-2">
+                  <CardTitle className="text-lg text-gray-900">Daily Metrics</CardTitle>
+                  <div className="flex items-center space-x-2">
+                    <Select defaultValue="overall">
+                      <SelectTrigger className="w-20 h-7 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="overall">Overall</SelectItem>
+                        <SelectItem value="team1">Team 1</SelectItem>
+                        <SelectItem value="team2">Team 2</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="flex items-center space-x-1 h-7 px-2">
+                          <CalendarIcon className="h-3 w-3" />
+                          <span className="text-sm">12-Aug-2025</span>
+                          <EditIcon className="h-3 w-3" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="end">
+                        <div className="p-4">
+                          <p className="text-sm">Calendar would go here</p>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </CardHeader>
+                
+                <CardContent className="p-3">
+                  <div className="grid grid-cols-3 gap-4">
+                    {/* Left side - Metrics */}
+                    <div className="bg-white rounded p-4 space-y-3">
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-sm font-medium text-gray-700">Total Requirements</span>
+                        <span className="text-2xl font-bold text-blue-600">27</span>
+                      </div>
+                      <div className="border-t border-gray-200"></div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-sm font-medium text-gray-700">Avg. Resumes per Requirement</span>
+                        <span className="text-2xl font-bold text-blue-600">24</span>
+                      </div>
+                      <div className="border-t border-gray-200"></div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-sm font-medium text-gray-700">Requirements per Recruiter</span>
+                        <span className="text-2xl font-bold text-blue-600">9</span>
+                      </div>
+                      <div className="border-t border-gray-200"></div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-sm font-medium text-gray-700">Completed Requirements</span>
+                        <span className="text-2xl font-bold text-blue-600">8</span>
+                      </div>
+                    </div>
+
+                    {/* Middle section - Calls and Submissions */}
+                    <div className="space-y-4">
+                      <div className="bg-white rounded p-4">
+                        <h4 className="text-sm font-medium text-gray-700 mb-3">Calls</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-blue-600">156</div>
+                            <div className="text-xs text-gray-500">Today</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-blue-600">1,243</div>
+                            <div className="text-xs text-gray-500">This Month</div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-white rounded p-4">
+                        <h4 className="text-sm font-medium text-gray-700 mb-3">Submissions</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-blue-600">23</div>
+                            <div className="text-xs text-gray-500">Today</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-blue-600">187</div>
+                            <div className="text-xs text-gray-500">This Month</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right section - Chart */}
+                    <div className="bg-white rounded p-4">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">Performance</h4>
+                      <div className="h-16 bg-gray-100 rounded mt-2 flex items-center justify-center">
+                        <span className="text-gray-500 text-sm">Chart placeholder</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Messages and Meetings Section */}
+              <div className="grid grid-cols-10 gap-3 h-fit">
+                {/* Pending Meetings */}
+                <Card className="bg-gray-100 col-span-3">
+                  <CardHeader className="pb-2 pt-3">
+                    <CardTitle className="text-lg text-gray-900">Pending Meetings</CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-4 pb-4">
+                    <div className="bg-white p-4 relative">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center">
+                          <h3 className="text-sm font-medium text-gray-700 mb-2">TL's Meeting</h3>
+                          <div className="text-4xl font-bold text-gray-900 mb-3">3</div>
+                          <Button 
+                            size="sm" 
+                            className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-sm rounded"
+                          >
+                            View
+                          </Button>
+                        </div>
+                        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-300 transform -translate-x-0.5"></div>
+                        <div className="text-center">
+                          <h3 className="text-sm font-medium text-gray-700 mb-2">CEO's Meeting</h3>
+                          <div className="text-4xl font-bold text-gray-900 mb-3">1</div>
+                          <Button 
+                            size="sm" 
+                            className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-sm rounded"
+                          >
+                            View
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Message Status */}
+                <Card className="bg-gray-50 col-span-5">
+                  <CardHeader className="pb-1 pt-2">
+                    <CardTitle className="text-lg text-gray-900">Message Status</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm bg-white rounded">
+                        <thead>
+                          <tr className="bg-slate-800 text-white">
+                            <th className="text-left py-2 px-3 text-sm font-medium">Name</th>
+                            <th className="text-left py-2 px-3 text-sm font-medium">Message</th>
+                            <th className="text-left py-2 px-3 text-sm font-medium">Date</th>
+                            <th className="text-left py-2 px-3 text-sm font-medium">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="border-b border-gray-100">
+                            <td className="py-2 px-3 text-gray-900 font-medium">kavitha</td>
+                            <td className="py-2 px-3 text-gray-600">Meeting scheduled for today</td>
+                            <td className="py-2 px-3 text-gray-600">12-Aug-2025</td>
+                            <td className="py-2 px-3">
+                              <span className="w-3 h-3 rounded-full inline-block bg-green-500"></span>
+                            </td>
+                          </tr>
+                          <tr className="border-b border-gray-100">
+                            <td className="py-2 px-3 text-gray-900 font-medium">Rajesh</td>
+                            <td className="py-2 px-3 text-gray-600">Requirements update needed</td>
+                            <td className="py-2 px-3 text-gray-600">11-Aug-2025</td>
+                            <td className="py-2 px-3">
+                              <span className="w-3 h-3 rounded-full inline-block bg-red-500"></span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                {/* Create Section */}
+                <Card className="bg-slate-800 col-span-2">
+                  <CardContent className="flex flex-col items-center justify-center h-full p-3">
+                    <div className="p-4 mb-3">
+                      <Mail className="w-10 h-10 text-white" />
+                    </div>
+                    <Button 
+                      className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
+                    >
+                      Create
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
+            
             {/* Team Members Sidebar */}
             <TeamMembersSidebar 
               selectedTeam={selectedTeam}
@@ -121,14 +362,6 @@ export default function TeamLeaderDashboard() {
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
           <AdminTopHeader />
-          <AdminProfileHeader profile={{
-            name: teamLeaderProfile?.name || "Team Leader",
-            role: "Team Leader",
-            email: teamLeaderProfile?.email || "",
-            phone: teamLeaderProfile?.phone || "",
-            bannerImage: null,
-            profilePicture: null
-          }} />
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
             {/* Requirements Section with Priority Distribution - Exact copy from admin */}
             <div className="flex gap-6">
@@ -284,14 +517,6 @@ export default function TeamLeaderDashboard() {
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
           <AdminTopHeader />
-          <AdminProfileHeader profile={{
-            name: teamLeaderProfile?.name || "Team Leader",
-            role: "Team Leader",
-            email: teamLeaderProfile?.email || "",
-            phone: teamLeaderProfile?.phone || "",
-            bannerImage: null,
-            profilePicture: null
-          }} />
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
             {/* Pipeline Header */}
             <div className="flex justify-between items-center">
@@ -452,14 +677,6 @@ export default function TeamLeaderDashboard() {
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
           <AdminTopHeader />
-          <AdminProfileHeader profile={{
-            name: teamLeaderProfile?.name || "Team Leader",
-            role: "Team Leader",
-            email: teamLeaderProfile?.email || "",
-            phone: teamLeaderProfile?.phone || "",
-            bannerImage: null,
-            profilePicture: null
-          }} />
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
             {/* Team Performance Section */}
             <Card>
