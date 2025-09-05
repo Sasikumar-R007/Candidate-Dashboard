@@ -661,192 +661,240 @@ export default function ClientDashboard() {
       
       case 'reports':
         return (
-          <div className="p-6 space-y-8 h-full overflow-y-auto bg-white">
-            {/* Company Header */}
-            <div className="flex items-center justify-between">
-              <h1 className="text-xl font-semibold text-gray-900">Gumlet Marketing Private Limited</h1>
-              <div className="flex items-center space-x-4">
-                <Select>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="All Rules" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Rules</SelectItem>
-                    <SelectItem value="active">Active Rules</SelectItem>
-                    <SelectItem value="paused">Paused Rules</SelectItem>
-                  </SelectContent>
-                </Select>
-                <div className="flex items-center space-x-2">
-                  <CalendarIcon className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm text-gray-700">12-Aug-2025</span>
-                  <span className="text-sm text-gray-500">Monthly</span>
+          <div className="flex h-full">
+            {/* Main Content Area */}
+            <div className="flex-1 p-6 space-y-6 overflow-y-auto bg-gray-50">
+              {/* Header with controls */}
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold text-gray-900">Speed Metrics</h2>
+                <div className="flex items-center space-x-4">
+                  <Select>
+                    <SelectTrigger className="w-32">
+                      <SelectValue defaultValue="All Roles" placeholder="All Roles" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Roles</SelectItem>
+                      <SelectItem value="active">Active Roles</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="flex items-center space-x-2 bg-white px-3 py-2 rounded border">
+                    <CalendarIcon className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm">12-Aug-2025</span>
+                    <Edit3 className="h-4 w-4 text-gray-500" />
+                  </div>
+                  <Select>
+                    <SelectTrigger className="w-24">
+                      <SelectValue defaultValue="Monthly" placeholder="Monthly" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
+                      <SelectItem value="daily">Daily</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-4 py-2 rounded">
-                  Download
-                </Button>
+              </div>
+
+              {/* Speed Metrics Row */}
+              <div className="grid grid-cols-4 gap-4">
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                  <h3 className="text-sm font-medium text-blue-700 mb-2">Time to 1st Submission</h3>
+                  <div className="flex items-end space-x-3 mb-2">
+                    <span className="text-3xl font-bold text-blue-900">5</span>
+                    <span className="text-sm text-blue-700 mb-1">days</span>
+                    <div className="w-3 h-3 bg-cyan-400 rounded-full mb-1"></div>
+                  </div>
+                </div>
+                
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                  <h3 className="text-sm font-medium text-blue-700 mb-2">Time to Interview</h3>
+                  <div className="flex items-end space-x-3 mb-2">
+                    <span className="text-3xl font-bold text-blue-900">3</span>
+                    <span className="text-sm text-blue-700 mb-1">days</span>
+                    <div className="w-3 h-3 bg-red-400 rounded-full mb-1"></div>
+                  </div>
+                </div>
+                
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                  <h3 className="text-sm font-medium text-blue-700 mb-2">Time to Offer</h3>
+                  <div className="flex items-end space-x-3 mb-2">
+                    <span className="text-3xl font-bold text-blue-900">15</span>
+                    <span className="text-sm text-blue-700 mb-1">days</span>
+                    <div className="w-3 h-3 bg-purple-400 rounded-full mb-1"></div>
+                  </div>
+                </div>
+                
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                  <h3 className="text-sm font-medium text-blue-700 mb-2">Time to Fill</h3>
+                  <div className="flex items-end space-x-3 mb-2">
+                    <span className="text-3xl font-bold text-blue-900">25</span>
+                    <span className="text-sm text-blue-700 mb-1">days</span>
+                    <div className="w-3 h-3 bg-amber-600 rounded-full mb-1"></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quality Metrics */}
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">Quality Metrics</h2>
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="bg-green-100 rounded-lg p-4 border border-green-200">
+                    <h3 className="text-sm font-medium text-green-700 mb-2">Submission to Short List %</h3>
+                    <div className="flex items-end space-x-3 mb-2">
+                      <span className="text-3xl font-bold text-green-800">5</span>
+                      <span className="text-sm text-green-700 mb-1">%</span>
+                      <div className="w-3 h-3 bg-cyan-400 rounded-full mb-1"></div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-green-100 rounded-lg p-4 border border-green-200">
+                    <h3 className="text-sm font-medium text-green-700 mb-2">Interview to Offer %</h3>
+                    <div className="flex items-end space-x-3 mb-2">
+                      <span className="text-3xl font-bold text-green-800">3</span>
+                      <span className="text-sm text-green-700 mb-1">%</span>
+                      <div className="w-3 h-3 bg-red-400 rounded-full mb-1"></div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-green-100 rounded-lg p-4 border border-green-200">
+                    <h3 className="text-sm font-medium text-green-700 mb-2">Offer Acceptance %</h3>
+                    <div className="flex items-end space-x-3 mb-2">
+                      <span className="text-3xl font-bold text-green-800">15</span>
+                      <span className="text-sm text-green-700 mb-1">%</span>
+                      <div className="w-3 h-3 bg-purple-400 rounded-full mb-1"></div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-green-100 rounded-lg p-4 border border-green-200">
+                    <h3 className="text-sm font-medium text-green-700 mb-2">Early Attrition %</h3>
+                    <div className="flex items-end space-x-3 mb-2">
+                      <span className="text-3xl font-bold text-green-800">25</span>
+                      <span className="text-sm text-green-700 mb-1">%</span>
+                      <div className="w-3 h-3 bg-amber-600 rounded-full mb-1"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Impact Metrics */}
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">Impact Metrics</h2>
+                <div className="grid grid-cols-4 gap-4 mb-4">
+                  <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                    <h3 className="text-sm font-medium text-red-700 mb-2">Speed to Hire value</h3>
+                    <div className="text-3xl font-bold text-red-600">15</div>
+                    <div className="text-sm text-gray-600 mt-1">Days faster*</div>
+                  </div>
+                  
+                  <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                    <h3 className="text-sm font-medium text-red-700 mb-2">Revenue Impact Of Delay</h3>
+                    <div className="text-3xl font-bold text-red-600">75,000</div>
+                    <div className="text-sm text-gray-600 mt-1">Lost per Role*</div>
+                  </div>
+                  
+                  <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                    <h3 className="text-sm font-medium text-purple-700 mb-2">Client NPS</h3>
+                    <div className="text-3xl font-bold text-purple-600">+60</div>
+                    <div className="text-sm text-gray-600 mt-1">Net Promoter Score*</div>
+                  </div>
+                  
+                  <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                    <h3 className="text-sm font-medium text-purple-700 mb-2">Candidate NPS</h3>
+                    <div className="text-3xl font-bold text-purple-600">+70</div>
+                    <div className="text-sm text-gray-600 mt-1">Net Promoter Score*</div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                    <h3 className="text-sm font-medium text-yellow-700 mb-2">Feedback Turn Around</h3>
+                    <div className="text-3xl font-bold text-yellow-600">2</div>
+                    <div className="text-sm text-gray-600 mt-1">days</div>
+                    <div className="text-xs text-gray-500 mt-1">Industry Avg. 5 days*</div>
+                  </div>
+                  
+                  <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                    <h3 className="text-sm font-medium text-yellow-700 mb-2">First Year Retention Rate</h3>
+                    <div className="text-3xl font-bold text-yellow-600">90</div>
+                    <div className="text-sm text-gray-600 mt-1">%</div>
+                  </div>
+                  
+                  <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                    <h3 className="text-sm font-medium text-yellow-700 mb-2">Fulfillment Rate</h3>
+                    <div className="text-3xl font-bold text-yellow-600">20</div>
+                    <div className="text-sm text-gray-600 mt-1">%</div>
+                  </div>
+                  
+                  <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200 relative">
+                    <h3 className="text-sm font-medium text-yellow-700 mb-2">Revenue Recovered</h3>
+                    <div className="text-3xl font-bold text-yellow-600">1.5 <span className="text-2xl">L</span></div>
+                    <div className="text-sm text-gray-600 mt-1">Gained per hire*</div>
+                    <Button className="absolute bottom-4 right-4 bg-cyan-400 hover:bg-cyan-500 text-black text-xs px-3 py-1 h-8 rounded">
+                      Download
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* Speed Metrics */}
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Speed Metrics</h2>
-              <div className="grid grid-cols-4 gap-6">
-                <div className="bg-white border border-gray-200 rounded-lg p-6">
-                  <h3 className="text-sm font-medium text-gray-600 mb-2">Time to 1st Submission</h3>
-                  <div className="flex items-center space-x-3">
-                    <div className="text-3xl font-bold text-gray-900">5</div>
-                    <div className="text-sm text-gray-500">days</div>
-                    <div className="w-3 h-3 bg-cyan-400 rounded-full"></div>
-                  </div>
-                </div>
-                
-                <div className="bg-white border border-gray-200 rounded-lg p-6">
-                  <h3 className="text-sm font-medium text-gray-600 mb-2">Time to Interview</h3>
-                  <div className="flex items-center space-x-3">
-                    <div className="text-3xl font-bold text-gray-900">3</div>
-                    <div className="text-sm text-gray-500">days</div>
-                    <div className="w-3 h-3 bg-orange-400 rounded-full"></div>
-                  </div>
-                </div>
-                
-                <div className="bg-white border border-gray-200 rounded-lg p-6">
-                  <h3 className="text-sm font-medium text-gray-600 mb-2">Time to Offer</h3>
-                  <div className="flex items-center space-x-3">
-                    <div className="text-3xl font-bold text-gray-900">15</div>
-                    <div className="text-sm text-gray-500">days</div>
-                    <div className="w-3 h-3 bg-purple-400 rounded-full"></div>
-                  </div>
-                </div>
-                
-                <div className="bg-white border border-gray-200 rounded-lg p-6">
-                  <h3 className="text-sm font-medium text-gray-600 mb-2">Time to Fill</h3>
-                  <div className="flex items-center space-x-3">
-                    <div className="text-3xl font-bold text-gray-900">25</div>
-                    <div className="text-sm text-gray-500">days</div>
-                    <div className="w-3 h-3 bg-brown-400 rounded-full"></div>
-                  </div>
-                  <div className="mt-4 h-32 bg-gray-50 rounded flex items-center justify-center">
-                    <span className="text-gray-400 text-sm">Line Chart</span>
+            {/* Right Sidebar with Charts */}
+            <div className="w-80 bg-white border-l border-gray-200 p-6 space-y-6">
+              {/* First Chart Area */}
+              <div className="space-y-4">
+                <div className="h-48 bg-blue-50 border border-blue-100 rounded-lg p-4">
+                  <div className="h-full flex items-center justify-center relative">
+                    {/* Sample line chart visualization */}
+                    <svg width="280" height="160" className="absolute">
+                      <defs>
+                        <linearGradient id="blueGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.3"/>
+                          <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.1"/>
+                        </linearGradient>
+                      </defs>
+                      <path d="M20,120 L60,80 L100,100 L140,60 L180,90 L220,70 L260,50" 
+                            stroke="#3B82F6" strokeWidth="2" fill="none"/>
+                      <path d="M20,140 L60,110 L100,130 L140,90 L180,120 L220,100 L260,80" 
+                            stroke="#EF4444" strokeWidth="2" fill="none"/>
+                      <path d="M20,130 L60,95 L100,115 L140,75 L180,105 L220,85 L260,65" 
+                            stroke="#10B981" strokeWidth="2" fill="none"/>
+                    </svg>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Quality Metrics */}
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Quality Metrics</h2>
-              <div className="grid grid-cols-4 gap-6">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                  <h3 className="text-sm font-medium text-gray-600 mb-2">Submission to Short List %</h3>
-                  <div className="flex items-center space-x-3">
-                    <div className="text-3xl font-bold text-gray-900">5</div>
-                    <div className="text-sm text-gray-500">%</div>
-                    <div className="w-3 h-3 bg-cyan-400 rounded-full"></div>
-                  </div>
-                </div>
-                
-                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                  <h3 className="text-sm font-medium text-gray-600 mb-2">Interview to Offer %</h3>
-                  <div className="flex items-center space-x-3">
-                    <div className="text-3xl font-bold text-gray-900">3</div>
-                    <div className="text-sm text-gray-500">%</div>
-                    <div className="w-3 h-3 bg-orange-400 rounded-full"></div>
-                  </div>
-                </div>
-                
-                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                  <h3 className="text-sm font-medium text-gray-600 mb-2">Offer Acceptance %</h3>
-                  <div className="flex items-center space-x-3">
-                    <div className="text-3xl font-bold text-gray-900">15</div>
-                    <div className="text-sm text-gray-500">%</div>
-                    <div className="w-3 h-3 bg-purple-400 rounded-full"></div>
-                  </div>
-                </div>
-                
-                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                  <h3 className="text-sm font-medium text-gray-600 mb-2">Early Attrition %</h3>
-                  <div className="flex items-center space-x-3">
-                    <div className="text-3xl font-bold text-gray-900">25</div>
-                    <div className="text-sm text-gray-500">%</div>
-                    <div className="w-3 h-3 bg-brown-400 rounded-full"></div>
-                  </div>
-                  <div className="mt-4 h-32 bg-gray-50 rounded flex items-center justify-center">
-                    <span className="text-gray-400 text-sm">Line Chart</span>
+              {/* Second Chart Area */}
+              <div className="space-y-4">
+                <div className="h-48 bg-green-50 border border-green-100 rounded-lg p-4">
+                  <div className="h-full flex items-center justify-center relative">
+                    {/* Sample line chart visualization */}
+                    <svg width="280" height="160" className="absolute">
+                      <defs>
+                        <linearGradient id="greenGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                          <stop offset="0%" stopColor="#10B981" stopOpacity="0.3"/>
+                          <stop offset="100%" stopColor="#10B981" stopOpacity="0.1"/>
+                        </linearGradient>
+                      </defs>
+                      <path d="M20,100 L60,70 L100,85 L140,50 L180,75 L220,60 L260,45" 
+                            stroke="#10B981" strokeWidth="2" fill="none"/>
+                      <path d="M20,120 L60,90 L100,105 L140,70 L180,95 L220,80 L260,65" 
+                            stroke="#F59E0B" strokeWidth="2" fill="none"/>
+                      <path d="M20,110 L60,80 L100,95 L140,60 L180,85 L220,70 L260,55" 
+                            stroke="#EF4444" strokeWidth="2" fill="none"/>
+                    </svg>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Impact Metrics */}
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-4">Impact Metrics</h2>
-              <div className="grid grid-cols-4 gap-6">
-                <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-                  <h3 className="text-sm font-medium text-gray-600 mb-2">Speed to Hire value</h3>
-                  <div className="text-3xl font-bold text-red-600">15</div>
-                  <div className="text-sm text-gray-500 mt-1">Days faster*</div>
+              {/* Drop Rates Section */}
+              <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+                <div className="text-center mb-4">
+                  <div className="text-sm text-gray-600 mb-1">Interview Drop of Rate</div>
+                  <div className="text-2xl font-bold text-gray-900">25%</div>
                 </div>
-                
-                <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-                  <h3 className="text-sm font-medium text-gray-600 mb-2">Revenue Impact Of Delay</h3>
-                  <div className="text-3xl font-bold text-red-600">75,000</div>
-                  <div className="text-sm text-gray-500 mt-1">Last per Role*</div>
+                <div className="text-center">
+                  <div className="text-sm text-gray-600 mb-1">Offer Drop of Rate</div>
+                  <div className="text-2xl font-bold text-gray-900">20%</div>
                 </div>
-                
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
-                  <h3 className="text-sm font-medium text-gray-600 mb-2">Client NPS</h3>
-                  <div className="text-3xl font-bold text-purple-600">+60</div>
-                  <div className="text-sm text-gray-500 mt-1">Net Promoter Score*</div>
-                </div>
-                
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
-                  <h3 className="text-sm font-medium text-gray-600 mb-2">Candidate NPS</h3>
-                  <div className="text-3xl font-bold text-purple-600">+70</div>
-                  <div className="text-sm text-gray-500 mt-1">Net Promoter Score*</div>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-4 gap-6 mt-6">
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-                  <h3 className="text-sm font-medium text-gray-600 mb-2">Feedback Turn Around</h3>
-                  <div className="text-3xl font-bold text-yellow-600">2</div>
-                  <div className="text-sm text-gray-500 mt-1">days</div>
-                  <div className="text-xs text-gray-400 mt-1">Industry Avg: 5 days*</div>
-                </div>
-                
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-                  <h3 className="text-sm font-medium text-gray-600 mb-2">First Year Retention Rate</h3>
-                  <div className="text-3xl font-bold text-yellow-600">90</div>
-                  <div className="text-sm text-gray-500 mt-1">%</div>
-                </div>
-                
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-                  <h3 className="text-sm font-medium text-gray-600 mb-2">Fulfillment Rate</h3>
-                  <div className="text-3xl font-bold text-yellow-600">20</div>
-                  <div className="text-sm text-gray-500 mt-1">%</div>
-                </div>
-                
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-                  <h3 className="text-sm font-medium text-gray-600 mb-2">Revenue Recovered</h3>
-                  <div className="text-3xl font-bold text-yellow-600">1.5</div>
-                  <div className="text-sm text-gray-500 mt-1">L</div>
-                  <div className="text-xs text-gray-400 mt-1">Gained per hire*</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Additional Metrics Section */}
-            <div className="flex justify-between items-end">
-              <div className="space-y-2">
-                <div className="text-sm text-gray-600">Interview Drop of Rate</div>
-                <div className="text-2xl font-bold text-gray-900">25%</div>
-              </div>
-              <div className="space-y-2">
-                <div className="text-sm text-gray-600">Offer Drop of Rate</div>
-                <div className="text-2xl font-bold text-gray-900">20%</div>
-              </div>
-              <div className="h-32 w-64 bg-gray-50 rounded flex items-center justify-center">
-                <span className="text-gray-400 text-sm">Chart Area</span>
               </div>
             </div>
           </div>
