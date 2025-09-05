@@ -23,6 +23,8 @@ export default function ClientDashboard() {
   const [isRolesModalOpen, setIsRolesModalOpen] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [jdText, setJdText] = useState('');
+  const [isJdModalOpen, setIsJdModalOpen] = useState(false);
+  const [tempJdText, setTempJdText] = useState('');
 
   // Sample data for the dashboard
   const dashboardStats = {
@@ -286,38 +288,71 @@ export default function ClientDashboard() {
                         }}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                       />
-                      <div className="border-2 border-dashed border-gray-300 rounded p-4 text-center hover:border-gray-400 transition-colors cursor-pointer h-32">
-                        <div className="mb-2">
-                          <div className="mx-auto w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                            <Upload className="h-5 w-5 text-gray-400" />
-                          </div>
-                        </div>
-                        <p className="text-gray-600 text-sm font-medium mb-1">Drag & Drop A file here or Click to Browse</p>
-                        <p className="text-xs text-gray-500 mb-1">Supported PDF,Docx</p>
-                        <p className="text-xs text-gray-500">Max File Size 5MB</p>
-                        {uploadedFile && (
-                          <p className="text-xs text-green-600 mt-2 font-medium">
-                            {uploadedFile.name}
-                          </p>
+                      <div className="border-2 border-dashed border-gray-300 rounded p-4 text-center hover:border-gray-400 transition-colors cursor-pointer h-32 flex flex-col justify-center">
+                        {uploadedFile ? (
+                          <>
+                            <div className="mb-2">
+                              <div className="mx-auto w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                <FileText className="h-5 w-5 text-green-600" />
+                              </div>
+                            </div>
+                            <p className="text-green-600 text-sm font-medium mb-1">{uploadedFile.name}</p>
+                            <p className="text-xs text-gray-500">File uploaded successfully</p>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setUploadedFile(null);
+                              }}
+                              className="text-xs text-red-500 hover:underline mt-1"
+                            >
+                              Remove file
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <div className="mb-2">
+                              <div className="mx-auto w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                <Upload className="h-5 w-5 text-gray-400" />
+                              </div>
+                            </div>
+                            <p className="text-gray-600 text-sm font-medium mb-1">Drag & Drop A file here or Click to Browse</p>
+                            <p className="text-xs text-gray-500 mb-1">Supported PDF,Docx</p>
+                            <p className="text-xs text-gray-500">Max File Size 5MB</p>
+                          </>
                         )}
                       </div>
                     </div>
 
                     {/* Copy & Paste - Minimized */}
                     <div className="relative">
-                      <div className="border-2 border-dashed border-gray-300 rounded p-4 text-center h-32 flex flex-col justify-center">
-                        <div className="mb-2">
-                          <div className="mx-auto w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                            <Edit3 className="h-5 w-5 text-gray-400" />
-                          </div>
-                        </div>
-                        <p className="text-gray-600 text-sm font-medium">Copy & Paste Or Write Your Own JD</p>
-                        <textarea
-                          value={jdText}
-                          onChange={(e) => setJdText(e.target.value)}
-                          placeholder="Paste JD content here..."
-                          className="mt-2 w-full h-16 text-xs border border-gray-200 rounded p-2 resize-none"
-                        />
+                      <div 
+                        onClick={() => {
+                          setTempJdText(jdText);
+                          setIsJdModalOpen(true);
+                        }}
+                        className="border-2 border-dashed border-gray-300 rounded p-4 text-center h-32 flex flex-col justify-center hover:border-gray-400 transition-colors cursor-pointer"
+                      >
+                        {jdText ? (
+                          <>
+                            <div className="mb-2">
+                              <div className="mx-auto w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                <Edit3 className="h-5 w-5 text-green-600" />
+                              </div>
+                            </div>
+                            <p className="text-green-600 text-sm font-medium mb-1">JD Content Added</p>
+                            <p className="text-xs text-gray-500">Click to edit content</p>
+                          </>
+                        ) : (
+                          <>
+                            <div className="mb-2">
+                              <div className="mx-auto w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                                <Edit3 className="h-5 w-5 text-gray-400" />
+                              </div>
+                            </div>
+                            <p className="text-gray-600 text-sm font-medium">Copy & Paste Or Write Your Own JD</p>
+                            <p className="text-xs text-gray-500 mt-1">Click to open editor</p>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -635,6 +670,47 @@ export default function ClientDashboard() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* JD Text Modal */}
+      <Dialog open={isJdModalOpen} onOpenChange={setIsJdModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Write Job Description</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Job Description Content</label>
+              <textarea
+                value={tempJdText}
+                onChange={(e) => setTempJdText(e.target.value)}
+                placeholder="Enter your job description here..."
+                className="w-full h-64 border border-gray-300 rounded p-3 resize-none text-sm"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setTempJdText(jdText);
+                  setIsJdModalOpen(false);
+                }}
+                className="rounded"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => {
+                  setJdText(tempJdText);
+                  setIsJdModalOpen(false);
+                }}
+                className="bg-cyan-400 hover:bg-cyan-500 text-black rounded"
+              >
+                Save JD Content
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
