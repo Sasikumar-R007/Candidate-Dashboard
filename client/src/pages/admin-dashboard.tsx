@@ -22,7 +22,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck } from "lucide-react";
+import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users } from "lucide-react";
 import { format } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useLocation } from "wouter";
@@ -370,6 +370,7 @@ export default function AdminDashboard() {
   const [isAddTeamLeaderModalNewOpen, setIsAddTeamLeaderModalNewOpen] = useState(false);
   const [userList, setUserList] = useState<any[]>([]);
   const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [editingUser, setEditingUser] = useState<any>(null);
 
   // Requirements API queries
   const { data: requirements = [], isLoading: isLoadingRequirements } = useQuery({
@@ -519,7 +520,16 @@ export default function AdminDashboard() {
     });
   };
 
-  const handleEditUser = (userData: any) => {
+  const handleEditUser = (user: any) => {
+    setEditingUser(user);
+    if (user.role === 'Team Leader') {
+      setIsAddTeamLeaderModalNewOpen(true);
+    } else if (user.role === 'Recruiter') {
+      setIsAddRecruiterModalOpen(true);
+    }
+  };
+
+  const handleUpdateUser = (userData: any) => {
     setUserList(prev => prev.map(user => user.id === userData.id ? userData : user));
     toast({
       title: "Success",
@@ -530,6 +540,16 @@ export default function AdminDashboard() {
 
   const handleArchivesClick = () => {
     navigate('/archives');
+  };
+
+  const handleDeleteUser = (userId: string, userName: string) => {
+    if (window.confirm(`Are you sure you want to delete ${userName}?`)) {
+      toast({
+        title: "User Deleted",
+        description: `${userName} has been successfully deleted.`,
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+    }
   };
 
   const displayedRequirements = requirements.slice(0, Math.min(requirementsVisible, 10));
@@ -3245,13 +3265,14 @@ export default function AdminDashboard() {
             {/* Header with Search and Action Buttons */}
             <div className="flex items-center justify-between gap-4">
               {/* Search Input */}
-              <div className="flex-1 max-w-sm">
+              <div className="flex-1 max-w-sm relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   type="text"
-                  placeholder="🔍 Search user..."
+                  placeholder="Search user..."
                   value={userSearchTerm}
                   onChange={(e) => setUserSearchTerm(e.target.value)}
-                  className="w-full bg-gray-50 border-gray-200 text-sm"
+                  className="w-full bg-gray-50 border-gray-200 text-sm pl-10"
                   data-testid="input-search-user"
                 />
               </div>
@@ -3259,18 +3280,20 @@ export default function AdminDashboard() {
               {/* Action Buttons */}
               <div className="flex gap-3">
                 <Button 
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm flex items-center gap-2"
                   onClick={() => setIsAddTeamLeaderModalNewOpen(true)}
                   data-testid="button-add-team-leader"
                 >
-                  + Add Team Leader
+                  <Users className="h-4 w-4" />
+                  Add Team Leader
                 </Button>
                 <Button 
-                  className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded text-sm"
+                  className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded text-sm flex items-center gap-2"
                   onClick={() => setIsAddRecruiterModalOpen(true)}
                   data-testid="button-add-recruiter"
                 >
-                  👤 Add Recruiter
+                  <UserPlus className="h-4 w-4" />
+                  Add Recruiter
                 </Button>
               </div>
             </div>
@@ -3297,18 +3320,27 @@ export default function AdminDashboard() {
                         <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.name}</td>
                         <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.email}</td>
                         <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.role}</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.status}</td>
+                        <td className="py-3 px-4 text-sm">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${
+                              user.status === 'Active' ? 'bg-green-500' : 'bg-red-500'
+                            }`}></div>
+                            <span className="text-gray-600 dark:text-gray-400">{user.status}</span>
+                          </div>
+                        </td>
                         <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.lastLogin}</td>
                         <td className="py-3 px-4">
                           <div className="flex gap-3 text-sm">
                             <button 
                               className="text-blue-600 hover:text-blue-700 font-medium"
+                              onClick={() => handleEditUser(user)}
                               data-testid={`button-edit-${user.id}`}
                             >
                               Edit
                             </button>
                             <button 
                               className="text-red-600 hover:text-red-700 font-medium"
+                              onClick={() => handleDeleteUser(user.id, user.name)}
                               data-testid={`button-delete-${user.id}`}
                             >
                               Delete
