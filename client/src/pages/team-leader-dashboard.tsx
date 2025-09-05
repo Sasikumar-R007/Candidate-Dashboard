@@ -67,50 +67,229 @@ export default function TeamLeaderDashboard() {
     );
   }
 
-  const renderSidebarContent = () => {
-    switch (sidebarTab) {
-      case 'dashboard':
-        return (
-          <>
-            <TeamLeaderProfileHeader profile={teamLeaderProfile} />
-            <TeamLeaderTabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-            <div className="flex-1 overflow-y-auto">
-              {renderDashboardTabContent()}
-            </div>
-          </>
-        );
-      case 'job-board':
-        return (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Job Board</h2>
-              <p className="text-gray-600 dark:text-gray-400">Team leader job board functionality will be implemented here</p>
-            </div>
+  const renderMainContent = () => {
+    return (
+      <div className="bg-gray-50 min-h-screen">
+        <TeamLeaderProfileHeader profile={teamLeaderProfile} />
+        <div className="flex">
+          {/* Main Content */}
+          <div className="flex-1 p-6">
+            {renderDashboardContent()}
           </div>
-        );
-      case 'settings':
-        return (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Settings</h2>
-              <p className="text-gray-600 dark:text-gray-400">Manage your account preferences and team settings</p>
-            </div>
+          
+          {/* Team Sidebar */}
+          <div className="w-80 bg-white border-l border-gray-200">
+            {renderTeamSidebar()}
           </div>
-        );
-      default:
-        return (
-          <>
-            <TeamLeaderProfileHeader profile={teamLeaderProfile} />
-            <TeamLeaderTabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-            <div className="flex-1 overflow-y-auto">
-              {renderDashboardTabContent()}
-            </div>
-          </>
-        );
-    }
+        </div>
+      </div>
+    );
   };
 
-  const renderDashboardTabContent = () => {
+  const renderDashboardContent = () => {
+    return (
+      <div className="space-y-6">
+        {/* Target Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Target</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-4 gap-0 bg-blue-50 rounded overflow-hidden">
+              <div className="bg-blue-100 text-center py-6 px-4">
+                <p className="text-sm font-medium text-gray-600 mb-2">Current Quarter</p>
+                <p className="text-lg font-bold text-gray-900">{targetMetrics?.currentQuarter || "ASO-2025"}</p>
+              </div>
+              <div className="bg-blue-50 text-center py-6 px-4">
+                <p className="text-sm font-medium text-gray-600 mb-2">Minimum Target</p>
+                <p className="text-lg font-bold text-gray-900">{targetMetrics?.minimumTarget || "15,00,000"}</p>
+              </div>
+              <div className="bg-blue-100 text-center py-6 px-4">
+                <p className="text-sm font-medium text-gray-600 mb-2">Target Achieved</p>
+                <p className="text-lg font-bold text-gray-900">{targetMetrics?.targetAchieved || "10,00,000"}</p>
+              </div>
+              <div className="bg-blue-50 text-center py-6 px-4">
+                <p className="text-sm font-medium text-gray-600 mb-2">Incentive Earned</p>
+                <p className="text-lg font-bold text-gray-900">{targetMetrics?.incentiveEarned || "50,000"}</p>
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">View All</Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Daily Metrics Section */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Daily Metrics</CardTitle>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">Overall</span>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="text-sm">
+                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    <span>{format(selectedDate, "dd-MMM-yyyy")}</span>
+                    <EditIcon className="h-4 w-4 ml-2" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-6">
+              {/* Left side - 2x2 Grid */}
+              <div className="col-span-2 grid grid-cols-2 gap-4">
+                <div className="bg-white p-6 border border-gray-200 rounded">
+                  <p className="text-sm text-gray-500 mb-2">Total Requirements</p>
+                  <div className="text-right">
+                    <span className="text-4xl font-bold text-blue-600">20</span>
+                  </div>
+                </div>
+                <div className="bg-white p-6 border border-gray-200 rounded">
+                  <p className="text-sm text-gray-500 mb-2">Avg. Resumes per Requirement</p>
+                  <div className="text-right">
+                    <span className="text-4xl font-bold text-blue-600">02</span>
+                  </div>
+                </div>
+                <div className="bg-white p-6 border border-gray-200 rounded">
+                  <p className="text-sm text-gray-500 mb-2">Requirements per Recruiter</p>
+                  <div className="text-right">
+                    <span className="text-4xl font-bold text-blue-600">03</span>
+                  </div>
+                </div>
+                <div className="bg-white p-6 border border-gray-200 rounded">
+                  <p className="text-sm text-gray-500 mb-2">Completed Requirements</p>
+                  <div className="text-right">
+                    <span className="text-4xl font-bold text-blue-600">12</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Right side - Daily Delivery & Performance */}
+              <div className="space-y-4">
+                <div className="bg-slate-800 text-white p-6 rounded">
+                  <h3 className="text-lg font-semibold mb-4">Daily Delivery</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="text-center">
+                      <p className="text-sm text-gray-300 mb-2">Delivered</p>
+                      <p className="text-3xl font-bold mb-3">3</p>
+                      <Button size="sm" className="bg-cyan-500 hover:bg-cyan-600">View</Button>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm text-gray-300 mb-2">Defaulted</p>
+                      <p className="text-3xl font-bold mb-3">1</p>
+                      <Button size="sm" className="bg-cyan-500 hover:bg-cyan-600">View</Button>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="bg-green-50 border border-green-200 p-4 rounded text-center">
+                  <div className="text-sm text-gray-600 mb-2">Overall Performance</div>
+                  <div className="w-12 h-12 bg-green-500 text-white rounded-full flex items-center justify-center mx-auto font-bold text-lg">G</div>
+                </div>
+              </div>
+            </div>
+            <div className="mt-4 text-center">
+              <Button variant="outline" size="sm">View More</Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Bottom Section */}
+        <div className="grid grid-cols-2 gap-6">
+          {/* Pending Meetings */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Meetings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-cyan-50 p-4 rounded text-center">
+                  <h3 className="font-semibold text-sm mb-2">TL's Meeting</h3>
+                  <p className="text-3xl font-bold text-cyan-600 mb-2">3</p>
+                  <Button size="sm" className="bg-cyan-500 hover:bg-cyan-600 text-white">View</Button>
+                </div>
+                <div className="bg-cyan-50 p-4 rounded text-center">
+                  <h3 className="font-semibold text-sm mb-2">CEO's Meeting</h3>
+                  <p className="text-3xl font-bold text-cyan-600 mb-2">1</p>
+                  <Button size="sm" className="bg-cyan-500 hover:bg-cyan-600 text-white">View</Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* CEO Commands */}
+          <Card>
+            <CardHeader>
+              <CardTitle>CEO Commands</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="bg-slate-800 text-white p-4 rounded">
+                <div className="space-y-2 text-sm">
+                  <div>Discuss with Shri Ragavi on her production</div>
+                  <div>Discuss with Kavya about her leaves</div>
+                  <div>Discuss with Umar for data</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  };
+
+  const renderTeamSidebar = () => {
+    const teamData = [
+      { name: "Deepika", salary: "3,50,000 INR", year: "2024-2025", count: 6 },
+      { name: "Priyanka", salary: "4,30,000 INR", year: "2024-2025", count: 12 },
+      { name: "Thamarai Selvi", salary: "1,00,000 INR", year: "2022-2025", count: 7 },
+      { name: "Kavya", salary: "5,50,000 INR", year: "2020-2025", count: 2 },
+      { name: "Karthikayan", salary: "3,00,000 INR", year: "2024-2025", count: 11 },
+      { name: "Vishnu Priya", salary: "4,50,000 INR", year: "2018-2025", count: 3 },
+      { name: "Helen", salary: "5,50,000 INR", year: "2017-2025", count: 10 },
+      { name: "Kavin", salary: "2,00,000 INR", year: "2022-2025", count: 12 },
+      { name: "Thrisha", salary: "3,50,000 INR", year: "2024-2025", count: 6 },
+      { name: "Megna", salary: "8,30,000 INR", year: "2022-2025", count: 12 }
+    ];
+
+    return (
+      <div className="p-6">
+        <div className="bg-blue-50 rounded-lg p-4 mb-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">My Team</h3>
+          <div className="space-y-4">
+            {teamData.map((member, index) => (
+              <div key={index} className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <img 
+                    src={`https://images.unsplash.com/photo-150${7 + index}003211169-0a1dd7228f2d?auto=format&fit=crop&w=32&h=32`}
+                    alt={member.name}
+                    className="w-8 h-8 rounded-full"
+                  />
+                  <div>
+                    <div className="font-medium text-sm text-gray-900">{member.name}</div>
+                    <div className="text-xs text-blue-600">{member.salary}</div>
+                    <div className="text-xs text-gray-500">{member.year}</div>
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-gray-900">{member.count}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderOldDashboardTabContent = () => {
     switch (activeTab) {
       case 'team':
         return (
@@ -988,14 +1167,5 @@ export default function TeamLeaderDashboard() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-inter">
-      <div className="flex min-h-screen">
-        <Sidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
-        <div className="flex-1 flex flex-col overflow-hidden ml-64">
-          {renderSidebarContent()}
-        </div>
-      </div>
-    </div>
-  );
+  return renderMainContent();
 }
