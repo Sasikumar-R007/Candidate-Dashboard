@@ -11,6 +11,8 @@ import TeamPerformanceModal from '@/components/dashboard/modals/team-performance
 import ClosureModal from '@/components/dashboard/modals/closure-modal';
 import AddTeamLeaderModal from '@/components/dashboard/modals/add-team-leader-modal';
 import AddTalentAdvisorModal from '@/components/dashboard/modals/add-talent-advisor-modal';
+import AddRecruiterModal from '@/components/dashboard/modals/add-recruiter-modal';
+import AddTeamLeaderModalNew from '@/components/dashboard/modals/add-team-leader-modal-new';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -364,7 +366,10 @@ export default function AdminDashboard() {
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
   const [isAddTeamLeaderModalOpen, setIsAddTeamLeaderModalOpen] = useState(false);
   const [isAddTalentAdvisorModalOpen, setIsAddTalentAdvisorModalOpen] = useState(false);
+  const [isAddRecruiterModalOpen, setIsAddRecruiterModalOpen] = useState(false);
+  const [isAddTeamLeaderModalNewOpen, setIsAddTeamLeaderModalNewOpen] = useState(false);
   const [userList, setUserList] = useState<any[]>([]);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
 
   // Requirements API queries
   const { data: requirements = [], isLoading: isLoadingRequirements } = useQuery({
@@ -3213,122 +3218,107 @@ export default function AdminDashboard() {
           </div>
         );
       case 'user-management':
-        return (
-          <div className="flex h-full">
-            {/* Main Content */}
-            <div className="flex-1 px-6 py-6 space-y-6 overflow-y-auto admin-scrollbar">
-              {/* Action Buttons */}
-              <div className="flex gap-4 mb-6">
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">+ Add Recruiter</Button>
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">+ Add Team Leader</Button>
-              </div>
+        // Sample user data matching the design
+        const userData = [
+          { id: "STL001", name: "Sundar Raj", email: "sundar.tl@example.com", role: "Team Leader", status: "Active", lastLogin: "N/A" },
+          { id: "STL002", name: "Kavitha M", email: "kavitha.tl@example.com", role: "Team Leader", status: "Active", lastLogin: "N/A" },
+          { id: "STL003", name: "Vignesh T", email: "vignesh.tl@example.com", role: "Team Leader", status: "Active", lastLogin: "N/A" },
+          { id: "STL004", name: "Sasikumar R", email: "sasikumar@scalingtheory.com", role: "Team Leader", status: "Active", lastLogin: "N/A" },
+          { id: "STL005", name: "Saran K", email: "saran@scalingtheory.com", role: "Team Leader", status: "Active", lastLogin: "N/A" },
+          { id: "STL006", name: "Azzim M", email: "azzim@scalingtheory.com", role: "Team Leader", status: "Active", lastLogin: "N/A" },
+          { id: "STA001", name: "R. Sudharshan", email: "sudharshan@scaling.com", role: "Recruiter", status: "Active", lastLogin: "N/A" },
+          { id: "STA002", name: "S. Kavitha", email: "kavitha@scaling.com", role: "Recruiter", status: "Active", lastLogin: "N/A" },
+          { id: "STA003", name: "Arun Raj", email: "arunraj@scaling.com", role: "Recruiter", status: "Active", lastLogin: "N/A" },
+          { id: "STA004", name: "Priya M", email: "priyam@scaling.com", role: "Recruiter", status: "Active", lastLogin: "N/A" },
+          { id: "STA005", name: "Kumaravel R", email: "kumaravel@scaling.com", role: "Recruiter", status: "Active", lastLogin: "N/A" },
+        ];
 
-              {/* User Management Table */}
-              <div className="bg-white dark:bg-gray-900  border border-gray-200 dark:border-gray-700">
-                <div className="overflow-x-auto admin-scrollbar">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">ID</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Name</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Email</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Role</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Status</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Last Login</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTA001</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Sundhar Raj</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">raj@gmail.com</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Team Leader</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Active</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">N/A</td>
-                        <td className="py-3 px-3">
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Edit</Button>
-                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">Delete</Button>
-                          </div>
-                        </td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTA002</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">kavitha</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">kavi@gmail.com</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Team Leader</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Active</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">N/A</td>
-                        <td className="py-3 px-3">
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Edit</Button>
-                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">Delete</Button>
-                          </div>
-                        </td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTA003</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Vignesh</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">vignesh@gmail.com</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Team Leader</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Active</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">N/A</td>
-                        <td className="py-3 px-3">
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Edit</Button>
-                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">Delete</Button>
-                          </div>
-                        </td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTA004</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Saran</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">saran@gmail.com</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Team Leader</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Active</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">N/A</td>
-                        <td className="py-3 px-3">
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Edit</Button>
-                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">Delete</Button>
-                          </div>
-                        </td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTL005</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Helen</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">helen@gmail.com</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Team Leader</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Active</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">N/A</td>
-                        <td className="py-3 px-3">
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Edit</Button>
-                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">Delete</Button>
-                          </div>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+        // Filter users based on search term
+        const filteredUsers = userData.filter(user =>
+          user.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+          user.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
+          user.role.toLowerCase().includes(userSearchTerm.toLowerCase())
+        );
+
+        return (
+          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
+            {/* Header with Search and Action Buttons */}
+            <div className="flex items-center justify-between gap-4">
+              {/* Search Input */}
+              <div className="flex-1 max-w-sm">
+                <Input
+                  type="text"
+                  placeholder="🔍 Search user..."
+                  value={userSearchTerm}
+                  onChange={(e) => setUserSearchTerm(e.target.value)}
+                  className="w-full bg-gray-50 border-gray-200 text-sm"
+                  data-testid="input-search-user"
+                />
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <Button 
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
+                  onClick={() => setIsAddTeamLeaderModalNewOpen(true)}
+                  data-testid="button-add-team-leader"
+                >
+                  + Add Team Leader
+                </Button>
+                <Button 
+                  className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded text-sm"
+                  onClick={() => setIsAddRecruiterModalOpen(true)}
+                  data-testid="button-add-recruiter"
+                >
+                  👤 Add Recruiter
+                </Button>
               </div>
             </div>
 
-            {/* Right Sidebar - Online Activity */}
-            <div className="w-72 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 px-6 pb-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Online Activity</h3>
-              
-              <div className="space-y-4">
-                <div className="bg-cyan-400 dark:bg-cyan-500 px-6 pb-6  text-center">
-                  <div className="text-sm font-medium text-white mb-2">Online</div>
-                  <div className="text-4xl font-bold text-white">3</div>
-                </div>
-                
-                <div className="bg-pink-400 dark:bg-pink-500 px-6 pb-6  text-center">
-                  <div className="text-sm font-medium text-white mb-2">Offline</div>
-                  <div className="text-4xl font-bold text-white">1</div>
-                </div>
+            {/* User Management Table */}
+            <div className="bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-600">
+                      <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-sm">ID</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-sm">Name</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-sm">Email</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-sm">Role</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-sm">Status</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-sm">Last Login</th>
+                      <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-sm">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredUsers.map((user, index) => (
+                      <tr key={user.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium text-sm">{user.id}</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.name}</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.email}</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.role}</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.status}</td>
+                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.lastLogin}</td>
+                        <td className="py-3 px-4">
+                          <div className="flex gap-3 text-sm">
+                            <button 
+                              className="text-blue-600 hover:text-blue-700 font-medium"
+                              data-testid={`button-edit-${user.id}`}
+                            >
+                              Edit
+                            </button>
+                            <button 
+                              className="text-red-600 hover:text-red-700 font-medium"
+                              data-testid={`button-delete-${user.id}`}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -4455,6 +4445,20 @@ export default function AdminDashboard() {
       <AddTalentAdvisorModal
         isOpen={isAddTalentAdvisorModalOpen}
         onClose={() => setIsAddTalentAdvisorModalOpen(false)}
+        onSubmit={handleAddUser}
+      />
+
+      {/* Add Recruiter Modal */}
+      <AddRecruiterModal
+        isOpen={isAddRecruiterModalOpen}
+        onClose={() => setIsAddRecruiterModalOpen(false)}
+        onSubmit={handleAddUser}
+      />
+
+      {/* Add Team Leader Modal New */}
+      <AddTeamLeaderModalNew
+        isOpen={isAddTeamLeaderModalNewOpen}
+        onClose={() => setIsAddTeamLeaderModalNewOpen(false)}
         onSubmit={handleAddUser}
       />
 
