@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, MessageSquare, Minus, Users, Play, Trophy, ArrowLeft, Send } from "lucide-react";
 
 interface ChatUser {
@@ -19,6 +20,9 @@ export default function ClientDashboard() {
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [chatView, setChatView] = useState<'list' | 'chat'>('list');
   const [activeChatUser, setActiveChatUser] = useState<ChatUser | null>(null);
+  const [isRolesModalOpen, setIsRolesModalOpen] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [jdText, setJdText] = useState('');
 
   // Sample data for the dashboard
   const dashboardStats = {
@@ -58,7 +62,7 @@ export default function ClientDashboard() {
     }
   ];
 
-  const rolesData = [
+  const allRolesData = [
     {
       roleId: 'STCL12JD13',
       role: 'Full Stack Engineer',
@@ -78,8 +82,51 @@ export default function ClientDashboard() {
       status: 'Paused',
       profilesShared: 3,
       lastActive: '14-10-2025'
+    },
+    {
+      roleId: 'STCL12JD15',
+      role: 'Frontend Developer',
+      team: 'Arun',
+      recruiter: 'Priya',
+      sharedOn: '15-11-2025',
+      status: 'Active',
+      profilesShared: 8,
+      lastActive: '16-11-2025'
+    },
+    {
+      roleId: 'STCL12JD16',
+      role: 'DevOps Engineer',
+      team: 'Anusha',
+      recruiter: 'Raj',
+      sharedOn: '20-11-2025',
+      status: 'Withdrawn',
+      profilesShared: 2,
+      lastActive: '21-11-2025'
+    },
+    {
+      roleId: 'STCL12JD17',
+      role: 'UI/UX Designer',
+      team: 'Arun',
+      recruiter: 'Maya',
+      sharedOn: '22-11-2025',
+      status: 'Active',
+      profilesShared: 4,
+      lastActive: '23-11-2025'
+    },
+    {
+      roleId: 'STCL12JD18',
+      role: 'Backend Developer',
+      team: 'Anusha',
+      recruiter: 'Kiran',
+      sharedOn: '25-11-2025',
+      status: 'Paused',
+      profilesShared: 5,
+      lastActive: '26-11-2025'
     }
   ];
+
+  // Only show top 2 roles in dashboard
+  const rolesData = allRolesData.slice(0, 2);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -172,12 +219,15 @@ export default function ClientDashboard() {
               </div>
 
               {/* Roles & Status Table */}
-              <div className="bg-white rounded-lg border border-gray-200">
-                <div className="px-6 py-4 border-b border-gray-200">
+              <div className="bg-white rounded border border-gray-200">
+                <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                   <h3 className="text-lg font-semibold text-gray-900">Roles & Status</h3>
-                  <div className="flex justify-end">
-                    <span className="text-sm text-blue-600 cursor-pointer hover:underline">View All</span>
-                  </div>
+                  <button 
+                    onClick={() => setIsRolesModalOpen(true)}
+                    className="text-sm text-blue-600 hover:underline cursor-pointer"
+                  >
+                    View All
+                  </button>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -216,35 +266,59 @@ export default function ClientDashboard() {
               </div>
 
               {/* JD Upload Section */}
-              <div className="bg-white rounded-lg border border-gray-200">
-                <div className="px-6 py-4 border-b border-gray-200">
+              <div className="bg-white rounded border border-gray-200">
+                <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                   <h3 className="text-lg font-semibold text-gray-900">JD Upload</h3>
-                  <div className="flex justify-end">
-                    <span className="text-red-500 text-sm">●</span>
-                  </div>
+                  <span className="text-red-500 text-sm">●</span>
                 </div>
                 <div className="p-6">
-                  <div className="grid grid-cols-2 gap-6 mb-6">
-                    {/* Drag & Drop Upload */}
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors cursor-pointer">
-                      <div className="mb-4">
-                        <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-                          <Upload className="h-8 w-8 text-gray-400" />
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    {/* Drag & Drop Upload - Minimized */}
+                    <div className="relative">
+                      <input
+                        type="file"
+                        accept=".pdf,.docx,.doc"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setUploadedFile(file);
+                          }
+                        }}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                      />
+                      <div className="border-2 border-dashed border-gray-300 rounded p-4 text-center hover:border-gray-400 transition-colors cursor-pointer h-32">
+                        <div className="mb-2">
+                          <div className="mx-auto w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                            <Upload className="h-5 w-5 text-gray-400" />
+                          </div>
                         </div>
+                        <p className="text-gray-600 text-sm font-medium mb-1">Drag & Drop A file here or Click to Browse</p>
+                        <p className="text-xs text-gray-500 mb-1">Supported PDF,Docx</p>
+                        <p className="text-xs text-gray-500">Max File Size 5MB</p>
+                        {uploadedFile && (
+                          <p className="text-xs text-green-600 mt-2 font-medium">
+                            {uploadedFile.name}
+                          </p>
+                        )}
                       </div>
-                      <p className="text-gray-600 mb-2 font-medium">Drag & Drop A file here or Click to Browse</p>
-                      <p className="text-sm text-gray-500 mb-1">Supported PDF,Docx</p>
-                      <p className="text-sm text-gray-500">Max File Size 5MB</p>
                     </div>
 
-                    {/* Copy & Paste */}
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors cursor-pointer">
-                      <div className="mb-4">
-                        <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
-                          <Edit3 className="h-8 w-8 text-gray-400" />
+                    {/* Copy & Paste - Minimized */}
+                    <div className="relative">
+                      <div className="border-2 border-dashed border-gray-300 rounded p-4 text-center h-32 flex flex-col justify-center">
+                        <div className="mb-2">
+                          <div className="mx-auto w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                            <Edit3 className="h-5 w-5 text-gray-400" />
+                          </div>
                         </div>
+                        <p className="text-gray-600 text-sm font-medium">Copy & Paste Or Write Your Own JD</p>
+                        <textarea
+                          value={jdText}
+                          onChange={(e) => setJdText(e.target.value)}
+                          placeholder="Paste JD content here..."
+                          className="mt-2 w-full h-16 text-xs border border-gray-200 rounded p-2 resize-none"
+                        />
                       </div>
-                      <p className="text-gray-600 font-medium">Copy & Paste Or Write Your Own JD</p>
                     </div>
                   </div>
 
@@ -254,21 +328,21 @@ export default function ClientDashboard() {
                       <label className="block text-sm font-medium text-gray-700 mb-2">Primary Skills</label>
                       <Input 
                         placeholder="Enter here..." 
-                        className="bg-white border-gray-300"
+                        className="bg-white border-gray-300 rounded"
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Secondary Skills</label>
                       <Input 
                         placeholder="Enter here..." 
-                        className="bg-white border-gray-300"
+                        className="bg-white border-gray-300 rounded"
                       />
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Knowledge Only</label>
                       <Input 
                         placeholder="Enter here..." 
-                        className="bg-white border-gray-300"
+                        className="bg-white border-gray-300 rounded"
                       />
                     </div>
                   </div>
@@ -277,13 +351,13 @@ export default function ClientDashboard() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Special Instructions</label>
                     <Input 
                       placeholder="" 
-                      className="bg-white border-gray-300"
+                      className="bg-white border-gray-300 rounded"
                     />
                   </div>
                   
                   {/* Preview & Submit Button */}
                   <div className="flex justify-end">
-                    <Button className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-8 py-2">
+                    <Button className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-8 py-2 rounded">
                       Preview & Submit
                     </Button>
                   </div>
@@ -424,7 +498,7 @@ export default function ClientDashboard() {
               {/* Chat Box Button */}
               <div className="p-4 border-t border-gray-200">
                 <Button 
-                  className="w-full bg-cyan-400 hover:bg-cyan-500 text-black font-medium py-3"
+                  className="w-full bg-cyan-400 hover:bg-cyan-500 text-black font-medium py-3 rounded"
                   onClick={() => setChatView('chat')}
                 >
                   <MessageSquare className="h-4 w-4 mr-2" />
@@ -510,9 +584,9 @@ export default function ClientDashboard() {
                 <div className="flex items-center space-x-2">
                   <Input 
                     placeholder="Type a message here"
-                    className="flex-1 border-gray-300"
+                    className="flex-1 border-gray-300 rounded"
                   />
-                  <Button className="bg-cyan-400 hover:bg-cyan-500 text-black p-2">
+                  <Button className="bg-cyan-400 hover:bg-cyan-500 text-black p-2 rounded">
                     <Send className="h-4 w-4" />
                   </Button>
                 </div>
@@ -521,6 +595,49 @@ export default function ClientDashboard() {
           )}
         </div>
       </div>
+      
+      {/* Roles Modal */}
+      <Dialog open={isRolesModalOpen} onOpenChange={setIsRolesModalOpen}>
+        <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>All Roles & Status</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[60vh]">
+            <table className="w-full">
+              <thead className="bg-gray-50 sticky top-0">
+                <tr>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Role ID</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Roles</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Team</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Recruiter</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Shared on</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Profiles Shared</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Last Active</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {allRolesData.map((role, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{role.roleId}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.role}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.team}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.recruiter}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.sharedOn}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Badge variant="secondary" className={`text-xs ${getStatusColor(role.status)}`}>
+                        {role.status}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">{role.profilesShared}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.lastActive}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
