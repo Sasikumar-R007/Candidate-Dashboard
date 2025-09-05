@@ -11,6 +11,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, MessageSquare, Minus, Users, Play, Trophy, ArrowLeft, Send, Calendar as CalendarIcon, MoreVertical } from "lucide-react";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 interface ChatUser {
   id: number;
@@ -22,6 +23,7 @@ interface ChatUser {
 }
 
 export default function ClientDashboard() {
+  const { toast } = useToast();
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [chatView, setChatView] = useState<'list' | 'chat'>('list');
   const [activeChatUser, setActiveChatUser] = useState<ChatUser | null>(null);
@@ -34,6 +36,7 @@ export default function ClientDashboard() {
   const [selectedCandidate, setSelectedCandidate] = useState<{name: string, stage: string} | null>(null);
   const [candidatePopupPosition, setCandidatePopupPosition] = useState<{x: number, y: number} | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
 
   // Sample data for the dashboard
   const dashboardStats = {
@@ -138,6 +141,20 @@ export default function ClientDashboard() {
 
   // Only show top 2 roles in dashboard
   const rolesData = allRolesData.slice(0, 2);
+
+  // Extended closure reports data for modal
+  const allClosureReports = [
+    { candidate: 'David Wilson', position: 'Frontend Developer', advisor: 'Kavitha', offered: '11-05-2023', joined: '10-10-2023' },
+    { candidate: 'Tom Anderson', position: 'UI/UX Designer', advisor: 'Rajesh', offered: '18-05-2023', joined: '12-10-2023' },
+    { candidate: 'Robert Kim', position: 'Backend Developer', advisor: 'Sowmiya', offered: '04-06-2023', joined: '25-10-2023' },
+    { candidate: 'Kevin Brown', position: 'QA Tester', advisor: 'Kalaiselvi', offered: '16-06-2023', joined: '30-10-2023' },
+    { candidate: 'Mel Gibson', position: 'Mobile App Developer', advisor: 'Malathi', offered: '08-07-2023', joined: '05-11-2023' },
+    { candidate: 'Sarah Johnson', position: 'DevOps Engineer', advisor: 'Priya', offered: '15-07-2023', joined: '10-11-2023' },
+    { candidate: 'Michael Chen', position: 'Data Analyst', advisor: 'Arun', offered: '22-07-2023', joined: '15-11-2023' },
+    { candidate: 'Emma Davis', position: 'Product Manager', advisor: 'Suresh', offered: '28-07-2023', joined: '20-11-2023' },
+    { candidate: 'James Thompson', position: 'Tech Lead', advisor: 'Deepa', offered: '05-08-2023', joined: '25-11-2023' },
+    { candidate: 'Lisa Wong', position: 'Security Engineer', advisor: 'Kumar', offered: '12-08-2023', joined: '30-11-2023' }
+  ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -576,7 +593,15 @@ export default function ClientDashboard() {
                 {/* Closure Reports Table */}
                 <Card className="mt-6">
                   <CardHeader className="bg-gray-50 border-b border-gray-200">
-                    <CardTitle className="text-lg font-semibold text-gray-900">Closure report</CardTitle>
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-lg font-semibold text-gray-900">Closure report</CardTitle>
+                      <button 
+                        onClick={() => setIsClosureModalOpen(true)}
+                        className="text-sm text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
+                      >
+                        View All
+                      </button>
+                    </div>
                   </CardHeader>
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
@@ -591,13 +616,7 @@ export default function ClientDashboard() {
                           </tr>
                         </thead>
                         <tbody>
-                          {[
-                            { candidate: 'David Wilson', position: 'Frontend Developer', advisor: 'Kavitha', offered: '11-05-2023', joined: '10-10-2023' },
-                            { candidate: 'Tom Anderson', position: 'UI/UX Designer', advisor: 'Rajesh', offered: '18-05-2023', joined: '12-10-2023' },
-                            { candidate: 'Robert Kim', position: 'Backend Developer', advisor: 'Sowmiya', offered: '04-06-2023', joined: '25-10-2023' },
-                            { candidate: 'Kevin Brown', position: 'QA Tester', advisor: 'Kalaiselvi', offered: '16-06-2023', joined: '30-10-2023' },
-                            { candidate: 'Mel Gibson', position: 'Mobile App Developer', advisor: 'Malathi', offered: '08-07-2023', joined: '05-11-2023' }
-                          ].map((row, index) => (
+                          {allClosureReports.slice(0, 5).map((row, index) => (
                             <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
                               <td className="p-3 text-gray-900">{row.candidate}</td>
                               <td className="p-3 text-gray-600">{row.position}</td>
@@ -608,13 +627,6 @@ export default function ClientDashboard() {
                           ))}
                         </tbody>
                       </table>
-                    </div>
-                    <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-                      <div className="flex justify-end">
-                        <Button variant="ghost" className="text-blue-600 hover:text-blue-700 text-sm">
-                          Vie All
-                        </Button>
-                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -649,15 +661,194 @@ export default function ClientDashboard() {
       
       case 'reports':
         return (
-          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Reports & Analytics</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 dark:text-gray-400">Reports and analytics content will be implemented here.</p>
-              </CardContent>
-            </Card>
+          <div className="p-6 space-y-8 h-full overflow-y-auto bg-white">
+            {/* Company Header */}
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl font-semibold text-gray-900">Gumlet Marketing Private Limited</h1>
+              <div className="flex items-center space-x-4">
+                <Select>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="All Rules" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Rules</SelectItem>
+                    <SelectItem value="active">Active Rules</SelectItem>
+                    <SelectItem value="paused">Paused Rules</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center space-x-2">
+                  <CalendarIcon className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm text-gray-700">12-Aug-2025</span>
+                  <span className="text-sm text-gray-500">Monthly</span>
+                </div>
+                <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-4 py-2 rounded">
+                  Download
+                </Button>
+              </div>
+            </div>
+
+            {/* Speed Metrics */}
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Speed Metrics</h2>
+              <div className="grid grid-cols-4 gap-6">
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h3 className="text-sm font-medium text-gray-600 mb-2">Time to 1st Submission</h3>
+                  <div className="flex items-center space-x-3">
+                    <div className="text-3xl font-bold text-gray-900">5</div>
+                    <div className="text-sm text-gray-500">days</div>
+                    <div className="w-3 h-3 bg-cyan-400 rounded-full"></div>
+                  </div>
+                </div>
+                
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h3 className="text-sm font-medium text-gray-600 mb-2">Time to Interview</h3>
+                  <div className="flex items-center space-x-3">
+                    <div className="text-3xl font-bold text-gray-900">3</div>
+                    <div className="text-sm text-gray-500">days</div>
+                    <div className="w-3 h-3 bg-orange-400 rounded-full"></div>
+                  </div>
+                </div>
+                
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h3 className="text-sm font-medium text-gray-600 mb-2">Time to Offer</h3>
+                  <div className="flex items-center space-x-3">
+                    <div className="text-3xl font-bold text-gray-900">15</div>
+                    <div className="text-sm text-gray-500">days</div>
+                    <div className="w-3 h-3 bg-purple-400 rounded-full"></div>
+                  </div>
+                </div>
+                
+                <div className="bg-white border border-gray-200 rounded-lg p-6">
+                  <h3 className="text-sm font-medium text-gray-600 mb-2">Time to Fill</h3>
+                  <div className="flex items-center space-x-3">
+                    <div className="text-3xl font-bold text-gray-900">25</div>
+                    <div className="text-sm text-gray-500">days</div>
+                    <div className="w-3 h-3 bg-brown-400 rounded-full"></div>
+                  </div>
+                  <div className="mt-4 h-32 bg-gray-50 rounded flex items-center justify-center">
+                    <span className="text-gray-400 text-sm">Line Chart</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quality Metrics */}
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Quality Metrics</h2>
+              <div className="grid grid-cols-4 gap-6">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                  <h3 className="text-sm font-medium text-gray-600 mb-2">Submission to Short List %</h3>
+                  <div className="flex items-center space-x-3">
+                    <div className="text-3xl font-bold text-gray-900">5</div>
+                    <div className="text-sm text-gray-500">%</div>
+                    <div className="w-3 h-3 bg-cyan-400 rounded-full"></div>
+                  </div>
+                </div>
+                
+                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                  <h3 className="text-sm font-medium text-gray-600 mb-2">Interview to Offer %</h3>
+                  <div className="flex items-center space-x-3">
+                    <div className="text-3xl font-bold text-gray-900">3</div>
+                    <div className="text-sm text-gray-500">%</div>
+                    <div className="w-3 h-3 bg-orange-400 rounded-full"></div>
+                  </div>
+                </div>
+                
+                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                  <h3 className="text-sm font-medium text-gray-600 mb-2">Offer Acceptance %</h3>
+                  <div className="flex items-center space-x-3">
+                    <div className="text-3xl font-bold text-gray-900">15</div>
+                    <div className="text-sm text-gray-500">%</div>
+                    <div className="w-3 h-3 bg-purple-400 rounded-full"></div>
+                  </div>
+                </div>
+                
+                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                  <h3 className="text-sm font-medium text-gray-600 mb-2">Early Attrition %</h3>
+                  <div className="flex items-center space-x-3">
+                    <div className="text-3xl font-bold text-gray-900">25</div>
+                    <div className="text-sm text-gray-500">%</div>
+                    <div className="w-3 h-3 bg-brown-400 rounded-full"></div>
+                  </div>
+                  <div className="mt-4 h-32 bg-gray-50 rounded flex items-center justify-center">
+                    <span className="text-gray-400 text-sm">Line Chart</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Impact Metrics */}
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Impact Metrics</h2>
+              <div className="grid grid-cols-4 gap-6">
+                <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                  <h3 className="text-sm font-medium text-gray-600 mb-2">Speed to Hire value</h3>
+                  <div className="text-3xl font-bold text-red-600">15</div>
+                  <div className="text-sm text-gray-500 mt-1">Days faster*</div>
+                </div>
+                
+                <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                  <h3 className="text-sm font-medium text-gray-600 mb-2">Revenue Impact Of Delay</h3>
+                  <div className="text-3xl font-bold text-red-600">75,000</div>
+                  <div className="text-sm text-gray-500 mt-1">Last per Role*</div>
+                </div>
+                
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
+                  <h3 className="text-sm font-medium text-gray-600 mb-2">Client NPS</h3>
+                  <div className="text-3xl font-bold text-purple-600">+60</div>
+                  <div className="text-sm text-gray-500 mt-1">Net Promoter Score*</div>
+                </div>
+                
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
+                  <h3 className="text-sm font-medium text-gray-600 mb-2">Candidate NPS</h3>
+                  <div className="text-3xl font-bold text-purple-600">+70</div>
+                  <div className="text-sm text-gray-500 mt-1">Net Promoter Score*</div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-4 gap-6 mt-6">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                  <h3 className="text-sm font-medium text-gray-600 mb-2">Feedback Turn Around</h3>
+                  <div className="text-3xl font-bold text-yellow-600">2</div>
+                  <div className="text-sm text-gray-500 mt-1">days</div>
+                  <div className="text-xs text-gray-400 mt-1">Industry Avg: 5 days*</div>
+                </div>
+                
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                  <h3 className="text-sm font-medium text-gray-600 mb-2">First Year Retention Rate</h3>
+                  <div className="text-3xl font-bold text-yellow-600">90</div>
+                  <div className="text-sm text-gray-500 mt-1">%</div>
+                </div>
+                
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                  <h3 className="text-sm font-medium text-gray-600 mb-2">Fulfillment Rate</h3>
+                  <div className="text-3xl font-bold text-yellow-600">20</div>
+                  <div className="text-sm text-gray-500 mt-1">%</div>
+                </div>
+                
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                  <h3 className="text-sm font-medium text-gray-600 mb-2">Revenue Recovered</h3>
+                  <div className="text-3xl font-bold text-yellow-600">1.5</div>
+                  <div className="text-sm text-gray-500 mt-1">L</div>
+                  <div className="text-xs text-gray-400 mt-1">Gained per hire*</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Additional Metrics Section */}
+            <div className="flex justify-between items-end">
+              <div className="space-y-2">
+                <div className="text-sm text-gray-600">Interview Drop of Rate</div>
+                <div className="text-2xl font-bold text-gray-900">25%</div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-sm text-gray-600">Offer Drop of Rate</div>
+                <div className="text-2xl font-bold text-gray-900">20%</div>
+              </div>
+              <div className="h-32 w-64 bg-gray-50 rounded flex items-center justify-center">
+                <span className="text-gray-400 text-sm">Chart Area</span>
+              </div>
+            </div>
           </div>
         );
       
@@ -685,6 +876,14 @@ export default function ClientDashboard() {
   const handleReject = () => {
     // Handle reject logic here
     console.log('Rejecting candidate:', selectedCandidate, 'Reason:', rejectReason);
+    
+    // Show success toast notification
+    toast({
+      title: "Candidate Rejected",
+      description: `${selectedCandidate?.name} has been rejected successfully.`,
+      className: "bg-green-50 border-green-200 text-green-800",
+    });
+    
     closeCandidatePopup();
   };
 
@@ -731,12 +930,13 @@ export default function ClientDashboard() {
       {/* Main Content Area */}
       <div className="flex-1 flex">
         {/* Middle Section */}
-        <div className="flex-1 bg-white">
+        <div className={`${sidebarTab === 'dashboard' ? 'flex-1' : 'w-full'} bg-white`}>
           {renderMainContent()}
         </div>
         
-        {/* Right Sidebar - Chats */}
-        <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
+        {/* Right Sidebar - Chats - Only show on dashboard */}
+        {sidebarTab === 'dashboard' && (
+          <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
           {chatView === 'list' ? (
             // Chat List View
             <>
@@ -881,7 +1081,8 @@ export default function ClientDashboard() {
               </div>
             </>
           )}
-        </div>
+          </div>
+        )}
       </div>
       
       {/* Roles Modal */}
@@ -964,6 +1165,39 @@ export default function ClientDashboard() {
                 Save JD Content
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Closure Reports Modal */}
+      <Dialog open={isClosureModalOpen} onOpenChange={setIsClosureModalOpen}>
+        <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>All Closure Reports</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[60vh]">
+            <table className="w-full border-collapse">
+              <thead className="bg-gray-50 sticky top-0">
+                <tr>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Candidate</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Position</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Talent Advisor</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Offered Date</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Joined Date</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {allClosureReports.map((report, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{report.candidate}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{report.position}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{report.advisor}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{report.offered}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{report.joined}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </DialogContent>
       </Dialog>
