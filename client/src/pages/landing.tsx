@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserIcon, UsersIcon, Crown, UserSearchIcon } from "lucide-react";
+import { UserIcon, UsersIcon, Crown, UserSearchIcon, Building2 } from "lucide-react";
 
 export default function Landing() {
   return (
@@ -16,7 +16,7 @@ export default function Landing() {
           </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {/* Candidate Dashboard Card */}
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="text-center pb-4">
@@ -105,6 +105,30 @@ export default function Landing() {
                   data-testid="button-recruiter-dashboard"
                 >
                   Enter Recruiter Dashboard
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* Client Dashboard Card */}
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardHeader className="text-center pb-4">
+              <div className="mx-auto mb-4 p-4 bg-teal-100 dark:bg-teal-900 rounded-full w-16 h-16 flex items-center justify-center">
+                <Building2 className="h-8 w-8 text-teal-600 dark:text-teal-400" />
+              </div>
+              <CardTitle className="text-xl">Client Dashboard</CardTitle>
+              <CardDescription>
+                Manage job requirements, track roles, and view recruitment progress
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/client" data-testid="link-client-dashboard">
+                <Button 
+                  className="w-full bg-teal-600 hover:bg-teal-700 text-white" 
+                  size="lg"
+                  data-testid="button-client-dashboard"
+                >
+                  Enter Client Dashboard
                 </Button>
               </Link>
             </CardContent>
