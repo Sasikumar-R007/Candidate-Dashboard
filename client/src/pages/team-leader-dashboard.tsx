@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import Sidebar from '@/components/dashboard/sidebar';
-import TeamLeaderProfileHeader from '@/components/dashboard/team-leader-profile-header';
-import TeamLeaderTabNavigation from '@/components/dashboard/team-leader-tab-navigation';
+import AdminSidebar from '@/components/dashboard/admin-sidebar';
+import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
+import AdminTopHeader from '@/components/dashboard/admin-top-header';
+import TeamBoxes from '@/components/dashboard/team-boxes';
+import TeamMembersSidebar from '@/components/dashboard/team-members-sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -18,6 +20,8 @@ export default function TeamLeaderDashboard() {
   const [activeTab, setActiveTab] = useState('team');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<any>(null);
+  const [selectedMember, setSelectedMember] = useState<any>(null);
 
   // Define color mapping for consistent candidate colors
   const candidateColors = {
@@ -68,18 +72,459 @@ export default function TeamLeaderDashboard() {
   }
 
   const renderMainContent = () => {
+    switch (sidebarTab) {
+      case 'dashboard':
+        return renderTeamContent();
+      case 'requirements':
+        return renderRequirementsContent();
+      case 'pipeline':
+        return renderPipelineContent();
+      case 'performance':
+        return renderPerformanceContent();
+      default:
+        return renderTeamContent();
+    }
+  };
+
+  const renderTeamContent = () => {
     return (
-      <div className="bg-gray-50 min-h-screen">
-        <TeamLeaderProfileHeader profile={teamLeaderProfile} />
-        <div className="flex">
-          {/* Main Content */}
-          <div className="flex-1 p-6">
-            {renderDashboardContent()}
+      <div className="flex min-h-screen">
+        <div className="flex-1 ml-16 bg-gray-50">
+          <AdminTopHeader />
+          <AdminProfileHeader profile={{
+            name: teamLeaderProfile?.name || "Team Leader",
+            role: "Team Leader",
+            email: teamLeaderProfile?.email || "",
+            phone: teamLeaderProfile?.phone || "",
+            bannerImage: null,
+            profilePicture: null
+          }} />
+          <div className="flex">
+            {/* Main Content */}
+            <div className="flex-1 p-6">
+              <TeamBoxes />
+            </div>
+            {/* Team Members Sidebar */}
+            <TeamMembersSidebar 
+              selectedTeam={selectedTeam}
+              selectedMember={selectedMember}
+              onMemberSelect={setSelectedMember}
+            />
           </div>
-          
-          {/* Team Sidebar */}
-          <div className="w-80 bg-white border-l border-gray-200">
-            {renderTeamSidebar()}
+        </div>
+      </div>
+    );
+  };
+
+  const renderRequirementsContent = () => {
+    return (
+      <div className="flex min-h-screen">
+        <div className="flex-1 ml-16 bg-gray-50">
+          <AdminTopHeader />
+          <AdminProfileHeader profile={{
+            name: teamLeaderProfile?.name || "Team Leader",
+            role: "Team Leader",
+            email: teamLeaderProfile?.email || "",
+            phone: teamLeaderProfile?.phone || "",
+            bannerImage: null,
+            profilePicture: null
+          }} />
+          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
+            {/* Requirements Section with Priority Distribution - Exact copy from admin */}
+            <div className="flex gap-6">
+              {/* Left Section - Requirements Table */}
+              <div className="flex-1">
+                <div className="bg-white border border-gray-200 overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900">Requirements</h3>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left p-3 font-semibold text-gray-700">Positions</th>
+                          <th className="text-left p-3 font-semibold text-gray-700">Criticality</th>
+                          <th className="text-left p-3 font-semibold text-gray-700">Company</th>
+                          <th className="text-left p-3 font-semibold text-gray-700">Contact</th>
+                          <th className="text-left p-3 font-semibold text-gray-700">Talent Advisor</th>
+                          <th className="text-left p-3 font-semibold text-gray-700">Recruiter</th>
+                          <th className="text-left p-3 font-semibold text-gray-700">Reallocate</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-b border-gray-100">
+                          <td className="p-3 text-gray-900">Frontend Developer</td>
+                          <td className="p-3">
+                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded-full">HIGH</span>
+                          </td>
+                          <td className="p-3 text-gray-600">TechCorp</td>
+                          <td className="p-3 text-gray-600">David Wilson</td>
+                          <td className="p-3 text-gray-600">kavitha</td>
+                          <td className="p-3">
+                            <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white">Assign</Button>
+                          </td>
+                          <td className="p-3">
+                            <Button variant="ghost" size="sm">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="p-3 text-gray-900">UI/UX Designer</td>
+                          <td className="p-3">
+                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full">MEDIUM</span>
+                          </td>
+                          <td className="p-3 text-gray-600">Designify</td>
+                          <td className="p-3 text-gray-600">Tom Anderson</td>
+                          <td className="p-3 text-gray-600">Rajesh</td>
+                          <td className="p-3">
+                            <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white">Assign</Button>
+                          </td>
+                          <td className="p-3">
+                            <Button variant="ghost" size="sm">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="p-3 text-gray-900">Backend Developer</td>
+                          <td className="p-3">
+                            <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-3 py-1 rounded-full">LOW</span>
+                          </td>
+                          <td className="p-3 text-gray-600">CodeLabs</td>
+                          <td className="p-3 text-gray-600">Robert Kim</td>
+                          <td className="p-3 text-gray-600">Sowmiya</td>
+                          <td className="p-3">
+                            <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white">Assign</Button>
+                          </td>
+                          <td className="p-3">
+                            <Button variant="ghost" size="sm">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  <div className="flex justify-center gap-3 p-4 border-t border-gray-200">
+                    <Button 
+                      variant="outline" 
+                      className="px-6 py-2 rounded bg-red-100 hover:bg-red-200 text-red-800 border-red-200"
+                    >
+                      Archives
+                    </Button>
+                    <Button 
+                      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                    >
+                      View More
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Section - Priority Distribution */}
+              <div className="w-60">
+                <div className="bg-white border border-gray-200 px-6 pb-6">
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Priority Distribution</h3>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-3 bg-red-50">
+                      <div className="flex items-center space-x-2">
+                        <div className="text-4xl font-bold text-red-600">H</div>
+                        <div className="text-sm text-gray-600">IGH</div>
+                      </div>
+                      <div className="text-2xl font-bold text-red-600">15</div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-3 bg-blue-50">
+                      <div className="flex items-center space-x-2">
+                        <div className="text-4xl font-bold text-blue-600">M</div>
+                        <div className="text-sm text-gray-600">EDIUM</div>
+                      </div>
+                      <div className="text-2xl font-bold text-blue-600">9</div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-3 bg-gray-50">
+                      <div className="flex items-center space-x-2">
+                        <div className="text-4xl font-bold text-gray-600">L</div>
+                        <div className="text-sm text-gray-600">OW</div>
+                      </div>
+                      <div className="text-2xl font-bold text-gray-600">3</div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-3 bg-slate-100">
+                      <div className="flex items-center space-x-2">
+                        <div className="text-4xl font-bold text-gray-900">T</div>
+                        <div className="text-sm text-gray-600">OTAL</div>
+                      </div>
+                      <div className="text-2xl font-bold text-gray-900">27</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderPipelineContent = () => {
+    return (
+      <div className="flex min-h-screen">
+        <div className="flex-1 ml-16 bg-gray-50">
+          <AdminTopHeader />
+          <AdminProfileHeader profile={{
+            name: teamLeaderProfile?.name || "Team Leader",
+            role: "Team Leader",
+            email: teamLeaderProfile?.email || "",
+            phone: teamLeaderProfile?.phone || "",
+            bannerImage: null,
+            profilePicture: null
+          }} />
+          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
+            {/* Pipeline Header */}
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold text-gray-900">Pipeline</h2>
+              <div className="flex items-center gap-4">
+                <Select>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Arun/Anusha /All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="arun">Arun</SelectItem>
+                    <SelectItem value="anusha">Anusha</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="flex items-center text-gray-600">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  12-Aug-2025
+                </div>
+              </div>
+            </div>
+
+            {/* Pipeline Stages */}
+            <div className="flex-1">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left p-3 font-semibold text-gray-700 w-32">Level 1</th>
+                          <th className="text-left p-3 font-semibold text-gray-700 w-32">Level 2</th>
+                          <th className="text-left p-3 font-semibold text-gray-700 w-32">Level 3</th>
+                          <th className="text-left p-3 font-semibold text-gray-700 w-32">Final Round</th>
+                          <th className="text-left p-3 font-semibold text-gray-700 w-32">HR Round</th>
+                          <th className="text-left p-3 font-semibold text-gray-700 w-32">Offer Stage</th>
+                          <th className="text-left p-3 font-semibold text-gray-700 w-32">Closure</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-b border-gray-100">
+                          <td className="p-3 w-32">
+                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#E6F4EA'}}>
+                              Keerthana
+                            </span>
+                          </td>
+                          <td className="p-3 w-32">
+                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#D9F0E1'}}>
+                              Keerthana
+                            </span>
+                          </td>
+                          <td className="p-3 w-32">
+                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#C2EED0'}}>
+                              Keerthana
+                            </span>
+                          </td>
+                          <td className="p-3 w-32">
+                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#B5E1C1'}}>
+                              Keerthana
+                            </span>
+                          </td>
+                          <td className="p-3 w-32">
+                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#99D9AE'}}>
+                              Keerthana
+                            </span>
+                          </td>
+                          <td className="p-3 w-32">
+                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#7CCBA0'}}>
+                              Keerthana
+                            </span>
+                          </td>
+                          <td className="p-3 w-32">
+                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#2F6F52'}}>
+                              Keerthana
+                            </span>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="p-3 w-32">
+                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#E6F4EA'}}>
+                              Vishnu Purana
+                            </span>
+                          </td>
+                          <td className="p-3 w-32">
+                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#D9F0E1'}}>
+                              Vishnu Purana
+                            </span>
+                          </td>
+                          <td className="p-3 w-32">
+                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#C2EED0'}}>
+                              Vishnu Purana
+                            </span>
+                          </td>
+                          <td className="p-3 w-32">
+                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#B5E1C1'}}>
+                              Vishnu Purana
+                            </span>
+                          </td>
+                          <td className="p-3 w-32">
+                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#99D9AE'}}>
+                              Vishnu Purana
+                            </span>
+                          </td>
+                          <td className="p-3 w-32">
+                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#7CCBA0'}}>
+                              Vishnu Purana
+                            </span>
+                          </td>
+                          <td className="p-3 w-32">
+                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#2F6F52'}}>
+                              Vishnu Purana
+                            </span>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="p-3 w-32">
+                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#E6F4EA'}}>
+                              Chanakya
+                            </span>
+                          </td>
+                          <td className="p-3 w-32">
+                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#D9F0E1'}}>
+                              Chanakya
+                            </span>
+                          </td>
+                          <td className="p-3 w-32">
+                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#C2EED0'}}>
+                              Chanakya
+                            </span>
+                          </td>
+                          <td className="p-3 w-32">
+                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#B5E1C1'}}>
+                              Chanakya
+                            </span>
+                          </td>
+                          <td className="p-3 w-32">
+                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#99D9AE'}}>
+                              Chanakya
+                            </span>
+                          </td>
+                          <td className="p-3 w-32"></td>
+                          <td className="p-3 w-32"></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderPerformanceContent = () => {
+    return (
+      <div className="flex min-h-screen">
+        <div className="flex-1 ml-16 bg-gray-50">
+          <AdminTopHeader />
+          <AdminProfileHeader profile={{
+            name: teamLeaderProfile?.name || "Team Leader",
+            role: "Team Leader",
+            email: teamLeaderProfile?.email || "",
+            phone: teamLeaderProfile?.phone || "",
+            bannerImage: null,
+            profilePicture: null
+          }} />
+          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
+            {/* Team Performance Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Team Performance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left p-3 font-semibold text-gray-700">Name</th>
+                        <th className="text-left p-3 font-semibold text-gray-700">Position</th>
+                        <th className="text-left p-3 font-semibold text-gray-700">Company</th>
+                        <th className="text-left p-3 font-semibold text-gray-700">Closure Month</th>
+                        <th className="text-left p-3 font-semibold text-gray-700">Talent Advisor</th>
+                        <th className="text-left p-3 font-semibold text-gray-700">Package</th>
+                        <th className="text-left p-3 font-semibold text-gray-700">Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-gray-100">
+                        <td className="p-3 text-gray-900">Emily Davis</td>
+                        <td className="p-3 text-gray-900">Frontend Developer</td>
+                        <td className="p-3 text-gray-900">TechCorp</td>
+                        <td className="p-3 text-gray-900">JFM, 2025</td>
+                        <td className="p-3 text-gray-900">kavitha</td>
+                        <td className="p-3 text-gray-900">12,00,000</td>
+                        <td className="p-3 text-gray-900">89,892</td>
+                      </tr>
+                      <tr className="border-b border-gray-100">
+                        <td className="p-3 text-gray-900">Michael Brown</td>
+                        <td className="p-3 text-gray-900">UI/UX Designer</td>
+                        <td className="p-3 text-gray-900">Designify</td>
+                        <td className="p-3 text-gray-900">AMJ, 2025</td>
+                        <td className="p-3 text-gray-900">Rajesh</td>
+                        <td className="p-3 text-gray-900">8,00,000</td>
+                        <td className="p-3 text-gray-900">59,928</td>
+                      </tr>
+                      <tr className="border-b border-gray-100">
+                        <td className="p-3 text-gray-900">Sarah Wilson</td>
+                        <td className="p-3 text-gray-900">Backend Developer</td>
+                        <td className="p-3 text-gray-900">CodeLabs</td>
+                        <td className="p-3 text-gray-900">MJJ, 2025</td>
+                        <td className="p-3 text-gray-900">Sowmiya</td>
+                        <td className="p-3 text-gray-900">18,00,000</td>
+                        <td className="p-3 text-gray-900">1,34,946</td>
+                      </tr>
+                      <tr className="border-b border-gray-100">
+                        <td className="p-3 text-gray-900">Kevin Brown</td>
+                        <td className="p-3 text-gray-900">QA Tester</td>
+                        <td className="p-3 text-gray-900">AppLogic</td>
+                        <td className="p-3 text-gray-900">PMA, 2025</td>
+                        <td className="p-3 text-gray-900">Kalaiselvi</td>
+                        <td className="p-3 text-gray-900">30,00,000</td>
+                        <td className="p-3 text-gray-900">2,24,910</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex justify-end mt-4">
+                  <Button className="bg-blue-500 hover:bg-blue-600 text-white">View Full List</Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
@@ -1167,5 +1612,10 @@ export default function TeamLeaderDashboard() {
     }
   };
 
-  return renderMainContent();
+  return (
+    <div className="min-h-screen">
+      <AdminSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
+      {renderMainContent()}
+    </div>
+  );
 }
