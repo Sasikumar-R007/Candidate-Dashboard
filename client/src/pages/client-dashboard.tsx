@@ -5,7 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, MessageSquare, Minus, Users, Play, Trophy, ArrowLeft, Send } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Textarea } from "@/components/ui/textarea";
+import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, MessageSquare, Minus, Users, Play, Trophy, ArrowLeft, Send, Calendar as CalendarIcon, MoreVertical } from "lucide-react";
+import { format } from "date-fns";
 
 interface ChatUser {
   id: number;
@@ -25,6 +30,10 @@ export default function ClientDashboard() {
   const [jdText, setJdText] = useState('');
   const [isJdModalOpen, setIsJdModalOpen] = useState(false);
   const [tempJdText, setTempJdText] = useState('');
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedCandidate, setSelectedCandidate] = useState<{name: string, stage: string} | null>(null);
+  const [candidatePopupPosition, setCandidatePopupPosition] = useState<{x: number, y: number} | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   // Sample data for the dashboard
   const dashboardStats = {
@@ -404,15 +413,237 @@ export default function ClientDashboard() {
       
       case 'requirements':
         return (
-          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Requirements Management</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-600 dark:text-gray-400">Requirements management content will be implemented here.</p>
-              </CardContent>
-            </Card>
+          <div className="flex h-full">
+            {/* Main Pipeline Content */}
+            <div className="flex-1 overflow-auto">
+              <div className="p-6 space-y-6">
+                {/* Pipeline Header */}
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900">Pipeline</h2>
+                  <div className="flex items-center gap-4">
+                    <Select>
+                      <SelectTrigger className="w-48 rounded">
+                        <SelectValue placeholder="All Roles" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Roles</SelectItem>
+                        <SelectItem value="active">Active Roles</SelectItem>
+                        <SelectItem value="paused">Paused Roles</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="rounded">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {format(selectedDate, "dd-MMM-yyyy")}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={(date) => date && setSelectedDate(date)}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+
+                {/* Pipeline Stages */}
+                <Card className="bg-white border border-gray-200">
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr>
+                            <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[140px]">Level 1</th>
+                            <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[140px]">Level 2</th>
+                            <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[140px]">Level 3</th>
+                            <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[140px]">Final Round</th>
+                            <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[140px]">HR Round</th>
+                            <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[140px]">Offer Stage</th>
+                            <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[140px]">Closure</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td className="p-3 align-top">
+                              <div className="flex flex-col gap-2">
+                                {['Keerthana', 'Vishnu Purana', 'Chanakya', 'Adhya', 'Vanshika', 'Reyansh', 'Shaurya', 'Vihana'].map((name, index) => (
+                                  <div 
+                                    key={index}
+                                    onClick={(e) => handleCandidateClick(e, name, 'Level 1')}
+                                    className="px-3 py-2 bg-green-200 rounded text-center text-sm font-medium text-gray-800 cursor-pointer hover:bg-green-300 transition-colors relative"
+                                  >
+                                    {name}
+                                    <MoreVertical className="h-3 w-3 absolute top-1 right-1 opacity-50" />
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="p-3 align-top">
+                              <div className="flex flex-col gap-2">
+                                {['Keerthana', 'Vishnu Purana', 'Chanakya', 'Adhya', 'Vanshika'].map((name, index) => (
+                                  <div 
+                                    key={index}
+                                    onClick={(e) => handleCandidateClick(e, name, 'Level 2')}
+                                    className="px-3 py-2 bg-green-300 rounded text-center text-sm font-medium text-gray-800 cursor-pointer hover:bg-green-400 transition-colors relative"
+                                  >
+                                    {name}
+                                    <MoreVertical className="h-3 w-3 absolute top-1 right-1 opacity-50" />
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="p-3 align-top">
+                              <div className="flex flex-col gap-2">
+                                {['Keerthana', 'Vishnu Purana', 'Chanakya', 'Adhya', 'Vanshika'].map((name, index) => (
+                                  <div 
+                                    key={index}
+                                    onClick={(e) => handleCandidateClick(e, name, 'Level 3')}
+                                    className="px-3 py-2 bg-green-400 rounded text-center text-sm font-medium text-gray-800 cursor-pointer hover:bg-green-500 transition-colors relative"
+                                  >
+                                    {name}
+                                    <MoreVertical className="h-3 w-3 absolute top-1 right-1 opacity-50" />
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="p-3 align-top">
+                              <div className="flex flex-col gap-2">
+                                {['Keerthana', 'Vishnu Purana', 'Chanakya', 'Adhya'].map((name, index) => (
+                                  <div 
+                                    key={index}
+                                    onClick={(e) => handleCandidateClick(e, name, 'Final Round')}
+                                    className="px-3 py-2 bg-green-500 rounded text-center text-sm font-medium text-white cursor-pointer hover:bg-green-600 transition-colors relative"
+                                  >
+                                    {name}
+                                    <MoreVertical className="h-3 w-3 absolute top-1 right-1 opacity-70" />
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="p-3 align-top">
+                              <div className="flex flex-col gap-2">
+                                {['Keerthana', 'Vishnu Purana', 'Chanakya'].map((name, index) => (
+                                  <div 
+                                    key={index}
+                                    onClick={(e) => handleCandidateClick(e, name, 'HR Round')}
+                                    className="px-3 py-2 bg-green-600 rounded text-center text-sm font-medium text-white cursor-pointer hover:bg-green-700 transition-colors relative"
+                                  >
+                                    {name}
+                                    <MoreVertical className="h-3 w-3 absolute top-1 right-1 opacity-70" />
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="p-3 align-top">
+                              <div className="flex flex-col gap-2">
+                                {['Keerthana', 'Vishnu Purana'].map((name, index) => (
+                                  <div 
+                                    key={index}
+                                    onClick={(e) => handleCandidateClick(e, name, 'Offer Stage')}
+                                    className="px-3 py-2 bg-green-700 rounded text-center text-sm font-medium text-white cursor-pointer hover:bg-green-800 transition-colors relative"
+                                  >
+                                    {name}
+                                    <MoreVertical className="h-3 w-3 absolute top-1 right-1 opacity-70" />
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="p-3 align-top">
+                              <div className="flex flex-col gap-2">
+                                {['Keerthana', 'Vishnu Purana'].map((name, index) => (
+                                  <div 
+                                    key={index}
+                                    onClick={(e) => handleCandidateClick(e, name, 'Closure')}
+                                    className="px-3 py-2 bg-green-800 rounded text-center text-sm font-medium text-white cursor-pointer hover:bg-green-900 transition-colors relative"
+                                  >
+                                    {name}
+                                    <MoreVertical className="h-3 w-3 absolute top-1 right-1 opacity-70" />
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Closure Reports Table */}
+                <Card className="mt-6">
+                  <CardHeader className="bg-gray-50 border-b border-gray-200">
+                    <CardTitle className="text-lg font-semibold text-gray-900">Closure report</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-gray-100 border-b border-gray-200">
+                            <th className="text-left p-3 font-medium text-gray-700 text-sm">Candidate</th>
+                            <th className="text-left p-3 font-medium text-gray-700 text-sm">Positions</th>
+                            <th className="text-left p-3 font-medium text-gray-700 text-sm">Talent Advisor</th>
+                            <th className="text-left p-3 font-medium text-gray-700 text-sm">Offered Date</th>
+                            <th className="text-left p-3 font-medium text-gray-700 text-sm">Joined Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[
+                            { candidate: 'David Wilson', position: 'Frontend Developer', advisor: 'Kavitha', offered: '11-05-2023', joined: '10-10-2023' },
+                            { candidate: 'Tom Anderson', position: 'UI/UX Designer', advisor: 'Rajesh', offered: '18-05-2023', joined: '12-10-2023' },
+                            { candidate: 'Robert Kim', position: 'Backend Developer', advisor: 'Sowmiya', offered: '04-06-2023', joined: '25-10-2023' },
+                            { candidate: 'Kevin Brown', position: 'QA Tester', advisor: 'Kalaiselvi', offered: '16-06-2023', joined: '30-10-2023' },
+                            { candidate: 'Mel Gibson', position: 'Mobile App Developer', advisor: 'Malathi', offered: '08-07-2023', joined: '05-11-2023' }
+                          ].map((row, index) => (
+                            <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
+                              <td className="p-3 text-gray-900">{row.candidate}</td>
+                              <td className="p-3 text-gray-600">{row.position}</td>
+                              <td className="p-3 text-gray-600">{row.advisor}</td>
+                              <td className="p-3 text-gray-600">{row.offered}</td>
+                              <td className="p-3 text-gray-600">{row.joined}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+                      <div className="flex justify-end">
+                        <Button variant="ghost" className="text-blue-600 hover:text-blue-700 text-sm">
+                          Vie All
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Right Sidebar with Stats */}
+            <div className="w-64 bg-white border-l border-gray-200">
+              <div className="p-4 space-y-1">
+                {[
+                  { label: 'SOURCED', count: 15, color: 'bg-green-100' },
+                  { label: 'SHORTLISTED', count: 9, color: 'bg-green-200' },
+                  { label: 'INTRO CALL', count: 7, color: 'bg-green-300' },
+                  { label: 'ASSIGNMENT', count: 9, color: 'bg-green-400' },
+                  { label: 'L1', count: 15, color: 'bg-green-500 text-white' },
+                  { label: 'L2', count: 9, color: 'bg-green-600 text-white' },
+                  { label: 'L3', count: 3, color: 'bg-green-700 text-white' },
+                  { label: 'FINAL ROUND', count: 9, color: 'bg-green-800 text-white' },
+                  { label: 'HR ROUND', count: 9, color: 'bg-green-900 text-white' },
+                  { label: 'OFFER STAGE', count: 9, color: 'bg-green-900 text-white' },
+                  { label: 'CLOSURE', count: 3, color: 'bg-green-950 text-white' }
+                ].map((item, index) => (
+                  <div key={index} className={`flex justify-between items-center py-3 px-4 rounded ${item.color}`}>
+                    <span className={`text-sm font-medium ${item.color.includes('text-white') ? 'text-white' : 'text-gray-700'}`}>{item.label}</span>
+                    <span className={`text-lg font-bold ${item.color.includes('text-white') ? 'text-white' : 'text-gray-900'}`}>{item.count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         );
       
@@ -433,6 +664,28 @@ export default function ClientDashboard() {
       default:
         return null;
     }
+  };
+
+  const handleCandidateClick = (e: React.MouseEvent, name: string, stage: string) => {
+    e.stopPropagation();
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    setCandidatePopupPosition({
+      x: rect.left + rect.width + 10,
+      y: rect.top
+    });
+    setSelectedCandidate({ name, stage });
+  };
+
+  const closeCandidatePopup = () => {
+    setSelectedCandidate(null);
+    setCandidatePopupPosition(null);
+    setRejectReason('');
+  };
+
+  const handleReject = () => {
+    // Handle reject logic here
+    console.log('Rejecting candidate:', selectedCandidate, 'Reason:', rejectReason);
+    closeCandidatePopup();
   };
 
   return (
@@ -714,6 +967,57 @@ export default function ClientDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+      
+      {/* Candidate Action Popup */}
+      {selectedCandidate && candidatePopupPosition && (
+        <>
+          {/* Backdrop to close popup */}
+          <div 
+            className="fixed inset-0 z-40" 
+            onClick={closeCandidatePopup}
+          />
+          
+          {/* Popup */}
+          <div 
+            className="fixed z-50 bg-white border border-gray-300 rounded shadow-lg p-4 w-64"
+            style={{
+              left: candidatePopupPosition.x,
+              top: candidatePopupPosition.y
+            }}
+          >
+            <div className="mb-3">
+              <h4 className="font-medium text-gray-900">{selectedCandidate.name}</h4>
+              <p className="text-sm text-gray-500">{selectedCandidate.stage}</p>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <input type="radio" id="reject" name="action" className="text-red-500" />
+                <label htmlFor="reject" className="text-sm text-red-600 font-medium">Reject</label>
+              </div>
+              
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Detailed Final Verdict</label>
+                <Textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Enter reason..."
+                  className="w-full h-16 text-xs border border-gray-300 rounded p-2 resize-none"
+                />
+              </div>
+              
+              <div className="flex justify-end">
+                <Button 
+                  onClick={handleReject}
+                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-1 text-sm rounded"
+                >
+                  Submit
+                </Button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
