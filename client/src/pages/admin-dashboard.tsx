@@ -3260,97 +3260,123 @@ export default function AdminDashboard() {
           user.role.toLowerCase().includes(userSearchTerm.toLowerCase())
         );
 
+        // Calculate online/offline counts
+        const activeCount = userData.filter(user => user.status === 'Active').length;
+        const offlineCount = userData.filter(user => user.status !== 'Active').length;
+
         return (
-          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
-            {/* Header with Search and Action Buttons */}
-            <div className="flex items-center justify-between gap-4">
-              {/* Search Input */}
-              <div className="flex-1 max-w-sm relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="Search user..."
-                  value={userSearchTerm}
-                  onChange={(e) => setUserSearchTerm(e.target.value)}
-                  className="w-full bg-gray-50 border-gray-200 text-sm pl-10"
-                  data-testid="input-search-user"
-                />
+          <div className="flex h-full">
+            {/* Main Content */}
+            <div className="flex-1 px-6 py-6 space-y-6 overflow-y-auto admin-scrollbar">
+              {/* Header with Search and Action Buttons */}
+              <div className="flex items-center justify-between gap-4">
+                {/* Search Input */}
+                <div className="flex-1 max-w-sm relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    type="text"
+                    placeholder="Search user..."
+                    value={userSearchTerm}
+                    onChange={(e) => setUserSearchTerm(e.target.value)}
+                    className="w-full bg-gray-50 border-gray-200 text-sm pl-10"
+                    data-testid="input-search-user"
+                  />
+                </div>
+                
+                {/* Action Buttons */}
+                <div className="flex gap-3">
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm flex items-center gap-2"
+                    onClick={() => setIsAddTeamLeaderModalNewOpen(true)}
+                    data-testid="button-add-team-leader"
+                  >
+                    <Users className="h-4 w-4" />
+                    Add Team Leader
+                  </Button>
+                  <Button 
+                    className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded text-sm flex items-center gap-2"
+                    onClick={() => setIsAddRecruiterModalOpen(true)}
+                    data-testid="button-add-recruiter"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    Add Recruiter
+                  </Button>
+                </div>
               </div>
-              
-              {/* Action Buttons */}
-              <div className="flex gap-3">
-                <Button 
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm flex items-center gap-2"
-                  onClick={() => setIsAddTeamLeaderModalNewOpen(true)}
-                  data-testid="button-add-team-leader"
-                >
-                  <Users className="h-4 w-4" />
-                  Add Team Leader
-                </Button>
-                <Button 
-                  className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded text-sm flex items-center gap-2"
-                  onClick={() => setIsAddRecruiterModalOpen(true)}
-                  data-testid="button-add-recruiter"
-                >
-                  <UserPlus className="h-4 w-4" />
-                  Add Recruiter
-                </Button>
+
+              {/* User Management Table */}
+              <div className="bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-600">
+                        <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-sm">ID</th>
+                        <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-sm">Name</th>
+                        <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-sm">Email</th>
+                        <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-sm">Role</th>
+                        <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-sm">Status</th>
+                        <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-sm">Last Login</th>
+                        <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-sm">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredUsers.map((user, index) => (
+                        <tr key={user.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium text-sm">{user.id}</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.name}</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.email}</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.role}</td>
+                          <td className="py-3 px-4 text-sm">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-2 h-2 rounded-full ${
+                                user.status === 'Active' ? 'bg-green-500' : 'bg-red-500'
+                              }`}></div>
+                              <span className="text-gray-600 dark:text-gray-400">{user.status}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.lastLogin}</td>
+                          <td className="py-3 px-4">
+                            <div className="flex gap-3 text-sm">
+                              <button 
+                                className="text-blue-600 hover:text-blue-700 font-medium"
+                                onClick={() => handleEditUser(user)}
+                                data-testid={`button-edit-${user.id}`}
+                              >
+                                Edit
+                              </button>
+                              <button 
+                                className="text-red-600 hover:text-red-700 font-medium"
+                                onClick={() => handleDeleteUser(user.id, user.name)}
+                                data-testid={`button-delete-${user.id}`}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
 
-            {/* User Management Table */}
-            <div className="bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-600">
-                      <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-sm">ID</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-sm">Name</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-sm">Email</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-sm">Role</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-sm">Status</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-sm">Last Login</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-700 dark:text-gray-300 text-sm">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUsers.map((user, index) => (
-                      <tr key={user.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium text-sm">{user.id}</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.name}</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.email}</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.role}</td>
-                        <td className="py-3 px-4 text-sm">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${
-                              user.status === 'Active' ? 'bg-green-500' : 'bg-red-500'
-                            }`}></div>
-                            <span className="text-gray-600 dark:text-gray-400">{user.status}</span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.lastLogin}</td>
-                        <td className="py-3 px-4">
-                          <div className="flex gap-3 text-sm">
-                            <button 
-                              className="text-blue-600 hover:text-blue-700 font-medium"
-                              onClick={() => handleEditUser(user)}
-                              data-testid={`button-edit-${user.id}`}
-                            >
-                              Edit
-                            </button>
-                            <button 
-                              className="text-red-600 hover:text-red-700 font-medium"
-                              onClick={() => handleDeleteUser(user.id, user.name)}
-                              data-testid={`button-delete-${user.id}`}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            {/* Right Sidebar - Online Activity */}
+            <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Online Activity</h3>
+              
+              <div className="space-y-1">
+                {/* Online Section */}
+                <div className="bg-cyan-400 dark:bg-cyan-500 px-6 py-8 text-center">
+                  <div className="text-sm font-medium text-gray-700 mb-2">Online</div>
+                  <div className="text-4xl font-bold text-black">{activeCount}</div>
+                </div>
+                
+                {/* Offline Section */}
+                <div className="bg-pink-400 dark:bg-pink-500 px-6 py-8 text-center">
+                  <div className="text-sm font-medium text-gray-700 mb-2">Offline</div>
+                  <div className="text-4xl font-bold text-black">{offlineCount}</div>
+                </div>
               </div>
             </div>
           </div>
