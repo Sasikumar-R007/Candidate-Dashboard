@@ -16,7 +16,7 @@ export default function Landing() {
           </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
           {/* Candidate Dashboard Card */}
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="text-center pb-4">
@@ -94,7 +94,7 @@ export default function Landing() {
               </div>
               <CardTitle className="text-xl">Recruiter Dashboard</CardTitle>
               <CardDescription>
-                Manage candidates, schedule interviews, and track recruitment pipeline
+                Classic design - Manage candidates, schedule interviews, and track recruitment pipeline
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -105,6 +105,30 @@ export default function Landing() {
                   data-testid="button-recruiter-dashboard"
                 >
                   Enter Recruiter Dashboard
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          {/* Recruiter Dashboard V2 Card */}
+          <Card className="hover:shadow-lg transition-shadow border-2 border-orange-300">
+            <CardHeader className="text-center pb-4">
+              <div className="mx-auto mb-4 p-4 bg-orange-200 dark:bg-orange-800 rounded-full w-16 h-16 flex items-center justify-center">
+                <UserSearchIcon className="h-8 w-8 text-orange-700 dark:text-orange-300" />
+              </div>
+              <CardTitle className="text-xl">Recruiter Login 2</CardTitle>
+              <CardDescription>
+                New team leader-style design with 5 comprehensive sections (Team, Requirements, Pipeline, Performance, Chat)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/recruiter2" data-testid="link-recruiter-dashboard-v2">
+                <Button 
+                  className="w-full bg-gradient-to-r from-orange-600 to-orange-800 hover:from-orange-700 hover:to-orange-900 text-white" 
+                  size="lg"
+                  data-testid="button-recruiter-dashboard-v2"
+                >
+                  Enter Recruiter Login 2
                 </Button>
               </Link>
             </CardContent>
