@@ -4,6 +4,7 @@ import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
 import AdminTopHeader from '@/components/dashboard/admin-top-header';
 import TeamLeaderTeamBoxes from '@/components/dashboard/team-leader-team-boxes';
 import TeamLeaderSidebar from '@/components/dashboard/team-leader-sidebar';
+import AddRequirementModal from '@/components/dashboard/modals/add-requirement-modal';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -454,68 +455,58 @@ export default function TeamLeaderDashboard() {
   };
 
   const renderRequirementsContent = () => {
+    const [isAddRequirementModalOpen, setIsAddRequirementModalOpen] = useState(false);
+    
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
           <AdminTopHeader userName="John Mathew" companyName="Gumlat Marketing Private Limited" />
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
-            {/* Requirements Section with Priority Distribution - Exact copy from admin */}
+            {/* Requirements Section with Priority Distribution */}
             <div className="flex gap-6">
               {/* Left Section - Requirements Table */}
               <div className="flex-1">
-                <div className="bg-white border border-gray-200 overflow-hidden">
-                  <div className="px-6 py-4 border-b border-gray-200">
+                <div className="bg-white border border-gray-200 overflow-hidden rounded-lg">
+                  <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                     <h3 className="text-lg font-semibold text-gray-900">Requirements</h3>
+                    <Button 
+                      onClick={() => setIsAddRequirementModalOpen(true)}
+                      className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded"
+                    >
+                      + Add Requirements
+                    </Button>
                   </div>
                   
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
                       <thead>
-                        <tr className="border-b border-gray-200">
+                        <tr className="border-b border-gray-200 bg-gray-50">
                           <th className="text-left p-3 font-semibold text-gray-700">Positions</th>
                           <th className="text-left p-3 font-semibold text-gray-700">Criticality</th>
                           <th className="text-left p-3 font-semibold text-gray-700">Company</th>
-                          <th className="text-left p-3 font-semibold text-gray-700">Contact</th>
+                          <th className="text-left p-3 font-semibold text-gray-700">SPOC</th>
                           <th className="text-left p-3 font-semibold text-gray-700">Talent Advisor</th>
-                          <th className="text-left p-3 font-semibold text-gray-700">Recruiter</th>
-                          <th className="text-left p-3 font-semibold text-gray-700">Reallocate</th>
+                          <th className="text-left p-3 font-semibold text-gray-700">Team Lead</th>
+                          <th className="text-left p-3 font-semibold text-gray-700">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr className="border-b border-gray-100">
-                          <td className="p-3 text-gray-900">Frontend Developer</td>
+                          <td className="p-3 text-gray-900">Mobile App Developer</td>
                           <td className="p-3">
-                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded-full">HIGH</span>
+                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
+                              <span className="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
+                              HIGH
+                            </span>
                           </td>
-                          <td className="p-3 text-gray-600">TechCorp</td>
-                          <td className="p-3 text-gray-600">David Wilson</td>
-                          <td className="p-3 text-gray-600">kavitha</td>
+                          <td className="p-3 text-gray-900">Tesco</td>
+                          <td className="p-3 text-gray-900">Mel Gibson</td>
+                          <td className="p-3 text-gray-900">Mel Gibson</td>
+                          <td className="p-3 text-gray-900">Arun</td>
                           <td className="p-3">
-                            <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white">Assign</Button>
-                          </td>
-                          <td className="p-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                              </svg>
-                            </Button>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="p-3 text-gray-900">UI/UX Designer</td>
-                          <td className="p-3">
-                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full">MEDIUM</span>
-                          </td>
-                          <td className="p-3 text-gray-600">Designify</td>
-                          <td className="p-3 text-gray-600">Tom Anderson</td>
-                          <td className="p-3 text-gray-600">Rajesh</td>
-                          <td className="p-3">
-                            <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white">Assign</Button>
-                          </td>
-                          <td className="p-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            <Button variant="ghost" size="sm" className="p-1">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
                               </svg>
                             </Button>
                           </td>
@@ -523,18 +514,259 @@ export default function TeamLeaderDashboard() {
                         <tr className="border-b border-gray-100">
                           <td className="p-3 text-gray-900">Backend Developer</td>
                           <td className="p-3">
-                            <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-3 py-1 rounded-full">LOW</span>
+                            <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
+                              <span className="w-2 h-2 bg-gray-500 rounded-full mr-1"></span>
+                              LOW
+                            </span>
                           </td>
-                          <td className="p-3 text-gray-600">CodeLabs</td>
-                          <td className="p-3 text-gray-600">Robert Kim</td>
-                          <td className="p-3 text-gray-600">Sowmiya</td>
+                          <td className="p-3 text-gray-900">CodeLabs</td>
+                          <td className="p-3 text-gray-900">Robert Kim</td>
+                          <td className="p-3 text-gray-900">Robert Kim</td>
+                          <td className="p-3 text-gray-900">Arun</td>
                           <td className="p-3">
-                            <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white">Assign</Button>
+                            <Button variant="ghost" size="sm" className="p-1">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                              </svg>
+                            </Button>
                           </td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="p-3 text-gray-900">Frontend Developer</td>
                           <td className="p-3">
-                            <Button variant="ghost" size="sm">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
+                              <span className="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
+                              MEDIUM
+                            </span>
+                          </td>
+                          <td className="p-3 text-gray-900">TechCorp</td>
+                          <td className="p-3 text-gray-900">David Wilson</td>
+                          <td className="p-3 text-gray-500">Unassigned</td>
+                          <td className="p-3 text-gray-900">Arun</td>
+                          <td className="p-3">
+                            <Button variant="ghost" size="sm" className="p-1">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="p-3 text-gray-900">QA Tester</td>
+                          <td className="p-3">
+                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
+                              <span className="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
+                              HIGH
+                            </span>
+                          </td>
+                          <td className="p-3 text-gray-900">AppLogic</td>
+                          <td className="p-3 text-gray-900">Kevin Brown</td>
+                          <td className="p-3 text-gray-500">Unassigned</td>
+                          <td className="p-3 text-gray-500">Unassigned</td>
+                          <td className="p-3">
+                            <Button variant="ghost" size="sm" className="p-1">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="p-3 text-gray-900">Mobile App Developer</td>
+                          <td className="p-3">
+                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
+                              <span className="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
+                              MEDIUM
+                            </span>
+                          </td>
+                          <td className="p-3 text-gray-900">Tesco</td>
+                          <td className="p-3 text-gray-900">Mel Gibson</td>
+                          <td className="p-3 text-gray-900">Mel Gibson</td>
+                          <td className="p-3 text-gray-900">Arun</td>
+                          <td className="p-3">
+                            <Button variant="ghost" size="sm" className="p-1">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="p-3 text-gray-900">Backend Developer</td>
+                          <td className="p-3">
+                            <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
+                              <span className="w-2 h-2 bg-gray-500 rounded-full mr-1"></span>
+                              LOW
+                            </span>
+                          </td>
+                          <td className="p-3 text-gray-900">CodeLabs</td>
+                          <td className="p-3 text-gray-900">Robert Kim</td>
+                          <td className="p-3 text-gray-900">Robert Kim</td>
+                          <td className="p-3 text-gray-900">Arun</td>
+                          <td className="p-3">
+                            <Button variant="ghost" size="sm" className="p-1">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="p-3 text-gray-900">UI/UX Designer</td>
+                          <td className="p-3">
+                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
+                              <span className="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
+                              MEDIUM
+                            </span>
+                          </td>
+                          <td className="p-3 text-gray-900">Designify</td>
+                          <td className="p-3 text-gray-900">Tom Anderson</td>
+                          <td className="p-3 text-gray-500">Unassigned</td>
+                          <td className="p-3 text-gray-900">Anusha</td>
+                          <td className="p-3">
+                            <Button variant="ghost" size="sm" className="p-1">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="p-3 text-gray-900">Frontend Developer</td>
+                          <td className="p-3">
+                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
+                              <span className="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
+                              HIGH
+                            </span>
+                          </td>
+                          <td className="p-3 text-gray-900">TechCorp</td>
+                          <td className="p-3 text-gray-900">David Wilson</td>
+                          <td className="p-3 text-gray-500">Unassigned</td>
+                          <td className="p-3 text-gray-900">Arun</td>
+                          <td className="p-3">
+                            <Button variant="ghost" size="sm" className="p-1">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="p-3 text-gray-900">UI/UX Designer</td>
+                          <td className="p-3">
+                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
+                              <span className="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
+                              MEDIUM
+                            </span>
+                          </td>
+                          <td className="p-3 text-gray-900">Designify</td>
+                          <td className="p-3 text-gray-900">Tom Anderson</td>
+                          <td className="p-3 text-gray-500">Unassigned</td>
+                          <td className="p-3 text-gray-900">Anusha</td>
+                          <td className="p-3">
+                            <Button variant="ghost" size="sm" className="p-1">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="p-3 text-gray-900">QA Tester</td>
+                          <td className="p-3">
+                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
+                              <span className="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
+                              MEDIUM
+                            </span>
+                          </td>
+                          <td className="p-3 text-gray-900">AppLogic</td>
+                          <td className="p-3 text-gray-900">Kevin Brown</td>
+                          <td className="p-3 text-gray-500">Unassigned</td>
+                          <td className="p-3 text-gray-500">Unassigned</td>
+                          <td className="p-3">
+                            <Button variant="ghost" size="sm" className="p-1">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="p-3 text-gray-900">Mobile App Developer</td>
+                          <td className="p-3">
+                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
+                              <span className="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
+                              HIGH
+                            </span>
+                          </td>
+                          <td className="p-3 text-gray-900">Designify</td>
+                          <td className="p-3 text-gray-900">Mel Gibson</td>
+                          <td className="p-3 text-gray-900">Mel Gibson</td>
+                          <td className="p-3 text-gray-900">Arun</td>
+                          <td className="p-3">
+                            <Button variant="ghost" size="sm" className="p-1">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="p-3 text-gray-900">Backend Developer</td>
+                          <td className="p-3">
+                            <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
+                              <span className="w-2 h-2 bg-gray-500 rounded-full mr-1"></span>
+                              LOW
+                            </span>
+                          </td>
+                          <td className="p-3 text-gray-900">Tesco</td>
+                          <td className="p-3 text-gray-900">Robert Kim</td>
+                          <td className="p-3 text-gray-900">Robert Kim</td>
+                          <td className="p-3 text-gray-500">Unassigned</td>
+                          <td className="p-3">
+                            <Button variant="ghost" size="sm" className="p-1">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="p-3 text-gray-900">Frontend Developer</td>
+                          <td className="p-3">
+                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
+                              <span className="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
+                              HIGH
+                            </span>
+                          </td>
+                          <td className="p-3 text-gray-900">CodeLabs</td>
+                          <td className="p-3 text-gray-900">David Wilson</td>
+                          <td className="p-3 text-gray-500">Unassigned</td>
+                          <td className="p-3 text-gray-900">Anusha</td>
+                          <td className="p-3">
+                            <Button variant="ghost" size="sm" className="p-1">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                              </svg>
+                            </Button>
+                          </td>
+                        </tr>
+                        <tr className="border-b border-gray-100">
+                          <td className="p-3 text-gray-900">QA Tester</td>
+                          <td className="p-3">
+                            <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
+                              <span className="w-2 h-2 bg-gray-500 rounded-full mr-1"></span>
+                              LOW
+                            </span>
+                          </td>
+                          <td className="p-3 text-gray-900">TechCorp</td>
+                          <td className="p-3 text-gray-900">Kevin Brown</td>
+                          <td className="p-3 text-gray-500">Unassigned</td>
+                          <td className="p-3 text-gray-900">Arun</td>
+                          <td className="p-3">
+                            <Button variant="ghost" size="sm" className="p-1">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
                               </svg>
                             </Button>
                           </td>
@@ -543,15 +775,14 @@ export default function TeamLeaderDashboard() {
                     </table>
                   </div>
                   
-                  <div className="flex justify-center gap-3 p-4 border-t border-gray-200">
+                  <div className="flex justify-center gap-4 p-4 border-t border-gray-200">
                     <Button 
-                      variant="outline" 
-                      className="px-6 py-2 rounded bg-red-100 hover:bg-red-200 text-red-800 border-red-200"
+                      className="px-6 py-2 bg-red-400 hover:bg-red-500 text-white font-medium rounded"
                     >
                       Archives
                     </Button>
                     <Button 
-                      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                      className="px-6 py-2 bg-cyan-400 hover:bg-cyan-500 text-black font-medium rounded"
                     >
                       View More
                     </Button>
@@ -560,43 +791,43 @@ export default function TeamLeaderDashboard() {
               </div>
 
               {/* Right Section - Priority Distribution */}
-              <div className="w-60">
-                <div className="bg-white border border-gray-200 px-6 pb-6">
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Priority Distribution</h3>
+              <div className="w-80">
+                <div className="bg-white border border-gray-200 rounded-lg">
+                  <div className="px-6 py-4 border-b border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900">Priority Distribution</h3>
                   </div>
                   
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-red-50">
+                  <div className="px-6 py-4 space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
                       <div className="flex items-center space-x-2">
-                        <div className="text-4xl font-bold text-red-600">H</div>
-                        <div className="text-sm text-gray-600">IGH</div>
+                        <div className="text-5xl font-bold text-red-600">H</div>
+                        <div className="text-sm text-gray-600 uppercase">IGH</div>
                       </div>
-                      <div className="text-2xl font-bold text-red-600">15</div>
+                      <div className="text-4xl font-bold text-red-600">15</div>
                     </div>
                     
-                    <div className="flex items-center justify-between p-3 bg-blue-50">
+                    <div className="flex items-center justify-between p-4 bg-cyan-50 rounded-lg">
                       <div className="flex items-center space-x-2">
-                        <div className="text-4xl font-bold text-blue-600">M</div>
-                        <div className="text-sm text-gray-600">EDIUM</div>
+                        <div className="text-5xl font-bold text-cyan-600">M</div>
+                        <div className="text-sm text-gray-600 uppercase">EDIUM</div>
                       </div>
-                      <div className="text-2xl font-bold text-blue-600">9</div>
+                      <div className="text-4xl font-bold text-cyan-600">9</div>
                     </div>
                     
-                    <div className="flex items-center justify-between p-3 bg-gray-50">
+                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-2">
-                        <div className="text-4xl font-bold text-gray-600">L</div>
-                        <div className="text-sm text-gray-600">OW</div>
+                        <div className="text-5xl font-bold text-gray-600">L</div>
+                        <div className="text-sm text-gray-600 uppercase">OW</div>
                       </div>
-                      <div className="text-2xl font-bold text-gray-600">3</div>
+                      <div className="text-4xl font-bold text-gray-600">3</div>
                     </div>
                     
-                    <div className="flex items-center justify-between p-3 bg-slate-100">
+                    <div className="flex items-center justify-between p-4 bg-slate-100 rounded-lg">
                       <div className="flex items-center space-x-2">
-                        <div className="text-4xl font-bold text-gray-900">T</div>
-                        <div className="text-sm text-gray-600">OTAL</div>
+                        <div className="text-5xl font-bold text-gray-900">T</div>
+                        <div className="text-sm text-gray-600 uppercase">OTAL</div>
                       </div>
-                      <div className="text-2xl font-bold text-gray-900">27</div>
+                      <div className="text-4xl font-bold text-gray-900">27</div>
                     </div>
                   </div>
                 </div>
@@ -604,6 +835,12 @@ export default function TeamLeaderDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Add Requirement Modal */}
+        <AddRequirementModal 
+          isOpen={isAddRequirementModalOpen} 
+          onClose={() => setIsAddRequirementModalOpen(false)} 
+        />
       </div>
     );
   };
