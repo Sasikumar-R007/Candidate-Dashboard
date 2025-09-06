@@ -1222,19 +1222,19 @@ export default function TeamLeaderDashboard() {
             <div className="grid grid-cols-4 gap-0 bg-blue-50 rounded overflow-hidden">
               <div className="bg-blue-100 text-center py-6 px-4">
                 <p className="text-sm font-medium text-gray-600 mb-2">Current Quarter</p>
-                <p className="text-lg font-bold text-gray-900">{targetMetrics?.currentQuarter || "ASO-2025"}</p>
+                <p className="text-lg font-bold text-gray-900">{(targetMetrics as any)?.currentQuarter || "ASO-2025"}</p>
               </div>
               <div className="bg-blue-50 text-center py-6 px-4">
                 <p className="text-sm font-medium text-gray-600 mb-2">Minimum Target</p>
-                <p className="text-lg font-bold text-gray-900">{targetMetrics?.minimumTarget || "15,00,000"}</p>
+                <p className="text-lg font-bold text-gray-900">{(targetMetrics as any)?.minimumTarget || "15,00,000"}</p>
               </div>
               <div className="bg-blue-100 text-center py-6 px-4">
                 <p className="text-sm font-medium text-gray-600 mb-2">Target Achieved</p>
-                <p className="text-lg font-bold text-gray-900">{targetMetrics?.targetAchieved || "10,00,000"}</p>
+                <p className="text-lg font-bold text-gray-900">{(targetMetrics as any)?.targetAchieved || "10,00,000"}</p>
               </div>
               <div className="bg-blue-50 text-center py-6 px-4">
                 <p className="text-sm font-medium text-gray-600 mb-2">Incentive Earned</p>
-                <p className="text-lg font-bold text-gray-900">{targetMetrics?.incentiveEarned || "50,000"}</p>
+                <p className="text-lg font-bold text-gray-900">{(targetMetrics as any)?.incentiveEarned || "50,000"}</p>
               </div>
             </div>
             <div className="mt-4 flex justify-end">
@@ -1425,7 +1425,7 @@ export default function TeamLeaderDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-3 gap-6">
-                  {(teamMembers || []).map((member: any, index: number) => (
+                  {((teamMembers as any) || []).map((member: any, index: number) => (
                     <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
                       <div className="flex justify-between items-start">
                         <div>
@@ -1460,19 +1460,19 @@ export default function TeamLeaderDashboard() {
                 <div className="grid grid-cols-4 gap-0 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-gray-800 dark:to-gray-700 rounded overflow-hidden border border-gray-200 dark:border-gray-600">
                   <div className="bg-blue-100 dark:bg-gray-700 text-center py-6 px-4 border-r border-blue-200 dark:border-gray-600">
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Current Quarter</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-current-quarter">{targetMetrics?.currentQuarter || 'ASO-2025'}</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-current-quarter">{(targetMetrics as any)?.currentQuarter || 'ASO-2025'}</p>
                   </div>
                   <div className="bg-blue-50 dark:bg-gray-750 text-center py-6 px-4 border-r border-blue-200 dark:border-gray-600">
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Minimum Target</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-minimum-target">{targetMetrics?.minimumTarget || '15,00,000'}</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-minimum-target">{(targetMetrics as any)?.minimumTarget || '15,00,000'}</p>
                   </div>
                   <div className="bg-blue-100 dark:bg-gray-700 text-center py-6 px-4 border-r border-blue-200 dark:border-gray-600">
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Target Achieved</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-target-achieved">{targetMetrics?.targetAchieved || '10,00,000'}</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-target-achieved">{(targetMetrics as any)?.targetAchieved || '10,00,000'}</p>
                   </div>
                   <div className="bg-blue-50 dark:bg-gray-750 text-center py-6 px-4">
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Incentive Earned</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-incentive-earned">{targetMetrics?.incentiveEarned || '50,000'}</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-incentive-earned">{(targetMetrics as any)?.incentiveEarned || '50,000'}</p>
                   </div>
                 </div>
               </CardContent>
@@ -1510,7 +1510,7 @@ export default function TeamLeaderDashboard() {
                       <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Total Requirements</p>
                       <div className="text-right">
                         <span className="text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-total-requirements">
-                          {dailyMetrics?.totalRequirements || "20"}
+                          {(dailyMetrics as any)?.totalRequirements || "20"}
                         </span>
                       </div>
                     </div>
@@ -1518,7 +1518,7 @@ export default function TeamLeaderDashboard() {
                       <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Completed Requirements</p>
                       <div className="text-right">
                         <span className="text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-completed-requirements">
-                          {dailyMetrics?.completedRequirements || "12"}
+                          {(dailyMetrics as any)?.completedRequirements || "12"}
                         </span>
                       </div>
                     </div>
@@ -1526,7 +1526,7 @@ export default function TeamLeaderDashboard() {
                       <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Avg. Resumes per Requirement</p>
                       <div className="text-right">
                         <span className="text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-avg-resumes">
-                          {dailyMetrics?.avgResumesPerRequirement || "02"}
+                          {(dailyMetrics as any)?.avgResumesPerRequirement || "02"}
                         </span>
                       </div>
                     </div>
@@ -1534,7 +1534,7 @@ export default function TeamLeaderDashboard() {
                       <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Requirements per Recruiter</p>
                       <div className="text-right">
                         <span className="text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-requirements-per-recruiter">
-                          {dailyMetrics?.requirementsPerRecruiter || "05"}
+                          {(dailyMetrics as any)?.requirementsPerRecruiter || "05"}
                         </span>
                       </div>
                     </div>
@@ -1547,7 +1547,7 @@ export default function TeamLeaderDashboard() {
                       <div className="text-center">
                         <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Delivered</p>
                         <p className="text-3xl font-bold text-gray-900 dark:text-white mb-3" data-testid="text-daily-delivered">
-                          {dailyMetrics?.dailyDeliveryDelivered || "3"}
+                          {(dailyMetrics as any)?.dailyDeliveryDelivered || "3"}
                         </p>
                         <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 text-white px-4" data-testid="button-view-delivered">
                           View
@@ -1556,7 +1556,7 @@ export default function TeamLeaderDashboard() {
                       <div className="text-center">
                         <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Defaulted</p>
                         <p className="text-3xl font-bold text-gray-900 dark:text-white mb-3" data-testid="text-daily-defaulted">
-                          {dailyMetrics?.dailyDeliveryDefaulted || "1"}
+                          {(dailyMetrics as any)?.dailyDeliveryDefaulted || "1"}
                         </p>
                         <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 text-white px-4" data-testid="button-view-defaulted">
                           View
@@ -1581,7 +1581,7 @@ export default function TeamLeaderDashboard() {
                 <CardContent>
                   <div className="bg-pink-50 dark:bg-pink-900/20 p-4 rounded">
                     <ul className="space-y-2 text-sm">
-                      {(ceoComments || []).map((commentObj: any, index: number) => (
+                      {((ceoComments as any) || []).map((commentObj: any, index: number) => (
                         <li key={index} data-testid={`text-ceo-comment-${index}`}>
                           {commentObj.comment}
                         </li>
@@ -1598,7 +1598,7 @@ export default function TeamLeaderDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4">
-                    {(meetings || []).map((meeting: any, index: number) => (
+                    {((meetings as any) || []).map((meeting: any, index: number) => (
                       <div key={index} className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded text-center">
                         <h3 className="font-semibold text-sm" data-testid={`text-meeting-type-${index}`}>{meeting.type}</h3>
                         <p className="text-2xl font-bold text-blue-600 my-2" data-testid={`text-meeting-count-${index}`}>
