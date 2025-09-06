@@ -28,6 +28,7 @@ export default function TeamLeaderDashboard() {
   const [assignments, setAssignments] = useState<{[key: string]: string}>({'mobile-app-dev': 'Arun'});
   const [isReallocating, setIsReallocating] = useState(false);
   const [selectedAssignee, setSelectedAssignee] = useState<string>('');
+  const [isAddRequirementModalOpen, setIsAddRequirementModalOpen] = useState(false);
 
   // Sample requirements data
   const [requirementsData, setRequirementsData] = useState([
@@ -455,8 +456,6 @@ export default function TeamLeaderDashboard() {
   };
 
   const renderRequirementsContent = () => {
-    const [isAddRequirementModalOpen, setIsAddRequirementModalOpen] = useState(false);
-    
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
