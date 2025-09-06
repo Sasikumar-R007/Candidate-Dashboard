@@ -94,7 +94,7 @@ export default function TeamLeaderDashboard() {
           <AdminTopHeader userName="John Mathew" companyName="Gumlat Marketing Private Limited" />
           <div className="flex h-screen">
             {/* Main Content - Middle Section (Scrollable) */}
-            <div className="px-3 py-2 space-y-2 flex-1 overflow-y-auto h-full">
+            <div className="px-2 py-1 space-y-1 flex-1 overflow-y-auto h-full">
               <TeamBoxes />
 
               {/* Target Section */}
@@ -167,22 +167,22 @@ export default function TeamLeaderDashboard() {
                   <div className="grid grid-cols-3 gap-6">
                     {/* Left side - Metrics */}
                     <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
-                      <div className="flex justify-between items-center py-3">
+                      <div className="flex justify-between items-center py-1">
                         <span className="text-sm font-medium text-gray-700">Total Requirements</span>
                         <span className="text-2xl font-bold text-blue-600">20</span>
                       </div>
                       <div className="border-t border-gray-200"></div>
-                      <div className="flex justify-between items-center py-3">
+                      <div className="flex justify-between items-center py-1">
                         <span className="text-sm font-medium text-gray-700">Avg. Resumes per Requirement</span>
                         <span className="text-2xl font-bold text-blue-600">02</span>
                       </div>
                       <div className="border-t border-gray-200"></div>
-                      <div className="flex justify-between items-center py-3">
+                      <div className="flex justify-between items-center py-1">
                         <span className="text-sm font-medium text-gray-700">Requirements per Recruiter</span>
                         <span className="text-2xl font-bold text-blue-600">03</span>
                       </div>
                       <div className="border-t border-gray-200"></div>
-                      <div className="flex justify-between items-center py-3">
+                      <div className="flex justify-between items-center py-1">
                         <span className="text-sm font-medium text-gray-700">Completed Requirements</span>
                         <span className="text-2xl font-bold text-blue-600">12</span>
                       </div>

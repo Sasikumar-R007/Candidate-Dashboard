@@ -23,7 +23,7 @@ export default function TeamMembersSidebar() {
         
         <div className="flex-1 px-4 pb-4">
           <div className="space-y-1">
-            {teamMembers.map((member, index) => {
+            {teamMembers.slice(0, 4).map((member, index) => {
               const isEven = index % 2 === 0;
               
               return (
