@@ -9,7 +9,6 @@ import Dashboard from "@/pages/dashboard";
 import TeamLeaderDashboard from "@/pages/team-leader-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
 import RecruiterDashboard from "@/pages/recruiter-dashboard";
-import RecruiterDashboardV2 from "@/pages/recruiter-dashboard-v2";
 import ClientDashboard from "@/pages/client-dashboard";
 import SourceResume from "@/pages/source-resume";
 import RecruiterActiveJobs from "@/pages/recruiter-active-jobs";
@@ -25,7 +24,6 @@ function Router() {
       <Route path="/team-leader" component={TeamLeaderDashboard} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/recruiter" component={RecruiterDashboard} />
-      <Route path="/recruiter2" component={RecruiterDashboardV2} />
       <Route path="/client" component={ClientDashboard} />
       <Route path="/source-resume" component={SourceResume} />
       <Route path="/recruiter-active-jobs" component={RecruiterActiveJobs} />
