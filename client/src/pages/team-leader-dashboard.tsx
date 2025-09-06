@@ -21,6 +21,7 @@ export default function TeamLeaderDashboard() {
   const [activeTab, setActiveTab] = useState('team');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
+  const [isClosureDetailsModalOpen, setIsClosureDetailsModalOpen] = useState(false);
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
   const [selectedMember, setSelectedMember] = useState<any>(null);
@@ -559,23 +560,17 @@ export default function TeamLeaderDashboard() {
   const renderPipelineContent = () => {
     return (
       <div className="flex h-full">
-        {/* Main Pipeline Content */}
-        <div className="flex-1 ml-16 overflow-auto admin-scrollbar">
+        {/* Middle Pipeline Content - Scrollable */}
+        <div className="flex-1 ml-16 overflow-y-auto admin-scrollbar">
           <div className="p-6 space-y-6">
             {/* Pipeline Header */}
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Pipeline</h2>
               <div className="flex items-center gap-4">
-                <Select>
-                  <SelectTrigger className="w-48 input-styled btn-rounded">
-                    <SelectValue placeholder="Arun/Anusha/All" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="arun">Arun</SelectItem>
-                    <SelectItem value="anusha">Anusha</SelectItem>
-                  </SelectContent>
-                </Select>
+                {/* Simple Arun box instead of dropdown */}
+                <div className="w-48 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white text-sm input-styled btn-rounded">
+                  Arun
+                </div>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="btn-rounded input-styled">
@@ -808,6 +803,7 @@ export default function TeamLeaderDashboard() {
                     <Button 
                       variant="ghost" 
                       className="text-blue-600 hover:text-blue-700 text-sm"
+                      onClick={() => setIsClosureDetailsModalOpen(true)}
                     >
                       See More...
                     </Button>
@@ -818,8 +814,8 @@ export default function TeamLeaderDashboard() {
           </div>
         </div>
 
-        {/* Right Sidebar with Stats - matching admin design */}
-        <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700">
+        {/* Right Sidebar with Stats - Fixed, Non-scrollable */}
+        <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 h-full overflow-hidden">
           <div className="p-4 space-y-1">
             <div className="flex justify-between items-center py-3 px-4 bg-green-100 dark:bg-green-900 rounded">
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SOURCED</span>
@@ -868,15 +864,6 @@ export default function TeamLeaderDashboard() {
             <div className="flex justify-between items-center py-3 px-4 bg-amber-500 dark:bg-amber-600 rounded">
               <span className="text-sm font-medium text-white">OFFER DROP</span>
               <span className="text-lg font-bold text-white">3</span>
-            </div>
-            
-            {/* See More button moved to bottom right */}
-            <div className="flex justify-end mt-4">
-              <Button 
-                className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded text-sm"
-              >
-                See More
-              </Button>
             </div>
           </div>
         </div>
@@ -2045,6 +2032,118 @@ export default function TeamLeaderDashboard() {
     <div className="min-h-screen">
       <TeamLeaderMainSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
       {renderMainContent()}
+      
+      {/* Closure Details Modal */}
+      <Dialog open={isClosureDetailsModalOpen} onOpenChange={setIsClosureDetailsModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Detailed Closure Reports</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Candidate</th>
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Position</th>
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Client</th>
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Package</th>
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Status</th>
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Revenue</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-white">David Johnson</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Frontend Developer</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">TechCorp</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Kavitha</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹12,00,000</td>
+                    <td className="p-3"><span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Joined</span></td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹89,892</td>
+                  </tr>
+                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-white">Tom Anderson</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">UI/UX Designer</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Designify</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Rajesh</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹8,00,000</td>
+                    <td className="p-3"><span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Joined</span></td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹59,928</td>
+                  </tr>
+                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-white">Robert Kim</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Backend Developer</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">CodeLabs</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Sowmiya</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹18,00,000</td>
+                    <td className="p-3"><span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">Pending</span></td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹1,34,946</td>
+                  </tr>
+                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-white">Sarah Wilson</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Data Scientist</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">DataTech</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Malathi</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹22,00,000</td>
+                    <td className="p-3"><span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Joined</span></td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹1,64,934</td>
+                  </tr>
+                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-white">Michael Chen</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">DevOps Engineer</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">CloudSoft</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Kalaiselvi</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹15,00,000</td>
+                    <td className="p-3"><span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Joined</span></td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹1,12,455</td>
+                  </tr>
+                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-white">Lisa Rodriguez</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Product Manager</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">InnovateHub</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Kavitha</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹25,00,000</td>
+                    <td className="p-3"><span className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">Offer Declined</span></td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹0</td>
+                  </tr>
+                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-white">James Martinez</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Full Stack Developer</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">WebSolutions</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Rajesh</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹14,00,000</td>
+                    <td className="p-3"><span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Joined</span></td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹1,04,916</td>
+                  </tr>
+                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-white">Emma Thompson</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">QA Lead</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">QualityFirst</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">Sowmiya</td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹16,00,000</td>
+                    <td className="p-3"><span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">Offer Extended</span></td>
+                    <td className="p-3 text-gray-600 dark:text-gray-400">₹0</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Total Closures: 8 | Total Revenue: ₹7,66,071
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsClosureDetailsModalOpen(false)}
+                className="btn-rounded"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
