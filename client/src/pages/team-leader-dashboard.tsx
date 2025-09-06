@@ -22,6 +22,57 @@ export default function TeamLeaderDashboard() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
   const [isClosureDetailsModalOpen, setIsClosureDetailsModalOpen] = useState(false);
+  const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
+  const [selectedRequirement, setSelectedRequirement] = useState<any>(null);
+  const [assignments, setAssignments] = useState<{[key: string]: string}>({'mobile-app-dev': 'Arun'});
+  const [isReallocating, setIsReallocating] = useState(false);
+  const [selectedAssignee, setSelectedAssignee] = useState<string>('');
+
+  // Sample requirements data
+  const [requirementsData, setRequirementsData] = useState([
+    { id: 'frontend-dev', position: 'Frontend Developer', criticality: 'HIGH', company: 'TechCorp', contact: 'David Wilson', talentAdvisor: 'kavitha', recruiter: null },
+    { id: 'ui-ux-designer', position: 'UI/UX Designer', criticality: 'MEDIUM', company: 'Designify', contact: 'Tom Anderson', talentAdvisor: 'Rajesh', recruiter: null },
+    { id: 'backend-dev', position: 'Backend Developer', criticality: 'LOW', company: 'CodeLabs', contact: 'Robert Kim', talentAdvisor: 'Sowmiya', recruiter: null },
+    { id: 'qa-tester', position: 'QA Tester', criticality: 'MEDIUM', company: 'AppLogic', contact: 'Kevin Brown', talentAdvisor: 'Kalaiselvi', recruiter: null },
+    { id: 'mobile-app-dev', position: 'Mobile App Developer', criticality: 'HIGH', company: 'Tesco', contact: 'Mel Gibson', talentAdvisor: 'Malathi', recruiter: 'Arun' },
+    { id: 'data-scientist', position: 'Data Scientist', criticality: 'HIGH', company: 'DataTech', contact: 'Sarah Wilson', talentAdvisor: 'Kavitha', recruiter: null },
+    { id: 'devops-engineer', position: 'DevOps Engineer', criticality: 'MEDIUM', company: 'CloudSoft', contact: 'Michael Chen', talentAdvisor: 'Rajesh', recruiter: null },
+    { id: 'product-manager', position: 'Product Manager', criticality: 'LOW', company: 'InnovateHub', contact: 'Lisa Rodriguez', talentAdvisor: 'Sowmiya', recruiter: null },
+    { id: 'fullstack-dev', position: 'Full Stack Developer', criticality: 'HIGH', company: 'WebSolutions', contact: 'James Martinez', talentAdvisor: 'Kalaiselvi', recruiter: null },
+    { id: 'security-analyst', position: 'Security Analyst', criticality: 'HIGH', company: 'SecureNet', contact: 'Emma Thompson', talentAdvisor: 'Malathi', recruiter: null }
+  ]);
+
+  // Available talent advisors
+  const talentAdvisors = ['Arun', 'Anusha', 'Priya', 'Vikash', 'Suresh', 'Meena'];
+
+  const handleAssign = (requirement: any) => {
+    setSelectedRequirement(requirement);
+    setIsReallocating(false);
+    setSelectedAssignee('');
+    setIsAssignmentModalOpen(true);
+  };
+
+  const handleReallocate = (requirement: any) => {
+    setSelectedRequirement(requirement);
+    setIsReallocating(true);
+    setSelectedAssignee(requirement.recruiter || '');
+    setIsAssignmentModalOpen(true);
+  };
+
+  const handleConfirmAssignment = (advisor: string) => {
+    if (selectedRequirement) {
+      const updatedRequirements = requirementsData.map(req => 
+        req.id === selectedRequirement.id 
+          ? { ...req, recruiter: advisor }
+          : req
+      );
+      setRequirementsData(updatedRequirements);
+      setAssignments(prev => ({ ...prev, [selectedRequirement.id]: advisor }));
+      setIsAssignmentModalOpen(false);
+      setSelectedRequirement(null);
+      setSelectedAssignee('');
+    }
+  };
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
   const [selectedMember, setSelectedMember] = useState<any>(null);
@@ -1416,101 +1467,62 @@ export default function TeamLeaderDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-4 px-4 text-gray-900 dark:text-white">Frontend Developer</td>
-                        <td className="py-4 px-4">
-                          <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded-full">HIGH</span>
-                        </td>
-                        <td className="py-4 px-4 text-gray-600 dark:text-gray-400">TechCorp</td>
-                        <td className="py-4 px-4 text-gray-600 dark:text-gray-400">David Wilson</td>
-                        <td className="py-4 px-4 text-gray-600 dark:text-gray-400">kavitha</td>
-                        <td className="py-4 px-4">
-                          <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white">Assign</Button>
-                        </td>
-                        <td className="py-4 px-4">
-                          <Button variant="ghost" size="sm">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                          </Button>
-                        </td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-4 px-4 text-gray-900 dark:text-white">UI/UX Designer</td>
-                        <td className="py-4 px-4">
-                          <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full">MEDIUM</span>
-                        </td>
-                        <td className="py-4 px-4 text-gray-600 dark:text-gray-400">Designify</td>
-                        <td className="py-4 px-4 text-gray-600 dark:text-gray-400">Tom Anderson</td>
-                        <td className="py-4 px-4 text-gray-600 dark:text-gray-400">Rajesh</td>
-                        <td className="py-4 px-4">
-                          <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white">Assign</Button>
-                        </td>
-                        <td className="py-4 px-4">
-                          <Button variant="ghost" size="sm">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                          </Button>
-                        </td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-4 px-4 text-gray-900 dark:text-white">Backend Developer</td>
-                        <td className="py-4 px-4">
-                          <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-3 py-1 rounded-full">LOW</span>
-                        </td>
-                        <td className="py-4 px-4 text-gray-600 dark:text-gray-400">CodeLabs</td>
-                        <td className="py-4 px-4 text-gray-600 dark:text-gray-400">Robert Kim</td>
-                        <td className="py-4 px-4 text-gray-600 dark:text-gray-400">Sowmiya</td>
-                        <td className="py-4 px-4">
-                          <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white">Assign</Button>
-                        </td>
-                        <td className="py-4 px-4">
-                          <Button variant="ghost" size="sm">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                          </Button>
-                        </td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-4 px-4 text-gray-900 dark:text-white">QA Tester</td>
-                        <td className="py-4 px-4">
-                          <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full">MEDIUM</span>
-                        </td>
-                        <td className="py-4 px-4 text-gray-600 dark:text-gray-400">AppLogic</td>
-                        <td className="py-4 px-4 text-gray-600 dark:text-gray-400">Kevin Brown</td>
-                        <td className="py-4 px-4 text-gray-600 dark:text-gray-400">Kalaiselvi</td>
-                        <td className="py-4 px-4">
-                          <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white">Assign</Button>
-                        </td>
-                        <td className="py-4 px-4">
-                          <Button variant="ghost" size="sm">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                          </Button>
-                        </td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-4 px-4 text-gray-900 dark:text-white">Mobile App Developer</td>
-                        <td className="py-4 px-4">
-                          <span className="bg-red-100 text-red-800 text-xs font-semibold px-3 py-1 rounded-full">HIGH</span>
-                        </td>
-                        <td className="py-4 px-4 text-gray-600 dark:text-gray-400">Tesco</td>
-                        <td className="py-4 px-4 text-gray-600 dark:text-gray-400">Mel Gibson</td>
-                        <td className="py-4 px-4 text-gray-600 dark:text-gray-400">Malathi</td>
-                        <td className="py-4 px-4 text-gray-600 dark:text-gray-400">Arun</td>
-                        <td className="py-4 px-4">
-                          <Button variant="ghost" size="sm">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                          </Button>
-                        </td>
-                      </tr>
+                      {requirementsData.map((requirement) => (
+                        <tr key={requirement.id} className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-4 px-4 text-gray-900 dark:text-white">{requirement.position}</td>
+                          <td className="py-4 px-4">
+                            <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
+                              requirement.criticality === 'HIGH' 
+                                ? 'bg-red-100 text-red-800' 
+                                : requirement.criticality === 'MEDIUM'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {requirement.criticality}
+                            </span>
+                          </td>
+                          <td className="py-4 px-4 text-gray-600 dark:text-gray-400">{requirement.company}</td>
+                          <td className="py-4 px-4 text-gray-600 dark:text-gray-400">{requirement.contact}</td>
+                          <td className="py-4 px-4 text-gray-600 dark:text-gray-400">{requirement.talentAdvisor}</td>
+                          <td className="py-4 px-4">
+                            {requirement.recruiter ? (
+                              <span className="text-gray-600 dark:text-gray-400">{requirement.recruiter}</span>
+                            ) : (
+                              <Button 
+                                size="sm" 
+                                className="bg-blue-500 hover:bg-blue-600 text-white rounded btn-rounded"
+                                onClick={() => handleAssign(requirement)}
+                              >
+                                Assign
+                              </Button>
+                            )}
+                          </td>
+                          <td className="py-4 px-4">
+                            {requirement.recruiter && (
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="rounded btn-rounded"
+                                onClick={() => handleReallocate(requirement)}
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
+                </div>
+                <div className="mt-4 flex justify-between">
+                  <Button variant="outline" className="rounded btn-rounded">
+                    View More
+                  </Button>
+                  <Button variant="outline" className="rounded btn-rounded">
+                    Archive
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -2142,6 +2154,79 @@ export default function TeamLeaderDashboard() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assignment Modal */}
+      <Dialog open={isAssignmentModalOpen} onOpenChange={setIsAssignmentModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">
+              {isReallocating ? 'Reallocate Requirement' : 'Assign Requirement'}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedRequirement && (
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Requirement Details:</h4>
+                <div className="space-y-2 text-sm">
+                  <div><span className="font-medium">Position:</span> {selectedRequirement.position}</div>
+                  <div><span className="font-medium">Company:</span> {selectedRequirement.company}</div>
+                  <div>
+                    <span className="font-medium">Criticality:</span> 
+                    <span className={`ml-2 px-2 py-1 rounded text-xs font-semibold ${
+                      selectedRequirement.criticality === 'HIGH' 
+                        ? 'bg-red-100 text-red-800' 
+                        : selectedRequirement.criticality === 'MEDIUM'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {selectedRequirement.criticality}
+                    </span>
+                  </div>
+                  <div><span className="font-medium">Contact Person:</span> {selectedRequirement.contact}</div>
+                </div>
+              </div>
+              
+              <div>
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
+                  {isReallocating ? 'Assign to Team Leader:' : 'Assign to Team Leader:'}
+                </h4>
+                <Select 
+                  defaultValue={isReallocating ? selectedRequirement.recruiter : undefined}
+                  onValueChange={(value) => setSelectedAssignee(value)}
+                >
+                  <SelectTrigger className="w-full input-styled btn-rounded">
+                    <SelectValue placeholder={isReallocating ? selectedRequirement.recruiter : "Select a Team Leader"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {talentAdvisors.map((advisor) => (
+                      <SelectItem key={advisor} value={advisor}>
+                        {advisor}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsAssignmentModalOpen(false)}
+                  className="btn-rounded"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  className="bg-gray-800 hover:bg-gray-900 text-white btn-rounded"
+                  onClick={() => selectedAssignee && handleConfirmAssignment(selectedAssignee)}
+                  disabled={!selectedAssignee}
+                >
+                  Confirm Assignment
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
