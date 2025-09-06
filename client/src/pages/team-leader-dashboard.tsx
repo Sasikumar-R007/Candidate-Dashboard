@@ -16,8 +16,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import { useLocation } from "wouter";
 
 export default function TeamLeaderDashboard() {
+  const [, navigate] = useLocation();
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [activeTab, setActiveTab] = useState('team');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -533,11 +535,14 @@ export default function TeamLeaderDashboard() {
                   <div className="flex justify-end gap-4 p-4 border-t border-gray-200">
                     <Button 
                       className="px-6 py-2 bg-red-400 hover:bg-red-500 text-white font-medium rounded"
+                      onClick={() => navigate('/archives')}
+                      data-testid="button-archives"
                     >
                       Archives
                     </Button>
                     <Button 
                       className="px-6 py-2 bg-cyan-400 hover:bg-cyan-500 text-black font-medium rounded"
+                      data-testid="button-view-more-requirements"
                     >
                       View More
                     </Button>
