@@ -2,8 +2,8 @@ import { useState } from 'react';
 import AdminSidebar from '@/components/dashboard/admin-sidebar';
 import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
 import AdminTopHeader from '@/components/dashboard/admin-top-header';
-import TeamBoxes from '@/components/dashboard/team-boxes';
-import TeamMembersSidebar from '@/components/dashboard/team-members-sidebar';
+import TeamLeaderTeamBoxes from '@/components/dashboard/team-leader-team-boxes';
+import TeamLeaderSidebar from '@/components/dashboard/team-leader-sidebar';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -95,8 +95,8 @@ export default function TeamLeaderDashboard() {
           <AdminTopHeader userName="John Mathew" companyName="Gumlat Marketing Private Limited" />
           <div className="flex h-screen">
             {/* Main Content - Middle Section (Scrollable) */}
-            <div className="px-2 py-1 space-y-1 flex-1 overflow-y-auto h-full">
-              <TeamBoxes />
+            <div className="px-3 py-2 space-y-2 flex-1 overflow-y-auto h-full">
+              <TeamLeaderTeamBoxes />
 
               {/* Target Section */}
               <Card className="bg-white border border-gray-200">
@@ -393,7 +393,7 @@ export default function TeamLeaderDashboard() {
             
             {/* Team Members Sidebar - Right Section (Non-scrollable) */}
             <div className="flex-shrink-0">
-              <TeamMembersSidebar />
+              <TeamLeaderSidebar />
             </div>
           </div>
         </div>

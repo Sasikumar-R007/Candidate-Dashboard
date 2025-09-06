@@ -12,51 +12,44 @@ const team = {
 
 export default function TeamBoxes() {
   return (
-    <div className="grid grid-cols-2 gap-4 mb-4">
-      {/* Team Details Card - Image 1 */}
-      <Card className="bg-white border border-gray-200">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Shield className="h-4 w-4 text-blue-500" />
-              <h3 className="text-lg font-semibold text-gray-900">
-                {team.name}
-              </h3>
-            </div>
+    <Card className="bg-white border border-gray-200 mb-6">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Shield className="h-5 w-5 text-blue-500" />
+            <h3 className="text-xl font-semibold text-gray-900">
+              {team.name}
+            </h3>
             <img 
               src={team.image} 
               alt={team.name}
-              className="w-12 h-12 rounded-lg object-cover"
+              className="w-16 h-16 rounded-full object-cover border-2 border-teal-400"
             />
           </div>
           
-          <div className="flex items-center justify-between mt-3">
+          <div className="flex items-center space-x-8">
             <div className="text-center">
-              <p className="text-xs font-medium text-red-500 mb-1">Members</p>
-              <p className="text-xl font-bold text-gray-900">{team.members}</p>
+              <p className="text-xs font-medium text-red-500 uppercase tracking-wider mb-1">Members</p>
+              <p className="text-3xl font-bold text-gray-900">{team.members}</p>
             </div>
             <div className="text-center">
-              <p className="text-xs font-medium text-blue-500 mb-1">Tenure</p>
-              <p className="text-xl font-bold text-gray-900">
-                {team.tenure} <span className="text-sm text-gray-500">years</span>
+              <p className="text-xs font-medium text-blue-500 uppercase tracking-wider mb-1">Tenure</p>
+              <p className="text-3xl font-bold text-gray-900">
+                {team.tenure} <span className="text-lg font-normal text-gray-500">years</span>
               </p>
             </div>
             <div className="text-center">
-              <p className="text-xs font-medium text-green-500 mb-1">Qtrs Achieved</p>
-              <p className="text-xl font-bold text-gray-900">{team.qtrsAchieved}</p>
+              <p className="text-xs font-medium text-green-500 uppercase tracking-wider mb-1">Qtrs Achieved</p>
+              <p className="text-3xl font-bold text-gray-900">{team.qtrsAchieved}</p>
             </div>
             <div className="text-center">
-              <p className="text-xs font-medium text-orange-500 mb-1">Next Milestone</p>
-              <p className="text-xl font-bold text-gray-900">{team.nextMilestone}</p>
+              <p className="text-xs font-medium text-orange-500 uppercase tracking-wider mb-1">Next Milestone</p>
+              <p className="text-3xl font-bold text-gray-900">{team.nextMilestone}</p>
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Performance Gauge Card - Image 2 */}
-      <Card className="bg-white border border-gray-200">
-        <CardContent className="p-4 flex items-center justify-center">
-          <div className="w-full h-20">
+          {/* Speedometer/Gauge Chart */}
+          <div className="w-48 h-24 relative">
             <svg viewBox="0 0 200 100" className="w-full h-full">
               {/* Background arc */}
               <path d="M 20 90 A 80 80 0 0 1 180 90" stroke="#e5e7eb" strokeWidth="8" fill="none"/>
@@ -72,14 +65,14 @@ export default function TeamBoxes() {
               <circle cx="100" cy="90" r="4" fill="#1f2937"/>
               
               {/* Labels */}
-              <text x="30" y="85" fontSize="8" fill="#6b7280" textAnchor="middle">SLIM</text>
-              <text x="70" y="35" fontSize="8" fill="#6b7280" textAnchor="middle">FAIR</text>
-              <text x="130" y="35" fontSize="8" fill="#6b7280" textAnchor="middle">GOOD</text>
-              <text x="170" y="85" fontSize="8" fill="#6b7280" textAnchor="middle">EXCELLENT</text>
+              <text x="30" y="85" fontSize="10" fill="#6b7280" textAnchor="middle">Slack</text>
+              <text x="70" y="35" fontSize="10" fill="#6b7280" textAnchor="middle">Fair</text>
+              <text x="130" y="35" fontSize="10" fill="#6b7280" textAnchor="middle">Good</text>
+              <text x="170" y="85" fontSize="10" fill="#6b7280" textAnchor="middle">Excellent</text>
             </svg>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
