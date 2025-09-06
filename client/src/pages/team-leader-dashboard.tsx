@@ -31,6 +31,7 @@ export default function TeamLeaderDashboard() {
   const [isReallocating, setIsReallocating] = useState(false);
   const [selectedAssignee, setSelectedAssignee] = useState<string>('');
   const [isAddRequirementModalOpen, setIsAddRequirementModalOpen] = useState(false);
+  const [isViewMoreRequirementsModalOpen, setIsViewMoreRequirementsModalOpen] = useState(false);
 
   // Sample requirements data
   const [requirementsData, setRequirementsData] = useState([
@@ -487,7 +488,7 @@ export default function TeamLeaderDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {requirementsData.slice(0, 15).map((requirement, index) => (
+                        {requirementsData.slice(0, 10).map((requirement, index) => (
                           <tr key={requirement.id} className="border-b border-gray-100">
                             <td className="p-3 text-gray-900">{requirement.position}</td>
                             <td className="p-3">
@@ -542,6 +543,7 @@ export default function TeamLeaderDashboard() {
                     </Button>
                     <Button 
                       className="px-6 py-2 bg-cyan-400 hover:bg-cyan-500 text-black font-medium rounded"
+                      onClick={() => setIsViewMoreRequirementsModalOpen(true)}
                       data-testid="button-view-more-requirements"
                     >
                       View More
@@ -2366,6 +2368,70 @@ export default function TeamLeaderDashboard() {
                 variant="outline" 
                 onClick={() => setIsClosureDetailsModalOpen(false)}
                 className="btn-rounded"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View More Requirements Modal */}
+      <Dialog open={isViewMoreRequirementsModalOpen} onOpenChange={setIsViewMoreRequirementsModalOpen}>
+        <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">All Requirements</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Positions</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Criticality</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Company</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">SPOC</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Talent Advisor</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {requirementsData.map((requirement, index) => (
+                    <tr key={requirement.id} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                      <td className="p-3 text-gray-900 border border-gray-300">{requirement.position}</td>
+                      <td className="p-3 border border-gray-300">
+                        <span className={`text-xs font-semibold px-2 py-1 rounded inline-flex items-center ${
+                          requirement.criticality === 'HIGH' ? 'bg-red-100 text-red-800' :
+                          requirement.criticality === 'MEDIUM' ? 'bg-blue-100 text-blue-800' :
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          <span className={`w-2 h-2 rounded-full mr-1 ${
+                            requirement.criticality === 'HIGH' ? 'bg-red-500' :
+                            requirement.criticality === 'MEDIUM' ? 'bg-blue-500' :
+                            'bg-gray-500'
+                          }`}></span>
+                          {requirement.criticality}
+                        </span>
+                      </td>
+                      <td className="p-3 text-gray-900 border border-gray-300">{requirement.company}</td>
+                      <td className="p-3 text-gray-900 border border-gray-300">{requirement.contact}</td>
+                      <td className="p-3 text-gray-900 border border-gray-300">{requirement.talentAdvisor || 'Unassigned'}</td>
+                      <td className="p-3 border border-gray-300">
+                        <span className={`text-xs font-semibold px-2 py-1 rounded ${
+                          requirement.recruiter ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {requirement.recruiter ? 'Assigned' : 'Open'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-end mt-4 pt-4 border-t border-gray-200">
+              <Button 
+                onClick={() => setIsViewMoreRequirementsModalOpen(false)}
+                className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded"
               >
                 Close
               </Button>
