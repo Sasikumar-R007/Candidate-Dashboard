@@ -131,12 +131,12 @@ export default function TeamLeaderDashboard() {
               </Card>
 
               {/* Daily Metrics Section */}
-              <Card className="bg-teal-50">
-                <CardHeader className="flex flex-row items-center justify-between pb-1 pt-2">
-                  <CardTitle className="text-lg text-gray-900">Daily Metrics</CardTitle>
+              <Card className="bg-white border border-gray-200">
+                <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4">
+                  <CardTitle className="text-lg font-semibold text-gray-900">Daily Metrics</CardTitle>
                   <div className="flex items-center space-x-2">
                     <Select defaultValue="overall">
-                      <SelectTrigger className="w-20 h-7 text-sm">
+                      <SelectTrigger className="w-24 h-8 text-sm">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -148,10 +148,10 @@ export default function TeamLeaderDashboard() {
                     
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="flex items-center space-x-1 h-7 px-2">
-                          <CalendarIcon className="h-3 w-3" />
+                        <Button variant="outline" size="sm" className="flex items-center space-x-1 h-8 px-3">
+                          <CalendarIcon className="h-4 w-4" />
                           <span className="text-sm">12-Aug-2025</span>
-                          <EditIcon className="h-3 w-3" />
+                          <EditIcon className="h-4 w-4" />
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="end">
@@ -163,66 +163,98 @@ export default function TeamLeaderDashboard() {
                   </div>
                 </CardHeader>
                 
-                <CardContent className="p-3">
-                  <div className="grid grid-cols-3 gap-4">
+                <CardContent className="p-4 pt-0">
+                  <div className="grid grid-cols-3 gap-6">
                     {/* Left side - Metrics */}
-                    <div className="bg-white rounded p-4 space-y-3">
-                      <div className="flex justify-between items-center py-2">
+                    <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
+                      <div className="flex justify-between items-center py-3">
                         <span className="text-sm font-medium text-gray-700">Total Requirements</span>
-                        <span className="text-2xl font-bold text-blue-600">27</span>
+                        <span className="text-2xl font-bold text-blue-600">20</span>
                       </div>
                       <div className="border-t border-gray-200"></div>
-                      <div className="flex justify-between items-center py-2">
+                      <div className="flex justify-between items-center py-3">
                         <span className="text-sm font-medium text-gray-700">Avg. Resumes per Requirement</span>
-                        <span className="text-2xl font-bold text-blue-600">24</span>
+                        <span className="text-2xl font-bold text-blue-600">02</span>
                       </div>
                       <div className="border-t border-gray-200"></div>
-                      <div className="flex justify-between items-center py-2">
+                      <div className="flex justify-between items-center py-3">
                         <span className="text-sm font-medium text-gray-700">Requirements per Recruiter</span>
-                        <span className="text-2xl font-bold text-blue-600">9</span>
+                        <span className="text-2xl font-bold text-blue-600">03</span>
                       </div>
                       <div className="border-t border-gray-200"></div>
-                      <div className="flex justify-between items-center py-2">
+                      <div className="flex justify-between items-center py-3">
                         <span className="text-sm font-medium text-gray-700">Completed Requirements</span>
-                        <span className="text-2xl font-bold text-blue-600">8</span>
+                        <span className="text-2xl font-bold text-blue-600">12</span>
                       </div>
                     </div>
 
-                    {/* Middle section - Calls and Submissions */}
-                    <div className="space-y-4">
-                      <div className="bg-white rounded p-4">
-                        <h4 className="text-sm font-medium text-gray-700 mb-3">Calls</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="text-center">
-                            <div className="text-2xl font-bold text-blue-600">156</div>
-                            <div className="text-xs text-gray-500">Today</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-2xl font-bold text-blue-600">1,243</div>
-                            <div className="text-xs text-gray-500">This Month</div>
-                          </div>
+                    {/* Middle section - Daily Delivery */}
+                    <div className="bg-slate-800 rounded-lg p-6 text-white">
+                      <h4 className="text-lg font-semibold text-white mb-6 text-center">Daily Delivery</h4>
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="text-center">
+                          <h5 className="text-sm font-medium text-cyan-300 mb-3">Delivered</h5>
+                          <div className="text-4xl font-bold text-white mb-4">3</div>
+                          <Button 
+                            size="sm" 
+                            className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded text-sm font-medium"
+                          >
+                            View
+                          </Button>
                         </div>
-                      </div>
-                      <div className="bg-white rounded p-4">
-                        <h4 className="text-sm font-medium text-gray-700 mb-3">Submissions</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="text-center">
-                            <div className="text-2xl font-bold text-blue-600">23</div>
-                            <div className="text-xs text-gray-500">Today</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-2xl font-bold text-blue-600">187</div>
-                            <div className="text-xs text-gray-500">This Month</div>
-                          </div>
+                        <div className="text-center">
+                          <h5 className="text-sm font-medium text-cyan-300 mb-3">Defaulted</h5>
+                          <div className="text-4xl font-bold text-white mb-4">1</div>
+                          <Button 
+                            size="sm" 
+                            className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded text-sm font-medium"
+                          >
+                            View
+                          </Button>
                         </div>
                       </div>
                     </div>
 
-                    {/* Right section - Chart */}
-                    <div className="bg-white rounded p-4">
-                      <h4 className="text-sm font-medium text-gray-700 mb-2">Performance</h4>
-                      <div className="h-16 bg-gray-100 rounded mt-2 flex items-center justify-center">
-                        <span className="text-gray-500 text-sm">Chart placeholder</span>
+                    {/* Right section - Overall Performance */}
+                    <div className="bg-white border border-gray-200 rounded-lg p-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-sm font-medium text-gray-700">Overall Performance</h4>
+                        <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                          <span className="text-white text-xl font-bold">G</span>
+                        </div>
+                      </div>
+                      <div className="h-24 relative">
+                        <svg viewBox="0 0 300 100" className="w-full h-full">
+                          {/* Grid lines */}
+                          <defs>
+                            <pattern id="grid" width="30" height="20" patternUnits="userSpaceOnUse">
+                              <path d="M 30 0 L 0 0 0 20" fill="none" stroke="#e5e7eb" strokeWidth="1"/>
+                            </pattern>
+                          </defs>
+                          <rect width="100%" height="100%" fill="url(#grid)" />
+                          
+                          {/* Performance line */}
+                          <polyline
+                            fill="none"
+                            stroke="#f59e0b"
+                            strokeWidth="2"
+                            points="30,80 60,70 90,60 120,50 150,45 180,40 210,35 240,30 270,25"
+                          />
+                          
+                          {/* Data points */}
+                          <circle cx="30" cy="80" r="3" fill="#f59e0b"/>
+                          <circle cx="60" cy="70" r="3" fill="#f59e0b"/>
+                          <circle cx="90" cy="60" r="3" fill="#f59e0b"/>
+                          <circle cx="120" cy="50" r="3" fill="#f59e0b"/>
+                          <circle cx="150" cy="45" r="3" fill="#f59e0b"/>
+                          <circle cx="180" cy="40" r="3" fill="#f59e0b"/>
+                          <circle cx="210" cy="35" r="3" fill="#f59e0b"/>
+                          <circle cx="240" cy="30" r="3" fill="#f59e0b"/>
+                          <circle cx="270" cy="25" r="3" fill="#f59e0b"/>
+                        </svg>
+                      </div>
+                      <div className="text-right mt-2">
+                        <Button variant="link" className="text-xs text-blue-600 p-0">View More</Button>
                       </div>
                     </div>
                   </div>
