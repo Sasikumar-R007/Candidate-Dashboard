@@ -32,6 +32,8 @@ export default function TeamLeaderDashboard() {
   const [selectedAssignee, setSelectedAssignee] = useState<string>('');
   const [isAddRequirementModalOpen, setIsAddRequirementModalOpen] = useState(false);
   const [isViewMoreRequirementsModalOpen, setIsViewMoreRequirementsModalOpen] = useState(false);
+  const [isViewTeamPerformanceModalOpen, setIsViewTeamPerformanceModalOpen] = useState(false);
+  const [isViewClosuresModalOpen, setIsViewClosuresModalOpen] = useState(false);
 
   // Sample requirements data
   const [requirementsData, setRequirementsData] = useState([
@@ -1000,7 +1002,12 @@ export default function TeamLeaderDashboard() {
       { name: "Rajesh", joiningDate: "Mar 2021", tenure: "3y 9m", closures: 23, lastClosure: "20-Dec-24", qtrsAchieved: 4 },
       { name: "Sowmiya", joiningDate: "Aug 2023", tenure: "1y 4m", closures: 8, lastClosure: "12-Dec-24", qtrsAchieved: 2 },
       { name: "Kalaiselvi", joiningDate: "Nov 2022", tenure: "2y 1m", closures: 12, lastClosure: "18-Dec-24", qtrsAchieved: 3 },
-      { name: "Malathi", joiningDate: "Feb 2024", tenure: "11m", closures: 5, lastClosure: "22-Dec-24", qtrsAchieved: 1 }
+      { name: "Malathi", joiningDate: "Feb 2024", tenure: "11m", closures: 5, lastClosure: "22-Dec-24", qtrsAchieved: 1 },
+      { name: "Priya", joiningDate: "Jun 2023", tenure: "1y 6m", closures: 9, lastClosure: "10-Dec-24", qtrsAchieved: 2 },
+      { name: "Arun", joiningDate: "Sep 2022", tenure: "2y 3m", closures: 14, lastClosure: "25-Dec-24", qtrsAchieved: 3 },
+      { name: "Divya", joiningDate: "Apr 2024", tenure: "8m", closures: 3, lastClosure: "05-Dec-24", qtrsAchieved: 1 },
+      { name: "Venkat", joiningDate: "Dec 2021", tenure: "3y", closures: 19, lastClosure: "28-Dec-24", qtrsAchieved: 4 },
+      { name: "Deepika", joiningDate: "Jul 2023", tenure: "1y 5m", closures: 7, lastClosure: "14-Dec-24", qtrsAchieved: 2 }
     ];
 
     // Closure data
@@ -1009,7 +1016,12 @@ export default function TeamLeaderDashboard() {
       { name: "Michael Brown", position: "UI/UX Designer", company: "Designify", closureMonth: "AMJ, 2025", talentAdvisor: "Rajesh", package: "8,00,000", revenue: "59,928" },
       { name: "Sarah Wilson", position: "Backend Developer", company: "CodeLabs", closureMonth: "MJJ, 2025", talentAdvisor: "Sowmiya", package: "18,00,000", revenue: "1,34,946" },
       { name: "Kevin Brown", position: "QA Tester", company: "AppLogic", closureMonth: "PMA, 2025", talentAdvisor: "Kalaiselvi", package: "30,00,000", revenue: "2,24,910" },
-      { name: "Lisa Wang", position: "Mobile Developer", company: "Tesco", closureMonth: "JAS, 2025", talentAdvisor: "Malathi", package: "15,00,000", revenue: "1,12,467" }
+      { name: "Lisa Wang", position: "Mobile Developer", company: "Tesco", closureMonth: "JAS, 2025", talentAdvisor: "Malathi", package: "15,00,000", revenue: "1,12,467" },
+      { name: "David Kumar", position: "DevOps Engineer", company: "CloudTech", closureMonth: "OND, 2024", talentAdvisor: "Priya", package: "22,00,000", revenue: "1,64,916" },
+      { name: "Anna Smith", position: "Data Scientist", company: "DataFlow", closureMonth: "JFM, 2025", talentAdvisor: "Arun", package: "25,00,000", revenue: "1,87,467" },
+      { name: "Robert Lee", position: "Security Expert", company: "SecureNet", closureMonth: "AMJ, 2025", talentAdvisor: "Divya", package: "28,00,000", revenue: "2,09,916" },
+      { name: "Maria Garcia", position: "Product Manager", company: "InnovateLab", closureMonth: "MJJ, 2025", talentAdvisor: "Venkat", package: "35,00,000", revenue: "2,62,467" },
+      { name: "James Wilson", position: "Full Stack Dev", company: "WebCorp", closureMonth: "PMA, 2025", talentAdvisor: "Deepika", package: "19,00,000", revenue: "1,42,467" }
     ];
 
     return (
@@ -1026,6 +1038,8 @@ export default function TeamLeaderDashboard() {
                   variant="link" 
                   size="sm" 
                   className="text-blue-600 text-sm"
+                  onClick={() => setIsViewTeamPerformanceModalOpen(true)}
+                  data-testid="button-view-team-performance"
                 >
                   view list
                 </Button>
@@ -1044,7 +1058,7 @@ export default function TeamLeaderDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {teamPerformanceData.map((member, index) => (
+                      {teamPerformanceData.slice(0, 5).map((member, index) => (
                         <tr key={member.name} className={index % 2 === 0 ? "bg-blue-50" : "bg-white"}>
                           <td className="py-3 px-4 text-gray-900 font-medium">{member.name}</td>
                           <td className="py-3 px-4 text-gray-600">{member.joiningDate}</td>
@@ -1068,6 +1082,8 @@ export default function TeamLeaderDashboard() {
                   variant="link" 
                   size="sm" 
                   className="text-blue-600 text-sm"
+                  onClick={() => setIsViewClosuresModalOpen(true)}
+                  data-testid="button-view-closures"
                 >
                   view more
                 </Button>
@@ -1087,7 +1103,7 @@ export default function TeamLeaderDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {closureData.map((closure, index) => (
+                      {closureData.slice(0, 5).map((closure, index) => (
                         <tr key={closure.name} className={index % 2 === 0 ? "bg-blue-50" : "bg-white"}>
                           <td className="py-3 px-4 text-gray-900 font-medium">{closure.name}</td>
                           <td className="py-3 px-4 text-gray-600">{closure.position}</td>
@@ -2431,6 +2447,120 @@ export default function TeamLeaderDashboard() {
             <div className="flex justify-end mt-4 pt-4 border-t border-gray-200">
               <Button 
                 onClick={() => setIsViewMoreRequirementsModalOpen(false)}
+                className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Team Performance Modal */}
+      <Dialog open={isViewTeamPerformanceModalOpen} onOpenChange={setIsViewTeamPerformanceModalOpen}>
+        <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">Team Performance - Complete List</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Talent Advisor</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Joining Date</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Tenure</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Closures</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Last Closure</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Qtrs Achieved</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { name: "Kavitha", joiningDate: "Jan 2022", tenure: "2y 11m", closures: 15, lastClosure: "15-Dec-24", qtrsAchieved: 3 },
+                    { name: "Rajesh", joiningDate: "Mar 2021", tenure: "3y 9m", closures: 23, lastClosure: "20-Dec-24", qtrsAchieved: 4 },
+                    { name: "Sowmiya", joiningDate: "Aug 2023", tenure: "1y 4m", closures: 8, lastClosure: "12-Dec-24", qtrsAchieved: 2 },
+                    { name: "Kalaiselvi", joiningDate: "Nov 2022", tenure: "2y 1m", closures: 12, lastClosure: "18-Dec-24", qtrsAchieved: 3 },
+                    { name: "Malathi", joiningDate: "Feb 2024", tenure: "11m", closures: 5, lastClosure: "22-Dec-24", qtrsAchieved: 1 },
+                    { name: "Priya", joiningDate: "Jun 2023", tenure: "1y 6m", closures: 9, lastClosure: "10-Dec-24", qtrsAchieved: 2 },
+                    { name: "Arun", joiningDate: "Sep 2022", tenure: "2y 3m", closures: 14, lastClosure: "25-Dec-24", qtrsAchieved: 3 },
+                    { name: "Divya", joiningDate: "Apr 2024", tenure: "8m", closures: 3, lastClosure: "05-Dec-24", qtrsAchieved: 1 },
+                    { name: "Venkat", joiningDate: "Dec 2021", tenure: "3y", closures: 19, lastClosure: "28-Dec-24", qtrsAchieved: 4 },
+                    { name: "Deepika", joiningDate: "Jul 2023", tenure: "1y 5m", closures: 7, lastClosure: "14-Dec-24", qtrsAchieved: 2 }
+                  ].map((member, index) => (
+                    <tr key={member.name} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                      <td className="p-3 text-gray-900 border border-gray-300 font-medium">{member.name}</td>
+                      <td className="p-3 text-gray-600 border border-gray-300">{member.joiningDate}</td>
+                      <td className="p-3 text-gray-600 border border-gray-300">{member.tenure}</td>
+                      <td className="p-3 text-gray-600 border border-gray-300">{member.closures}</td>
+                      <td className="p-3 text-gray-600 border border-gray-300">{member.lastClosure}</td>
+                      <td className="p-3 text-gray-600 border border-gray-300">{member.qtrsAchieved}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-end mt-4 pt-4 border-t border-gray-200">
+              <Button 
+                onClick={() => setIsViewTeamPerformanceModalOpen(false)}
+                className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Closures Modal */}
+      <Dialog open={isViewClosuresModalOpen} onOpenChange={setIsViewClosuresModalOpen}>
+        <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">All Closures</DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Name</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Position</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Company</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Closure Month</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Talent Advisor</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Package</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Revenue</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { name: "Emily Davis", position: "Frontend Developer", company: "TechCorp", closureMonth: "JFM, 2025", talentAdvisor: "Kavitha", package: "12,00,000", revenue: "89,892" },
+                    { name: "Michael Brown", position: "UI/UX Designer", company: "Designify", closureMonth: "AMJ, 2025", talentAdvisor: "Rajesh", package: "8,00,000", revenue: "59,928" },
+                    { name: "Sarah Wilson", position: "Backend Developer", company: "CodeLabs", closureMonth: "MJJ, 2025", talentAdvisor: "Sowmiya", package: "18,00,000", revenue: "1,34,946" },
+                    { name: "Kevin Brown", position: "QA Tester", company: "AppLogic", closureMonth: "PMA, 2025", talentAdvisor: "Kalaiselvi", package: "30,00,000", revenue: "2,24,910" },
+                    { name: "Lisa Wang", position: "Mobile Developer", company: "Tesco", closureMonth: "JAS, 2025", talentAdvisor: "Malathi", package: "15,00,000", revenue: "1,12,467" },
+                    { name: "David Kumar", position: "DevOps Engineer", company: "CloudTech", closureMonth: "OND, 2024", talentAdvisor: "Priya", package: "22,00,000", revenue: "1,64,916" },
+                    { name: "Anna Smith", position: "Data Scientist", company: "DataFlow", closureMonth: "JFM, 2025", talentAdvisor: "Arun", package: "25,00,000", revenue: "1,87,467" },
+                    { name: "Robert Lee", position: "Security Expert", company: "SecureNet", closureMonth: "AMJ, 2025", talentAdvisor: "Divya", package: "28,00,000", revenue: "2,09,916" },
+                    { name: "Maria Garcia", position: "Product Manager", company: "InnovateLab", closureMonth: "MJJ, 2025", talentAdvisor: "Venkat", package: "35,00,000", revenue: "2,62,467" },
+                    { name: "James Wilson", position: "Full Stack Dev", company: "WebCorp", closureMonth: "PMA, 2025", talentAdvisor: "Deepika", package: "19,00,000", revenue: "1,42,467" }
+                  ].map((closure, index) => (
+                    <tr key={closure.name} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                      <td className="p-3 text-gray-900 border border-gray-300 font-medium">{closure.name}</td>
+                      <td className="p-3 text-gray-600 border border-gray-300">{closure.position}</td>
+                      <td className="p-3 text-gray-600 border border-gray-300">{closure.company}</td>
+                      <td className="p-3 text-gray-600 border border-gray-300">{closure.closureMonth}</td>
+                      <td className="p-3 text-gray-600 border border-gray-300">{closure.talentAdvisor}</td>
+                      <td className="p-3 text-gray-600 border border-gray-300">₹{closure.package}</td>
+                      <td className="p-3 text-gray-600 border border-gray-300">₹{closure.revenue}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-end mt-4 pt-4 border-t border-gray-200">
+              <Button 
+                onClick={() => setIsViewClosuresModalOpen(false)}
                 className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded"
               >
                 Close
