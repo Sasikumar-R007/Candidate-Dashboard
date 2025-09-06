@@ -985,72 +985,112 @@ export default function TeamLeaderDashboard() {
   };
 
   const renderPerformanceContent = () => {
+    // Team performance data
+    const teamPerformanceData = [
+      { name: "Kavitha", joiningDate: "Jan 2022", tenure: "2y 11m", closures: 15, lastClosure: "15-Dec-24", qtrsAchieved: 3 },
+      { name: "Rajesh", joiningDate: "Mar 2021", tenure: "3y 9m", closures: 23, lastClosure: "20-Dec-24", qtrsAchieved: 4 },
+      { name: "Sowmiya", joiningDate: "Aug 2023", tenure: "1y 4m", closures: 8, lastClosure: "12-Dec-24", qtrsAchieved: 2 },
+      { name: "Kalaiselvi", joiningDate: "Nov 2022", tenure: "2y 1m", closures: 12, lastClosure: "18-Dec-24", qtrsAchieved: 3 },
+      { name: "Malathi", joiningDate: "Feb 2024", tenure: "11m", closures: 5, lastClosure: "22-Dec-24", qtrsAchieved: 1 }
+    ];
+
+    // Closure data
+    const closureData = [
+      { name: "Emily Davis", position: "Frontend Developer", company: "TechCorp", closureMonth: "JFM, 2025", talentAdvisor: "Kavitha", package: "12,00,000", revenue: "89,892" },
+      { name: "Michael Brown", position: "UI/UX Designer", company: "Designify", closureMonth: "AMJ, 2025", talentAdvisor: "Rajesh", package: "8,00,000", revenue: "59,928" },
+      { name: "Sarah Wilson", position: "Backend Developer", company: "CodeLabs", closureMonth: "MJJ, 2025", talentAdvisor: "Sowmiya", package: "18,00,000", revenue: "1,34,946" },
+      { name: "Kevin Brown", position: "QA Tester", company: "AppLogic", closureMonth: "PMA, 2025", talentAdvisor: "Kalaiselvi", package: "30,00,000", revenue: "2,24,910" },
+      { name: "Lisa Wang", position: "Mobile Developer", company: "Tesco", closureMonth: "JAS, 2025", talentAdvisor: "Malathi", package: "15,00,000", revenue: "1,12,467" }
+    ];
+
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
           <AdminTopHeader userName="John Mathew" companyName="Gumlat Marketing Private Limited" />
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
+            
             {/* Team Performance Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Team Performance</CardTitle>
+            <Card className="bg-gray-50">
+              <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
+                <CardTitle className="text-lg text-gray-900">Team Performance</CardTitle>
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  className="text-blue-600 text-sm"
+                >
+                  view list
+                </Button>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3">
                 <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
+                  <table className="w-full border-collapse bg-white rounded">
                     <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left p-3 font-semibold text-gray-700">Name</th>
-                        <th className="text-left p-3 font-semibold text-gray-700">Position</th>
-                        <th className="text-left p-3 font-semibold text-gray-700">Company</th>
-                        <th className="text-left p-3 font-semibold text-gray-700">Closure Month</th>
-                        <th className="text-left p-3 font-semibold text-gray-700">Talent Advisor</th>
-                        <th className="text-left p-3 font-semibold text-gray-700">Package</th>
-                        <th className="text-left p-3 font-semibold text-gray-700">Revenue</th>
+                      <tr className="bg-gray-200">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Talent Advisor</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Joining Date</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Tenure</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Closures</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Last Closure</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Qtrs Achieved</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="border-b border-gray-100">
-                        <td className="p-3 text-gray-900">Emily Davis</td>
-                        <td className="p-3 text-gray-900">Frontend Developer</td>
-                        <td className="p-3 text-gray-900">TechCorp</td>
-                        <td className="p-3 text-gray-900">JFM, 2025</td>
-                        <td className="p-3 text-gray-900">kavitha</td>
-                        <td className="p-3 text-gray-900">12,00,000</td>
-                        <td className="p-3 text-gray-900">89,892</td>
-                      </tr>
-                      <tr className="border-b border-gray-100">
-                        <td className="p-3 text-gray-900">Michael Brown</td>
-                        <td className="p-3 text-gray-900">UI/UX Designer</td>
-                        <td className="p-3 text-gray-900">Designify</td>
-                        <td className="p-3 text-gray-900">AMJ, 2025</td>
-                        <td className="p-3 text-gray-900">Rajesh</td>
-                        <td className="p-3 text-gray-900">8,00,000</td>
-                        <td className="p-3 text-gray-900">59,928</td>
-                      </tr>
-                      <tr className="border-b border-gray-100">
-                        <td className="p-3 text-gray-900">Sarah Wilson</td>
-                        <td className="p-3 text-gray-900">Backend Developer</td>
-                        <td className="p-3 text-gray-900">CodeLabs</td>
-                        <td className="p-3 text-gray-900">MJJ, 2025</td>
-                        <td className="p-3 text-gray-900">Sowmiya</td>
-                        <td className="p-3 text-gray-900">18,00,000</td>
-                        <td className="p-3 text-gray-900">1,34,946</td>
-                      </tr>
-                      <tr className="border-b border-gray-100">
-                        <td className="p-3 text-gray-900">Kevin Brown</td>
-                        <td className="p-3 text-gray-900">QA Tester</td>
-                        <td className="p-3 text-gray-900">AppLogic</td>
-                        <td className="p-3 text-gray-900">PMA, 2025</td>
-                        <td className="p-3 text-gray-900">Kalaiselvi</td>
-                        <td className="p-3 text-gray-900">30,00,000</td>
-                        <td className="p-3 text-gray-900">2,24,910</td>
-                      </tr>
+                      {teamPerformanceData.map((member, index) => (
+                        <tr key={member.name} className={index % 2 === 0 ? "bg-blue-50" : "bg-white"}>
+                          <td className="py-3 px-4 text-gray-900 font-medium">{member.name}</td>
+                          <td className="py-3 px-4 text-gray-600">{member.joiningDate}</td>
+                          <td className="py-3 px-4 text-gray-600">{member.tenure}</td>
+                          <td className="py-3 px-4 text-gray-600">{member.closures}</td>
+                          <td className="py-3 px-4 text-gray-600">{member.lastClosure}</td>
+                          <td className="py-3 px-4 text-gray-600">{member.qtrsAchieved}</td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
-                <div className="flex justify-end mt-4">
-                  <Button className="bg-blue-500 hover:bg-blue-600 text-white">View Full List</Button>
+              </CardContent>
+            </Card>
+
+            {/* List of Closures Section */}
+            <Card className="bg-gray-50">
+              <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
+                <CardTitle className="text-lg text-gray-900">List of Closures</CardTitle>
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  className="text-blue-600 text-sm"
+                >
+                  view more
+                </Button>
+              </CardHeader>
+              <CardContent className="p-3">
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse bg-white rounded">
+                    <thead>
+                      <tr className="bg-gray-200">
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Name</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Position</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Company</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Closure Month</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Talent Advisor</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Package</th>
+                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Revenue</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {closureData.map((closure, index) => (
+                        <tr key={closure.name} className={index % 2 === 0 ? "bg-blue-50" : "bg-white"}>
+                          <td className="py-3 px-4 text-gray-900 font-medium">{closure.name}</td>
+                          <td className="py-3 px-4 text-gray-600">{closure.position}</td>
+                          <td className="py-3 px-4 text-gray-600">{closure.company}</td>
+                          <td className="py-3 px-4 text-gray-600">{closure.closureMonth}</td>
+                          <td className="py-3 px-4 text-gray-600">{closure.talentAdvisor}</td>
+                          <td className="py-3 px-4 text-gray-600">{closure.package}</td>
+                          <td className="py-3 px-4 text-gray-600">{closure.revenue}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </CardContent>
             </Card>
