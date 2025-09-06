@@ -21,6 +21,7 @@ export default function TeamLeaderDashboard() {
   const [activeTab, setActiveTab] = useState('team');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
+  const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
   const [selectedMember, setSelectedMember] = useState<any>(null);
 
@@ -101,12 +102,83 @@ export default function TeamLeaderDashboard() {
               <Card className="bg-white border border-gray-200">
                 <CardHeader className="pb-3 pt-4 flex flex-row items-center justify-between">
                   <CardTitle className="text-lg font-semibold text-gray-900">Target</CardTitle>
-                  <Button 
-                    variant="outline"
-                    className="text-sm px-4 py-2 border-gray-300 hover:bg-gray-50"
-                  >
-                    View All
-                  </Button>
+                  <Dialog open={isTargetModalOpen} onOpenChange={setIsTargetModalOpen}>
+                    <DialogTrigger asChild>
+                      <Button 
+                        variant="outline"
+                        className="text-sm px-4 py-2 border-gray-300 hover:bg-gray-50"
+                      >
+                        View All
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl">
+                      <DialogHeader>
+                        <DialogTitle className="text-xl font-semibold">All Quarters Target Data</DialogTitle>
+                      </DialogHeader>
+                      <div className="mt-4">
+                        <div className="overflow-x-auto">
+                          <table className="w-full border-collapse border border-gray-300">
+                            <thead>
+                              <tr className="bg-gray-100">
+                                <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Quarter</th>
+                                <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Minimum Target</th>
+                                <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Target Achieved</th>
+                                <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Incentive Earned</th>
+                                <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                <td className="border border-gray-300 px-4 py-3">ASO-2025</td>
+                                <td className="border border-gray-300 px-4 py-3">15,00,000</td>
+                                <td className="border border-gray-300 px-4 py-3">10,00,000</td>
+                                <td className="border border-gray-300 px-4 py-3">50,000</td>
+                                <td className="border border-gray-300 px-4 py-3">
+                                  <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-sm">In Progress</span>
+                                </td>
+                              </tr>
+                              <tr className="bg-gray-50">
+                                <td className="border border-gray-300 px-4 py-3">JSO-2024</td>
+                                <td className="border border-gray-300 px-4 py-3">12,00,000</td>
+                                <td className="border border-gray-300 px-4 py-3">14,50,000</td>
+                                <td className="border border-gray-300 px-4 py-3">85,000</td>
+                                <td className="border border-gray-300 px-4 py-3">
+                                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">Completed</span>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td className="border border-gray-300 px-4 py-3">AMJ-2024</td>
+                                <td className="border border-gray-300 px-4 py-3">13,00,000</td>
+                                <td className="border border-gray-300 px-4 py-3">11,75,000</td>
+                                <td className="border border-gray-300 px-4 py-3">35,000</td>
+                                <td className="border border-gray-300 px-4 py-3">
+                                  <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm">Below Target</span>
+                                </td>
+                              </tr>
+                              <tr className="bg-gray-50">
+                                <td className="border border-gray-300 px-4 py-3">JFM-2024</td>
+                                <td className="border border-gray-300 px-4 py-3">11,00,000</td>
+                                <td className="border border-gray-300 px-4 py-3">12,80,000</td>
+                                <td className="border border-gray-300 px-4 py-3">75,000</td>
+                                <td className="border border-gray-300 px-4 py-3">
+                                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">Completed</span>
+                                </td>
+                              </tr>
+                              <tr>
+                                <td className="border border-gray-300 px-4 py-3">OND-2023</td>
+                                <td className="border border-gray-300 px-4 py-3">10,50,000</td>
+                                <td className="border border-gray-300 px-4 py-3">13,20,000</td>
+                                <td className="border border-gray-300 px-4 py-3">90,000</td>
+                                <td className="border border-gray-300 px-4 py-3">
+                                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">Completed</span>
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
                   <div className="grid grid-cols-4 gap-0 bg-cyan-50 rounded-lg overflow-hidden">
