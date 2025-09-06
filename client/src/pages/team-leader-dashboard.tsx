@@ -525,12 +525,9 @@ export default function TeamLeaderDashboard() {
                           <td className="p-3 text-gray-900">CodeLabs</td>
                           <td className="p-3 text-gray-900">Robert Kim</td>
                           <td className="p-3 text-gray-900">Robert Kim</td>
-                          <td className="p-3 text-gray-900">Arun</td>
                           <td className="p-3">
                             <Button variant="ghost" size="sm" className="p-1">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-                              </svg>
+                              <UserRound className="w-4 h-4" />
                             </Button>
                           </td>
                         </tr>
@@ -545,12 +542,9 @@ export default function TeamLeaderDashboard() {
                           <td className="p-3 text-gray-900">TechCorp</td>
                           <td className="p-3 text-gray-900">David Wilson</td>
                           <td className="p-3 text-gray-500">Unassigned</td>
-                          <td className="p-3 text-gray-900">Arun</td>
                           <td className="p-3">
                             <Button variant="ghost" size="sm" className="p-1">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-                              </svg>
+                              <UserRound className="w-4 h-4" />
                             </Button>
                           </td>
                         </tr>
@@ -565,12 +559,9 @@ export default function TeamLeaderDashboard() {
                           <td className="p-3 text-gray-900">AppLogic</td>
                           <td className="p-3 text-gray-900">Kevin Brown</td>
                           <td className="p-3 text-gray-500">Unassigned</td>
-                          <td className="p-3 text-gray-500">Unassigned</td>
                           <td className="p-3">
                             <Button variant="ghost" size="sm" className="p-1">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-                              </svg>
+                              <UserRound className="w-4 h-4" />
                             </Button>
                           </td>
                         </tr>
@@ -585,12 +576,9 @@ export default function TeamLeaderDashboard() {
                           <td className="p-3 text-gray-900">Tesco</td>
                           <td className="p-3 text-gray-900">Mel Gibson</td>
                           <td className="p-3 text-gray-900">Mel Gibson</td>
-                          <td className="p-3 text-gray-900">Arun</td>
                           <td className="p-3">
                             <Button variant="ghost" size="sm" className="p-1">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-                              </svg>
+                              <UserRound className="w-4 h-4" />
                             </Button>
                           </td>
                         </tr>
@@ -605,12 +593,9 @@ export default function TeamLeaderDashboard() {
                           <td className="p-3 text-gray-900">CodeLabs</td>
                           <td className="p-3 text-gray-900">Robert Kim</td>
                           <td className="p-3 text-gray-900">Robert Kim</td>
-                          <td className="p-3 text-gray-900">Arun</td>
                           <td className="p-3">
                             <Button variant="ghost" size="sm" className="p-1">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-                              </svg>
+                              <UserRound className="w-4 h-4" />
                             </Button>
                           </td>
                         </tr>
@@ -625,12 +610,9 @@ export default function TeamLeaderDashboard() {
                           <td className="p-3 text-gray-900">Designify</td>
                           <td className="p-3 text-gray-900">Tom Anderson</td>
                           <td className="p-3 text-gray-500">Unassigned</td>
-                          <td className="p-3 text-gray-900">Anusha</td>
                           <td className="p-3">
                             <Button variant="ghost" size="sm" className="p-1">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-                              </svg>
+                              <UserRound className="w-4 h-4" />
                             </Button>
                           </td>
                         </tr>
@@ -645,12 +627,9 @@ export default function TeamLeaderDashboard() {
                           <td className="p-3 text-gray-900">TechCorp</td>
                           <td className="p-3 text-gray-900">David Wilson</td>
                           <td className="p-3 text-gray-500">Unassigned</td>
-                          <td className="p-3 text-gray-900">Arun</td>
                           <td className="p-3">
                             <Button variant="ghost" size="sm" className="p-1">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-                              </svg>
+                              <UserRound className="w-4 h-4" />
                             </Button>
                           </td>
                         </tr>
@@ -665,12 +644,9 @@ export default function TeamLeaderDashboard() {
                           <td className="p-3 text-gray-900">Designify</td>
                           <td className="p-3 text-gray-900">Tom Anderson</td>
                           <td className="p-3 text-gray-500">Unassigned</td>
-                          <td className="p-3 text-gray-900">Anusha</td>
                           <td className="p-3">
                             <Button variant="ghost" size="sm" className="p-1">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-                              </svg>
+                              <UserRound className="w-4 h-4" />
                             </Button>
                           </td>
                         </tr>
@@ -685,12 +661,9 @@ export default function TeamLeaderDashboard() {
                           <td className="p-3 text-gray-900">AppLogic</td>
                           <td className="p-3 text-gray-900">Kevin Brown</td>
                           <td className="p-3 text-gray-500">Unassigned</td>
-                          <td className="p-3 text-gray-500">Unassigned</td>
                           <td className="p-3">
                             <Button variant="ghost" size="sm" className="p-1">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-                              </svg>
+                              <UserRound className="w-4 h-4" />
                             </Button>
                           </td>
                         </tr>
@@ -705,12 +678,9 @@ export default function TeamLeaderDashboard() {
                           <td className="p-3 text-gray-900">Designify</td>
                           <td className="p-3 text-gray-900">Mel Gibson</td>
                           <td className="p-3 text-gray-900">Mel Gibson</td>
-                          <td className="p-3 text-gray-900">Arun</td>
                           <td className="p-3">
                             <Button variant="ghost" size="sm" className="p-1">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-                              </svg>
+                              <UserRound className="w-4 h-4" />
                             </Button>
                           </td>
                         </tr>
@@ -725,12 +695,9 @@ export default function TeamLeaderDashboard() {
                           <td className="p-3 text-gray-900">Tesco</td>
                           <td className="p-3 text-gray-900">Robert Kim</td>
                           <td className="p-3 text-gray-900">Robert Kim</td>
-                          <td className="p-3 text-gray-500">Unassigned</td>
                           <td className="p-3">
                             <Button variant="ghost" size="sm" className="p-1">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-                              </svg>
+                              <UserRound className="w-4 h-4" />
                             </Button>
                           </td>
                         </tr>
@@ -745,12 +712,9 @@ export default function TeamLeaderDashboard() {
                           <td className="p-3 text-gray-900">CodeLabs</td>
                           <td className="p-3 text-gray-900">David Wilson</td>
                           <td className="p-3 text-gray-500">Unassigned</td>
-                          <td className="p-3 text-gray-900">Anusha</td>
                           <td className="p-3">
                             <Button variant="ghost" size="sm" className="p-1">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-                              </svg>
+                              <UserRound className="w-4 h-4" />
                             </Button>
                           </td>
                         </tr>
@@ -765,12 +729,9 @@ export default function TeamLeaderDashboard() {
                           <td className="p-3 text-gray-900">TechCorp</td>
                           <td className="p-3 text-gray-900">Kevin Brown</td>
                           <td className="p-3 text-gray-500">Unassigned</td>
-                          <td className="p-3 text-gray-900">Arun</td>
                           <td className="p-3">
                             <Button variant="ghost" size="sm" className="p-1">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
-                              </svg>
+                              <UserRound className="w-4 h-4" />
                             </Button>
                           </td>
                         </tr>
@@ -861,16 +822,19 @@ export default function TeamLeaderDashboard() {
                 </div>
                 
                 <div>
-                  <Label htmlFor="team-leader" className="text-sm font-medium text-gray-700">
-                    Assign to Team Leader:
+                  <Label htmlFor="talent-advisor" className="text-sm font-medium text-gray-700">
+                    Assign to Talent Advisor:
                   </Label>
                   <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
                     <SelectTrigger className="mt-2">
-                      <SelectValue placeholder="Select a Team Leader" />
+                      <SelectValue placeholder="Select a Talent Advisor" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Arun">Arun</SelectItem>
-                      <SelectItem value="Anusha">Anusha</SelectItem>
+                      <SelectItem value="Kavitha">Kavitha</SelectItem>
+                      <SelectItem value="Rajesh">Rajesh</SelectItem>
+                      <SelectItem value="Sowmiya">Sowmiya</SelectItem>
+                      <SelectItem value="Kalaiselvi">Kalaiselvi</SelectItem>
+                      <SelectItem value="Malathi">Malathi</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -891,7 +855,16 @@ export default function TeamLeaderDashboard() {
                   <Button
                     className="bg-gray-800 hover:bg-gray-900 text-white font-medium px-6 py-2 rounded"
                     onClick={() => {
-                      // Handle assignment logic here
+                      if (selectedAssignee && selectedRequirement) {
+                        // Update the requirements data with the new talent advisor assignment
+                        setRequirementsData(prev => 
+                          prev.map(req => 
+                            req.id === selectedRequirement.id 
+                              ? { ...req, talentAdvisor: selectedAssignee }
+                              : req
+                          )
+                        );
+                      }
                       setIsAssignmentModalOpen(false);
                       setSelectedRequirement(null);
                       setSelectedAssignee('');
