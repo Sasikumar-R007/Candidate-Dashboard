@@ -558,17 +558,17 @@ export default function TeamLeaderDashboard() {
 
   const renderPipelineContent = () => {
     return (
-      <div className="flex min-h-screen">
-        <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader userName="John Mathew" companyName="Gumlat Marketing Private Limited" />
-          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
+      <div className="flex h-full">
+        {/* Main Pipeline Content */}
+        <div className="flex-1 ml-16 overflow-auto admin-scrollbar">
+          <div className="p-6 space-y-6">
             {/* Pipeline Header */}
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-900">Pipeline</h2>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Pipeline</h2>
               <div className="flex items-center gap-4">
                 <Select>
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Arun/Anusha /All" />
+                  <SelectTrigger className="w-48 input-styled btn-rounded">
+                    <SelectValue placeholder="Arun/Anusha/All" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
@@ -576,139 +576,307 @@ export default function TeamLeaderDashboard() {
                     <SelectItem value="anusha">Anusha</SelectItem>
                   </SelectContent>
                 </Select>
-                <div className="flex items-center text-gray-600">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  12-Aug-2025
-                </div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="btn-rounded input-styled">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {format(selectedDate, "dd-MMM-yyyy")}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => date && setSelectedDate(date)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 
-            {/* Pipeline Stages */}
-            <div className="flex-1">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="text-left p-3 font-semibold text-gray-700 w-32">Level 1</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 w-32">Level 2</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 w-32">Level 3</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 w-32">Final Round</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 w-32">HR Round</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 w-32">Offer Stage</th>
-                          <th className="text-left p-3 font-semibold text-gray-700 w-32">Closure</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr className="border-b border-gray-100">
-                          <td className="p-3 w-32">
-                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#E6F4EA'}}>
+            {/* Pipeline Stages - matching admin design */}
+            <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto admin-scrollbar">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr>
+                        <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Level 1</th>
+                        <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Level 2</th>
+                        <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Level 3</th>
+                        <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Final Round</th>
+                        <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">HR Round</th>
+                        <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Offer Stage</th>
+                        <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Closure</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="p-3 align-top">
+                          <div className="flex flex-col gap-2">
+                            <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
                               Keerthana
-                            </span>
-                          </td>
-                          <td className="p-3 w-32">
-                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#D9F0E1'}}>
-                              Keerthana
-                            </span>
-                          </td>
-                          <td className="p-3 w-32">
-                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#C2EED0'}}>
-                              Keerthana
-                            </span>
-                          </td>
-                          <td className="p-3 w-32">
-                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#B5E1C1'}}>
-                              Keerthana
-                            </span>
-                          </td>
-                          <td className="p-3 w-32">
-                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#99D9AE'}}>
-                              Keerthana
-                            </span>
-                          </td>
-                          <td className="p-3 w-32">
-                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#7CCBA0'}}>
-                              Keerthana
-                            </span>
-                          </td>
-                          <td className="p-3 w-32">
-                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#2F6F52'}}>
-                              Keerthana
-                            </span>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="p-3 w-32">
-                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#E6F4EA'}}>
+                            </div>
+                            <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
                               Vishnu Purana
-                            </span>
-                          </td>
-                          <td className="p-3 w-32">
-                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#D9F0E1'}}>
-                              Vishnu Purana
-                            </span>
-                          </td>
-                          <td className="p-3 w-32">
-                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#C2EED0'}}>
-                              Vishnu Purana
-                            </span>
-                          </td>
-                          <td className="p-3 w-32">
-                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#B5E1C1'}}>
-                              Vishnu Purana
-                            </span>
-                          </td>
-                          <td className="p-3 w-32">
-                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#99D9AE'}}>
-                              Vishnu Purana
-                            </span>
-                          </td>
-                          <td className="p-3 w-32">
-                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#7CCBA0'}}>
-                              Vishnu Purana
-                            </span>
-                          </td>
-                          <td className="p-3 w-32">
-                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#2F6F52'}}>
-                              Vishnu Purana
-                            </span>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="p-3 w-32">
-                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#E6F4EA'}}>
+                            </div>
+                            <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
                               Chanakya
-                            </span>
-                          </td>
-                          <td className="p-3 w-32">
-                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#D9F0E1'}}>
+                            </div>
+                            <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                              Adhya
+                            </div>
+                            <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                              Vanshika
+                            </div>
+                            <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                              Reyansh
+                            </div>
+                            <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                              Shaurya
+                            </div>
+                            <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                              Vihana
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-3 align-top">
+                          <div className="flex flex-col gap-2">
+                            <div className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                              Keerthana
+                            </div>
+                            <div className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                              Vishnu Purana
+                            </div>
+                            <div className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
                               Chanakya
-                            </span>
-                          </td>
-                          <td className="p-3 w-32">
-                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#C2EED0'}}>
+                            </div>
+                            <div className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                              Adhya
+                            </div>
+                            <div className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                              Vanshika
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-3 align-top">
+                          <div className="flex flex-col gap-2">
+                            <div className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                              Keerthana
+                            </div>
+                            <div className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                              Vishnu Purana
+                            </div>
+                            <div className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
                               Chanakya
-                            </span>
-                          </td>
-                          <td className="p-3 w-32">
-                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#B5E1C1'}}>
+                            </div>
+                            <div className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                              Adhya
+                            </div>
+                            <div className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                              Vanshika
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-3 align-top">
+                          <div className="flex flex-col gap-2">
+                            <div className="px-3 py-2 bg-green-500 dark:bg-green-600 rounded text-center text-sm font-medium text-white">
+                              Keerthana
+                            </div>
+                            <div className="px-3 py-2 bg-green-500 dark:bg-green-600 rounded text-center text-sm font-medium text-white">
+                              Vishnu Purana
+                            </div>
+                            <div className="px-3 py-2 bg-green-500 dark:bg-green-600 rounded text-center text-sm font-medium text-white">
                               Chanakya
-                            </span>
-                          </td>
-                          <td className="p-3 w-32">
-                            <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#99D9AE'}}>
+                            </div>
+                            <div className="px-3 py-2 bg-green-500 dark:bg-green-600 rounded text-center text-sm font-medium text-white">
+                              Adhya
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-3 align-top">
+                          <div className="flex flex-col gap-2">
+                            <div className="px-3 py-2 bg-green-600 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
+                              Keerthana
+                            </div>
+                            <div className="px-3 py-2 bg-green-600 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
+                              Vishnu Purana
+                            </div>
+                            <div className="px-3 py-2 bg-green-600 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
                               Chanakya
-                            </span>
-                          </td>
-                          <td className="p-3 w-32"></td>
-                          <td className="p-3 w-32"></td>
-                        </tr>
-                      </tbody>
-                    </table>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-3 align-top">
+                          <div className="flex flex-col gap-2">
+                            <div className="px-3 py-2 bg-green-700 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
+                              Keerthana
+                            </div>
+                            <div className="px-3 py-2 bg-green-700 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
+                              Vishnu Purana
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-3 align-top">
+                          <div className="flex flex-col gap-2">
+                            <div className="px-3 py-2 bg-green-800 dark:bg-green-400 rounded text-center text-sm font-medium text-white">
+                              Keerthana
+                            </div>
+                            <div className="px-3 py-2 bg-green-800 dark:bg-green-400 rounded text-center text-sm font-medium text-white">
+                              Vishnu Purana
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Closure Reports Table */}
+            <Card className="mt-6">
+              <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Closure Reports</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto admin-scrollbar">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Candidate</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Positions</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Client</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Fixed CTC</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Offered Date</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Joined Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td className="p-3 text-gray-900 dark:text-white">David Johnson</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">Frontend Developer</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">TechCorp</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">Kavitha</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">MLJ, 2025</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">12-06-2025</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">12-04-2025</td>
+                      </tr>
+                      <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td className="p-3 text-gray-900 dark:text-white">Tom Anderson</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">UI/UX Designer</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">Designify</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">Rajesh</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">ASO, 2025</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">18-06-2025</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">05-05-2025</td>
+                      </tr>
+                      <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td className="p-3 text-gray-900 dark:text-white">Robert Kim</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">Backend Developer</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">CodeLabs</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">Sowmiya</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">MLJ, 2025</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">28-06-2025</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">19-08-2025</td>
+                      </tr>
+                      <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td className="p-3 text-gray-900 dark:text-white">Kevin Brown</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">QA Tester</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">AppLogic</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">Kalaiselvi</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">FMA, 2025</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">03-07-2025</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">03-09-2025</td>
+                      </tr>
+                      <tr className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td className="p-3 text-gray-900 dark:text-white">Mel Gibson</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">Mobile App Developer</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">Tesco</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">Malathi</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">NDJ, 2025</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">18-07-2025</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">10-10-2025</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                  <div className="flex justify-end">
+                    <Button 
+                      variant="ghost" 
+                      className="text-blue-600 hover:text-blue-700 text-sm"
+                    >
+                      See More...
+                    </Button>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Right Sidebar with Stats - matching admin design */}
+        <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700">
+          <div className="p-4 space-y-1">
+            <div className="flex justify-between items-center py-3 px-4 bg-green-100 dark:bg-green-900 rounded">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SOURCED</span>
+              <span className="text-lg font-bold text-gray-900 dark:text-white">15</span>
+            </div>
+            <div className="flex justify-between items-center py-3 px-4 bg-green-200 dark:bg-green-800 rounded">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SHORTLISTED</span>
+              <span className="text-lg font-bold text-gray-900 dark:text-white">9</span>
+            </div>
+            <div className="flex justify-between items-center py-3 px-4 bg-green-300 dark:bg-green-700 rounded">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">INTRO CALL</span>
+              <span className="text-lg font-bold text-gray-900 dark:text-white">7</span>
+            </div>
+            <div className="flex justify-between items-center py-3 px-4 bg-green-400 dark:bg-green-600 rounded">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">ASSIGNMENT</span>
+              <span className="text-lg font-bold text-gray-800 dark:text-white">9</span>
+            </div>
+            <div className="flex justify-between items-center py-3 px-4 bg-green-500 dark:bg-green-600 rounded">
+              <span className="text-sm font-medium text-white">L1</span>
+              <span className="text-lg font-bold text-white">15</span>
+            </div>
+            <div className="flex justify-between items-center py-3 px-4 bg-green-600 dark:bg-green-500 rounded">
+              <span className="text-sm font-medium text-white">L2</span>
+              <span className="text-lg font-bold text-white">9</span>
+            </div>
+            <div className="flex justify-between items-center py-3 px-4 bg-green-700 dark:bg-green-500 rounded">
+              <span className="text-sm font-medium text-white">L3</span>
+              <span className="text-lg font-bold text-white">3</span>
+            </div>
+            <div className="flex justify-between items-center py-3 px-4 bg-green-800 dark:bg-green-400 rounded">
+              <span className="text-sm font-medium text-white">FINAL ROUND</span>
+              <span className="text-lg font-bold text-white">9</span>
+            </div>
+            <div className="flex justify-between items-center py-3 px-4 bg-green-900 dark:bg-green-400 rounded">
+              <span className="text-sm font-medium text-white">HR ROUND</span>
+              <span className="text-lg font-bold text-white">9</span>
+            </div>
+            <div className="flex justify-between items-center py-3 px-4 bg-green-900 dark:bg-green-300 rounded">
+              <span className="text-sm font-medium text-white">OFFER STAGE</span>
+              <span className="text-lg font-bold text-white">9</span>
+            </div>
+            <div className="flex justify-between items-center py-3 px-4 bg-green-950 dark:bg-green-300 rounded">
+              <span className="text-sm font-medium text-white">CLOSURE</span>
+              <span className="text-lg font-bold text-white">3</span>
+            </div>
+            <div className="flex justify-between items-center py-3 px-4 bg-amber-500 dark:bg-amber-600 rounded">
+              <span className="text-sm font-medium text-white">OFFER DROP</span>
+              <span className="text-lg font-bold text-white">3</span>
+            </div>
+            
+            {/* See More button moved to bottom right */}
+            <div className="flex justify-end mt-4">
+              <Button 
+                className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded text-sm"
+              >
+                See More
+              </Button>
             </div>
           </div>
         </div>
