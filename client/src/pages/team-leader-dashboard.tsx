@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import AdminSidebar from '@/components/dashboard/admin-sidebar';
+import TeamLeaderMainSidebar from '@/components/dashboard/team-leader-main-sidebar';
 import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
 import AdminTopHeader from '@/components/dashboard/admin-top-header';
 import TeamLeaderTeamBoxes from '@/components/dashboard/team-leader-team-boxes';
@@ -405,7 +405,7 @@ export default function TeamLeaderDashboard() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader />
+          <AdminTopHeader userName="John Mathew" companyName="Gumlat Marketing Private Limited" />
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
             {/* Requirements Section with Priority Distribution - Exact copy from admin */}
             <div className="flex gap-6">
@@ -560,7 +560,7 @@ export default function TeamLeaderDashboard() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader />
+          <AdminTopHeader userName="John Mathew" companyName="Gumlat Marketing Private Limited" />
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
             {/* Pipeline Header */}
             <div className="flex justify-between items-center">
@@ -720,7 +720,7 @@ export default function TeamLeaderDashboard() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader />
+          <AdminTopHeader userName="John Mathew" companyName="Gumlat Marketing Private Limited" />
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
             {/* Team Performance Section */}
             <Card>
@@ -1007,7 +1007,7 @@ export default function TeamLeaderDashboard() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-3 gap-6">
-                  {teamMembers?.map((member: any, index: number) => (
+                  {(teamMembers || []).map((member: any, index: number) => (
                     <div key={index} className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
                       <div className="flex justify-between items-start">
                         <div>
@@ -1042,19 +1042,19 @@ export default function TeamLeaderDashboard() {
                 <div className="grid grid-cols-4 gap-0 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-gray-800 dark:to-gray-700 rounded overflow-hidden border border-gray-200 dark:border-gray-600">
                   <div className="bg-blue-100 dark:bg-gray-700 text-center py-6 px-4 border-r border-blue-200 dark:border-gray-600">
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Current Quarter</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-current-quarter">{targetMetrics?.currentQuarter}</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-current-quarter">{targetMetrics?.currentQuarter || 'ASO-2025'}</p>
                   </div>
                   <div className="bg-blue-50 dark:bg-gray-750 text-center py-6 px-4 border-r border-blue-200 dark:border-gray-600">
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Minimum Target</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-minimum-target">{targetMetrics?.minimumTarget}</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-minimum-target">{targetMetrics?.minimumTarget || '15,00,000'}</p>
                   </div>
                   <div className="bg-blue-100 dark:bg-gray-700 text-center py-6 px-4 border-r border-blue-200 dark:border-gray-600">
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Target Achieved</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-target-achieved">{targetMetrics?.targetAchieved}</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-target-achieved">{targetMetrics?.targetAchieved || '10,00,000'}</p>
                   </div>
                   <div className="bg-blue-50 dark:bg-gray-750 text-center py-6 px-4">
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Incentive Earned</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-incentive-earned">{targetMetrics?.incentiveEarned}</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-incentive-earned">{targetMetrics?.incentiveEarned || '50,000'}</p>
                   </div>
                 </div>
               </CardContent>
@@ -1163,7 +1163,7 @@ export default function TeamLeaderDashboard() {
                 <CardContent>
                   <div className="bg-pink-50 dark:bg-pink-900/20 p-4 rounded">
                     <ul className="space-y-2 text-sm">
-                      {ceoComments?.map((commentObj: any, index: number) => (
+                      {(ceoComments || []).map((commentObj: any, index: number) => (
                         <li key={index} data-testid={`text-ceo-comment-${index}`}>
                           {commentObj.comment}
                         </li>
@@ -1180,7 +1180,7 @@ export default function TeamLeaderDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4">
-                    {meetings?.map((meeting: any, index: number) => (
+                    {(meetings || []).map((meeting: any, index: number) => (
                       <div key={index} className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded text-center">
                         <h3 className="font-semibold text-sm" data-testid={`text-meeting-type-${index}`}>{meeting.type}</h3>
                         <p className="text-2xl font-bold text-blue-600 my-2" data-testid={`text-meeting-count-${index}`}>
@@ -1875,7 +1875,7 @@ export default function TeamLeaderDashboard() {
 
   return (
     <div className="min-h-screen">
-      <AdminSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
+      <TeamLeaderMainSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
       {renderMainContent()}
     </div>
   );
