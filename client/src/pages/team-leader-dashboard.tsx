@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, EditIcon, MoreVertical, Mail } from "lucide-react";
+import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 
@@ -460,20 +460,14 @@ export default function TeamLeaderDashboard() {
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
           <AdminTopHeader userName="John Mathew" companyName="Gumlat Marketing Private Limited" />
-          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
+          <div className="px-6 py-6 space-y-6 h-full">
             {/* Requirements Section with Priority Distribution */}
-            <div className="flex gap-6">
-              {/* Left Section - Requirements Table */}
-              <div className="flex-1">
+            <div className="flex gap-6 h-full">
+              {/* Middle Section - Requirements Table (Scrollable) */}
+              <div className="flex-1 overflow-y-auto">
                 <div className="bg-white border border-gray-200 overflow-hidden rounded-lg">
-                  <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                  <div className="px-6 py-4 border-b border-gray-200">
                     <h3 className="text-lg font-semibold text-gray-900">Requirements</h3>
-                    <Button 
-                      onClick={() => setIsAddRequirementModalOpen(true)}
-                      className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded"
-                    >
-                      + Add Requirements
-                    </Button>
                   </div>
                   
                   <div className="overflow-x-auto">
@@ -485,7 +479,6 @@ export default function TeamLeaderDashboard() {
                           <th className="text-left p-3 font-semibold text-gray-700">Company</th>
                           <th className="text-left p-3 font-semibold text-gray-700">SPOC</th>
                           <th className="text-left p-3 font-semibold text-gray-700">Talent Advisor</th>
-                          <th className="text-left p-3 font-semibold text-gray-700">Team Lead</th>
                           <th className="text-left p-3 font-semibold text-gray-700">Actions</th>
                         </tr>
                       </thead>
@@ -501,11 +494,24 @@ export default function TeamLeaderDashboard() {
                           <td className="p-3 text-gray-900">Tesco</td>
                           <td className="p-3 text-gray-900">Mel Gibson</td>
                           <td className="p-3 text-gray-900">Mel Gibson</td>
-                          <td className="p-3 text-gray-900">Arun</td>
                           <td className="p-3">
-                            <Button variant="ghost" size="sm" className="p-1">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="p-1"
+                              onClick={() => {
+                                setSelectedRequirement({
+                                  position: 'Mobile App Developer',
+                                  company: 'Tesco',
+                                  criticality: 'HIGH',
+                                  contactPerson: 'Mel Gibson',
+                                  isAssigned: true
+                                });
+                                setIsAssignmentModalOpen(true);
+                              }}
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                               </svg>
                             </Button>
                           </td>
@@ -774,7 +780,7 @@ export default function TeamLeaderDashboard() {
                     </table>
                   </div>
                   
-                  <div className="flex justify-center gap-4 p-4 border-t border-gray-200">
+                  <div className="flex justify-end gap-4 p-4 border-t border-gray-200">
                     <Button 
                       className="px-6 py-2 bg-red-400 hover:bg-red-500 text-white font-medium rounded"
                     >
@@ -789,9 +795,9 @@ export default function TeamLeaderDashboard() {
                 </div>
               </div>
 
-              {/* Right Section - Priority Distribution */}
-              <div className="w-80">
-                <div className="bg-white border border-gray-200 rounded-lg">
+              {/* Right Section - Priority Distribution (Static) */}
+              <div className="w-80 flex-shrink-0">
+                <div className="bg-white border border-gray-200 rounded-lg sticky top-0">
                   <div className="px-6 py-4 border-b border-gray-200">
                     <h3 className="text-lg font-semibold text-gray-900">Priority Distribution</h3>
                   </div>
@@ -835,11 +841,71 @@ export default function TeamLeaderDashboard() {
           </div>
         </div>
 
-        {/* Add Requirement Modal */}
-        <AddRequirementModal 
-          isOpen={isAddRequirementModalOpen} 
-          onClose={() => setIsAddRequirementModalOpen(false)} 
-        />
+        {/* Assignment Modal */}
+        {isAssignmentModalOpen && selectedRequirement && (
+          <Dialog open={isAssignmentModalOpen} onOpenChange={setIsAssignmentModalOpen}>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-semibold text-gray-900">
+                  Assign Requirement
+                </DialogTitle>
+              </DialogHeader>
+              
+              <div className="space-y-4 mt-4">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900 mb-4">Requirement Details:</h4>
+                  <div className="space-y-2">
+                    <div><strong>Position:</strong> {selectedRequirement.position}</div>
+                    <div><strong>Company:</strong> {selectedRequirement.company}</div>
+                    <div><strong>Criticality:</strong> <span className="text-red-600">{selectedRequirement.criticality}</span></div>
+                    <div><strong>Contact Person:</strong> {selectedRequirement.contactPerson}</div>
+                  </div>
+                </div>
+                
+                <div>
+                  <Label htmlFor="team-leader" className="text-sm font-medium text-gray-700">
+                    Assign to Team Leader:
+                  </Label>
+                  <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
+                    <SelectTrigger className="mt-2">
+                      <SelectValue placeholder="Select a Team Leader" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Arun">Arun</SelectItem>
+                      <SelectItem value="Anusha">Anusha</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setIsAssignmentModalOpen(false);
+                      setSelectedRequirement(null);
+                      setSelectedAssignee('');
+                    }}
+                    className="px-6 py-2 rounded"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className="bg-gray-800 hover:bg-gray-900 text-white font-medium px-6 py-2 rounded"
+                    onClick={() => {
+                      // Handle assignment logic here
+                      setIsAssignmentModalOpen(false);
+                      setSelectedRequirement(null);
+                      setSelectedAssignee('');
+                    }}
+                  >
+                    Confirm Assignment
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
     );
   };
