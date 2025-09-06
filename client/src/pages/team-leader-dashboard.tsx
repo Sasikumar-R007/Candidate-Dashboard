@@ -261,33 +261,32 @@ export default function TeamLeaderDashboard() {
                 </CardContent>
               </Card>
 
-              {/* Messages and Meetings Section */}
-              <div className="grid grid-cols-10 gap-3 h-fit">
+              {/* Bottom Section - Meetings and CEO Commands */}
+              <div className="grid grid-cols-2 gap-6">
                 {/* Pending Meetings */}
-                <Card className="bg-gray-100 col-span-3">
-                  <CardHeader className="pb-2 pt-3">
-                    <CardTitle className="text-lg text-gray-900">Pending Meetings</CardTitle>
+                <Card className="bg-white border border-gray-200">
+                  <CardHeader className="pb-3 pt-4">
+                    <CardTitle className="text-lg font-semibold text-gray-900">Pending Meetings</CardTitle>
                   </CardHeader>
-                  <CardContent className="px-4 pb-4">
-                    <div className="bg-white p-4 relative">
-                      <div className="grid grid-cols-2 gap-4">
+                  <CardContent className="p-4 pt-0">
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                      <div className="grid grid-cols-2 gap-6">
                         <div className="text-center">
-                          <h3 className="text-sm font-medium text-gray-700 mb-2">TL's Meeting</h3>
-                          <div className="text-4xl font-bold text-gray-900 mb-3">3</div>
+                          <h3 className="text-sm font-medium text-gray-700 mb-3">TL's Meeting</h3>
+                          <div className="text-4xl font-bold text-gray-900 mb-4">3</div>
                           <Button 
                             size="sm" 
-                            className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-sm rounded"
+                            className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded text-sm font-medium"
                           >
                             View
                           </Button>
                         </div>
-                        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-300 transform -translate-x-0.5"></div>
-                        <div className="text-center">
-                          <h3 className="text-sm font-medium text-gray-700 mb-2">CEO's Meeting</h3>
-                          <div className="text-4xl font-bold text-gray-900 mb-3">1</div>
+                        <div className="text-center border-l border-gray-300 pl-6">
+                          <h3 className="text-sm font-medium text-gray-700 mb-3">CEO's Meeting</h3>
+                          <div className="text-4xl font-bold text-gray-900 mb-4">1</div>
                           <Button 
                             size="sm" 
-                            className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-sm rounded"
+                            className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded text-sm font-medium"
                           >
                             View
                           </Button>
@@ -297,56 +296,24 @@ export default function TeamLeaderDashboard() {
                   </CardContent>
                 </Card>
 
-                {/* Message Status */}
-                <Card className="bg-gray-50 col-span-5">
-                  <CardHeader className="pb-1 pt-2">
-                    <CardTitle className="text-lg text-gray-900">Message Status</CardTitle>
+                {/* CEO Commands */}
+                <Card className="bg-white border border-gray-200">
+                  <CardHeader className="pb-3 pt-4 flex flex-row items-center justify-between">
+                    <CardTitle className="text-lg font-semibold text-gray-900">CEO Commands</CardTitle>
+                    <Button variant="link" className="text-sm text-blue-600 p-0">View More</Button>
                   </CardHeader>
-                  <CardContent>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm bg-white rounded">
-                        <thead>
-                          <tr className="bg-slate-800 text-white">
-                            <th className="text-left py-2 px-3 text-sm font-medium">Name</th>
-                            <th className="text-left py-2 px-3 text-sm font-medium">Message</th>
-                            <th className="text-left py-2 px-3 text-sm font-medium">Date</th>
-                            <th className="text-left py-2 px-3 text-sm font-medium">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr className="border-b border-gray-100">
-                            <td className="py-2 px-3 text-gray-900 font-medium">kavitha</td>
-                            <td className="py-2 px-3 text-gray-600">Meeting scheduled for today</td>
-                            <td className="py-2 px-3 text-gray-600">12-Aug-2025</td>
-                            <td className="py-2 px-3">
-                              <span className="w-3 h-3 rounded-full inline-block bg-green-500"></span>
-                            </td>
-                          </tr>
-                          <tr className="border-b border-gray-100">
-                            <td className="py-2 px-3 text-gray-900 font-medium">Rajesh</td>
-                            <td className="py-2 px-3 text-gray-600">Requirements update needed</td>
-                            <td className="py-2 px-3 text-gray-600">11-Aug-2025</td>
-                            <td className="py-2 px-3">
-                              <span className="w-3 h-3 rounded-full inline-block bg-red-500"></span>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
+                  <CardContent className="p-4 pt-0">
+                    <div className="bg-slate-800 rounded-lg p-6 text-white space-y-4">
+                      <div className="text-cyan-300 text-sm font-medium">
+                        Discuss with Shri Ragavi on her production
+                      </div>
+                      <div className="text-cyan-300 text-sm font-medium">
+                        Discuss with Kavya about her leaves
+                      </div>
+                      <div className="text-cyan-300 text-sm font-medium">
+                        Discuss with Umar for data
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-                
-                {/* Create Section */}
-                <Card className="bg-slate-800 col-span-2">
-                  <CardContent className="flex flex-col items-center justify-center h-full p-3">
-                    <div className="p-4 mb-3">
-                      <Mail className="w-10 h-10 text-white" />
-                    </div>
-                    <Button 
-                      className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
-                    >
-                      Create
-                    </Button>
                   </CardContent>
                 </Card>
               </div>
