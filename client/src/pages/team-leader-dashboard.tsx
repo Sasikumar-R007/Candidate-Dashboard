@@ -483,258 +483,47 @@ export default function TeamLeaderDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        <tr className="border-b border-gray-100">
-                          <td className="p-3 text-gray-900">Mobile App Developer</td>
-                          <td className="p-3">
-                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
-                              <span className="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
-                              HIGH
-                            </span>
-                          </td>
-                          <td className="p-3 text-gray-900">Tesco</td>
-                          <td className="p-3 text-gray-900">Mel Gibson</td>
-                          <td className="p-3 text-gray-900">Mel Gibson</td>
-                          <td className="p-3">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="p-1"
-                              onClick={() => {
-                                setSelectedRequirement({
-                                  position: 'Mobile App Developer',
-                                  company: 'Tesco',
-                                  criticality: 'HIGH',
-                                  contactPerson: 'Mel Gibson',
-                                  isAssigned: true
-                                });
-                                setIsAssignmentModalOpen(true);
-                              }}
-                            >
-                              <UserRound className="w-4 h-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="p-3 text-gray-900">Backend Developer</td>
-                          <td className="p-3">
-                            <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
-                              <span className="w-2 h-2 bg-gray-500 rounded-full mr-1"></span>
-                              LOW
-                            </span>
-                          </td>
-                          <td className="p-3 text-gray-900">CodeLabs</td>
-                          <td className="p-3 text-gray-900">Robert Kim</td>
-                          <td className="p-3 text-gray-900">Robert Kim</td>
-                          <td className="p-3">
-                            <Button variant="ghost" size="sm" className="p-1">
-                              <UserRound className="w-4 h-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="p-3 text-gray-900">Frontend Developer</td>
-                          <td className="p-3">
-                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
-                              <span className="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
-                              MEDIUM
-                            </span>
-                          </td>
-                          <td className="p-3 text-gray-900">TechCorp</td>
-                          <td className="p-3 text-gray-900">David Wilson</td>
-                          <td className="p-3 text-gray-500">Unassigned</td>
-                          <td className="p-3">
-                            <Button variant="ghost" size="sm" className="p-1">
-                              <UserRound className="w-4 h-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="p-3 text-gray-900">QA Tester</td>
-                          <td className="p-3">
-                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
-                              <span className="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
-                              HIGH
-                            </span>
-                          </td>
-                          <td className="p-3 text-gray-900">AppLogic</td>
-                          <td className="p-3 text-gray-900">Kevin Brown</td>
-                          <td className="p-3 text-gray-500">Unassigned</td>
-                          <td className="p-3">
-                            <Button variant="ghost" size="sm" className="p-1">
-                              <UserRound className="w-4 h-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="p-3 text-gray-900">Mobile App Developer</td>
-                          <td className="p-3">
-                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
-                              <span className="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
-                              MEDIUM
-                            </span>
-                          </td>
-                          <td className="p-3 text-gray-900">Tesco</td>
-                          <td className="p-3 text-gray-900">Mel Gibson</td>
-                          <td className="p-3 text-gray-900">Mel Gibson</td>
-                          <td className="p-3">
-                            <Button variant="ghost" size="sm" className="p-1">
-                              <UserRound className="w-4 h-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="p-3 text-gray-900">Backend Developer</td>
-                          <td className="p-3">
-                            <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
-                              <span className="w-2 h-2 bg-gray-500 rounded-full mr-1"></span>
-                              LOW
-                            </span>
-                          </td>
-                          <td className="p-3 text-gray-900">CodeLabs</td>
-                          <td className="p-3 text-gray-900">Robert Kim</td>
-                          <td className="p-3 text-gray-900">Robert Kim</td>
-                          <td className="p-3">
-                            <Button variant="ghost" size="sm" className="p-1">
-                              <UserRound className="w-4 h-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="p-3 text-gray-900">UI/UX Designer</td>
-                          <td className="p-3">
-                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
-                              <span className="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
-                              MEDIUM
-                            </span>
-                          </td>
-                          <td className="p-3 text-gray-900">Designify</td>
-                          <td className="p-3 text-gray-900">Tom Anderson</td>
-                          <td className="p-3 text-gray-500">Unassigned</td>
-                          <td className="p-3">
-                            <Button variant="ghost" size="sm" className="p-1">
-                              <UserRound className="w-4 h-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="p-3 text-gray-900">Frontend Developer</td>
-                          <td className="p-3">
-                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
-                              <span className="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
-                              HIGH
-                            </span>
-                          </td>
-                          <td className="p-3 text-gray-900">TechCorp</td>
-                          <td className="p-3 text-gray-900">David Wilson</td>
-                          <td className="p-3 text-gray-500">Unassigned</td>
-                          <td className="p-3">
-                            <Button variant="ghost" size="sm" className="p-1">
-                              <UserRound className="w-4 h-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="p-3 text-gray-900">UI/UX Designer</td>
-                          <td className="p-3">
-                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
-                              <span className="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
-                              MEDIUM
-                            </span>
-                          </td>
-                          <td className="p-3 text-gray-900">Designify</td>
-                          <td className="p-3 text-gray-900">Tom Anderson</td>
-                          <td className="p-3 text-gray-500">Unassigned</td>
-                          <td className="p-3">
-                            <Button variant="ghost" size="sm" className="p-1">
-                              <UserRound className="w-4 h-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="p-3 text-gray-900">QA Tester</td>
-                          <td className="p-3">
-                            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
-                              <span className="w-2 h-2 bg-blue-500 rounded-full mr-1"></span>
-                              MEDIUM
-                            </span>
-                          </td>
-                          <td className="p-3 text-gray-900">AppLogic</td>
-                          <td className="p-3 text-gray-900">Kevin Brown</td>
-                          <td className="p-3 text-gray-500">Unassigned</td>
-                          <td className="p-3">
-                            <Button variant="ghost" size="sm" className="p-1">
-                              <UserRound className="w-4 h-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="p-3 text-gray-900">Mobile App Developer</td>
-                          <td className="p-3">
-                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
-                              <span className="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
-                              HIGH
-                            </span>
-                          </td>
-                          <td className="p-3 text-gray-900">Designify</td>
-                          <td className="p-3 text-gray-900">Mel Gibson</td>
-                          <td className="p-3 text-gray-900">Mel Gibson</td>
-                          <td className="p-3">
-                            <Button variant="ghost" size="sm" className="p-1">
-                              <UserRound className="w-4 h-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="p-3 text-gray-900">Backend Developer</td>
-                          <td className="p-3">
-                            <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
-                              <span className="w-2 h-2 bg-gray-500 rounded-full mr-1"></span>
-                              LOW
-                            </span>
-                          </td>
-                          <td className="p-3 text-gray-900">Tesco</td>
-                          <td className="p-3 text-gray-900">Robert Kim</td>
-                          <td className="p-3 text-gray-900">Robert Kim</td>
-                          <td className="p-3">
-                            <Button variant="ghost" size="sm" className="p-1">
-                              <UserRound className="w-4 h-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="p-3 text-gray-900">Frontend Developer</td>
-                          <td className="p-3">
-                            <span className="bg-red-100 text-red-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
-                              <span className="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
-                              HIGH
-                            </span>
-                          </td>
-                          <td className="p-3 text-gray-900">CodeLabs</td>
-                          <td className="p-3 text-gray-900">David Wilson</td>
-                          <td className="p-3 text-gray-500">Unassigned</td>
-                          <td className="p-3">
-                            <Button variant="ghost" size="sm" className="p-1">
-                              <UserRound className="w-4 h-4" />
-                            </Button>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="p-3 text-gray-900">QA Tester</td>
-                          <td className="p-3">
-                            <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-2 py-1 rounded inline-flex items-center">
-                              <span className="w-2 h-2 bg-gray-500 rounded-full mr-1"></span>
-                              LOW
-                            </span>
-                          </td>
-                          <td className="p-3 text-gray-900">TechCorp</td>
-                          <td className="p-3 text-gray-900">Kevin Brown</td>
-                          <td className="p-3 text-gray-500">Unassigned</td>
-                          <td className="p-3">
-                            <Button variant="ghost" size="sm" className="p-1">
-                              <UserRound className="w-4 h-4" />
-                            </Button>
-                          </td>
-                        </tr>
+                        {requirementsData.slice(0, 15).map((requirement, index) => (
+                          <tr key={requirement.id} className="border-b border-gray-100">
+                            <td className="p-3 text-gray-900">{requirement.position}</td>
+                            <td className="p-3">
+                              <span className={`text-xs font-semibold px-2 py-1 rounded inline-flex items-center ${
+                                requirement.criticality === 'HIGH' ? 'bg-red-100 text-red-800' :
+                                requirement.criticality === 'MEDIUM' ? 'bg-blue-100 text-blue-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                <span className={`w-2 h-2 rounded-full mr-1 ${
+                                  requirement.criticality === 'HIGH' ? 'bg-red-500' :
+                                  requirement.criticality === 'MEDIUM' ? 'bg-blue-500' :
+                                  'bg-gray-500'
+                                }`}></span>
+                                {requirement.criticality}
+                              </span>
+                            </td>
+                            <td className="p-3 text-gray-900">{requirement.company}</td>
+                            <td className="p-3 text-gray-900">{requirement.contact}</td>
+                            <td className="p-3 text-gray-900">{requirement.talentAdvisor || 'Unassigned'}</td>
+                            <td className="p-3">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="p-1"
+                                onClick={() => {
+                                  setSelectedRequirement({
+                                    id: requirement.id,
+                                    position: requirement.position,
+                                    company: requirement.company,
+                                    criticality: requirement.criticality,
+                                    contactPerson: requirement.contact
+                                  });
+                                  setIsAssignmentModalOpen(true);
+                                }}
+                              >
+                                <UserRound className="w-4 h-4" />
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
