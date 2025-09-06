@@ -91,10 +91,10 @@ export default function TeamLeaderDashboard() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader />
-          <div className="flex">
-            {/* Main Content - Exact copy from admin team section */}
-            <div className="px-3 py-2 space-y-2 flex-1 overflow-y-auto">
+          <AdminTopHeader userName="John Mathew" companyName="Gumlat Marketing Private Limited" />
+          <div className="flex h-screen">
+            {/* Main Content - Middle Section (Scrollable) */}
+            <div className="px-3 py-2 space-y-2 flex-1 overflow-y-auto h-full">
               <TeamBoxes />
 
               {/* Target Section */}
@@ -319,12 +319,10 @@ export default function TeamLeaderDashboard() {
               </div>
             </div>
             
-            {/* Team Members Sidebar */}
-            <TeamMembersSidebar 
-              selectedTeam={selectedTeam}
-              selectedMember={selectedMember}
-              onMemberSelect={setSelectedMember}
-            />
+            {/* Team Members Sidebar - Right Section (Non-scrollable) */}
+            <div className="flex-shrink-0">
+              <TeamMembersSidebar />
+            </div>
           </div>
         </div>
       </div>

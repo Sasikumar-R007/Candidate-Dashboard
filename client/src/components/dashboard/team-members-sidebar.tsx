@@ -21,7 +21,7 @@ export default function TeamMembersSidebar() {
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Team Members</h3>
         </div>
         
-        <div className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide">
+        <div className="flex-1 px-4 pb-4">
           <div className="space-y-1">
             {teamMembers.map((member, index) => {
               const isEven = index % 2 === 0;
