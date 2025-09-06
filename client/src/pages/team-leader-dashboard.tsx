@@ -97,60 +97,35 @@ export default function TeamLeaderDashboard() {
             <div className="px-3 py-2 space-y-2 flex-1 overflow-y-auto">
               <TeamBoxes />
 
-              {/* Target & Incentives Section */}
-              <Card className="bg-gray-50">
-                <CardHeader className="pb-1 pt-1 flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg text-gray-900">Target & Incentives</CardTitle>
+              {/* Target Section */}
+              <Card className="bg-white border border-gray-200">
+                <CardHeader className="pb-3 pt-4 flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg font-semibold text-gray-900">Target</CardTitle>
                   <Button 
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2"
+                    variant="outline"
+                    className="text-sm px-4 py-2 border-gray-300 hover:bg-gray-50"
                   >
                     View All
                   </Button>
                 </CardHeader>
-                <CardContent className="p-1">
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse bg-white rounded">
-                      <thead>
-                        <tr className="bg-gray-200">
-                          <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Resource</th>
-                          <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Role</th>
-                          <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Quarter</th>
-                          <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Minimum Target</th>
-                          <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Target Achieved</th>
-                          <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Closures</th>
-                          <th className="text-left py-2 px-3 text-sm font-medium text-gray-700">Incentives</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr className="bg-blue-50">
-                          <td className="py-2 px-3 text-sm text-gray-900 font-medium">kavitha</td>
-                          <td className="py-2 px-3 text-sm text-gray-600">Talent Advisor</td>
-                          <td className="py-2 px-3 text-sm text-gray-600">Q4 2024</td>
-                          <td className="py-2 px-3 text-sm text-gray-600">12</td>
-                          <td className="py-2 px-3 text-sm text-gray-600">15</td>
-                          <td className="py-2 px-3 text-sm text-gray-600">8</td>
-                          <td className="py-2 px-3 text-sm text-gray-600">₹45,000</td>
-                        </tr>
-                        <tr className="bg-white">
-                          <td className="py-2 px-3 text-sm text-gray-900 font-medium">Rajesh</td>
-                          <td className="py-2 px-3 text-sm text-gray-600">Senior Recruiter</td>
-                          <td className="py-2 px-3 text-sm text-gray-600">Q4 2024</td>
-                          <td className="py-2 px-3 text-sm text-gray-600">8</td>
-                          <td className="py-2 px-3 text-sm text-gray-600">10</td>
-                          <td className="py-2 px-3 text-sm text-gray-600">6</td>
-                          <td className="py-2 px-3 text-sm text-gray-600">₹30,000</td>
-                        </tr>
-                        <tr className="bg-blue-50">
-                          <td className="py-2 px-3 text-sm text-gray-900 font-medium">Sowmiya</td>
-                          <td className="py-2 px-3 text-sm text-gray-600">Recruiter</td>
-                          <td className="py-2 px-3 text-sm text-gray-600">Q4 2024</td>
-                          <td className="py-2 px-3 text-sm text-gray-600">6</td>
-                          <td className="py-2 px-3 text-sm text-gray-600">7</td>
-                          <td className="py-2 px-3 text-sm text-gray-600">4</td>
-                          <td className="py-2 px-3 text-sm text-gray-600">₹25,000</td>
-                        </tr>
-                      </tbody>
-                    </table>
+                <CardContent className="p-4 pt-0">
+                  <div className="grid grid-cols-4 gap-0 bg-cyan-50 rounded-lg overflow-hidden">
+                    <div className="text-center py-6 px-4 border-r border-cyan-100">
+                      <p className="text-sm font-semibold text-gray-700 mb-2">Current Quarter</p>
+                      <p className="text-xl font-bold text-gray-900">ASO-2025</p>
+                    </div>
+                    <div className="text-center py-6 px-4 border-r border-cyan-100">
+                      <p className="text-sm font-semibold text-gray-700 mb-2">Minimum Target</p>
+                      <p className="text-xl font-bold text-gray-900">15,00,000</p>
+                    </div>
+                    <div className="text-center py-6 px-4 border-r border-cyan-100">
+                      <p className="text-sm font-semibold text-gray-700 mb-2">Target Achieved</p>
+                      <p className="text-xl font-bold text-gray-900">10,00,000</p>
+                    </div>
+                    <div className="text-center py-6 px-4">
+                      <p className="text-sm font-semibold text-gray-700 mb-2">Incentive Earned</p>
+                      <p className="text-xl font-bold text-gray-900">50,000</p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
