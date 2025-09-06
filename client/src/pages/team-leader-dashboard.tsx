@@ -34,6 +34,31 @@ export default function TeamLeaderDashboard() {
   const [isViewMoreRequirementsModalOpen, setIsViewMoreRequirementsModalOpen] = useState(false);
   const [isViewTeamPerformanceModalOpen, setIsViewTeamPerformanceModalOpen] = useState(false);
   const [isViewClosuresModalOpen, setIsViewClosuresModalOpen] = useState(false);
+  const [newMessage, setNewMessage] = useState("");
+  const [chatMessages, setChatMessages] = useState([
+    { id: 1, sender: "John Mathew", message: "Good morning team! Please review the requirements for today", time: "9:00 AM", isOwn: true },
+    { id: 2, sender: "Kavitha", message: "Good morning sir. I've reviewed the Frontend Developer position. Ready to proceed.", time: "9:05 AM", isOwn: false },
+    { id: 3, sender: "Rajesh", message: "Working on the UI/UX Designer requirement. Will update shortly.", time: "9:10 AM", isOwn: false },
+    { id: 4, sender: "Sowmiya", message: "Backend Developer position - I have 2 potential candidates to share", time: "9:15 AM", isOwn: false },
+    { id: 5, sender: "John Mathew", message: "Great! Please share the profiles by EOD today", time: "9:20 AM", isOwn: true },
+    { id: 6, sender: "Kalaiselvi", message: "QA Tester requirement - interviewed 3 candidates yesterday", time: "9:25 AM", isOwn: false },
+    { id: 7, sender: "Malathi", message: "Mobile App Developer role - client wants to schedule interviews", time: "9:30 AM", isOwn: false }
+  ]);
+
+  // Handle sending new chat messages
+  const handleSendMessage = () => {
+    if (newMessage.trim()) {
+      const newMsg = {
+        id: chatMessages.length + 1,
+        sender: "John Mathew",
+        message: newMessage.trim(),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isOwn: true
+      };
+      setChatMessages([...chatMessages, newMsg]);
+      setNewMessage("");
+    }
+  };
 
   // Sample requirements data
   const [requirementsData, setRequirementsData] = useState([
@@ -1126,25 +1151,6 @@ export default function TeamLeaderDashboard() {
   };
 
   const renderChatContent = () => {
-    // Sample chat messages 
-    const chatMessages = [
-      { id: 1, sender: "John Mathew", message: "Good morning team! Please review the requirements for today", time: "9:00 AM", isOwn: true },
-      { id: 2, sender: "Kavitha", message: "Good morning sir. I've reviewed the Frontend Developer position. Ready to proceed.", time: "9:05 AM", isOwn: false },
-      { id: 3, sender: "Rajesh", message: "Working on the UI/UX Designer requirement. Will update shortly.", time: "9:10 AM", isOwn: false },
-      { id: 4, sender: "Sowmiya", message: "Backend Developer position - I have 2 potential candidates to share", time: "9:15 AM", isOwn: false },
-      { id: 5, sender: "John Mathew", message: "Great! Please share the profiles by EOD today", time: "9:20 AM", isOwn: true },
-      { id: 6, sender: "Kalaiselvi", message: "QA Tester requirement - interviewed 3 candidates yesterday", time: "9:25 AM", isOwn: false },
-      { id: 7, sender: "Malathi", message: "Mobile App Developer role - client wants to schedule interviews", time: "9:30 AM", isOwn: false }
-    ];
-
-    const [newMessage, setNewMessage] = useState("");
-
-    const handleSendMessage = () => {
-      if (newMessage.trim()) {
-        // Add message logic here
-        setNewMessage("");
-      }
-    };
 
     return (
       <div className="flex min-h-screen">
