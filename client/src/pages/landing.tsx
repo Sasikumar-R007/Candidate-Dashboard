@@ -110,6 +110,30 @@ export default function Landing() {
             </CardContent>
           </Card>
 
+          {/* Recruiter Login 2 Card */}
+          <Card className="hover:shadow-lg transition-shadow border-2 border-orange-200 dark:border-orange-700">
+            <CardHeader className="text-center pb-4">
+              <div className="mx-auto mb-4 p-4 bg-orange-200 dark:bg-orange-800 rounded-full w-16 h-16 flex items-center justify-center">
+                <UserSearchIcon className="h-8 w-8 text-orange-700 dark:text-orange-300" />
+              </div>
+              <CardTitle className="text-xl">Recruiter Login 2</CardTitle>
+              <CardDescription>
+                Enhanced recruiter workspace with advanced features and improved workflows
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Link href="/recruiter-login-2" data-testid="link-recruiter-login-2">
+                <Button 
+                  className="w-full bg-orange-700 hover:bg-orange-800 text-white" 
+                  size="lg"
+                  data-testid="button-recruiter-login-2"
+                >
+                  Enter Recruiter Login 2
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+
           {/* Client Dashboard Card */}
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader className="text-center pb-4">
