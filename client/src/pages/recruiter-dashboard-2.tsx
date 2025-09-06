@@ -524,7 +524,7 @@ export default function RecruiterDashboard2() {
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      <TeamLeaderMainSidebar activeTab={sidebarTab} />
+      <TeamLeaderMainSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
       {renderMainContent()}
     </div>
   );
