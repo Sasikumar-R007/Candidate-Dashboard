@@ -510,9 +510,7 @@ export default function TeamLeaderDashboard() {
                                 setIsAssignmentModalOpen(true);
                               }}
                             >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                              </svg>
+                              <UserRound className="w-4 h-4" />
                             </Button>
                           </td>
                         </tr>
@@ -2459,78 +2457,6 @@ export default function TeamLeaderDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Assignment Modal */}
-      <Dialog open={isAssignmentModalOpen} onOpenChange={setIsAssignmentModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">
-              {isReallocating ? 'Reallocate Requirement' : 'Assign Requirement'}
-            </DialogTitle>
-          </DialogHeader>
-          {selectedRequirement && (
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-3">Requirement Details:</h4>
-                <div className="space-y-2 text-sm">
-                  <div><span className="font-medium">Position:</span> {selectedRequirement.position}</div>
-                  <div><span className="font-medium">Company:</span> {selectedRequirement.company}</div>
-                  <div>
-                    <span className="font-medium">Criticality:</span> 
-                    <span className={`ml-2 px-2 py-1 rounded text-xs font-semibold ${
-                      selectedRequirement.criticality === 'HIGH' 
-                        ? 'bg-red-100 text-red-800' 
-                        : selectedRequirement.criticality === 'MEDIUM'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {selectedRequirement.criticality}
-                    </span>
-                  </div>
-                  <div><span className="font-medium">Contact Person:</span> {selectedRequirement.contact}</div>
-                </div>
-              </div>
-              
-              <div>
-                <h4 className="font-semibold text-gray-900 dark:text-white mb-3">
-                  {isReallocating ? 'Assign to Team Leader:' : 'Assign to Team Leader:'}
-                </h4>
-                <Select 
-                  defaultValue={isReallocating ? selectedRequirement.recruiter : undefined}
-                  onValueChange={(value) => setSelectedAssignee(value)}
-                >
-                  <SelectTrigger className="w-full input-styled btn-rounded">
-                    <SelectValue placeholder={isReallocating ? selectedRequirement.recruiter : "Select a Team Leader"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {talentAdvisors.map((advisor) => (
-                      <SelectItem key={advisor} value={advisor}>
-                        {advisor}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsAssignmentModalOpen(false)}
-                  className="btn-rounded"
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  className="bg-gray-800 hover:bg-gray-900 text-white btn-rounded"
-                  onClick={() => selectedAssignee && handleConfirmAssignment(selectedAssignee)}
-                  disabled={!selectedAssignee}
-                >
-                  Confirm Assignment
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
