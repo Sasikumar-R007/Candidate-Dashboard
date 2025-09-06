@@ -1,8 +1,16 @@
 # Overview
 
-This is a dual-dashboard job portal web application featuring both candidate and team leader interfaces. The system provides comprehensive dashboards for job seekers to manage their profiles and for team leaders to monitor recruitment metrics, team performance, and targets. The application features a modern, responsive design with consistent styling across both dashboards and a landing page for role selection.
+This is a comprehensive multi-role recruitment platform web application featuring dashboards for candidates, team leaders, administrators, recruiters, and clients. The system provides specialized interfaces for job seekers to manage their profiles, team leaders to monitor recruitment metrics, administrators to oversee the entire organization, and recruiters to manage their active jobs and applications. The application features a modern, responsive design with consistent styling across all dashboards and a landing page for role selection.
 
-**Migration Status**: Successfully migrated from Replit Agent to standard Replit environment on August 21, 2025. All functionality preserved with enhanced UI design for team leader dashboard components. Migration completed with working Admin dashboard implementation. All image upload features fully functional across all dashboards. Added admin-specific sidebar with "Report" option and replaced shield icons with crown icons for CEO role display. Final migration verification completed - all systems operational with Express server running on port 5000 and React frontend working correctly.
+**Migration Status**: Successfully migrated GitHub repository to Replit environment on September 6, 2025. All functionality preserved and operational with Express server running on port 5000 and React frontend working correctly. The application is fully configured for the Replit environment with proper host settings, port configuration, and deployment setup.
+
+**Current Status**: The application is running successfully with:
+- Frontend: React + Vite + TypeScript with Shadcn UI components
+- Backend: Express + TypeScript with comprehensive API endpoints
+- Storage: In-memory storage with rich sample data for all roles
+- File Uploads: Working file upload system for profiles, banners, and resumes
+- Multi-role Support: Candidate, Team Leader, Admin, Recruiter, and Client dashboards
+- Responsive Design: TailwindCSS with dark/light theme support
 
 **Latest Migration Update (August 14, 2025)**: Successfully completed project migration from Replit Agent to standard Replit environment. All systems operational with Node.js backend, React frontend, and in-memory storage. Enhanced candidate dashboard UI with improved resume preview height matching and job preferences section centering with rounded borders and styled input fields.
 
