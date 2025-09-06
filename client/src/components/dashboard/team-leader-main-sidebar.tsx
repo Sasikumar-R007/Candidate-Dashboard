@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Users, FileText, GitBranch, Trophy, ChevronRight, User } from "lucide-react";
+import { Users, FileText, GitBranch, Trophy, MessageCircle, ChevronRight, User } from "lucide-react";
 import { useState } from "react";
 
 interface TeamLeaderMainSidebarProps {
@@ -15,7 +15,8 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange }: TeamLe
     { id: 'dashboard', label: 'Team', icon: Users },
     { id: 'requirements', label: 'Requirements', icon: FileText },
     { id: 'pipeline', label: 'Pipeline', icon: GitBranch },
-    { id: 'performance', label: 'Performance', icon: Trophy }
+    { id: 'performance', label: 'Performance', icon: Trophy },
+    { id: 'chat', label: 'Chat', icon: MessageCircle }
   ];
 
   const handleTabClick = (tabId: string) => {

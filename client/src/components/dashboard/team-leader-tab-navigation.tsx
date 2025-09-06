@@ -11,6 +11,7 @@ export default function TeamLeaderTabNavigation({ activeTab, onTabChange }: Team
     { id: 'requirements', label: 'Requirements' },
     { id: 'pipeline', label: 'Pipeline' },
     { id: 'performance', label: 'Performance' },
+    { id: 'chat', label: 'Chat' },
   ];
 
   return (

@@ -137,6 +137,8 @@ export default function TeamLeaderDashboard() {
         return renderPipelineContent();
       case 'performance':
         return renderPerformanceContent();
+      case 'chat':
+        return renderChatContent();
       default:
         return renderTeamContent();
     }
@@ -1091,6 +1093,114 @@ export default function TeamLeaderDashboard() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderChatContent = () => {
+    // Sample chat messages 
+    const chatMessages = [
+      { id: 1, sender: "John Mathew", message: "Good morning team! Please review the requirements for today", time: "9:00 AM", isOwn: true },
+      { id: 2, sender: "Kavitha", message: "Good morning sir. I've reviewed the Frontend Developer position. Ready to proceed.", time: "9:05 AM", isOwn: false },
+      { id: 3, sender: "Rajesh", message: "Working on the UI/UX Designer requirement. Will update shortly.", time: "9:10 AM", isOwn: false },
+      { id: 4, sender: "Sowmiya", message: "Backend Developer position - I have 2 potential candidates to share", time: "9:15 AM", isOwn: false },
+      { id: 5, sender: "John Mathew", message: "Great! Please share the profiles by EOD today", time: "9:20 AM", isOwn: true },
+      { id: 6, sender: "Kalaiselvi", message: "QA Tester requirement - interviewed 3 candidates yesterday", time: "9:25 AM", isOwn: false },
+      { id: 7, sender: "Malathi", message: "Mobile App Developer role - client wants to schedule interviews", time: "9:30 AM", isOwn: false }
+    ];
+
+    const [newMessage, setNewMessage] = useState("");
+
+    const handleSendMessage = () => {
+      if (newMessage.trim()) {
+        // Add message logic here
+        setNewMessage("");
+      }
+    };
+
+    return (
+      <div className="flex min-h-screen">
+        <div className="flex-1 ml-16 bg-gray-50">
+          <AdminTopHeader userName="John Mathew" companyName="Gumlat Marketing Private Limited" />
+          <div className="px-6 py-6 h-full flex flex-col">
+            
+            {/* Chat Header */}
+            <Card className="mb-4">
+              <CardHeader className="pb-3 pt-4">
+                <CardTitle className="text-lg text-gray-900 flex items-center">
+                  <i className="fas fa-comments mr-2 text-blue-600"></i>
+                  Team Chat - Requirements Discussion
+                </CardTitle>
+                <p className="text-sm text-gray-600">5 members online</p>
+              </CardHeader>
+            </Card>
+
+            {/* Chat Messages Area */}
+            <Card className="flex-1 flex flex-col">
+              <CardContent className="flex-1 flex flex-col p-0">
+                {/* Messages Container */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                  {chatMessages.map((message) => (
+                    <div key={message.id} className={`flex ${message.isOwn ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                        message.isOwn 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-white border border-gray-200 text-gray-900'
+                      }`}>
+                        {!message.isOwn && (
+                          <div className="text-xs font-semibold text-blue-600 mb-1">
+                            {message.sender}
+                          </div>
+                        )}
+                        <div className="text-sm">{message.message}</div>
+                        <div className={`text-xs mt-1 ${message.isOwn ? 'text-blue-200' : 'text-gray-500'}`}>
+                          {message.time}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Message Input Area */}
+                <div className="border-t border-gray-200 p-4 bg-white">
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="text"
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      placeholder="Type your message..."
+                      className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                    />
+                    <Button 
+                      onClick={handleSendMessage}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+                    >
+                      <i className="fas fa-paper-plane mr-2"></i>
+                      Send
+                    </Button>
+                  </div>
+                  
+                  {/* Quick Actions */}
+                  <div className="flex items-center space-x-4 mt-3">
+                    <Button variant="outline" size="sm" className="text-sm">
+                      <i className="fas fa-paperclip mr-2"></i>
+                      Attach File
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-sm">
+                      <i className="fas fa-file-alt mr-2"></i>
+                      Share Resume
+                    </Button>
+                    <Button variant="outline" size="sm" className="text-sm">
+                      <i className="fas fa-calendar mr-2"></i>
+                      Schedule Meeting
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
