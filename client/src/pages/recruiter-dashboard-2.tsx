@@ -112,12 +112,14 @@ export default function RecruiterDashboard2() {
 
   // Define color mapping for consistent candidate colors
   const candidateColors = {
-    'Priya': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-    'Amit': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200',
-    'Sowmiya': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
-    'Rajesh': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-    'Kavitha': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-    'Vinay': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+    'Keerthana': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+    'Vishnu Purana': 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200',
+    'Chanakya': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+    'Adhya': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+    'Vanshika': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+    'Reyansh': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+    'Saurang': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+    'Vihana': 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200'
   };
 
   // Use API data for recruiter context
@@ -452,9 +454,359 @@ export default function RecruiterDashboard2() {
 
   const renderPipelineContent = () => {
     return (
-      <div className="p-6">
-        <h2 className="text-2xl font-bold mb-4">Recruitment Pipeline</h2>
-        <p className="text-gray-600">Pipeline visualization would go here...</p>
+      <div className="px-6 py-6 space-y-6">
+        {/* Pipeline Stages */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Pipeline</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Level 1</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Level 2</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Level 3</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Final Round</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">HR Round</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Offer Stage</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Closure</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Row 1 */}
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Keerthana']}`}>
+                        Keerthana
+                      </span>
+                    </td>
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Keerthana']}`}>
+                        Keerthana
+                      </span>
+                    </td>
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Keerthana']}`}>
+                        Keerthana
+                      </span>
+                    </td>
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Keerthana']}`}>
+                        Keerthana
+                      </span>
+                    </td>
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Keerthana']}`}>
+                        Keerthana
+                      </span>
+                    </td>
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Keerthana']}`}>
+                        Keerthana
+                      </span>
+                    </td>
+                    <td className="p-3 w-32">
+                      <div className="flex items-center justify-between">
+                        <span className={`inline-block flex-1 text-center px-3 py-2 rounded text-sm ${candidateColors['Keerthana']}`}>
+                          Keerthana
+                        </span>
+                        <Dialog open={isClosureModalOpen} onOpenChange={setIsClosureModalOpen}>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="ml-2 p-1">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                              <DialogTitle>Closure Report</DialogTitle>
+                            </DialogHeader>
+                            <div className="grid grid-cols-2 gap-4 py-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="candidate-name">Candidate Name</Label>
+                                <Input id="candidate-name" placeholder="Enter name" className="bg-gray-50 dark:bg-gray-700 border rounded" />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="fixed-ctc">Fixed CTC</Label>
+                                <Input id="fixed-ctc" placeholder="Enter CTC" className="bg-gray-50 dark:bg-gray-700 border rounded" />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="client">Client</Label>
+                                <Input id="client" placeholder="Enter client" className="bg-gray-50 dark:bg-gray-700 border rounded" />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="talent-advisor">Talent Advisor</Label>
+                                <Input id="talent-advisor" placeholder="Enter advisor" className="bg-gray-50 dark:bg-gray-700 border rounded" />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="position">Position</Label>
+                                <Input id="position" placeholder="Enter position" className="bg-gray-50 dark:bg-gray-700 border rounded" />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="offered-date">Offered Date</Label>
+                                <Input id="offered-date" type="date" className="bg-gray-50 dark:bg-gray-700 border rounded" />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="joining-date">Joining Date</Label>
+                                <Input id="joining-date" type="date" className="bg-gray-50 dark:bg-gray-700 border rounded" />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="comments">Comments</Label>
+                                <Input id="comments" placeholder="Enter comments" className="bg-gray-50 dark:bg-gray-700 border rounded" />
+                              </div>
+                            </div>
+                            <div className="flex justify-center">
+                              <Button className="bg-blue-500 hover:bg-blue-600 text-white">Send Report</Button>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      </div>
+                    </td>
+                  </tr>
+                  {/* Row 2 */}
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Vishnu Purana']}`}>
+                        Vishnu Purana
+                      </span>
+                    </td>
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Vishnu Purana']}`}>
+                        Vishnu Purana
+                      </span>
+                    </td>
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Vishnu Purana']}`}>
+                        Vishnu Purana
+                      </span>
+                    </td>
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Vishnu Purana']}`}>
+                        Vishnu Purana
+                      </span>
+                    </td>
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Vishnu Purana']}`}>
+                        Vishnu Purana
+                      </span>
+                    </td>
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Vishnu Purana']}`}>
+                        Vishnu Purana
+                      </span>
+                    </td>
+                    <td className="p-3 w-32">
+                      <div className="flex items-center justify-between">
+                        <span className={`inline-block flex-1 text-center px-3 py-2 rounded text-sm ${candidateColors['Vishnu Purana']}`}>
+                          Vishnu Purana
+                        </span>
+                        <Button variant="ghost" size="sm" className="ml-2 p-1">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                  {/* Row 3 */}
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Chanakya']}`}>
+                        Chanakya
+                      </span>
+                    </td>
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Chanakya']}`}>
+                        Chanakya
+                      </span>
+                    </td>
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Chanakya']}`}>
+                        Chanakya
+                      </span>
+                    </td>
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Chanakya']}`}>
+                        Chanakya
+                      </span>
+                    </td>
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Chanakya']}`}>
+                        Chanakya
+                      </span>
+                    </td>
+                    <td className="p-3 w-32"></td>
+                    <td className="p-3 w-32"></td>
+                  </tr>
+                  {/* Row 4 */}
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Adhya']}`}>
+                        Adhya
+                      </span>
+                    </td>
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Adhya']}`}>
+                        Adhya
+                      </span>
+                    </td>
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Adhya']}`}>
+                        Adhya
+                      </span>
+                    </td>
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Adhya']}`}>
+                        Adhya
+                      </span>
+                    </td>
+                    <td className="p-3 w-32"></td>
+                    <td className="p-3 w-32"></td>
+                    <td className="p-3 w-32"></td>
+                  </tr>
+                  {/* Row 5 */}
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Vanshika']}`}>
+                        Vanshika
+                      </span>
+                    </td>
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Vanshika']}`}>
+                        Vanshika
+                      </span>
+                    </td>
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Vanshika']}`}>
+                        Vanshika
+                      </span>
+                    </td>
+                    <td className="p-3 w-32"></td>
+                    <td className="p-3 w-32"></td>
+                    <td className="p-3 w-32"></td>
+                    <td className="p-3 w-32"></td>
+                  </tr>
+                  {/* Row 6 */}
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Reyansh']}`}>
+                        Reyansh
+                      </span>
+                    </td>
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Reyansh']}`}>
+                        Reyansh
+                      </span>
+                    </td>
+                    <td className="p-3 w-32"></td>
+                    <td className="p-3 w-32"></td>
+                    <td className="p-3 w-32"></td>
+                    <td className="p-3 w-32"></td>
+                    <td className="p-3 w-32"></td>
+                  </tr>
+                  {/* Row 7 */}
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Saurang']}`}>
+                        Saurang
+                      </span>
+                    </td>
+                    <td className="p-3 w-32"></td>
+                    <td className="p-3 w-32"></td>
+                    <td className="p-3 w-32"></td>
+                    <td className="p-3 w-32"></td>
+                    <td className="p-3 w-32"></td>
+                    <td className="p-3 w-32"></td>
+                  </tr>
+                  {/* Row 8 */}
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 w-32">
+                      <span className={`inline-block w-full text-center px-3 py-2 rounded text-sm ${candidateColors['Vihana']}`}>
+                        Vihana
+                      </span>
+                    </td>
+                    <td className="p-3 w-32"></td>
+                    <td className="p-3 w-32"></td>
+                    <td className="p-3 w-32"></td>
+                    <td className="p-3 w-32"></td>
+                    <td className="p-3 w-32"></td>
+                    <td className="p-3 w-32"></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Closure Reports */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Closure Reports</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Candidate</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Positions</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Client</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Talent Advisor</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Fixed CTC</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Offered Date</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Joined Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-gray-100">David Wilson</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Frontend Developer</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">TechCorp</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Kavitha</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">MJJ, 2025</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">12-06-2025</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">12-04-2025</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Tom Anderson</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">UI/UX Designer</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Designify</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Rajesh</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">ASO, 2025</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">18-08-2025</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">05-05-2025</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Robert Kim</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Backend Developer</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">CodeLabs</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Sowmiya</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">MJJ, 2025</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">28-06-2025</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">19-08-2025</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Kevin Brown</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">QA Tester</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">AppLogic</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Kalaiselvi</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">PMA, 2025</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">03-07-2025</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">03-09-2025</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Mel Gibson</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Mobile App Developer</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Tesco</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Malathi</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">NDA, 2025</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">18-07-2025</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">10-10-2025</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   };
