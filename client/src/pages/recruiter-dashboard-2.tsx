@@ -176,89 +176,102 @@ export default function RecruiterDashboard2() {
   };
 
   const renderRecruiterContent = () => {
+    const applicantData = [
+      { appliedOn: '06-06-2025', candidateName: 'Aarav', company: 'TechCorp', roleApplied: 'Frontend Developer', submission: 'Inbound', currentStatus: 'In-Process' },
+      { appliedOn: '08-06-2025', candidateName: 'Arjun', company: 'Designify', roleApplied: 'UI/UX Designer', submission: 'Uploaded', currentStatus: 'In-Process' },
+      { appliedOn: '20-06-2025', candidateName: 'Shaurya', company: 'CodeLabs', roleApplied: 'Backend Developer', submission: 'Uploaded', currentStatus: 'In-Process' },
+      { appliedOn: '01-07-2025', candidateName: 'Vihaan', company: 'AppLogic', roleApplied: 'QA Tester', submission: 'Inbound', currentStatus: 'In-Process' },
+      { appliedOn: '23-07-2025', candidateName: 'Aditya', company: 'Bug Catchers', roleApplied: 'Mobile App Developer', submission: 'Inbound', currentStatus: 'In-Process' },
+    ];
+
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
           <AdminTopHeader userName="Kumaravel R - Recruiter 2" companyName="Gumlat Marketing Private Limited" />
           <div className="flex h-screen">
             {/* Main Content - Middle Section (Scrollable) */}
-            <div className="px-3 py-2 space-y-2 flex-1 overflow-y-auto h-full">
+            <div className="px-6 py-6 space-y-6 flex-1 overflow-y-auto h-full">
 
-              <TeamLeaderTeamBoxes />
+              {/* Applicant Overview Table */}
+              <Card className="bg-white border border-gray-200">
+                <CardHeader className="pb-4 pt-6">
+                  <CardTitle className="text-lg font-semibold text-gray-900">Applicant Overview</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left py-3 px-6 font-medium text-gray-700">Applied on</th>
+                          <th className="text-left py-3 px-6 font-medium text-gray-700">Candidate Name</th>
+                          <th className="text-left py-3 px-6 font-medium text-gray-700">Company</th>
+                          <th className="text-left py-3 px-6 font-medium text-gray-700">Role Applied</th>
+                          <th className="text-left py-3 px-6 font-medium text-gray-700">Submission</th>
+                          <th className="text-left py-3 px-6 font-medium text-gray-700">Current Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {applicantData.map((applicant, index) => (
+                          <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                            <td className="py-3 px-6 text-gray-900">{applicant.appliedOn}</td>
+                            <td className="py-3 px-6 text-gray-900 font-medium">{applicant.candidateName}</td>
+                            <td className="py-3 px-6 text-gray-900">{applicant.company}</td>
+                            <td className="py-3 px-6 text-gray-900">{applicant.roleApplied}</td>
+                            <td className="py-3 px-6">
+                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                applicant.submission === 'Inbound' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-blue-100 text-blue-800'
+                              }`}>
+                                {applicant.submission}
+                              </span>
+                            </td>
+                            <td className="py-3 px-6">
+                              <select className="border border-gray-300 rounded px-3 py-1 text-sm" defaultValue={applicant.currentStatus}>
+                                <option value="In-Process">In-Process</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Rejected">Rejected</option>
+                              </select>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Target Section */}
               <Card className="bg-white border border-gray-200">
-                <CardHeader className="pb-3 pt-4 flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg font-semibold text-gray-900">Recruitment Targets</CardTitle>
-                  <Dialog open={isTargetModalOpen} onOpenChange={setIsTargetModalOpen}>
-                    <DialogTrigger asChild>
-                      <Button 
-                        variant="outline"
-                        className="text-sm px-4 py-2 border-gray-300 hover:bg-gray-50"
-                        data-testid="button-view-all-targets"
-                      >
-                        View All
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-4xl">
-                      <DialogHeader>
-                        <DialogTitle className="text-xl font-semibold">All Quarters Recruitment Targets</DialogTitle>
-                      </DialogHeader>
-                      <div className="mt-4">
-                        <div className="overflow-x-auto">
-                          <table className="w-full border-collapse border border-gray-300">
-                            <thead>
-                              <tr className="bg-gray-100">
-                                <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Quarter</th>
-                                <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Hiring Target</th>
-                                <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Hires Achieved</th>
-                                <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Bonus Earned</th>
-                                <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Status</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr>
-                                <td className="border border-gray-300 px-4 py-3">ASO-2025</td>
-                                <td className="border border-gray-300 px-4 py-3">25 Hires</td>
-                                <td className="border border-gray-300 px-4 py-3">18 Hires</td>
-                                <td className="border border-gray-300 px-4 py-3">₹45,000</td>
-                                <td className="border border-gray-300 px-4 py-3">
-                                  <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-sm">In Progress</span>
-                                </td>
-                              </tr>
-                              <tr className="bg-gray-50">
-                                <td className="border border-gray-300 px-4 py-3">JSO-2024</td>
-                                <td className="border border-gray-300 px-4 py-3">22 Hires</td>
-                                <td className="border border-gray-300 px-4 py-3">26 Hires</td>
-                                <td className="border border-gray-300 px-4 py-3">₹65,000</td>
-                                <td className="border border-gray-300 px-4 py-3">
-                                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">Completed</span>
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                <CardHeader className="pb-4 pt-6">
+                  <CardTitle className="text-lg font-semibold text-gray-900">Target</CardTitle>
+                  <div className="text-right">
+                    <Button 
+                      variant="link"
+                      className="text-sm text-blue-600 hover:text-blue-800 p-0"
+                      data-testid="button-view-all-targets"
+                    >
+                      View All
+                    </Button>
+                  </div>
                 </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <div className="grid grid-cols-4 gap-0 bg-orange-50 rounded-lg overflow-hidden">
-                    <div className="text-center py-6 px-4 border-r border-orange-100">
-                      <p className="text-sm font-semibold text-gray-700 mb-2" data-testid="text-current-quarter">Current Quarter</p>
-                      <p className="text-xl font-bold text-gray-900">ASO-2025</p>
+                <CardContent className="p-6 pt-0">
+                  <div className="grid grid-cols-4 gap-0 bg-blue-50 rounded-lg overflow-hidden">
+                    <div className="text-center py-8 px-4 border-r border-blue-100">
+                      <p className="text-sm font-semibold text-gray-700 mb-3" data-testid="text-current-quarter">Current Quarter</p>
+                      <p className="text-2xl font-bold text-gray-900">ASO-2025</p>
                     </div>
-                    <div className="text-center py-6 px-4 border-r border-orange-100">
-                      <p className="text-sm font-semibold text-gray-700 mb-2" data-testid="text-hiring-target">Hiring Target</p>
-                      <p className="text-xl font-bold text-gray-900">25</p>
+                    <div className="text-center py-8 px-4 border-r border-blue-100">
+                      <p className="text-sm font-semibold text-gray-700 mb-3" data-testid="text-minimum-target">Minimum Target</p>
+                      <p className="text-2xl font-bold text-gray-900">15,00,000</p>
                     </div>
-                    <div className="text-center py-6 px-4 border-r border-orange-100">
-                      <p className="text-sm font-semibold text-gray-700 mb-2" data-testid="text-hires-achieved">Hires Achieved</p>
-                      <p className="text-xl font-bold text-gray-900">18</p>
+                    <div className="text-center py-8 px-4 border-r border-blue-100">
+                      <p className="text-sm font-semibold text-gray-700 mb-3" data-testid="text-target-achieved">Target Achieved</p>
+                      <p className="text-2xl font-bold text-gray-900">10,00,000</p>
                     </div>
-                    <div className="text-center py-6 px-4">
-                      <p className="text-sm font-semibold text-gray-700 mb-2" data-testid="text-bonus-earned">Bonus Earned</p>
-                      <p className="text-xl font-bold text-gray-900">₹45,000</p>
+                    <div className="text-center py-8 px-4">
+                      <p className="text-sm font-semibold text-gray-700 mb-3" data-testid="text-incentive-earned">Incentive Earned</p>
+                      <p className="text-2xl font-bold text-gray-900">50,000</p>
                     </div>
                   </div>
                 </CardContent>
@@ -266,14 +279,15 @@ export default function RecruiterDashboard2() {
 
               {/* Daily Metrics Section */}
               <Card className="bg-white border border-gray-200">
-                <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4">
-                  <CardTitle className="text-lg font-semibold text-gray-900">Daily Recruitment Metrics</CardTitle>
+                <CardHeader className="flex flex-row items-center justify-between pb-4 pt-6">
+                  <CardTitle className="text-lg font-semibold text-gray-900">Daily Metrics</CardTitle>
                   <div className="flex items-center space-x-2">
-                    <Select defaultValue="personal">
-                      <SelectTrigger className="w-24 h-8 text-sm">
+                    <Select defaultValue="overall">
+                      <SelectTrigger className="w-32 h-8 text-sm">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="overall">Overall</SelectItem>
                         <SelectItem value="personal">Personal</SelectItem>
                         <SelectItem value="team">Team</SelectItem>
                       </SelectContent>
@@ -283,7 +297,7 @@ export default function RecruiterDashboard2() {
                       <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" className="flex items-center space-x-1 h-8 px-3" data-testid="button-date-picker">
                           <CalendarIcon className="h-4 w-4" />
-                          <span className="text-sm">06-Sep-2025</span>
+                          <span className="text-sm">12-Aug-2025</span>
                           <EditIcon className="h-4 w-4" />
                         </Button>
                       </PopoverTrigger>
@@ -299,66 +313,71 @@ export default function RecruiterDashboard2() {
                   </div>
                 </CardHeader>
                 
-                <CardContent className="p-4 pt-0">
+                <CardContent className="px-6 pb-6 pt-0">
                   <div className="grid grid-cols-3 gap-6">
                     {/* Left side - Metrics */}
-                    <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
-                      <div className="flex justify-between items-center py-1">
-                        <span className="text-sm font-medium text-gray-700">Active Job Openings</span>
-                        <span className="text-2xl font-bold text-blue-600" data-testid="text-active-jobs">28</span>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-sm font-medium text-gray-600">Total Requirements</span>
+                        <span className="text-4xl font-bold text-blue-600" data-testid="text-total-requirements">20</span>
                       </div>
-                      <div className="border-t border-gray-200"></div>
-                      <div className="flex justify-between items-center py-1">
-                        <span className="text-sm font-medium text-gray-700">Candidates Sourced</span>
-                        <span className="text-2xl font-bold text-blue-600" data-testid="text-candidates-sourced">45</span>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-sm font-medium text-gray-600">Avg. Resumes per Requirement</span>
+                        <span className="text-4xl font-bold text-blue-600" data-testid="text-avg-resumes">02</span>
                       </div>
-                      <div className="border-t border-gray-200"></div>
-                      <div className="flex justify-between items-center py-1">
-                        <span className="text-sm font-medium text-gray-700">Interviews Scheduled</span>
-                        <span className="text-2xl font-bold text-blue-600" data-testid="text-interviews-scheduled">12</span>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-sm font-medium text-gray-600">Requirements per Recruiter</span>
+                        <span className="text-4xl font-bold text-blue-600" data-testid="text-requirements-recruiter">03</span>
                       </div>
-                      <div className="border-t border-gray-200"></div>
-                      <div className="flex justify-between items-center py-1">
-                        <span className="text-sm font-medium text-gray-700">Offers Extended</span>
-                        <span className="text-2xl font-bold text-blue-600" data-testid="text-offers-extended">06</span>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-sm font-medium text-gray-600">Completed Requirements</span>
+                        <span className="text-4xl font-bold text-blue-600" data-testid="text-completed-requirements">12</span>
                       </div>
                     </div>
 
                     {/* Middle section - Daily Delivery */}
-                    <div className="bg-white border border-gray-200 rounded-lg p-6">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Daily Performance</h3>
-                      <div className="flex items-center justify-center">
+                    <div className="bg-slate-800 text-white rounded-lg p-6">
+                      <h3 className="text-lg font-semibold text-white mb-6">Daily Delivery</h3>
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="text-center">
-                          <div className="text-4xl font-bold text-green-600 mb-2" data-testid="text-performance-score">92%</div>
-                          <div className="text-sm text-gray-600">Performance Score</div>
+                          <div className="text-sm text-gray-300 mb-2">Delivered</div>
+                          <div className="text-4xl font-bold text-white mb-3">3</div>
+                          <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white" data-testid="button-view-delivered">
+                            View
+                          </Button>
                         </div>
-                      </div>
-                      <div className="mt-6 space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Target Achievement</span>
-                          <span className="font-medium">78%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div className="bg-green-600 h-2 rounded-full" style={{width: '78%'}}></div>
+                        <div className="text-center">
+                          <div className="text-sm text-gray-300 mb-2">Defaulted</div>
+                          <div className="text-4xl font-bold text-white mb-3">1</div>
+                          <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white" data-testid="button-view-defaulted">
+                            View
+                          </Button>
                         </div>
                       </div>
                     </div>
 
-                    {/* Right section - Quick Stats */}
-                    <div className="bg-white border border-gray-200 rounded-lg p-6">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Stats</h3>
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600">Response Rate</span>
-                          <span className="text-lg font-bold text-blue-600" data-testid="text-response-rate">89%</span>
+                    {/* Right section - Overall Performance */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-lg font-semibold text-gray-900">Overall Performance</h3>
+                        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                          <span className="text-green-700 font-bold text-lg">G</span>
                         </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600">Interview-to-Hire</span>
-                          <span className="text-lg font-bold text-green-600" data-testid="text-interview-hire-ratio">1:3</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm text-gray-600">Avg. Time to Fill</span>
-                          <span className="text-lg font-bold text-orange-600" data-testid="text-time-to-fill">12 days</span>
+                      </div>
+                      <div className="text-right">
+                        <Button size="sm" variant="link" className="text-blue-600 p-0" data-testid="button-view-more-performance">
+                          View More
+                        </Button>
+                      </div>
+                      <div className="h-24 flex items-center justify-center">
+                        {/* Simple line chart placeholder */}
+                        <div className="w-full h-16 bg-gray-100 rounded flex items-end justify-around px-4">
+                          <div className="w-1 bg-orange-400 rounded" style={{height: '30%'}}></div>
+                          <div className="w-1 bg-orange-400 rounded" style={{height: '45%'}}></div>
+                          <div className="w-1 bg-orange-400 rounded" style={{height: '60%'}}></div>
+                          <div className="w-1 bg-orange-400 rounded" style={{height: '55%'}}></div>
+                          <div className="w-1 bg-orange-400 rounded" style={{height: '70%'}}></div>
+                          <div className="w-1 bg-orange-400 rounded" style={{height: '40%'}}></div>
                         </div>
                       </div>
                     </div>
@@ -366,53 +385,120 @@ export default function RecruiterDashboard2() {
                 </CardContent>
               </Card>
 
-              {/* CEO Comments Section */}
-              {ceoComments && ceoComments.length > 0 && (
+              {/* Bottom Row - Pending Meetings and CEO Commands */}
+              <div className="grid grid-cols-2 gap-6">
+                {/* Pending Meetings */}
                 <Card className="bg-white border border-gray-200">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold text-gray-900">Management Feedback</CardTitle>
+                  <CardHeader className="pb-4 pt-6">
+                    <CardTitle className="text-lg font-semibold text-gray-900">Pending Meetings</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {ceoComments.map((comment: any) => (
-                        <div key={comment.id} className="p-4 bg-pink-50 dark:bg-pink-900/20 rounded border-l-4 border-pink-400" data-testid={`comment-${comment.id}`}>
-                          <p className="text-pink-900 dark:text-pink-100">{comment.comment}</p>
-                          <p className="text-sm text-pink-600 dark:text-pink-300 mt-2">- {comment.author}</p>
-                        </div>
-                      ))}
+                  <CardContent className="px-6 pb-6 pt-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="text-left py-3 font-medium text-gray-700">Meeting</th>
+                            <th className="text-left py-3 font-medium text-gray-700">Date</th>
+                            <th className="text-left py-3 font-medium text-gray-700">Person</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="border-b border-gray-100">
+                            <td className="py-3 text-gray-900">TL</td>
+                            <td className="py-3 text-gray-900">25-05-2025</td>
+                            <td className="py-3 text-gray-900">Arun</td>
+                          </tr>
+                          <tr className="border-b border-gray-100">
+                            <td className="py-3 text-gray-900">CEO</td>
+                            <td className="py-3 text-gray-900">01-05-2025</td>
+                            <td className="py-3 text-gray-900">Vikna Prakash</td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
                   </CardContent>
                 </Card>
-              )}
 
-              {/* Pending Meetings */}
-              {meetings && meetings.length > 0 && (
+                {/* CEO Commands */}
                 <Card className="bg-white border border-gray-200">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold text-gray-900">Upcoming Meetings</CardTitle>
+                  <CardHeader className="pb-4 pt-6">
+                    <CardTitle className="text-lg font-semibold text-gray-900">CEO Commands</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {meetings.map((meeting: any) => (
-                        <div key={meeting.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded" data-testid={`meeting-${meeting.id}`}>
-                          <div>
-                            <div className="font-medium text-gray-900 dark:text-white">{meeting.type}</div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">{meeting.date} with {meeting.person}</div>
-                          </div>
-                          <Button size="sm" variant="outline" data-testid={`button-view-meeting-${meeting.id}`}>
-                            View Details
-                          </Button>
-                        </div>
-                      ))}
+                  <CardContent className="px-6 pb-6 pt-0">
+                    <div className="bg-slate-800 text-white rounded-lg p-6 space-y-4">
+                      <div className="text-sm text-gray-300">
+                        <p>Discuss with Shri Ragavi on her production</p>
+                      </div>
+                      <div className="text-sm text-gray-300">
+                        <p>Discuss with Kavya about her leaves</p>
+                      </div>
+                      <div className="text-sm text-gray-300">
+                        <p>Discuss with Umar for data</p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
-              )}
+              </div>
+
             </div>
 
             {/* Right Sidebar */}
-            <div className="w-80 bg-white border-l border-gray-200 p-4 overflow-y-auto h-full">
-              <TeamLeaderSidebar />
+            <div className="w-80 bg-white border-l border-gray-200 p-6 overflow-y-auto h-full space-y-6">
+              {/* Active Jobs */}
+              <div className="text-center">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Active Jobs</h3>
+                <div className="text-5xl font-bold text-gray-900 mb-2">12</div>
+              </div>
+              
+              {/* Total Jobs */}
+              <div className="text-center">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Total Jobs</h3>
+                <div className="text-5xl font-bold text-gray-900 mb-2">20</div>
+              </div>
+              
+              {/* New Applications */}
+              <div className="text-center">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">New Applications</h3>
+                <div className="text-5xl font-bold text-gray-900 mb-2">10</div>
+              </div>
+              
+              {/* Total Applications */}
+              <div className="text-center">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Total Applications</h3>
+                <div className="text-5xl font-bold text-gray-900 mb-2">20</div>
+                <div className="text-right">
+                  <Button size="sm" variant="link" className="text-blue-600 p-0 text-xs">
+                    See All
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Interview Tracker */}
+              <div className="border-t pt-6">
+                <h3 className="text-sm font-semibold text-gray-700 mb-4">Interview Tracker</h3>
+                
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Today's Schedule</span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-2xl font-bold text-gray-900">4</span>
+                      <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1 text-xs">
+                        Add
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Pending cases</span>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-2xl font-bold text-gray-900">10</span>
+                      <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1 text-xs">
+                        View
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
