@@ -507,32 +507,150 @@ export default function RecruiterDashboard2() {
   };
 
   const renderRequirementsContent = () => {
+    // Updated requirements data with SPOC Email field matching the image
+    const requirementsTableData = [
+      { position: 'Frontend Developer', criticality: 'HIGH', company: 'TechCorp', spoc: 'David Wilson', spocEmail: 'david@techcorp.com', count: 'Set' },
+      { position: 'UI/UX Designer', criticality: 'MEDIUM', company: 'Designify', spoc: 'Tom Anderson', spocEmail: 'tom@designify.com', count: 'Set' },
+      { position: 'Backend Developer', criticality: 'LOW', company: 'CodeLabs', spoc: 'Robert Kim', spocEmail: 'robert@codelabs.com', count: 'Set' },
+      { position: 'QA Tester', criticality: 'MEDIUM', company: 'AppLogic', spoc: 'Kevin Brown', spocEmail: 'kevin@applogic.com', count: 'Set' },
+      { position: 'Mobile App Developer', criticality: 'HIGH', company: 'Tesco', spoc: 'Mel Gibson', spocEmail: 'mel@tesco.com', count: 'Set' },
+    ];
+
     return (
-      <div className="p-6">
-        <h2 className="text-2xl font-bold mb-4">Recruitment Requirements</h2>
-        <div className="grid gap-4">
-          {requirementsData.map((req) => (
-            <Card key={req.id} className="p-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="font-semibold">{req.position}</h3>
-                  <p className="text-sm text-gray-600">{req.company} - {req.candidates} candidates</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`px-2 py-1 rounded text-xs ${
-                    req.criticality === 'HIGH' ? 'bg-red-100 text-red-800' :
-                    req.criticality === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-green-100 text-green-800'
-                  }`}>
-                    {req.criticality}
-                  </span>
-                  <span className="px-2 py-1 rounded text-xs bg-blue-100 text-blue-800">
-                    {req.status}
-                  </span>
-                </div>
+      <div className="flex min-h-screen">
+        <div className="flex-1 ml-16 bg-gray-50">
+          <AdminTopHeader userName="Kumaravel R - Recruiter 2" companyName="Gumlat Marketing Private Limited" />
+          <div className="flex h-screen">
+            {/* Main Content Area */}
+            <div className="flex-1 px-6 py-6 overflow-y-auto">
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">Deliverables</h2>
+              
+              {/* Requirements Table */}
+              <Card className="bg-white border border-gray-200">
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-gray-50 border-b border-gray-200">
+                          <th className="text-left py-3 px-4 font-medium text-gray-700">Positions</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-700">Criticality</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-700">Company</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-700">SPOC</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-700">SPOC Email</th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-700">Count</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {requirementsTableData.map((req, index) => (
+                          <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                            <td className="py-3 px-4 text-gray-900">{req.position}</td>
+                            <td className="py-3 px-4">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                req.criticality === 'HIGH' ? 'bg-red-100 text-red-800' :
+                                req.criticality === 'MEDIUM' ? 'bg-blue-100 text-blue-800' :
+                                'bg-green-100 text-green-800'
+                              }`}>
+                                • {req.criticality}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-gray-900">{req.company}</td>
+                            <td className="py-3 px-4 text-gray-900">{req.spoc}</td>
+                            <td className="py-3 px-4 text-gray-900">{req.spocEmail}</td>
+                            <td className="py-3 px-4">
+                              <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white rounded">
+                                {req.count}
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  {/* Action Buttons */}
+                  <div className="flex justify-center gap-4 p-4 border-t border-gray-100">
+                    <Button 
+                      variant="outline" 
+                      className="bg-red-500 hover:bg-red-600 text-white hover:text-white border-red-500 hover:border-red-600 rounded px-6"
+                      data-testid="button-req-archives"
+                    >
+                      Req-Archives
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      className="bg-blue-500 hover:bg-blue-600 text-white hover:text-white border-blue-500 hover:border-blue-600 rounded px-6"
+                      data-testid="button-view-more"
+                    >
+                      View More
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Priority Distribution Sidebar */}
+            <div className="w-80 bg-white border-l border-gray-200 px-6 py-6">
+              <div className="space-y-6">
+                {/* Priority Distribution */}
+                <Card className="bg-gray-50 border border-gray-200">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg font-semibold text-gray-900">Priority Distribution</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Idle Requirement */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="text-4xl font-bold text-blue-500">9</div>
+                        <span className="text-gray-700 font-medium">Idle Requirement</span>
+                      </div>
+                    </div>
+
+                    {/* Delivery Pending */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="text-4xl font-bold text-red-400">3</div>
+                        <span className="text-gray-700 font-medium">Delivery Pending</span>
+                      </div>
+                    </div>
+
+                    {/* Robust Requirement */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="text-4xl font-bold text-green-500">7</div>
+                        <span className="text-gray-700 font-medium">Robust Requirement</span>
+                      </div>
+                    </div>
+
+                    {/* Easy Requirement */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="text-4xl font-bold text-green-600">2</div>
+                        <span className="text-gray-700 font-medium">Easy Requirement</span>
+                      </div>
+                    </div>
+
+                    {/* High Priority */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="text-4xl font-bold text-orange-500">6</div>
+                        <span className="text-gray-700 font-medium">High Priority</span>
+                      </div>
+                    </div>
+
+                    {/* Total Requirement */}
+                    <div className="flex items-center justify-between border-t border-gray-300 pt-4">
+                      <div className="flex items-center space-x-3">
+                        <div>
+                          <div className="text-sm text-gray-600 font-medium">Total Requirement</div>
+                          <div className="text-3xl font-bold text-gray-900">20</div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            </Card>
-          ))}
+            </div>
+          </div>
         </div>
       </div>
     );
