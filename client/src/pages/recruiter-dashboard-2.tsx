@@ -813,9 +813,148 @@ export default function RecruiterDashboard2() {
 
   const renderPerformanceContent = () => {
     return (
-      <div className="p-6">
-        <h2 className="text-2xl font-bold mb-4">Performance Analytics</h2>
-        <p className="text-gray-600">Performance metrics and analytics would go here...</p>
+      <div className="px-6 py-6 space-y-6">
+        {/* Team Performance Table */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Team Performance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Talent Advisor</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Joining Date</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Tenure</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Closures</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Last Closure</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Qtrs Achieved</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-gray-100">David Wilson</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">23-04-2023</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">2 yrs,3 months</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">4</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">23-06-2023</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">3</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Tom Anderson</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">28-04-2023</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">2 yrs,3 months</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">8</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">29-04-2023</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">6</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Robert Kim</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">04-05-2023</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">2 yrs,2 months</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">9</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">02-05-2023</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">11</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Kevin Brown</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">12-05-2023</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">2 yrs,2 months</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">13</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">18-05-2023</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">5</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Mel Gibson</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">05-06-2023</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">2 yrs</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">5</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">01-06-2023</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">13</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-end mt-4">
+              <Button className="bg-blue-500 hover:bg-blue-600 text-white">View Full List</Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* List of Closures Table */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>List Of Closures</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Candidate</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Positions</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Client</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Quarter</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Talent Advisor</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">CTC</th>
+                    <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Revenue</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-gray-100">David Wilson</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Frontend Developer</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">TechCorp</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">MJJ, 2025</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Kavitha</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">15,00,000</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">1,12,455</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Tom Anderson</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">UI/UX Designer</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Designify</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">ASO, 2025</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Rajesh</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">25,00,000</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">1,87,425</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Robert Kim</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Backend Developer</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">CodeLabs</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">MJJ, 2025</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Sowmiya</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">18,00,000</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">1,34,946</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Kevin Brown</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">QA Tester</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">AppLogic</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">PMA, 2025</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Kalaiselvi</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">30,00,000</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">2,24,910</td>
+                  </tr>
+                  <tr className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Mel Gibson</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Mobile App Developer</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Tesco</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">NDA, 2025</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">Malathi</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">50,00,000</td>
+                    <td className="p-3 text-gray-900 dark:text-gray-100">4,49,820</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-end mt-4">
+              <Button className="bg-blue-500 hover:bg-blue-600 text-white">View Full List</Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   };
