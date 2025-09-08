@@ -181,17 +181,6 @@ export default function RecruiterDashboard2() {
           <div className="flex h-screen">
             {/* Main Content - Middle Section (Scrollable) */}
             <div className="px-3 py-2 space-y-2 flex-1 overflow-y-auto h-full">
-              {/* Welcome Card for Recruiter 2 */}
-              <Card className="bg-gradient-to-r from-orange-50 to-orange-100 border-orange-200">
-                <CardContent className="p-6">
-                  <h2 className="text-xl font-semibold text-orange-900 mb-2">
-                    Welcome to Recruiter Dashboard 2! 🎯
-                  </h2>
-                  <p className="text-orange-700">
-                    Enhanced recruitment workspace with team leader capabilities and advanced features.
-                  </p>
-                </CardContent>
-              </Card>
 
               <TeamLeaderTeamBoxes />
 
