@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { User, Briefcase, Settings, LogOut } from "lucide-react";
+import { User, Briefcase, Settings, LogOut, UserCircle } from "lucide-react";
 import { useState } from "react";
 
 interface SidebarProps {
@@ -12,6 +12,7 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: User },
+    { id: 'profile', label: 'Profile', icon: UserCircle },
     { id: 'job-board', label: 'Job Board', icon: Briefcase },
     { id: 'settings', label: 'Settings', icon: Settings }
   ];

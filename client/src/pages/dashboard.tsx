@@ -9,6 +9,7 @@ import ActivityTab from '@/components/dashboard/tabs/activity-tab';
 import JobBoardTab from '@/components/dashboard/tabs/job-board-tab';
 import MyJobsTab from '@/components/dashboard/tabs/my-jobs-tab';
 import CandidateMetricsSidebar from '@/components/dashboard/candidate-metrics-sidebar';
+import ProfilePage from '@/pages/profile';
 import { useProfile } from '@/hooks/use-profile';
 
 export default function Dashboard() {
@@ -44,7 +45,7 @@ export default function Dashboard() {
             <div className="flex-1 flex flex-col">
               <SimpleClientHeader 
                 companyName="Gumlet Marketing Private Limited"
-                userName={profile?.name || 'Sasi Kumar'}
+                userName={`${profile?.firstName} ${profile?.lastName}` || 'Sasi Kumar'}
                 userImage={profile?.profilePicture || '/api/placeholder/32/32'}
               />
               <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
@@ -53,6 +54,19 @@ export default function Dashboard() {
               </div>
             </div>
             {activeTab === 'my-jobs' && <CandidateMetricsSidebar />}
+          </div>
+        );
+      case 'profile':
+        return (
+          <div className="flex flex-1">
+            <div className="flex-1 flex flex-col">
+              <SimpleClientHeader 
+                companyName="Gumlet Marketing Private Limited"
+                userName={`${profile?.firstName} ${profile?.lastName}` || 'Sasi Kumar'}
+                userImage={profile?.profilePicture || '/api/placeholder/32/32'}
+              />
+              <ProfilePage profile={profile!} />
+            </div>
           </div>
         );
       case 'job-board':
@@ -73,7 +87,7 @@ export default function Dashboard() {
             <div className="flex-1 flex flex-col">
               <SimpleClientHeader 
                 companyName="Gumlet Marketing Private Limited"
-                userName={profile?.name || 'Sasi Kumar'}
+                userName={`${profile?.firstName} ${profile?.lastName}` || 'Sasi Kumar'}
                 userImage={profile?.profilePicture || '/api/placeholder/32/32'}
               />
               <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />

@@ -74,7 +74,7 @@ export default function ProfilePage({ profile }: ProfilePageProps) {
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex items-center gap-6">
             <Avatar className="w-32 h-32">
-              <AvatarImage src={profile?.profilePicture || '/api/placeholder/128/128'} alt={profile?.name} />
+              <AvatarImage src={profile?.profilePicture || '/api/placeholder/128/128'} alt={`${profile?.firstName} ${profile?.lastName}`} />
               <AvatarFallback className="text-2xl">{profile?.firstName?.[0]}{profile?.lastName?.[0]}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
