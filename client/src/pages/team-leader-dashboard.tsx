@@ -34,6 +34,10 @@ export default function TeamLeaderDashboard() {
   const [isViewMoreRequirementsModalOpen, setIsViewMoreRequirementsModalOpen] = useState(false);
   const [isViewTeamPerformanceModalOpen, setIsViewTeamPerformanceModalOpen] = useState(false);
   const [isViewClosuresModalOpen, setIsViewClosuresModalOpen] = useState(false);
+  const [isDeliveredModalOpen, setIsDeliveredModalOpen] = useState(false);
+  const [isDefaultedModalOpen, setIsDefaultedModalOpen] = useState(false);
+  const [isMeetingsModalOpen, setIsMeetingsModalOpen] = useState(false);
+  const [isCeoCommentsModalOpen, setIsCeoCommentsModalOpen] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [chatMessages, setChatMessages] = useState([
     { id: 1, sender: "John Mathew", message: "Good morning team! Please review the requirements for today", time: "9:00 AM", isOwn: true },
@@ -313,9 +317,12 @@ export default function TeamLeaderDashboard() {
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0" align="end">
-                        <div className="p-4">
-                          <p className="text-sm">Calendar would go here</p>
-                        </div>
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={(date) => date && setSelectedDate(date)}
+                          initialFocus
+                        />
                       </PopoverContent>
                     </Popover>
                   </div>
@@ -356,6 +363,8 @@ export default function TeamLeaderDashboard() {
                           <Button 
                             size="sm" 
                             className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded text-sm font-medium"
+                            onClick={() => setIsDeliveredModalOpen(true)}
+                            data-testid="button-view-delivered"
                           >
                             View
                           </Button>
@@ -366,6 +375,8 @@ export default function TeamLeaderDashboard() {
                           <Button 
                             size="sm" 
                             className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded text-sm font-medium"
+                            onClick={() => setIsDefaultedModalOpen(true)}
+                            data-testid="button-view-defaulted"
                           >
                             View
                           </Button>
@@ -435,6 +446,8 @@ export default function TeamLeaderDashboard() {
                           <Button 
                             size="sm" 
                             className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded text-sm font-medium"
+                            onClick={() => setIsMeetingsModalOpen(true)}
+                            data-testid="button-view-meetings-tl"
                           >
                             View
                           </Button>
@@ -445,6 +458,8 @@ export default function TeamLeaderDashboard() {
                           <Button 
                             size="sm" 
                             className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded text-sm font-medium"
+                            onClick={() => setIsMeetingsModalOpen(true)}
+                            data-testid="button-view-meetings-ceo"
                           >
                             View
                           </Button>
@@ -458,7 +473,14 @@ export default function TeamLeaderDashboard() {
                 <Card className="bg-white border border-gray-200">
                   <CardHeader className="pb-3 pt-4 flex flex-row items-center justify-between">
                     <CardTitle className="text-lg font-semibold text-gray-900">CEO Commands</CardTitle>
-                    <Button variant="link" className="text-sm text-blue-600 p-0">View More</Button>
+                    <Button 
+                      variant="link" 
+                      className="text-sm text-blue-600 p-0"
+                      onClick={() => setIsCeoCommentsModalOpen(true)}
+                      data-testid="button-view-more-comments"
+                    >
+                      View More
+                    </Button>
                   </CardHeader>
                   <CardContent className="p-4 pt-0">
                     <div className="bg-slate-800 rounded-lg p-6 text-white space-y-4">
