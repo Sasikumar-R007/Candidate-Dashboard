@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Search, MapPin, Edit, Bookmark } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Search, MapPin, Filter, X, Heart, Clock, Bookmark } from "lucide-react";
 import { useSavedJobs, useSaveJob, useRemoveSavedJob } from "@/hooks/use-saved-jobs";
 import { useToast } from "@/hooks/use-toast";
-import { useProfile } from "@/hooks/use-profile";
 
 interface JobListing {
   id: string;
@@ -32,74 +30,221 @@ const jobListings: JobListing[] = [
     company: 'Google Technologies Inc.',
     title: 'Cloud Engineer',
     description: 'Technology Product based hyper growth, innovative company.',
-    experience: '8 Years',
+    experience: '5-8 Years',
     salary: '25 LPA',
     location: 'Bangalore',
     type: 'Full Time',
     workType: 'Work from office',
     skills: ['CICD', 'Docker', 'Azure'],
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/480px-Google_%22G%22_logo.svg.png',
+    logo: '/api/placeholder/60/60',
     isRemote: false,
     postedDays: 3,
-    background: 'bg-green-100',
+    background: 'bg-gradient-to-br from-green-100 to-green-200',
     isHot: true
   },
   {
-    id: '2',
-    company: 'Unity Technologies',
-    title: 'Cloud Engineer',
-    description: 'Technology Product based hyper growth, innovative company.',
-    experience: '8 Years',
-    salary: '25 LPA',
-    location: 'Bangalore',
+    id: '2', 
+    company: 'Microsoft Corp.',
+    title: 'Senior Software Engineer',
+    description: 'Join our innovative team building next-generation cloud solutions.',
+    experience: '3-5 Years',
+    salary: '20 LPA',
+    location: 'Mumbai',
     type: 'Full Time',
-    workType: 'Work from office',
-    skills: ['CICD', 'Docker', 'Azure'],
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/Unity_Technologies_logo.svg/480px-Unity_Technologies_logo.svg.png',
+    workType: 'Hybrid',
+    skills: ['React', 'Node.js', 'TypeScript'],
+    logo: '/api/placeholder/60/60',
     isRemote: false,
-    postedDays: 3,
-    background: 'bg-purple-100',
+    postedDays: 1,
+    background: 'bg-gradient-to-br from-purple-100 to-purple-200',
     isHot: false
   },
   {
     id: '3',
-    company: 'Google Technologies Inc.',
+    company: 'Amazon Web Services',
+    title: 'DevOps Engineer',
+    description: 'Build and maintain scalable infrastructure for millions of users.',
+    experience: '4-6 Years',
+    salary: '30 LPA',
+    location: 'Hyderabad',
+    type: 'Full Time',
+    workType: 'Remote',
+    skills: ['AWS', 'Kubernetes', 'Terraform'],
+    logo: '/api/placeholder/60/60',
+    isRemote: true,
+    postedDays: 2,
+    background: 'bg-gradient-to-br from-orange-100 to-orange-200',
+    isHot: true
+  },
+  {
+    id: '4',
+    company: 'Meta Platforms',
     title: 'Frontend Developer',
-    description: 'Technology Product based hyper growth, innovative company.',
-    experience: '8 Years',
-    salary: '25 LPA',
+    description: 'Create amazing user experiences for billions of users worldwide.',
+    experience: '2-4 Years',
+    salary: '18 LPA',
+    location: 'Delhi',
+    type: 'Full Time',
+    workType: 'Work from office',
+    skills: ['React', 'JavaScript', 'CSS'],
+    logo: '/api/placeholder/60/60',
+    isRemote: false,
+    postedDays: 5,
+    background: 'bg-gradient-to-br from-blue-100 to-blue-200',
+    isHot: false
+  },
+  {
+    id: '5',
+    company: 'Netflix Inc.',
+    title: 'Data Scientist',
+    description: 'Drive data-driven decisions to enhance user experience.',
+    experience: '6-8 Years',
+    salary: '35 LPA',
+    location: 'Bangalore',
+    type: 'Full Time',
+    workType: 'Hybrid',
+    skills: ['Python', 'Machine Learning', 'SQL'],
+    logo: '/api/placeholder/60/60',
+    isRemote: false,
+    postedDays: 1,
+    background: 'bg-gradient-to-br from-pink-100 to-pink-200',
+    isHot: true
+  },
+  {
+    id: '6',
+    company: 'Adobe Systems',
+    title: 'UI/UX Designer',
+    description: 'Design intuitive and beautiful digital experiences.',
+    experience: '3-5 Years',
+    salary: '22 LPA',
+    location: 'Pune',
+    type: 'Full Time',
+    workType: 'Work from office',
+    skills: ['Figma', 'Adobe XD', 'Prototyping'],
+    logo: '/api/placeholder/60/60',
+    isRemote: false,
+    postedDays: 4,
+    background: 'bg-gradient-to-br from-yellow-100 to-yellow-200',
+    isHot: false
+  },
+  {
+    id: '7',
+    company: 'Salesforce Inc.',
+    title: 'Backend Developer',
+    description: 'Build robust and scalable backend systems.',
+    experience: '4-7 Years',
+    salary: '28 LPA',
+    location: 'Chennai',
+    type: 'Full Time',
+    workType: 'Remote',
+    skills: ['Java', 'Spring Boot', 'PostgreSQL'],
+    logo: '/api/placeholder/60/60',
+    isRemote: true,
+    postedDays: 2,
+    background: 'bg-gradient-to-br from-indigo-100 to-indigo-200',
+    isHot: true
+  },
+  {
+    id: '8',
+    company: 'Spotify Technology',
+    title: 'Mobile Developer',
+    description: 'Develop mobile apps used by millions of music lovers.',
+    experience: '2-5 Years',
+    salary: '24 LPA',
+    location: 'Gurgaon',
+    type: 'Full Time',
+    workType: 'Hybrid',
+    skills: ['React Native', 'iOS', 'Android'],
+    logo: '/api/placeholder/60/60',
+    isRemote: false,
+    postedDays: 6,
+    background: 'bg-gradient-to-br from-teal-100 to-teal-200',
+    isHot: false
+  },
+  {
+    id: '9',
+    company: 'Tesla Inc.',
+    title: 'Full Stack Developer',
+    description: 'Work on cutting-edge automotive technology solutions.',
+    experience: '5-8 Years',
+    salary: '32 LPA',
     location: 'Bangalore',
     type: 'Full Time',
     workType: 'Work from office',
-    skills: ['CICD', 'Docker', 'Azure'],
-    logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/480px-Google_%22G%22_logo.svg.png',
+    skills: ['Python', 'React', 'MongoDB'],
+    logo: '/api/placeholder/60/60',
     isRemote: false,
     postedDays: 3,
-    background: 'bg-red-100',
+    background: 'bg-gradient-to-br from-red-100 to-red-200',
     isHot: true
+  },
+  {
+    id: '10',
+    company: 'Airbnb Inc.',
+    title: 'Product Manager',
+    description: 'Lead product strategy for our global marketplace.',
+    experience: '6-9 Years',
+    salary: '40 LPA',
+    location: 'Mumbai',
+    type: 'Full Time',
+    workType: 'Hybrid',
+    skills: ['Product Strategy', 'Analytics', 'Leadership'],
+    logo: '/api/placeholder/60/60',
+    isRemote: false,
+    postedDays: 1,
+    background: 'bg-gradient-to-br from-cyan-100 to-cyan-200',
+    isHot: false
   }
 ];
 
 export default function JobBoardTab() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [jobFilter, setJobFilter] = useState<'all' | 'hot' | 'saved'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
   const [showJobModal, setShowJobModal] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const [jobFilter, setJobFilter] = useState<'all' | 'hot' | 'saved'>('all');
   const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set());
   const [showApplyConfirmation, setShowApplyConfirmation] = useState(false);
   const [pendingApplyJob, setPendingApplyJob] = useState<JobListing | null>(null);
-  const itemsPerPage = 3;
-  const { data: profile } = useProfile();
-  const { data: savedJobsData } = useSavedJobs();
+  const [filters, setFilters] = useState({
+    company: '',
+    role: '',
+    experience: '',
+    location: '',
+    workType: '',
+    skills: ''
+  });
+  const itemsPerPage = 5;
+
+  const { data: savedJobsData = [] } = useSavedJobs();
   const saveJobMutation = useSaveJob();
   const removeSavedJobMutation = useRemoveSavedJob();
   const { toast } = useToast();
 
-  // Create a Set of saved job keys for fast lookup
-  const savedJobs = new Set(
-    savedJobsData?.map(job => `${job.jobTitle}-${job.company}`) || []
-  );
+  // Convert saved jobs array to Set for quick lookup
+  const savedJobs = new Set(savedJobsData.map(job => `${job.jobTitle}-${job.company}`));
+
+  const handleViewMore = (job: JobListing) => {
+    setSelectedJob(job);
+    setShowJobModal(true);
+  };
+
+  const applyFilters = () => {
+    setShowFilterModal(false);
+    setCurrentPage(1);
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      company: '',
+      role: '',
+      experience: '',
+      location: '',
+      workType: '',
+      skills: ''
+    });
+  };
 
   const toggleSaveJob = async (job: JobListing) => {
     const jobKey = `${job.title}-${job.company}`;
@@ -137,11 +282,6 @@ export default function JobBoardTab() {
     }
   };
 
-  const handleViewMore = (job: JobListing) => {
-    setSelectedJob(job);
-    setShowJobModal(true);
-  };
-
   const handleApplyJob = (job: JobListing) => {
     setPendingApplyJob(job);
     setShowApplyConfirmation(true);
@@ -170,14 +310,57 @@ export default function JobBoardTab() {
     const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          job.company.toLowerCase().includes(searchQuery.toLowerCase());
     
-    return matchesSearch;
+    // Apply additional filters
+    const matchesCompany = !filters.company || job.company.toLowerCase().includes(filters.company.toLowerCase());
+    const matchesRole = !filters.role || job.title.toLowerCase().includes(filters.role.toLowerCase());
+    const matchesExperience = !filters.experience || job.experience.toLowerCase().includes(filters.experience.toLowerCase());
+    const matchesLocation = !filters.location || job.location.toLowerCase().includes(filters.location.toLowerCase());
+    const matchesWorkType = !filters.workType || job.workType.toLowerCase().includes(filters.workType.toLowerCase());
+    const matchesSkills = !filters.skills || job.skills.some(skill => 
+      skill.toLowerCase().includes(filters.skills.toLowerCase())
+    );
+    
+    return matchesSearch && matchesCompany && matchesRole && matchesExperience && 
+           matchesLocation && matchesWorkType && matchesSkills;
   });
 
-  // Pagination
-  const totalJobs = filteredJobs.length;
+  // Create saved job cards from saved jobs data
+  const savedJobCards = savedJobsData.map(savedJob => {
+    // Find matching job from jobListings or create a simplified card
+    const matchingJob = jobListings.find(job => 
+      job.title === savedJob.jobTitle && job.company === savedJob.company
+    );
+    
+    if (matchingJob) {
+      return matchingJob;
+    } else {
+      // Create a simplified job card for saved jobs not in current listings
+      return {
+        id: `saved-${savedJob.jobTitle}-${savedJob.company}`,
+        company: savedJob.company,
+        title: savedJob.jobTitle,
+        description: `Saved job from ${savedJob.company}`,
+        experience: 'N/A',
+        salary: savedJob.salary || 'Not specified',
+        location: savedJob.location || 'Not specified',
+        type: savedJob.jobType || 'Full Time',
+        workType: 'Not specified',
+        skills: [],
+        logo: '/api/placeholder/60/60',
+        isRemote: false,
+        postedDays: 0,
+        background: 'bg-gradient-to-br from-gray-100 to-gray-200',
+        isHot: false
+      };
+    }
+  });
+
+  // Determine which jobs to display based on filter
+  const jobsToDisplay = jobFilter === 'saved' ? savedJobCards : filteredJobs;
+  const totalJobs = jobsToDisplay.length;
   const totalPages = Math.ceil(totalJobs / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentJobs = filteredJobs.slice(startIndex, startIndex + itemsPerPage);
+  const currentJobs = jobsToDisplay.slice(startIndex, startIndex + itemsPerPage);
   
   const goToNextPage = () => {
     if (currentPage < totalPages) {
@@ -192,175 +375,89 @@ export default function JobBoardTab() {
   };
 
   return (
-    <div className="h-full bg-gray-50 dark:bg-gray-900 flex">
-      {/* Left Sidebar - Profile and Filters */}
-      <div className="w-80 p-6 space-y-6">
-        {/* Profile Card */}
-        <Card className="bg-white border border-gray-200 shadow-sm rounded-lg">
-          <CardContent className="p-6 text-center">
-            <div className="relative">
-              <div className="w-20 h-20 mx-auto mb-4 relative">
-                <img
-                  src={profile?.profilePicture || '/api/placeholder/80/80'}
-                  alt="Profile"
-                  className="w-full h-full rounded-full object-cover"
-                />
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">25%</span>
-                </div>
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-1">
-                {profile?.name || 'S. Bruce Mars'}
-              </h3>
-              <p className="text-sm text-gray-600 mb-1">
-                National Institute of Technology
-              </p>
-              <p className="text-sm text-gray-600 mb-4">
-                Cloud Engineer
-              </p>
-              <p className="text-xs text-gray-500 mb-4">
-                Last login: just now
-              </p>
-              <Button className="w-full bg-cyan-500 hover:bg-cyan-600 text-white rounded" size="sm">
-                <Edit className="w-4 h-4 mr-2" />
-                Edit profile
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Filters Card */}
-        <Card className="bg-white border border-gray-200 shadow-sm rounded-lg">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">Filters</h3>
-              <span className="text-xs bg-gray-100 px-2 py-1 rounded">Applied 12</span>
-            </div>
-            
-            <div className="space-y-4">
-              {/* Department */}
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">
-                  Department
-                </label>
-                <div className="space-y-2">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2 text-cyan-500" defaultChecked />
-                    <span className="text-sm text-gray-600">Software Testing</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2 text-cyan-500" defaultChecked />
-                    <span className="text-sm text-gray-600">Web Designing</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2 text-gray-400" />
-                    <span className="text-sm text-gray-600">Others</span>
-                  </label>
-                  <Button variant="link" className="text-xs text-gray-500 p-0">
-                    View More ▼
-                  </Button>
-                </div>
-              </div>
-
-              {/* Salary */}
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">
-                  Salary <span className="text-xs text-gray-500">(Per Year)</span>
-                </label>
-                <div className="space-y-2">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2 text-gray-400" />
-                    <span className="text-sm text-gray-600">0-2 Lakhs</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2 text-cyan-500" defaultChecked />
-                    <span className="text-sm text-gray-600">3-6 Lakhs</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2 text-gray-400" />
-                    <span className="text-sm text-gray-600">6-12 lakhs</span>
-                  </label>
-                  <Button variant="link" className="text-xs text-gray-500 p-0">
-                    View More ▼
-                  </Button>
-                </div>
-              </div>
-
-              {/* Role category */}
-              <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">
-                  Role category
-                </label>
-                <div className="space-y-2">
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2 text-gray-400" />
-                    <span className="text-sm text-gray-600">Software Developer</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input type="checkbox" className="mr-2 text-gray-400" />
-                    <span className="text-sm text-gray-600">UX Developer</span>
-                  </label>
-                  <Button variant="link" className="text-xs text-gray-500 p-0">
-                    View More ▼
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Right Content - Search and Jobs */}
-      <div className="flex-1 p-6">
-        {/* Header with Search */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <Button
-                variant={jobFilter === 'hot' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setJobFilter(jobFilter === 'hot' ? 'all' : 'hot')}
-                className={`rounded-full px-4 ${
-                  jobFilter === 'hot'
-                    ? 'bg-red-500 hover:bg-red-600 text-white'
-                    : 'border-red-300 text-red-500 hover:bg-red-50'
-                }`}
-              >
-                Hot Jobs
-              </Button>
-              <div className="flex items-center">
-                <span className="text-sm text-gray-600 mr-2">All Jobs</span>
-                <div className="relative">
-                  <div className={`w-12 h-6 rounded-full transition-colors ${jobFilter === 'all' ? 'bg-cyan-500' : 'bg-gray-300'}`}>
-                    <div className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform mt-0.5 ${jobFilter === 'all' ? 'translate-x-6' : 'translate-x-1'}`}></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">👤</span>
-              <span className="text-sm text-gray-500">📧</span>
-            </div>
-          </div>
-
+    <div className="min-h-screen bg-white dark:bg-gray-900">
+      {/* Header */}
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Job Board</h1>
+        
+        {/* Search Bar and Controls - Same Row */}
+        <div className="flex items-center justify-between gap-4">
           {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <div className="relative flex-1 max-w-md">
             <Input
               type="text"
               placeholder="Search Jobs"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full border border-gray-200 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-              data-testid="input-job-search"
+              className="pl-10 w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+              data-testid="input-search-jobs"
             />
+            <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+          </div>
+
+          {/* Job Type Toggle and Filters */}
+          <div className="flex items-center gap-4">
+            {/* Saved Jobs Button */}
+            <button
+              onClick={() => setJobFilter('saved')}
+              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                jobFilter === 'saved'
+                  ? 'bg-green-500 text-white'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 border border-gray-300 dark:border-gray-600'
+              }`}
+              data-testid="button-saved-jobs"
+            >
+              <i className="fas fa-bookmark mr-2"></i>
+              Saved Jobs ({savedJobs.size})
+            </button>
+
+            {/* Hot Jobs / All Jobs Toggle */}
+            <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+              <button
+                onClick={() => setJobFilter('hot')}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  jobFilter === 'hot'
+                    ? 'bg-red-500 text-white'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100'
+                }`}
+                data-testid="button-hot-jobs"
+              >
+                <i className="fas fa-fire mr-2"></i>
+                Hot Jobs
+              </button>
+              <button
+                onClick={() => setJobFilter('all')}
+                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                  jobFilter === 'all'
+                    ? 'bg-blue-500 text-white'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100'
+                }`}
+                data-testid="button-all-jobs"
+              >
+                All Jobs
+              </button>
+            </div>
+
+            {/* Add Filters Button */}
+            <Button 
+              onClick={() => setShowFilterModal(true)}
+              className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100" 
+              variant="ghost" 
+              size="sm"
+              data-testid="button-add-filters"
+            >
+              <i className="fas fa-sliders-h mr-2"></i>
+              Add Filters
+            </Button>
           </div>
         </div>
+      </div>
 
-        {/* Jobs List */}
+      {/* Job Listings */}
+      <div className="p-6">
         <div className="space-y-4">
           {currentJobs.map((job) => (
-            <div key={job.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200 overflow-hidden">
+            <div key={job.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200 overflow-hidden m-4">
               <div className="flex">
                 {/* Company Logo Section - Left Side Full Height */}
                 <div className="w-52 flex flex-col items-center justify-center relative">
@@ -474,7 +571,6 @@ export default function JobBoardTab() {
             </div>
           ))}
         </div>
-        </div>
 
         {/* Pagination */}
         <div className="flex flex-col items-center gap-4 mt-8">
@@ -528,33 +624,378 @@ export default function JobBoardTab() {
           </div>
         </div>
       </div>
-    </div>
 
-      {/* Apply Job Confirmation Modal */}
-      {showApplyConfirmation && pendingApplyJob && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-lg font-semibold mb-2">Apply for Job</h3>
-            <p className="text-gray-600 mb-4">
-              Are you sure you want to apply for {pendingApplyJob?.title} at {pendingApplyJob?.company}?
-            </p>
-            <div className="flex gap-2 justify-end">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowApplyConfirmation(false);
-                  setPendingApplyJob(null);
-                }}
+      {/* Job Details Modal - Popup Style */}
+      {showJobModal && selectedJob && (
+        <div className="fixed top-0 left-64 right-0 bottom-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="bg-blue-50 dark:bg-blue-900/30 rounded-2xl shadow-2xl max-w-2xl w-full mx-8 max-h-[85vh] flex flex-col">
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}>
+              {/* Close Button - Top Right */}
+              {/* <div className="flex justify-end mb-4">
+                <button
+                  onClick={() => setShowJobModal(false)}
+                  className="p-2 hover:bg-blue-100 dark:hover:bg-blue-800 rounded-full transition-colors"
+                >
+                  <i className="fas fa-times text-gray-500 dark:text-gray-400"></i>
+                </button>
+              </div> */}
+
+              {/* Job Card Header */}
+              <div className="bg-white dark:bg-gray-800 p-4 mb-4 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                <div className="flex">
+                    {/* Company Logo Section */}
+                    <div className="w-32 flex items-center justify-center">
+                      <div className={`${selectedJob.background} rounded-xl p-3 flex flex-col items-center justify-center w-full h-full min-h-[100px]`}>
+                        <img
+                          src={selectedJob.logo}
+                          alt={`${selectedJob.company} logo`}
+                          className="w-12 h-12 rounded object-cover mb-1"
+                        />
+                        <div className="text-xs font-bold text-gray-700 dark:text-gray-300">{selectedJob.company.split(' ')[0]}</div>
+                      </div>
+                    </div>
+
+                    {/* Job Details */}
+                    <div className="flex-1 pl-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{selectedJob.company}</h3>
+                          <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                            {selectedJob.title}
+                            {selectedJob.isHot && <i className="fas fa-fire text-red-500 text-sm"></i>}
+                          </h4>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{selectedJob.description}</p>
+                        </div>
+                        <button
+                          onClick={() => setShowJobModal(false)}
+                          className="w-6 h-6 bg-red-500 hover:bg-red-600 rounded flex items-center justify-center ml-2 transition-colors"
+                          data-testid="button-close-modal"
+                        >
+                          <i className="fas fa-times text-white text-xs"></i>
+                        </button>
+                      </div>
+                      
+                      <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400 mb-2">
+                        <span className="flex items-center gap-1">
+                          <i className="fas fa-briefcase"></i>
+                          {selectedJob.experience}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="font-semibold">₹</span>
+                          {selectedJob.salary}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <i className="fas fa-map-marker-alt"></i>
+                          {selectedJob.location}
+                        </span>
+                        <span className="font-medium">{selectedJob.workType}</span>
+                        <span className="font-medium">{selectedJob.type}</span>
+                      </div>
+
+                      {/* Job Tags */}
+                      <div className="flex items-center gap-1 mb-2">
+                        <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs">
+                          Open Positions ~ 2
+                        </span>
+                        <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs">
+                          Product
+                        </span>
+                        <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs">
+                          B2B
+                        </span>
+                        <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs">
+                          Full Time
+                        </span>
+                      </div>
+
+                      {/* Skills */}
+                      <div className="flex items-center gap-1">
+                        {selectedJob.skills.map((skill, index) => (
+                          <span key={index} className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full text-xs font-medium">
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+
+                      {/* View Less Button */}
+                      <div className="flex justify-end mt-2">
+                        <Button 
+                          onClick={() => setShowJobModal(false)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded text-xs" 
+                          size="sm"
+                        >
+                          View Less
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Content Sections - Separate Boxes */}
+                <div className=" pb-4 space-y-4">
+                  {/* About Company Box */}
+                  <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm w-full">
+                    <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">About Company</h5>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                      Google, now a subsidiary of Alphabet Inc., is a multinational technology company known for 
+                      its Internet search engine, online advertising technologies, cloud computing, and other 
+                      software services. Originally founded in 1998 by Larry Page and Sergey Brin, initially as a research project 
+                      at Stanford University. Google's core mission is to organize the world's information and 
+                      make it universally accessible and useful.
+                    </p>
+                  </div>
+
+                  {/* Role Definition Box */}
+                  <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm w-full">
+                    <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Role Definition</h5>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-3">
+                      We are looking for a Cloud Engineer to join our team and work with our engineering team to 
+                      optimize, implement, and maintain our organization's cloud-based systems.
+                    </p>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-3">
+                      A Cloud Engineer's responsibilities include deploying and debugging systems, as well as 
+                      executing new cloud initiatives.
+                    </p>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                      Ultimately, you will work with different IT professionals and teams to ensure our cloud 
+                      computing systems meet the needs of our organization and customers.
+                    </p>
+                  </div>
+
+                  {/* Key Responsibilities Box */}
+                  <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm w-full">
+                    <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Key Responsibilities</h5>
+                    <ul className="space-y-2 text-gray-600 dark:text-gray-400 text-sm">
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600 mt-1 text-xs">•</span>
+                        <span>Design, develop, and deploy modular cloud-based systems</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600 mt-1 text-xs">•</span>
+                        <span>Develop and maintain cloud solutions in accordance with best practices</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600 mt-1 text-xs">•</span>
+                        <span>Ensure efficient functioning of data storage and process functions in accordance with 
+                        company security policies and best practices in cloud security</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600 mt-1 text-xs">•</span>
+                        <span>Identify, analyse, and resolve infrastructure vulnerabilities and application deployment 
+                        issues</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600 mt-1 text-xs">•</span>
+                        <span>Regularly review existing systems and make recommendations for improvements</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600 mt-1 text-xs">•</span>
+                        <span>Interact with clients, provide cloud support, and make recommendations based on client 
+                        needs</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Skills Required Box */}
+                  <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm w-full">
+                    <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Skills Required</h5>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-lg border border-green-200 dark:border-green-700">
+                        <h6 className="font-medium text-gray-900 dark:text-gray-100 mb-2 text-sm">Primary Skills</h6>
+                        <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                          <div>Business Development</div>
+                          <div>Marketing Analysis</div>
+                          <div>Lead Generation</div>
+                          <div>International Sales</div>
+                          <div>Digital Marketing</div>
+                          <div>SEO</div>
+                        </div>
+                      </div>
+                      <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-lg border border-blue-200 dark:border-blue-700">
+                        <h6 className="font-medium text-gray-900 dark:text-gray-100 mb-2 text-sm">Secondary Skills</h6>
+                        <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                          <div>Corporate Sales</div>
+                          <div>Resource Manager</div>
+                          <div>Customer Interaction</div>
+                          <div>Customer Service</div>
+                          <div>Direct sales</div>
+                        </div>
+                      </div>
+                      <div className="bg-yellow-100 dark:bg-yellow-900/30 p-3 rounded-lg border border-yellow-200 dark:border-yellow-700">
+                        <h6 className="font-medium text-gray-900 dark:text-gray-100 mb-2 text-sm">Knowledge Only</h6>
+                        <div className="space-y-1 text-xs text-gray-600 dark:text-gray-400">
+                          <div>Telecalling</div>
+                          <div>English communication</div>
+                          <div>Sales requirement</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            {/* Apply and Save Buttons Footer */}
+            <div className="p-4 flex justify-center gap-3">
+              <Button 
+                onClick={() => toggleSaveJob(selectedJob!)}
+                className={`px-6 py-2 rounded font-medium border-0 text-sm transition-all ${
+                  savedJobs.has(`${selectedJob?.title}-${selectedJob?.company}`)
+                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    : 'bg-orange-500 hover:bg-orange-600 text-white'
+                }`}
+                disabled={saveJobMutation.isPending || removeSavedJobMutation.isPending}
               >
-                Cancel
+                {saveJobMutation.isPending || removeSavedJobMutation.isPending ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Saving...
+                  </span>
+                ) : (
+                  <>
+                    <Bookmark className="w-4 h-4 mr-1" />
+                    {savedJobs.has(`${selectedJob?.title}-${selectedJob?.company}`) ? 'Saved' : 'Save'}
+                  </>
+                )}
               </Button>
-              <Button onClick={confirmApplyJob} className="bg-blue-600 hover:bg-blue-700 text-white">
-                Apply
+              <Button 
+                onClick={() => selectedJob && handleApplyJob(selectedJob)}
+                disabled={selectedJob && appliedJobs.has(`${selectedJob.title}-${selectedJob.company}`)}
+                className={`px-6 py-2 rounded font-medium border-0 text-sm ${
+                  selectedJob && appliedJobs.has(`${selectedJob.title}-${selectedJob.company}`)
+                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+                }`}
+              >
+                {selectedJob && appliedJobs.has(`${selectedJob.title}-${selectedJob.company}`) ? 'Applied' : 'Apply'}
               </Button>
             </div>
           </div>
         </div>
       )}
+
+      {/* Filter Modal */}
+      <Dialog open={showFilterModal} onOpenChange={setShowFilterModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Filter Jobs</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Company Name</label>
+              <Input
+                value={filters.company}
+                onChange={(e) => setFilters({ ...filters, company: e.target.value })}
+                placeholder="e.g. Google, Microsoft"
+                data-testid="input-filter-company"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role</label>
+              <Input
+                value={filters.role}
+                onChange={(e) => setFilters({ ...filters, role: e.target.value })}
+                placeholder="e.g. Software Engineer, Designer"
+                data-testid="input-filter-role"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Experience</label>
+              <Input
+                value={filters.experience}
+                onChange={(e) => setFilters({ ...filters, experience: e.target.value })}
+                placeholder="e.g. 2-4 Years, 5-8 Years"
+                data-testid="input-filter-experience"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Location</label>
+              <Input
+                value={filters.location}
+                onChange={(e) => setFilters({ ...filters, location: e.target.value })}
+                placeholder="e.g. Bangalore, Mumbai"
+                data-testid="input-filter-location"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Work Type</label>
+              <Input
+                value={filters.workType}
+                onChange={(e) => setFilters({ ...filters, workType: e.target.value })}
+                placeholder="e.g. Remote, Hybrid, Work from office"
+                data-testid="input-filter-work-type"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Skills</label>
+              <Input
+                value={filters.skills}
+                onChange={(e) => setFilters({ ...filters, skills: e.target.value })}
+                placeholder="e.g. React, Python, Docker"
+                data-testid="input-filter-skills"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button 
+                onClick={clearFilters}
+                variant="outline" 
+                className="flex-1"
+                data-testid="button-clear-filters"
+              >
+                Clear All
+              </Button>
+              <Button 
+                onClick={applyFilters}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                data-testid="button-apply-filters"
+              >
+                Search
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Apply Confirmation Dialog */}
+      <Dialog open={showApplyConfirmation} onOpenChange={setShowApplyConfirmation}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">Confirm Application</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to apply for <span className="font-medium">{pendingApplyJob?.title}</span> at <span className="font-medium">{pendingApplyJob?.company}</span>?
+            </p>
+            <p className="text-sm text-gray-500">
+              Recruiters will be contacting you shortly regarding your application.
+            </p>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setShowApplyConfirmation(false)}
+              className="px-4 py-2 rounded"
+              data-testid="button-cancel-apply"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmApplyJob}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+              data-testid="button-confirm-apply"
+            >
+              Confirm Application
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
