@@ -43,11 +43,6 @@ export default function Dashboard() {
         return (
           <div className="flex flex-1">
             <div className="flex-1 flex flex-col">
-              <SimpleClientHeader 
-                companyName="Gumlet Marketing Private Limited"
-                userName={`${profile?.firstName} ${profile?.lastName}` || 'Sasi Kumar'}
-                userImage={profile?.profilePicture || '/api/placeholder/32/32'}
-              />
               <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
               <div className="flex-1 overflow-y-auto">
                 {renderDashboardTabContent()}
@@ -57,18 +52,7 @@ export default function Dashboard() {
           </div>
         );
       case 'profile':
-        return (
-          <div className="flex flex-1">
-            <div className="flex-1 flex flex-col">
-              <SimpleClientHeader 
-                companyName="Gumlet Marketing Private Limited"
-                userName={`${profile?.firstName} ${profile?.lastName}` || 'Sasi Kumar'}
-                userImage={profile?.profilePicture || '/api/placeholder/32/32'}
-              />
-              <ProfilePage profile={profile!} />
-            </div>
-          </div>
-        );
+        return <ProfilePage profile={profile!} />;
       case 'job-board':
         return <JobBoardTab />;
       case 'settings':
@@ -85,11 +69,6 @@ export default function Dashboard() {
         return (
           <div className="flex flex-1">
             <div className="flex-1 flex flex-col">
-              <SimpleClientHeader 
-                companyName="Gumlet Marketing Private Limited"
-                userName={`${profile?.firstName} ${profile?.lastName}` || 'Sasi Kumar'}
-                userImage={profile?.profilePicture || '/api/placeholder/32/32'}
-              />
               <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
               <div className="flex-1 overflow-y-auto">
                 {renderDashboardTabContent()}
