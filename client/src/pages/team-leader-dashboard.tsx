@@ -2729,9 +2729,7 @@ export default function TeamLeaderDashboard() {
                 <tbody>
                   {[
                     { meetingType: "TL's Meeting", date: "15-Aug-2025", time: "10:00 AM", person: "Kavitha", agenda: "Monthly Review", status: "Scheduled" },
-                    { meetingType: "TL's Meeting", date: "16-Aug-2025", time: "2:00 PM", person: "Rajesh", agenda: "Performance Discussion", status: "Pending" },
-                    { meetingType: "TL's Meeting", date: "17-Aug-2025", time: "11:30 AM", person: "Sowmiya", agenda: "Project Updates", status: "Confirmed" },
-                    { meetingType: "CEO's Meeting", date: "18-Aug-2025", time: "3:00 PM", person: "John Mathew", agenda: "Quarterly Review", status: "Scheduled" }
+                    { meetingType: "TL's Meeting", date: "16-Aug-2025", time: "2:00 PM", person: "Rajesh", agenda: "Performance Discussion", status: "Pending" }
                   ].map((meeting, index) => (
                     <tr key={index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
                       <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{meeting.meetingType}</td>
