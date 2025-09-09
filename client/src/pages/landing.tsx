@@ -17,24 +17,6 @@ export default function Landing() {
           </span>
         </div>
 
-        {/* Navigation Links */}
-        <div className="hidden md:flex items-center space-x-8">
-          <a href="#" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium">
-            Home
-          </a>
-          <a href="#" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium">
-            Features
-          </a>
-          <a href="#" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium">
-            Integration
-          </a>
-          <a href="#" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium">
-            Pricing
-          </a>
-          <a href="#" className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium">
-            Blog
-          </a>
-        </div>
 
         {/* Action Buttons */}
         <div className="flex items-center space-x-3">
