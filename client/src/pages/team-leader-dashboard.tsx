@@ -43,7 +43,7 @@ export default function TeamLeaderDashboard() {
   const [activeChatUser, setActiveChatUser] = useState<string | null>(null);
   
   // Team members for team chat (5 members)
-  const teamMembers = [
+  const chatTeamMembers = [
     { id: 'kavitha', name: 'Kavitha', role: 'Senior Recruiter', status: 'online' },
     { id: 'rajesh', name: 'Rajesh', role: 'Technical Recruiter', status: 'online' },
     { id: 'sowmiya', name: 'Sowmiya', role: 'Senior Recruiter', status: 'online' },
@@ -138,7 +138,7 @@ export default function TeamLeaderDashboard() {
     if (chatType === 'team') {
       return 'Team Chat - Requirements Discussion';
     } else if (activeChatUser) {
-      const contact = [...teamMembers, ...individualContacts].find(c => c.id === activeChatUser);
+      const contact = [...chatTeamMembers, ...individualContacts].find(c => c.id === activeChatUser);
       return `Private Chat - ${contact?.name || 'Unknown'}`;
     }
     return 'Chat';
@@ -1378,7 +1378,7 @@ export default function TeamLeaderDashboard() {
                   </Button>
                 </div>
                 <div className="space-y-2">
-                  {teamMembers.map((member) => (
+                  {chatTeamMembers.map((member) => (
                     <div 
                       key={member.id} 
                       className={`flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-gray-50 ${

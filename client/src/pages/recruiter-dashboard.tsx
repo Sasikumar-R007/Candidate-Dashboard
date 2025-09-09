@@ -248,7 +248,109 @@ export default function RecruiterDashboard() {
   const [selectedDateString, setSelectedDateString] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [inputCount, setInputCount] = useState('');
+  
+  // Chat functionality states
+  const [newMessage, setNewMessage] = useState("");
+  const [chatType, setChatType] = useState<'team' | 'private'>('team');
+  const [activeChatUser, setActiveChatUser] = useState<string | null>(null);
+  
+  // Team members for team chat (5 members)
+  const teamMembers = [
+    { id: 'kavitha', name: 'Kavitha', role: 'Senior Recruiter', status: 'online' },
+    { id: 'rajesh', name: 'Rajesh', role: 'Technical Recruiter', status: 'online' },
+    { id: 'sowmiya', name: 'Sowmiya', role: 'Senior Recruiter', status: 'online' },
+    { id: 'kalaiselvi', name: 'Kalaiselvi', role: 'Recruiter', status: 'away' },
+    { id: 'malathi', name: 'Malathi', role: 'Junior Recruiter', status: 'online' }
+  ];
+
+  // Individual contacts for private chat (4 contacts)
+  const individualContacts = [
+    { id: 'john-tl', name: 'John Mathew', role: 'Team Leader', status: 'online' },
+    { id: 'priya-client', name: 'Priya Singh', role: 'Client Manager', status: 'online' },
+    { id: 'david-ceo', name: 'David Johnson', role: 'CEO', status: 'away' },
+    { id: 'sarah-ops', name: 'Sarah Williams', role: 'Operations Head', status: 'online' }
+  ];
+
+  const [teamChatMessages, setTeamChatMessages] = useState([
+    { id: 1, sender: "Kavitha", message: "Good morning team! I have a new requirement from TechCorp", time: "9:00 AM", isOwn: false },
+    { id: 2, sender: "Current User", message: "Good morning! Please share the details", time: "9:05 AM", isOwn: true },
+    { id: 3, sender: "Rajesh", message: "I can help with technical screening if needed", time: "9:10 AM", isOwn: false },
+    { id: 4, sender: "Sowmiya", message: "I have some good candidates for backend roles", time: "9:15 AM", isOwn: false },
+    { id: 5, sender: "Kalaiselvi", message: "Let me know if you need help with scheduling interviews", time: "9:20 AM", isOwn: false },
+    { id: 6, sender: "Malathi", message: "I'm working on the frontend developer requirements", time: "9:25 AM", isOwn: false }
+  ]);
+
+  const [privateChatMessages, setPrivateChatMessages] = useState<{[key: string]: any[]}>({
+    'john-tl': [
+      { id: 1, sender: "John Mathew", message: "How is the progress on the current requirements?", time: "10:30 AM", isOwn: false },
+      { id: 2, sender: "Current User", message: "Going well! I have 3 candidates in the pipeline", time: "10:35 AM", isOwn: true }
+    ],
+    'priya-client': [
+      { id: 1, sender: "Priya Singh", message: "The client wants to expedite the hiring process", time: "11:00 AM", isOwn: false },
+      { id: 2, sender: "Current User", message: "I'll prioritize the top candidates for this week", time: "11:05 AM", isOwn: true }
+    ],
+    'david-ceo': [
+      { id: 1, sender: "David Johnson", message: "Great job on meeting this month's targets!", time: "2:00 PM", isOwn: false },
+      { id: 2, sender: "Current User", message: "Thank you sir! The team has been very supportive", time: "2:05 PM", isOwn: true }
+    ],
+    'sarah-ops': [
+      { id: 1, sender: "Sarah Williams", message: "Do you need any additional resources for the new client?", time: "3:30 PM", isOwn: false },
+      { id: 2, sender: "Current User", message: "Yes, I could use help with candidate sourcing", time: "3:35 PM", isOwn: true }
+    ]
+  });
   const [calendarStep, setCalendarStep] = useState<'calendar' | 'input'>('calendar');
+  
+  // Chat helper functions
+  const handleSendMessage = () => {
+    if (newMessage.trim()) {
+      const newMsg = {
+        id: Date.now(),
+        sender: "Current User",
+        message: newMessage.trim(),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isOwn: true
+      };
+      
+      if (chatType === 'team') {
+        setTeamChatMessages([...teamChatMessages, newMsg]);
+      } else if (activeChatUser && chatType === 'private') {
+        setPrivateChatMessages(prev => ({
+          ...prev,
+          [activeChatUser]: [...(prev[activeChatUser] || []), newMsg]
+        }));
+      }
+      setNewMessage("");
+    }
+  };
+
+  const handleStartPrivateChat = (userId: string) => {
+    setChatType('private');
+    setActiveChatUser(userId);
+  };
+
+  const handleSwitchToTeamChat = () => {
+    setChatType('team');
+    setActiveChatUser(null);
+  };
+
+  const getCurrentChatMessages = () => {
+    if (chatType === 'team') {
+      return teamChatMessages;
+    } else if (activeChatUser && chatType === 'private') {
+      return privateChatMessages[activeChatUser] || [];
+    }
+    return [];
+  };
+
+  const getCurrentChatTitle = () => {
+    if (chatType === 'team') {
+      return 'Team Chat - Requirements Discussion';
+    } else if (activeChatUser) {
+      const contact = [...teamMembers, ...individualContacts].find(c => c.id === activeChatUser);
+      return `Private Chat - ${contact?.name || 'Unknown'}`;
+    }
+    return 'Chat';
+  };
   
   const getTotalCountForReq = (reqId: string) => {
     const counts = requirementCounts[reqId] || {};
@@ -1095,6 +1197,202 @@ export default function RecruiterDashboard() {
     }
   };
 
+  const renderChatContent = () => {
+    const currentMessages = getCurrentChatMessages();
+
+    return (
+      <div className="min-h-screen bg-gray-50 flex">
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col">
+          <div className="px-6 py-6 h-full flex flex-col">
+            
+            {/* Chat Header */}
+            <div className="mb-4 bg-white rounded-lg shadow-sm p-4 border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <i className="fas fa-comments mr-2 text-blue-600"></i>
+                  <h2 className="text-lg font-semibold text-gray-900">{getCurrentChatTitle()}</h2>
+                </div>
+                {chatType === 'private' && (
+                  <button 
+                    onClick={handleSwitchToTeamChat}
+                    className="text-sm bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
+                    data-testid="button-back-to-team-chat"
+                  >
+                    Back to Team Chat
+                  </button>
+                )}
+              </div>
+              <p className="text-sm text-gray-600 mt-1">
+                {chatType === 'team' ? '5 members online' : 'Private conversation'}
+              </p>
+            </div>
+
+            {/* Chat Messages Area */}
+            <div className="flex-1 bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col">
+              {/* Messages Container */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                {currentMessages.map((message) => (
+                  <div key={message.id} className={`flex ${message.isOwn ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                      message.isOwn 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-white border border-gray-200 text-gray-900'
+                    }`}>
+                      {!message.isOwn && (
+                        <div className="text-xs font-semibold text-blue-600 mb-1">
+                          {message.sender}
+                        </div>
+                      )}
+                      <div className="text-sm">{message.message}</div>
+                      <div className={`text-xs mt-1 ${message.isOwn ? 'text-blue-200' : 'text-gray-500'}`}>
+                        {message.time}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Message Input Area */}
+              <div className="border-t border-gray-200 p-4 bg-white">
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Type your message..."
+                    className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                    data-testid="input-chat-message"
+                  />
+                  <button 
+                    onClick={handleSendMessage}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
+                    data-testid="button-send-message"
+                  >
+                    Send
+                  </button>
+                </div>
+                
+                {/* Quick Actions */}
+                <div className="flex items-center space-x-4 mt-3">
+                  <button className="text-sm text-gray-600 hover:text-gray-800 flex items-center">
+                    <i className="fas fa-paperclip mr-2"></i>
+                    Attach File
+                  </button>
+                  <button className="text-sm text-gray-600 hover:text-gray-800 flex items-center">
+                    <i className="fas fa-file-alt mr-2"></i>
+                    Share Resume
+                  </button>
+                  <button className="text-sm text-gray-600 hover:text-gray-800 flex items-center">
+                    <i className="fas fa-calendar mr-2"></i>
+                    Schedule Meeting
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Sidebar - Chat Participants */}
+        <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
+          <div className="p-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Chat Participants</h3>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto">
+            {/* Team Chat Section */}
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-semibold text-gray-700">Team Chat (5 members)</h4>
+                <button 
+                  onClick={handleSwitchToTeamChat}
+                  className={`text-xs px-2 py-1 rounded ${
+                    chatType === 'team' 
+                      ? 'bg-blue-500 text-white' 
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                  data-testid="button-switch-team-chat"
+                >
+                  Join
+                </button>
+              </div>
+              <div className="space-y-2">
+                {teamMembers.map((member) => (
+                  <div 
+                    key={member.id} 
+                    className={`flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-gray-50 ${
+                      chatType === 'team' ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'
+                    }`}
+                    onClick={() => handleStartPrivateChat(member.id)}
+                    data-testid={`contact-team-${member.id}`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-3 h-3 rounded-full ${
+                        member.status === 'online' ? 'bg-green-500' : 'bg-yellow-500'
+                      }`}></div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{member.name}</p>
+                        <p className="text-xs text-gray-500">{member.role}</p>
+                      </div>
+                    </div>
+                    <button 
+                      className="text-xs text-blue-600 hover:text-blue-800"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartPrivateChat(member.id);
+                      }}
+                    >
+                      Chat
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Individual Contacts Section */}
+            <div className="p-4 border-t border-gray-200">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Private Contacts (4 contacts)</h4>
+              <div className="space-y-2">
+                {individualContacts.map((contact) => (
+                  <div 
+                    key={contact.id} 
+                    className={`flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-gray-50 ${
+                      chatType === 'private' && activeChatUser === contact.id 
+                        ? 'bg-blue-50 border border-blue-200' 
+                        : 'bg-gray-50'
+                    }`}
+                    onClick={() => handleStartPrivateChat(contact.id)}
+                    data-testid={`contact-private-${contact.id}`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className={`w-3 h-3 rounded-full ${
+                        contact.status === 'online' ? 'bg-green-500' : 'bg-yellow-500'
+                      }`}></div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{contact.name}</p>
+                        <p className="text-xs text-gray-500">{contact.role}</p>
+                      </div>
+                    </div>
+                    <button 
+                      className="text-xs text-blue-600 hover:text-blue-800"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartPrivateChat(contact.id);
+                      }}
+                    >
+                      Chat
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderSidebarContent = () => {
     switch (sidebarTab) {
       case 'dashboard':
@@ -1109,6 +1407,8 @@ export default function RecruiterDashboard() {
         );
       case 'job-board':
         return <JobBoardTab />;
+      case 'chat':
+        return renderChatContent();
       case 'settings':
         return (
           <div className="flex items-center justify-center h-full">
