@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Search, MapPin, Edit, Heart } from "lucide-react";
+import { Search, MapPin, Edit, Bookmark } from "lucide-react";
 import { useSavedJobs, useSaveJob, useRemoveSavedJob } from "@/hooks/use-saved-jobs";
 import { useToast } from "@/hooks/use-toast";
 import { useProfile } from "@/hooks/use-profile";
@@ -83,6 +83,13 @@ const jobListings: JobListing[] = [
 export default function JobBoardTab() {
   const [searchQuery, setSearchQuery] = useState('');
   const [jobFilter, setJobFilter] = useState<'all' | 'hot' | 'saved'>('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedJob, setSelectedJob] = useState<JobListing | null>(null);
+  const [showJobModal, setShowJobModal] = useState(false);
+  const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set());
+  const [showApplyConfirmation, setShowApplyConfirmation] = useState(false);
+  const [pendingApplyJob, setPendingApplyJob] = useState<JobListing | null>(null);
+  const itemsPerPage = 3;
   const { data: profile } = useProfile();
   const { data: savedJobsData } = useSavedJobs();
   const saveJobMutation = useSaveJob();
@@ -130,6 +137,30 @@ export default function JobBoardTab() {
     }
   };
 
+  const handleViewMore = (job: JobListing) => {
+    setSelectedJob(job);
+    setShowJobModal(true);
+  };
+
+  const handleApplyJob = (job: JobListing) => {
+    setPendingApplyJob(job);
+    setShowApplyConfirmation(true);
+  };
+
+  const confirmApplyJob = () => {
+    if (pendingApplyJob) {
+      const jobKey = `${pendingApplyJob.title}-${pendingApplyJob.company}`;
+      setAppliedJobs(prev => new Set(Array.from(prev).concat(jobKey)));
+      toast({
+        title: "Application submitted",
+        description: "Recruiters will be contacting you shortly regarding your application.",
+      });
+      setShowApplyConfirmation(false);
+      setPendingApplyJob(null);
+      if (selectedJob) setShowJobModal(false);
+    }
+  };
+
   const filteredJobs = jobListings.filter(job => {
     // Filter by job type
     if (jobFilter === 'hot' && !job.isHot) return false;
@@ -141,6 +172,24 @@ export default function JobBoardTab() {
     
     return matchesSearch;
   });
+
+  // Pagination
+  const totalJobs = filteredJobs.length;
+  const totalPages = Math.ceil(totalJobs / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentJobs = filteredJobs.slice(startIndex, startIndex + itemsPerPage);
+  
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+    }
+  };
+  
+  const goToPrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  };
 
   return (
     <div className="h-full bg-gray-50 dark:bg-gray-900 flex">
@@ -310,102 +359,202 @@ export default function JobBoardTab() {
 
         {/* Jobs List */}
         <div className="space-y-4">
-          {filteredJobs.map((job) => (
-            <Card key={job.id} className="bg-white border border-gray-200 shadow-sm rounded-lg">
-              <CardContent className="p-0">
-                <div className="flex">
-                  {/* Company Logo Section */}
-                  <div className={`w-32 ${job.background} rounded-l-lg p-6 flex flex-col items-center justify-center`}>
+          {currentJobs.map((job) => (
+            <div key={job.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all duration-200 overflow-hidden">
+              <div className="flex">
+                {/* Company Logo Section - Left Side Full Height */}
+                <div className="w-52 flex flex-col items-center justify-center relative">
+                  <div className={`${job.background} rounded-xl p-6 flex flex-col items-center justify-center mx-2 my-4 h-full min-h-[200px]`} style={{width: '80%'}}>
                     <img
                       src={job.logo}
                       alt={`${job.company} logo`}
-                      className="w-16 h-16 object-contain mb-2"
+                      className="w-16 h-16 rounded object-cover mb-2"
                     />
-                    <div className="text-xs font-bold text-gray-700 text-center">
-                      {job.company.split(' ')[0]}
-                    </div>
-                  </div>
-
-                  {/* Job Details */}
-                  <div className="flex-1 p-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900">{job.company}</h3>
-                          {job.isHot && (
-                            <Heart className="w-4 h-4 fill-red-500 text-red-500" />
-                          )}
-                        </div>
-                        <h4 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-                          {job.title}
-                          <span className="text-orange-500">🔥</span>
-                        </h4>
-                        <p className="text-sm text-gray-600 mb-3">{job.description}</p>
-                        
-                        <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
-                          <span className="flex items-center gap-1">
-                            <span className="font-semibold">{job.experience}</span>
-                          </span>
-                          <span className="flex items-center gap-1">
-                            ₹ <span className="font-semibold">{job.salary}</span>
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <MapPin className="w-4 h-4" />
-                            {job.location}
-                          </span>
-                          <span>{job.workType}</span>
-                          <span>{job.type}</span>
-                        </div>
-
-                        <div className="flex items-center gap-2 mb-4">
-                          <Badge className="bg-blue-100 text-blue-700 border-blue-200">Product</Badge>
-                          <Badge className="bg-blue-100 text-blue-700 border-blue-200">B2B</Badge>
-                          <Badge className="bg-blue-100 text-blue-700 border-blue-200">{job.type}</Badge>
-                          <span className="text-sm text-gray-500">
-                            Open Positions • 2
-                          </span>
-                        </div>
-
-                        {/* Skills */}
-                        <div className="flex flex-wrap gap-2 mb-4">
-                          {job.skills.map((skill, idx) => (
-                            <Badge 
-                              key={idx}
-                              className="bg-green-100 text-green-700 border-green-200 text-xs px-2 py-1"
-                            >
-                              {skill}
-                            </Badge>
-                          ))}
-                        </div>
-
-                        <div className="text-xs text-gray-500">
-                          Posted: {job.postedDays} days ago
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-col items-end gap-2">
-                        <button
-                          onClick={() => toggleSaveJob(job)}
-                          className={`p-2 rounded transition-colors ${
-                            savedJobs.has(`${job.title}-${job.company}`)
-                              ? 'bg-red-500 text-white'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          <Heart className="w-4 h-4" />
-                        </button>
-                        <Button className="bg-slate-700 hover:bg-slate-800 text-white px-6 py-2 rounded">
-                          View More
-                        </Button>
-                      </div>
+                    <div className="text-center">
+                      <div className="text-sm font-bold text-gray-700 dark:text-gray-300">{job.company.split(' ')[0]}</div>
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+
+                {/* Job Details - Right Side */}
+                <div className="flex-1 p-6 relative">
+                  {/* Save Job Button - Top Right */}
+                  <button
+                    onClick={() => toggleSaveJob(job)}
+                    className={`absolute top-6 right-6 p-3 rounded-full transition-all duration-200 ${
+                      savedJobs.has(`${job.title}-${job.company}`) 
+                        ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg' 
+                        : 'bg-orange-500 hover:bg-orange-600 text-white'
+                    }`}
+                    data-testid={`button-save-${job.id}`}
+                  >
+                    <i className={`${savedJobs.has(`${job.title}-${job.company}`) ? 'fas fa-bookmark' : 'far fa-bookmark'} text-white`}></i>
+                  </button>
+
+                  <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-1">{job.company}</h3>
+                  <h4 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+                    {job.title}
+                    {job.isHot && <i className="fas fa-fire text-red-500 text-lg"></i>}
+                  </h4>
+                  <p className="text-gray-600 dark:text-gray-400 mb-4">{job.description}</p>
+                  
+                  <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    <span className="flex items-center gap-1">
+                      <i className="fas fa-briefcase"></i>
+                      {job.experience}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="font-semibold">₹</span>
+                      {job.salary}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <i className="fas fa-map-marker-alt"></i>
+                      {job.location}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <i className="fas fa-clock"></i>
+                      {job.workType}
+                    </span>
+                    <span className="font-medium">{job.type}</span>
+                  </div>
+
+                  {/* Job Tags */}
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-xs">
+                      Open Positions ~ 2
+                    </span>
+                    <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-xs">
+                      Product
+                    </span>
+                    <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-xs">
+                      B2B
+                    </span>
+                    <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full text-xs">
+                      Full Time
+                    </span>
+                  </div>
+
+                  {/* Skills */}
+                  <div className="flex items-center gap-2 mb-4">
+                    {job.skills.map((skill, index) => (
+                      <span key={index} className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full text-xs font-medium">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">Posted: {job.postedDays} days ago</span>
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={() => handleViewMore(job)}
+                        className="bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 rounded font-medium" 
+                        size="sm" 
+                        data-testid={`button-view-more-${job.id}`}
+                      >
+                        View More
+                      </Button>
+                      <Button 
+                        onClick={() => handleApplyJob(job)}
+                        disabled={appliedJobs.has(`${job.title}-${job.company}`)}
+                        className={`px-4 py-2 rounded font-medium ${
+                          appliedJobs.has(`${job.title}-${job.company}`)
+                            ? 'bg-green-600 hover:bg-green-700 text-white'
+                            : 'bg-blue-600 hover:bg-blue-700 text-white'
+                        }`}
+                        size="sm"
+                        data-testid={`button-apply-${job.id}`}
+                      >
+                        {appliedJobs.has(`${job.title}-${job.company}`) ? 'Applied' : 'Apply'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
+        </div>
+
+        {/* Pagination */}
+        <div className="flex flex-col items-center gap-4 mt-8">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            Showing page {currentPage} of {totalPages} ({totalJobs} total jobs)
+          </div>
+          
+          {/* Page Navigation */}
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={goToPrevPage}
+              disabled={currentPage === 1}
+              variant="outline"
+              size="sm"
+              data-testid="button-prev-page"
+            >
+              <i className="fas fa-chevron-left mr-2"></i>
+              Previous
+            </Button>
+            
+            <div className="flex items-center gap-2">
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                const page = i + 1;
+                return (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${
+                      currentPage === page
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                    }`}
+                    data-testid={`button-page-${page}`}
+                  >
+                    {page}
+                  </button>
+                );
+              })}
+            </div>
+            
+            <Button
+              onClick={goToNextPage}
+              disabled={currentPage === totalPages}
+              variant="outline"
+              size="sm"
+              data-testid="button-next-page"
+            >
+              Next
+              <i className="fas fa-chevron-right ml-2"></i>
+            </Button>
+          </div>
+        </div>
       </div>
+    </div>
+
+      {/* Apply Job Confirmation Modal */}
+      {showApplyConfirmation && pendingApplyJob && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-2">Apply for Job</h3>
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to apply for {pendingApplyJob?.title} at {pendingApplyJob?.company}?
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowApplyConfirmation(false);
+                  setPendingApplyJob(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={confirmApplyJob} className="bg-blue-600 hover:bg-blue-700 text-white">
+                Apply
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
