@@ -101,7 +101,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-inter">
       <div className="flex min-h-screen">
         <Sidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
-        <div className="flex-1 flex flex-col overflow-hidden ml-64">
+        <div className="flex-1 flex flex-col overflow-hidden ml-16">
           {renderSidebarContent()}
         </div>
       </div>
