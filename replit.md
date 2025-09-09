@@ -9,6 +9,8 @@ This is a dual-dashboard job portal web application featuring both candidate and
 - Verified full-stack application functionality with Express backend and React frontend
 - Configured deployment settings for autoscale deployment target
 - All systems operational: backend API endpoints, frontend React application, file uploads, and dashboard interfaces
+- Created new simplified landing page with two-button interface for candidate/employer login
+- Moved original detailed dashboard selection to /dashboard-selection route
 
 **Previous Migration Status**: Successfully migrated from Replit Agent to standard Replit environment on August 21, 2025. All functionality preserved with enhanced UI design for team leader dashboard components. Migration completed with working Admin dashboard implementation. All image upload features fully functional across all dashboards. Added admin-specific sidebar with "Report" option and replaced shield icons with crown icons for CEO role display.
 
