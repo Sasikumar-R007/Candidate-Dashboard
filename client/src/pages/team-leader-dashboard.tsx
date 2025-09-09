@@ -2598,6 +2598,222 @@ export default function TeamLeaderDashboard() {
         </DialogContent>
       </Dialog>
 
+      {/* Daily Delivery Modals */}
+      {/* Delivered Items Modal */}
+      <Dialog open={isDeliveredModalOpen} onOpenChange={setIsDeliveredModalOpen}>
+        <DialogContent className="max-w-4xl mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+              Delivered Items
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-4">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
+                <thead>
+                  <tr className="bg-gray-200 dark:bg-gray-700">
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Requirement</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Candidate</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Client</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Delivered Date</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { requirement: "Frontend Developer", candidate: "Sarah Johnson", client: "TechCorp", deliveredDate: "12-Aug-2025", status: "Interview Scheduled" },
+                    { requirement: "UI/UX Designer", candidate: "Mike Wilson", client: "Designify", deliveredDate: "12-Aug-2025", status: "Under Review" },
+                    { requirement: "Backend Developer", candidate: "Lisa Chen", client: "CodeLabs", deliveredDate: "12-Aug-2025", status: "Approved" }
+                  ].map((item, index) => (
+                    <tr key={index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
+                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{item.requirement}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.candidate}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.client}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.deliveredDate}</td>
+                      <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
+                        <span className="px-2 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <Button 
+                onClick={() => setIsDeliveredModalOpen(false)}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded"
+                data-testid="button-close-delivered-modal"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Defaulted Items Modal */}
+      <Dialog open={isDefaultedModalOpen} onOpenChange={setIsDefaultedModalOpen}>
+        <DialogContent className="max-w-4xl mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+              Defaulted Items
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-4">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
+                <thead>
+                  <tr className="bg-gray-200 dark:bg-gray-700">
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Requirement</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Candidate</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Client</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Expected Date</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { requirement: "QA Tester", candidate: "Robert Brown", client: "AppLogic", expectedDate: "10-Aug-2025", status: "Candidate Unavailable" }
+                  ].map((item, index) => (
+                    <tr key={index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
+                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{item.requirement}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.candidate}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.client}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.expectedDate}</td>
+                      <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
+                        <span className="px-2 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
+                          {item.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <Button 
+                onClick={() => setIsDefaultedModalOpen(false)}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded"
+                data-testid="button-close-defaulted-modal"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Meetings Modal */}
+      <Dialog open={isMeetingsModalOpen} onOpenChange={setIsMeetingsModalOpen}>
+        <DialogContent className="max-w-5xl mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+              Pending Meetings
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-4">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
+                <thead>
+                  <tr className="bg-gray-200 dark:bg-gray-700">
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Meeting Type</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Date</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Time</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Person</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Agenda</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { meetingType: "TL's Meeting", date: "15-Aug-2025", time: "10:00 AM", person: "Kavitha", agenda: "Monthly Review", status: "Scheduled" },
+                    { meetingType: "TL's Meeting", date: "16-Aug-2025", time: "2:00 PM", person: "Rajesh", agenda: "Performance Discussion", status: "Pending" },
+                    { meetingType: "TL's Meeting", date: "17-Aug-2025", time: "11:30 AM", person: "Sowmiya", agenda: "Project Updates", status: "Confirmed" },
+                    { meetingType: "CEO's Meeting", date: "18-Aug-2025", time: "3:00 PM", person: "John Mathew", agenda: "Quarterly Review", status: "Scheduled" }
+                  ].map((meeting, index) => (
+                    <tr key={index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
+                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{meeting.meetingType}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.date}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.time}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.person}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.agenda}</td>
+                      <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
+                        <span className={`px-2 py-1 rounded-full text-sm font-medium ${
+                          meeting.status === 'Confirmed' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
+                          meeting.status === 'Scheduled' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' :
+                          'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                        }`}>
+                          {meeting.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <Button 
+                onClick={() => setIsMeetingsModalOpen(false)}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded"
+                data-testid="button-close-meetings-modal"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* CEO Comments Modal */}
+      <Dialog open={isCeoCommentsModalOpen} onOpenChange={setIsCeoCommentsModalOpen}>
+        <DialogContent className="max-w-4xl mx-auto max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+              CEO Comments & Messages
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-4">
+            <div className="space-y-4">
+              {[
+                { id: 1, message: "Discuss with Shri Ragavi on her production", time: "12-Aug-2025 09:30 AM", priority: "High" },
+                { id: 2, message: "Discuss with Kavya about her leaves", time: "12-Aug-2025 10:15 AM", priority: "Medium" },
+                { id: 3, message: "Discuss with Umar for data", time: "12-Aug-2025 11:00 AM", priority: "High" },
+                { id: 4, message: "Review team performance metrics for Q3", time: "11-Aug-2025 02:30 PM", priority: "High" },
+                { id: 5, message: "Schedule one-on-one meetings with underperforming team members", time: "11-Aug-2025 03:45 PM", priority: "Medium" },
+                { id: 6, message: "Implement new recruitment strategy for senior roles", time: "10-Aug-2025 09:00 AM", priority: "High" },
+                { id: 7, message: "Address client feedback on recent placements", time: "10-Aug-2025 04:20 PM", priority: "High" },
+                { id: 8, message: "Organize team building activities for better collaboration", time: "09-Aug-2025 11:30 AM", priority: "Low" }
+              ].map((comment) => (
+                <div key={comment.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-start justify-between mb-2">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      comment.priority === 'High' ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400' :
+                      comment.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400' :
+                      'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
+                    }`}>
+                      {comment.priority} Priority
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">{comment.time}</span>
+                  </div>
+                  <p className="text-gray-900 dark:text-white text-sm font-medium">{comment.message}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-6 flex justify-end">
+              <Button 
+                onClick={() => setIsCeoCommentsModalOpen(false)}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded"
+                data-testid="button-close-comments-modal"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }
