@@ -39,7 +39,27 @@ export default function TeamLeaderDashboard() {
   const [isMeetingsModalOpen, setIsMeetingsModalOpen] = useState(false);
   const [isCeoCommentsModalOpen, setIsCeoCommentsModalOpen] = useState(false);
   const [newMessage, setNewMessage] = useState("");
-  const [chatMessages, setChatMessages] = useState([
+  const [chatType, setChatType] = useState<'team' | 'private'>('team');
+  const [activeChatUser, setActiveChatUser] = useState<string | null>(null);
+  
+  // Team members for team chat (5 members)
+  const teamMembers = [
+    { id: 'kavitha', name: 'Kavitha', role: 'Senior Recruiter', status: 'online' },
+    { id: 'rajesh', name: 'Rajesh', role: 'Technical Recruiter', status: 'online' },
+    { id: 'sowmiya', name: 'Sowmiya', role: 'Senior Recruiter', status: 'online' },
+    { id: 'kalaiselvi', name: 'Kalaiselvi', role: 'Recruiter', status: 'away' },
+    { id: 'malathi', name: 'Malathi', role: 'Junior Recruiter', status: 'online' }
+  ];
+
+  // Individual contacts for private chat (4 contacts)
+  const individualContacts = [
+    { id: 'arun-hr', name: 'Arun Kumar', role: 'HR Manager', status: 'online' },
+    { id: 'priya-client', name: 'Priya Singh', role: 'Client Manager', status: 'online' },
+    { id: 'david-ceo', name: 'David Johnson', role: 'CEO', status: 'away' },
+    { id: 'sarah-ops', name: 'Sarah Williams', role: 'Operations Head', status: 'online' }
+  ];
+
+  const [teamChatMessages, setTeamChatMessages] = useState([
     { id: 1, sender: "John Mathew", message: "Good morning team! Please review the requirements for today", time: "9:00 AM", isOwn: true },
     { id: 2, sender: "Kavitha", message: "Good morning sir. I've reviewed the Frontend Developer position. Ready to proceed.", time: "9:05 AM", isOwn: false },
     { id: 3, sender: "Rajesh", message: "Working on the UI/UX Designer requirement. Will update shortly.", time: "9:10 AM", isOwn: false },
@@ -49,19 +69,79 @@ export default function TeamLeaderDashboard() {
     { id: 7, sender: "Malathi", message: "Mobile App Developer role - client wants to schedule interviews", time: "9:30 AM", isOwn: false }
   ]);
 
+  const [privateChatMessages, setPrivateChatMessages] = useState<{[key: string]: any[]}>({
+    'arun-hr': [
+      { id: 1, sender: "Arun Kumar", message: "Hi John, need to discuss the new hire onboarding process", time: "10:30 AM", isOwn: false },
+      { id: 2, sender: "John Mathew", message: "Sure, let's schedule a meeting for tomorrow", time: "10:35 AM", isOwn: true }
+    ],
+    'priya-client': [
+      { id: 1, sender: "Priya Singh", message: "The client wants to increase the requirements count", time: "11:00 AM", isOwn: false },
+      { id: 2, sender: "John Mathew", message: "Let me check our capacity and get back to you", time: "11:05 AM", isOwn: true }
+    ],
+    'david-ceo': [
+      { id: 1, sender: "David Johnson", message: "Great work on this quarter's targets!", time: "2:00 PM", isOwn: false },
+      { id: 2, sender: "John Mathew", message: "Thank you sir! The team has been working hard", time: "2:05 PM", isOwn: true }
+    ],
+    'sarah-ops': [
+      { id: 1, sender: "Sarah Williams", message: "Can we review the resource allocation for next month?", time: "3:30 PM", isOwn: false },
+      { id: 2, sender: "John Mathew", message: "Yes, I'll prepare the report by Friday", time: "3:35 PM", isOwn: true }
+    ]
+  });
+
   // Handle sending new chat messages
   const handleSendMessage = () => {
     if (newMessage.trim()) {
       const newMsg = {
-        id: chatMessages.length + 1,
+        id: Date.now(),
         sender: "John Mathew",
         message: newMessage.trim(),
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isOwn: true
       };
-      setChatMessages([...chatMessages, newMsg]);
+      
+      if (chatType === 'team') {
+        setTeamChatMessages([...teamChatMessages, newMsg]);
+      } else if (activeChatUser && chatType === 'private') {
+        setPrivateChatMessages(prev => ({
+          ...prev,
+          [activeChatUser]: [...(prev[activeChatUser] || []), newMsg]
+        }));
+      }
       setNewMessage("");
     }
+  };
+
+  // Handle starting private chat
+  const handleStartPrivateChat = (userId: string) => {
+    setChatType('private');
+    setActiveChatUser(userId);
+  };
+
+  // Handle switching back to team chat
+  const handleSwitchToTeamChat = () => {
+    setChatType('team');
+    setActiveChatUser(null);
+  };
+
+  // Get current chat messages
+  const getCurrentChatMessages = () => {
+    if (chatType === 'team') {
+      return teamChatMessages;
+    } else if (activeChatUser && chatType === 'private') {
+      return privateChatMessages[activeChatUser] || [];
+    }
+    return [];
+  };
+
+  // Get current chat title
+  const getCurrentChatTitle = () => {
+    if (chatType === 'team') {
+      return 'Team Chat - Requirements Discussion';
+    } else if (activeChatUser) {
+      const contact = [...teamMembers, ...individualContacts].find(c => c.id === activeChatUser);
+      return `Private Chat - ${contact?.name || 'Unknown'}`;
+    }
+    return 'Chat';
   };
 
   // Sample requirements data
@@ -1173,88 +1253,205 @@ export default function TeamLeaderDashboard() {
   };
 
   const renderChatContent = () => {
+    const currentMessages = getCurrentChatMessages();
 
     return (
       <div className="flex min-h-screen">
-        <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader userName="John Mathew" companyName="Gumlat Marketing Private Limited" />
-          <div className="px-6 py-6 h-full flex flex-col">
-            
-            {/* Chat Header */}
-            <Card className="mb-4">
-              <CardHeader className="pb-3 pt-4">
-                <CardTitle className="text-lg text-gray-900 flex items-center">
-                  <i className="fas fa-comments mr-2 text-blue-600"></i>
-                  Team Chat - Requirements Discussion
-                </CardTitle>
-                <p className="text-sm text-gray-600">5 members online</p>
-              </CardHeader>
-            </Card>
+        <div className="flex-1 ml-16 bg-gray-50 flex">
+          {/* Main Chat Area */}
+          <div className="flex-1 flex flex-col">
+            <AdminTopHeader userName="John Mathew" companyName="Gumlat Marketing Private Limited" />
+            <div className="px-6 py-6 h-full flex flex-col">
+              
+              {/* Chat Header */}
+              <Card className="mb-4">
+                <CardHeader className="pb-3 pt-4">
+                  <CardTitle className="text-lg text-gray-900 flex items-center justify-between">
+                    <div className="flex items-center">
+                      <i className="fas fa-comments mr-2 text-blue-600"></i>
+                      {getCurrentChatTitle()}
+                    </div>
+                    {chatType === 'private' && (
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={handleSwitchToTeamChat}
+                        data-testid="button-back-to-team-chat"
+                      >
+                        Back to Team Chat
+                      </Button>
+                    )}
+                  </CardTitle>
+                  <p className="text-sm text-gray-600">
+                    {chatType === 'team' ? '5 members online' : 'Private conversation'}
+                  </p>
+                </CardHeader>
+              </Card>
 
-            {/* Chat Messages Area */}
-            <Card className="flex-1 flex flex-col">
-              <CardContent className="flex-1 flex flex-col p-0">
-                {/* Messages Container */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-                  {chatMessages.map((message) => (
-                    <div key={message.id} className={`flex ${message.isOwn ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                        message.isOwn 
-                          ? 'bg-blue-600 text-white' 
-                          : 'bg-white border border-gray-200 text-gray-900'
-                      }`}>
-                        {!message.isOwn && (
-                          <div className="text-xs font-semibold text-blue-600 mb-1">
-                            {message.sender}
+              {/* Chat Messages Area */}
+              <Card className="flex-1 flex flex-col">
+                <CardContent className="flex-1 flex flex-col p-0">
+                  {/* Messages Container */}
+                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                    {currentMessages.map((message) => (
+                      <div key={message.id} className={`flex ${message.isOwn ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                          message.isOwn 
+                            ? 'bg-blue-600 text-white' 
+                            : 'bg-white border border-gray-200 text-gray-900'
+                        }`}>
+                          {!message.isOwn && (
+                            <div className="text-xs font-semibold text-blue-600 mb-1">
+                              {message.sender}
+                            </div>
+                          )}
+                          <div className="text-sm">{message.message}</div>
+                          <div className={`text-xs mt-1 ${message.isOwn ? 'text-blue-200' : 'text-gray-500'}`}>
+                            {message.time}
                           </div>
-                        )}
-                        <div className="text-sm">{message.message}</div>
-                        <div className={`text-xs mt-1 ${message.isOwn ? 'text-blue-200' : 'text-gray-500'}`}>
-                          {message.time}
                         </div>
                       </div>
+                    ))}
+                  </div>
+
+                  {/* Message Input Area */}
+                  <div className="border-t border-gray-200 p-4 bg-white">
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        placeholder="Type your message..."
+                        className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                        data-testid="input-chat-message"
+                      />
+                      <Button 
+                        onClick={handleSendMessage}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+                        data-testid="button-send-message"
+                      >
+                        <i className="fas fa-paper-plane mr-2"></i>
+                        Send
+                      </Button>
+                    </div>
+                    
+                    {/* Quick Actions */}
+                    <div className="flex items-center space-x-4 mt-3">
+                      <Button variant="outline" size="sm" className="text-sm">
+                        <i className="fas fa-paperclip mr-2"></i>
+                        Attach File
+                      </Button>
+                      <Button variant="outline" size="sm" className="text-sm">
+                        <i className="fas fa-file-alt mr-2"></i>
+                        Share Resume
+                      </Button>
+                      <Button variant="outline" size="sm" className="text-sm">
+                        <i className="fas fa-calendar mr-2"></i>
+                        Schedule Meeting
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+
+          {/* Right Sidebar - Chat Participants */}
+          <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
+            <div className="p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Chat Participants</h3>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto">
+              {/* Team Chat Section */}
+              <div className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-semibold text-gray-700">Team Chat (5 members)</h4>
+                  <Button 
+                    variant={chatType === 'team' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={handleSwitchToTeamChat}
+                    data-testid="button-switch-team-chat"
+                  >
+                    Join
+                  </Button>
+                </div>
+                <div className="space-y-2">
+                  {teamMembers.map((member) => (
+                    <div 
+                      key={member.id} 
+                      className={`flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-gray-50 ${
+                        chatType === 'team' ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'
+                      }`}
+                      onClick={() => handleStartPrivateChat(member.id)}
+                      data-testid={`contact-team-${member.id}`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-3 h-3 rounded-full ${
+                          member.status === 'online' ? 'bg-green-500' : 'bg-yellow-500'
+                        }`}></div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{member.name}</p>
+                          <p className="text-xs text-gray-500">{member.role}</p>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartPrivateChat(member.id);
+                        }}
+                      >
+                        Chat
+                      </Button>
                     </div>
                   ))}
                 </div>
+              </div>
 
-                {/* Message Input Area */}
-                <div className="border-t border-gray-200 p-4 bg-white">
-                  <div className="flex items-center space-x-3">
-                    <input
-                      type="text"
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder="Type your message..."
-                      className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                    />
-                    <Button 
-                      onClick={handleSendMessage}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+              {/* Individual Contacts Section */}
+              <div className="p-4 border-t border-gray-200">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Private Contacts (4 contacts)</h4>
+                <div className="space-y-2">
+                  {individualContacts.map((contact) => (
+                    <div 
+                      key={contact.id} 
+                      className={`flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-gray-50 ${
+                        chatType === 'private' && activeChatUser === contact.id 
+                          ? 'bg-blue-50 border border-blue-200' 
+                          : 'bg-gray-50'
+                      }`}
+                      onClick={() => handleStartPrivateChat(contact.id)}
+                      data-testid={`contact-private-${contact.id}`}
                     >
-                      <i className="fas fa-paper-plane mr-2"></i>
-                      Send
-                    </Button>
-                  </div>
-                  
-                  {/* Quick Actions */}
-                  <div className="flex items-center space-x-4 mt-3">
-                    <Button variant="outline" size="sm" className="text-sm">
-                      <i className="fas fa-paperclip mr-2"></i>
-                      Attach File
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-sm">
-                      <i className="fas fa-file-alt mr-2"></i>
-                      Share Resume
-                    </Button>
-                    <Button variant="outline" size="sm" className="text-sm">
-                      <i className="fas fa-calendar mr-2"></i>
-                      Schedule Meeting
-                    </Button>
-                  </div>
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-3 h-3 rounded-full ${
+                          contact.status === 'online' ? 'bg-green-500' : 'bg-yellow-500'
+                        }`}></div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{contact.name}</p>
+                          <p className="text-xs text-gray-500">{contact.role}</p>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartPrivateChat(contact.id);
+                        }}
+                      >
+                        Chat
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
         </div>
       </div>
