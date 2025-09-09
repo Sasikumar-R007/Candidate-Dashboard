@@ -8,6 +8,7 @@ import JobPreferencesTab from '@/components/dashboard/tabs/job-preferences-tab';
 import ActivityTab from '@/components/dashboard/tabs/activity-tab';
 import JobBoardTab from '@/components/dashboard/tabs/job-board-tab';
 import MyJobsTab from '@/components/dashboard/tabs/my-jobs-tab';
+import CandidateMetricsSidebar from '@/components/dashboard/candidate-metrics-sidebar';
 import { useProfile } from '@/hooks/use-profile';
 
 export default function Dashboard() {
@@ -37,19 +38,22 @@ export default function Dashboard() {
   const renderSidebarContent = () => {
     switch (sidebarTab) {
       case 'dashboard':
-        // Render dashboard with tab navigation
+        // Render dashboard with tab navigation and metrics sidebar
         return (
-          <>
-            <SimpleClientHeader 
-              companyName="Gumlet Marketing Private Limited"
-              userName={profile?.name || 'Sasi Kumar'}
-              userImage={profile?.profilePicture || '/api/placeholder/32/32'}
-            />
-            <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-            <div className="flex-1 overflow-y-auto">
-              {renderDashboardTabContent()}
+          <div className="flex flex-1">
+            <div className="flex-1 flex flex-col">
+              <SimpleClientHeader 
+                companyName="Gumlet Marketing Private Limited"
+                userName={profile?.name || 'Sasi Kumar'}
+                userImage={profile?.profilePicture || '/api/placeholder/32/32'}
+              />
+              <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+              <div className="flex-1 overflow-y-auto">
+                {renderDashboardTabContent()}
+              </div>
             </div>
-          </>
+            {activeTab === 'my-jobs' && <CandidateMetricsSidebar />}
+          </div>
         );
       case 'job-board':
         return <JobBoardTab />;
@@ -65,17 +69,20 @@ export default function Dashboard() {
 
       default:
         return (
-          <>
-            <SimpleClientHeader 
-              companyName="Gumlet Marketing Private Limited"
-              userName={profile?.name || 'Sasi Kumar'}
-              userImage={profile?.profilePicture || '/api/placeholder/32/32'}
-            />
-            <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
-            <div className="flex-1 overflow-y-auto">
-              {renderDashboardTabContent()}
+          <div className="flex flex-1">
+            <div className="flex-1 flex flex-col">
+              <SimpleClientHeader 
+                companyName="Gumlet Marketing Private Limited"
+                userName={profile?.name || 'Sasi Kumar'}
+                userImage={profile?.profilePicture || '/api/placeholder/32/32'}
+              />
+              <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+              <div className="flex-1 overflow-y-auto">
+                {renderDashboardTabContent()}
+              </div>
             </div>
-          </>
+            {activeTab === 'my-jobs' && <CandidateMetricsSidebar />}
+          </div>
         );
     }
   };
