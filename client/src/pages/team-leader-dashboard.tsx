@@ -312,7 +312,7 @@ export default function TeamLeaderDashboard() {
                       <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" className="flex items-center space-x-1 h-8 px-3">
                           <CalendarIcon className="h-4 w-4" />
-                          <span className="text-sm">12-Aug-2025</span>
+                          <span className="text-sm">{format(selectedDate, "dd-MMM-yyyy")}</span>
                           <EditIcon className="h-4 w-4" />
                         </Button>
                       </PopoverTrigger>
@@ -2771,30 +2771,23 @@ export default function TeamLeaderDashboard() {
         <DialogContent className="max-w-4xl mx-auto max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
-              CEO Comments & Messages
+              CEO Commands
             </DialogTitle>
           </DialogHeader>
           <div className="p-4">
             <div className="space-y-4">
               {[
-                { id: 1, message: "Discuss with Shri Ragavi on her production", time: "12-Aug-2025 09:30 AM", priority: "High" },
-                { id: 2, message: "Discuss with Kavya about her leaves", time: "12-Aug-2025 10:15 AM", priority: "Medium" },
-                { id: 3, message: "Discuss with Umar for data", time: "12-Aug-2025 11:00 AM", priority: "High" },
-                { id: 4, message: "Review team performance metrics for Q3", time: "11-Aug-2025 02:30 PM", priority: "High" },
-                { id: 5, message: "Schedule one-on-one meetings with underperforming team members", time: "11-Aug-2025 03:45 PM", priority: "Medium" },
-                { id: 6, message: "Implement new recruitment strategy for senior roles", time: "10-Aug-2025 09:00 AM", priority: "High" },
-                { id: 7, message: "Address client feedback on recent placements", time: "10-Aug-2025 04:20 PM", priority: "High" },
-                { id: 8, message: "Organize team building activities for better collaboration", time: "09-Aug-2025 11:30 AM", priority: "Low" }
+                { id: 1, message: "Discuss with Shri Ragavi on her production", time: "12-Aug-2025 09:30 AM" },
+                { id: 2, message: "Discuss with Kavya about her leaves", time: "12-Aug-2025 10:15 AM" },
+                { id: 3, message: "Discuss with Umar for data", time: "12-Aug-2025 11:00 AM" },
+                { id: 4, message: "Review team performance metrics for Q3", time: "11-Aug-2025 02:30 PM" },
+                { id: 5, message: "Schedule one-on-one meetings with underperforming team members", time: "11-Aug-2025 03:45 PM" },
+                { id: 6, message: "Implement new recruitment strategy for senior roles", time: "10-Aug-2025 09:00 AM" },
+                { id: 7, message: "Address client feedback on recent placements", time: "10-Aug-2025 04:20 PM" },
+                { id: 8, message: "Organize team building activities for better collaboration", time: "09-Aug-2025 11:30 AM" }
               ].map((comment) => (
                 <div key={comment.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                   <div className="flex items-start justify-between mb-2">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      comment.priority === 'High' ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400' :
-                      comment.priority === 'Medium' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400' :
-                      'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                    }`}>
-                      {comment.priority} Priority
-                    </span>
                     <span className="text-xs text-gray-500 dark:text-gray-400">{comment.time}</span>
                   </div>
                   <p className="text-gray-900 dark:text-white text-sm font-medium">{comment.message}</p>
