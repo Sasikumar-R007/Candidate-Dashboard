@@ -1,8 +1,30 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
+
+// Trust proxy for proper host/protocol handling on cloud platforms
+app.set('trust proxy', 1);
+
+// CORS configuration for cross-origin requests
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? [
+        process.env.FRONTEND_URL || 'https://your-app.vercel.app',
+        /\.vercel\.app$/,  // Allow all Vercel preview deployments
+        /localhost:\d+$/   // Allow localhost for development
+      ]
+    : true, // Allow all origins in development
+  credentials: true, // Allow cookies and credentials
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
+};
+
+app.use(cors(corsOptions));
+// Handle CORS preflight requests
+app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -43,8 +65,9 @@ app.use((req, res, next) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
+    console.error('Server error:', err);
     res.status(status).json({ message });
-    throw err;
+    // Don't throw err to prevent process crashes in production
   });
 
   // importantly only setup vite in development and after
@@ -61,11 +84,17 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
+  const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '0.0.0.0';
+  
   server.listen({
     port,
-    host: "0.0.0.0",
+    host,
     reusePort: true,
   }, () => {
-    log(`serving on port ${port}`);
+    log(`🚀 Backend server running on http://${host}:${port}`);
+    log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    if (process.env.FRONTEND_URL) {
+      log(`Frontend URL: ${process.env.FRONTEND_URL}`);
+    }
   });
 })();

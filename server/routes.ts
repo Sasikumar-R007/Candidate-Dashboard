@@ -1,20 +1,51 @@
 import express, { type Express } from "express";
 import { createServer, type Server } from "http";
+import fs from "fs";
 import { storage } from "./storage";
 import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertRequirementSchema } from "@shared/schema";
 import multer from "multer";
 import path from "path";
 
+// Ensure uploads directory exists
+const uploadsDir = 'uploads';
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
 const upload = multer({
   storage: multer.diskStorage({
     destination: function (req, file, cb) {
-      cb(null, 'uploads/');
+      cb(null, uploadsDir);
     },
     filename: function (req, file, cb) {
       const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
       cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
     }
-  })
+  }),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow image files, PDFs, and documents (including modern formats)
+    const allowedExtensions = /\.(jpeg|jpg|png|gif|webp|avif|pdf|doc|docx)$/i;
+    const extname = allowedExtensions.test(file.originalname.toLowerCase());
+    
+    // Check MIME types including modern image formats and Office documents
+    const allowedMimeTypes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
+      'image/webp', 'image/avif', // Modern image formats
+      'application/pdf',
+      'application/msword', // .doc
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document' // .docx
+    ];
+    const mimetype = allowedMimeTypes.includes(file.mimetype);
+    
+    if (extname && mimetype) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only images (JPEG, PNG, GIF, WebP, AVIF), PDFs, and Word documents are allowed!'));
+    }
+  }
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -189,10 +220,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file uploaded" });
       }
       
-      const fileUrl = `/uploads/${req.file.filename}`;
+      // In production, consider using cloud storage like AWS S3, Cloudinary, etc.
+      // For now, using local storage with proper URL generation
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
+        : `http://${req.get('host')}`;
+      
+      const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
       res.json({ url: fileUrl });
     } catch (error) {
-      res.status(500).json({ message: "Upload failed" });
+      console.error('Upload error:', error);
+      res.status(500).json({ message: "Upload failed", error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -202,10 +240,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file uploaded" });
       }
       
-      const fileUrl = `/uploads/${req.file.filename}`;
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
+        : `http://${req.get('host')}`;
+      
+      const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
       res.json({ url: fileUrl });
     } catch (error) {
-      res.status(500).json({ message: "Upload failed" });
+      console.error('Upload error:', error);
+      res.status(500).json({ message: "Upload failed", error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -215,10 +258,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No file uploaded" });
       }
       
-      const fileUrl = `/uploads/${req.file.filename}`;
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
+        : `http://${req.get('host')}`;
+      
+      const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
       res.json({ url: fileUrl });
     } catch (error) {
-      res.status(500).json({ message: "Upload failed" });
+      console.error('Upload error:', error);
+      res.status(500).json({ message: "Upload failed", error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -409,21 +457,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Team Leader file upload endpoints
   app.post("/api/team-leader/upload/banner", upload.single('file'), (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
+        : `http://${req.get('host')}`;
+      
+      const url = `${baseUrl}/uploads/${req.file.filename}`;
+      res.json({ url });
+    } catch (error) {
+      console.error('Upload error:', error);
+      res.status(500).json({ message: "Upload failed", error: error instanceof Error ? error.message : 'Unknown error' });
     }
-    
-    const url = `/uploads/${req.file.filename}`;
-    res.json({ url });
   });
 
   app.post("/api/team-leader/upload/profile", upload.single('file'), (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
+        : `http://${req.get('host')}`;
+      
+      const url = `${baseUrl}/uploads/${req.file.filename}`;
+      res.json({ url });
+    } catch (error) {
+      console.error('Upload error:', error);
+      res.status(500).json({ message: "Upload failed", error: error instanceof Error ? error.message : 'Unknown error' });
     }
-    
-    const url = `/uploads/${req.file.filename}`;
-    res.json({ url });
   });
 
   // In-memory storage for team leader profile to persist changes
@@ -495,21 +561,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Admin file upload endpoints
   app.post("/api/admin/upload/banner", upload.single('file'), (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
+        : `http://${req.get('host')}`;
+      
+      const url = `${baseUrl}/uploads/${req.file.filename}`;
+      res.json({ url });
+    } catch (error) {
+      console.error('Upload error:', error);
+      res.status(500).json({ message: "Upload failed", error: error instanceof Error ? error.message : 'Unknown error' });
     }
-    
-    const url = `/uploads/${req.file.filename}`;
-    res.json({ url });
   });
 
   app.post("/api/admin/upload/profile", upload.single('file'), (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
+        : `http://${req.get('host')}`;
+      
+      const url = `${baseUrl}/uploads/${req.file.filename}`;
+      res.json({ url });
+    } catch (error) {
+      console.error('Upload error:', error);
+      res.status(500).json({ message: "Upload failed", error: error instanceof Error ? error.message : 'Unknown error' });
     }
-    
-    const url = `/uploads/${req.file.filename}`;
-    res.json({ url });
   });
 
   // Recruiter Dashboard API routes
@@ -590,21 +674,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/recruiter/upload/banner", upload.single('file'), (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
+        : `http://${req.get('host')}`;
+      
+      const url = `${baseUrl}/uploads/${req.file.filename}`;
+      res.json({ url });
+    } catch (error) {
+      console.error('Upload error:', error);
+      res.status(500).json({ message: "Upload failed", error: error instanceof Error ? error.message : 'Unknown error' });
     }
-    
-    const url = `/uploads/${req.file.filename}`;
-    res.json({ url });
   });
 
   app.post("/api/recruiter/upload/profile", upload.single('file'), (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded" });
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
+        : `http://${req.get('host')}`;
+      
+      const url = `${baseUrl}/uploads/${req.file.filename}`;
+      res.json({ url });
+    } catch (error) {
+      console.error('Upload error:', error);
+      res.status(500).json({ message: "Upload failed", error: error instanceof Error ? error.message : 'Unknown error' });
     }
-    
-    const url = `/uploads/${req.file.filename}`;
-    res.json({ url });
   });
 
   // Requirements API endpoints
