@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run build:frontend",
   "outputDirectory": "dist/public",
   "framework": "vite",
   "installCommand": "npm install",
