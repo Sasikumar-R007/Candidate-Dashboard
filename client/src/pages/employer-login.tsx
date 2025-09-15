@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { BrainCircuit, Globe } from "lucide-react";
-import illustrationUrl from "@assets/F1_1757909688002.png";
+import illustrationUrl from "@assets/F1-removebg-preview_1757910210273.png";
 
 interface LoginForm {
   email: string;
@@ -40,8 +40,10 @@ export default function EmployerLogin() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Side - Blue Background with Branding and Illustration */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900 relative overflow-hidden">
+      {/* Left Side - Blue Background with Branding and Illustration with Curve */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-900 via-blue-800 to-blue-700 relative overflow-hidden">
+        {/* Curved edge */}
+        <div className="absolute top-0 right-0 bottom-0 w-20 bg-gray-50 rounded-l-[100px] transform translate-x-10"></div>
         {/* Background texture/pattern */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-900/20 to-indigo-900/30"></div>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(120,119,198,0.3),transparent_50%)]"></div>
@@ -59,24 +61,24 @@ export default function EmployerLogin() {
           {/* Main Content */}
           <div className="space-y-8 max-w-md">
             <div>
-              <h1 className="text-4xl lg:text-5xl font-bold leading-tight mb-6">
+              <h1 className="text-2xl font-bold leading-tight mb-4">
                 Track. Improve.
                 <br />
                 Win every hire with
                 <br />
                 data-driven insights
               </h1>
-              <p className="text-slate-300 text-lg">
+              <p className="text-slate-300 text-sm">
                 Your hiring success, simplified into powerful metrics
               </p>
             </div>
 
             {/* Illustration */}
-            <div className="flex justify-center">
+            <div className="flex justify-start">
               <img 
                 src={illustrationUrl} 
                 alt="Business analytics illustration" 
-                className="w-80 h-64 object-contain"
+                className="w-64 h-48 object-contain"
               />
             </div>
           </div>
@@ -118,14 +120,14 @@ export default function EmployerLogin() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" data-testid="form-employer-login">
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="email" className="text-gray-700 font-medium">
+                  <Label htmlFor="email" className="text-gray-700 font-medium text-sm mb-1 block">
                     Email
                   </Label>
                   <Input
                     id="email"
                     type="email"
-                    placeholder="Enter your email"
-                    className="mt-1 w-full border-gray-300 rounded-md focus:border-slate-500 focus:ring-slate-500"
+                    placeholder=""
+                    className="w-full h-11 border border-gray-300 rounded-md px-3 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-gray-700"
                     data-testid="input-email"
                     {...register("email", {
                       required: "Email is required",
@@ -141,14 +143,14 @@ export default function EmployerLogin() {
                 </div>
 
                 <div>
-                  <Label htmlFor="password" className="text-gray-700 font-medium">
+                  <Label htmlFor="password" className="text-gray-700 font-medium text-sm mb-1 block">
                     Password
                   </Label>
                   <Input
                     id="password"
                     type="password"
-                    placeholder="Enter your password"
-                    className="mt-1 w-full border-gray-300 rounded-md focus:border-slate-500 focus:ring-slate-500"
+                    placeholder=""
+                    className="w-full h-11 border border-gray-300 rounded-md px-3 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-gray-700"
                     data-testid="input-password"
                     {...register("password", {
                       required: "Password is required",
@@ -165,10 +167,10 @@ export default function EmployerLogin() {
               </div>
 
               {/* Forgot Password Link */}
-              <div className="text-right">
+              <div className="text-left">
                 <button
                   type="button"
-                  className="text-sm text-blue-600 hover:text-blue-500 font-medium"
+                  className="text-sm text-blue-600 hover:text-blue-500"
                   data-testid="button-forgot-password"
                 >
                   Forgot Password?
@@ -179,26 +181,13 @@ export default function EmployerLogin() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-slate-800 hover:bg-slate-700 text-white py-3 text-lg font-semibold rounded-md transition-colors"
+                className="w-full bg-blue-900 hover:bg-blue-800 text-white py-3 text-base font-medium rounded-md transition-colors"
                 data-testid="button-login"
               >
                 {isLoading ? "Logging in..." : "Login"}
               </Button>
             </form>
 
-            {/* Additional Links */}
-            <div className="text-center text-sm text-gray-600">
-              <p>
-                Don't have an account?{" "}
-                <button
-                  type="button"
-                  className="text-blue-600 hover:text-blue-500 font-medium"
-                  data-testid="button-sign-up"
-                >
-                  Sign up
-                </button>
-              </p>
-            </div>
           </div>
         </div>
       </div>
