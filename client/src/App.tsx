@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/contexts/theme-context";
 import Landing from "@/pages/landing";
+import EmployerLogin from "@/pages/employer-login";
 import DashboardSelection from "@/pages/dashboard-selection";
 import Dashboard from "@/pages/dashboard";
 import TeamLeaderDashboard from "@/pages/team-leader-dashboard";
@@ -22,6 +23,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+      <Route path="/employer-login" component={EmployerLogin} />
       <Route path="/dashboard-selection" component={DashboardSelection} />
       <Route path="/candidate" component={Dashboard} />
       <Route path="/team-leader" component={TeamLeaderDashboard} />
