@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
+import { useLocation } from "wouter";
 import { BrainCircuit } from "lucide-react";
 import candidateImageUrl from "@assets/cand f_1758168663913.png";
 
@@ -18,9 +19,15 @@ interface RegisterForm {
   fullName: string;
 }
 
+interface OTPForm {
+  otp: string;
+}
+
 export default function CandidateLogin() {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [showOTP, setShowOTP] = useState(false);
+  const [, setLocation] = useLocation();
 
   const {
     register: registerLogin,
@@ -35,12 +42,17 @@ export default function CandidateLogin() {
     watch,
   } = useForm<RegisterForm>();
 
+  const {
+    register: registerOTP,
+    handleSubmit: handleSubmitOTP,
+    formState: { errors: otpErrors },
+  } = useForm<OTPForm>();
+
   const onLogin = async (data: LoginForm) => {
     setIsLoading(true);
     try {
-      // TODO: Implement actual login logic with API endpoint
       await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log("Login successful", data);
+      setShowOTP(true);
     } catch (error) {
       console.error("Login failed", error);
     } finally {
@@ -51,9 +63,9 @@ export default function CandidateLogin() {
   const onRegister = async (data: RegisterForm) => {
     setIsLoading(true);
     try {
-      // TODO: Implement actual register logic with API endpoint
       await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log("Registration successful", data);
+      // Redirect to career launchpad form
+      setLocation('/candidate-registration');
     } catch (error) {
       console.error("Registration failed", error);
     } finally {
@@ -61,46 +73,91 @@ export default function CandidateLogin() {
     }
   };
 
-  return (
-    <div className="min-h-screen flex">
-      {/* Left Side - Blue Background with Candidate Image */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-800 via-blue-700 to-blue-600 relative overflow-hidden">
-        {/* Curved edge */}
-        <div className="absolute top-0 right-0 bottom-0 w-20 bg-gray-50 rounded-l-[100px] transform translate-x-10"></div>
-        
-        {/* Content */}
-        <div className="relative z-10 flex flex-col justify-center items-center p-12 text-white w-full">
-          {/* Logo and Brand */}
-          <div className="absolute top-8 left-8 flex items-center space-x-3">
-            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-              <BrainCircuit className="w-5 h-5 text-slate-800" />
-            </div>
-            <span className="text-2xl font-bold">StaffOS</span>
-          </div>
+  const onVerifyOTP = async (data: OTPForm) => {
+    setIsLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Redirect to candidate dashboard
+      setLocation('/candidate');
+    } catch (error) {
+      console.error("OTP verification failed", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-          {/* Main Content */}
-          <div className="text-center max-w-md">
-            <h1 className="text-3xl font-bold leading-tight mb-4">
-              Your Next
-              <br />
-              Opportunity Awaits
-            </h1>
-            <p className="text-slate-300 text-base mb-8">
-              Access your opportunities and manage
-              <br />
-              your applications
-            </p>
-
-            {/* Candidate Illustration */}
-            <div className="flex justify-center">
-              <img 
-                src={candidateImageUrl} 
-                alt="Your Next Opportunity Awaits - Access your opportunities and manage your applications" 
-                className="w-full max-w-sm h-auto object-contain"
-              />
+  if (showOTP) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-sm">
+          <div className="text-center space-y-6">
+            <div>
+              <h2 className="text-lg font-medium text-gray-900">Enter 2FA OTP sent to your Mobile</h2>
             </div>
+
+            <form onSubmit={handleSubmitOTP(onVerifyOTP)} className="space-y-4" data-testid="form-otp-verification">
+              <div>
+                <Input
+                  type="text"
+                  placeholder="6-digit OTP"
+                  className="w-full h-12 text-center text-lg border border-gray-300 rounded focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  data-testid="input-otp"
+                  maxLength={6}
+                  {...registerOTP("otp", {
+                    required: "OTP is required",
+                    pattern: {
+                      value: /^\d{6}$/,
+                      message: "Please enter a valid 6-digit OTP",
+                    },
+                  })}
+                />
+                {otpErrors.otp && (
+                  <p className="mt-1 text-sm text-red-600">{otpErrors.otp.message}</p>
+                )}
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-white py-3 text-base font-medium rounded"
+                data-testid="button-verify-otp"
+              >
+                {isLoading ? "Verifying..." : "Verify OTP"}
+              </Button>
+
+              <div className="flex justify-between text-sm">
+                <button
+                  type="button"
+                  onClick={() => setShowOTP(false)}
+                  className="text-gray-600 hover:text-gray-800"
+                  data-testid="button-back-to-login"
+                >
+                  Back To Login
+                </button>
+                <button
+                  type="button"
+                  className="text-blue-600 hover:text-blue-500"
+                  data-testid="button-resend-otp"
+                >
+                  Resend OTP
+                </button>
+              </div>
+            </form>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex">
+      {/* Left Side - Exact Design from Image */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+        <img 
+          src={candidateImageUrl} 
+          alt="Your Next Opportunity Awaits - Access your opportunities and manage your applications" 
+          className="w-full h-full object-cover"
+        />
       </div>
 
       {/* Right Side - Login/Register Form */}

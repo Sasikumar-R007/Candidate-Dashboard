@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/contexts/theme-context";
 import Landing from "@/pages/landing";
 import EmployerLogin from "@/pages/employer-login";
 import CandidateLogin from "@/pages/candidate-login";
+import CandidateRegistration from "@/pages/candidate-registration";
 import DashboardSelection from "@/pages/dashboard-selection";
 import Dashboard from "@/pages/dashboard";
 import TeamLeaderDashboard from "@/pages/team-leader-dashboard";
@@ -26,6 +27,7 @@ function Router() {
       <Route path="/" component={Landing} />
       <Route path="/employer-login" component={EmployerLogin} />
       <Route path="/candidate-login" component={CandidateLogin} />
+      <Route path="/candidate-registration" component={CandidateRegistration} />
       <Route path="/dashboard-selection" component={DashboardSelection} />
       <Route path="/candidate" component={Dashboard} />
       <Route path="/team-leader" component={TeamLeaderDashboard} />
