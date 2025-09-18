@@ -764,6 +764,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Employer forgot password endpoint
+  app.post("/api/employer/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: "Invalid email format" });
+      }
+
+      // Simulate sending notification to admin
+      console.log(`Password reset request for employer email: ${email}`);
+      console.log(`Admin notification: New password reset request from ${email}`);
+      
+      // In a real implementation, you would:
+      // 1. Check if email exists in the employer database
+      // 2. Generate a reset token
+      // 3. Send email to admin with the request details
+      // 4. Store the reset request in database
+      
+      // Simulate processing delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      res.json({ 
+        message: "Password reset request sent to admin",
+        details: "You will receive an email notification once your request has been processed by the admin team."
+      });
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Google OAuth endpoints (placeholder for future implementation)
+  app.get("/api/auth/google", async (req, res) => {
+    // Placeholder for Google OAuth initiation
+    res.status(501).json({ message: "Google OAuth not yet implemented" });
+  });
+
+  app.get("/api/auth/google/callback", async (req, res) => {
+    // Placeholder for Google OAuth callback
+    res.status(501).json({ message: "Google OAuth callback not yet implemented" });
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

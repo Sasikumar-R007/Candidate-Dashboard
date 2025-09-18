@@ -5,6 +5,8 @@ import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { BrainCircuit } from "lucide-react";
 import { 
   AlertDialog,
@@ -35,7 +37,29 @@ export default function EmployerLogin() {
     register,
     handleSubmit,
     formState: { errors },
+    getValues,
   } = useForm<LoginForm>();
+
+  // Forgot password mutation
+  const forgotPasswordMutation = useMutation({
+    mutationFn: async (email: string) => {
+      const response = await apiRequest("POST", "/api/employer/forgot-password", { email });
+      return await response.json();
+    },
+    onSuccess: (data: any) => {
+      toast({
+        title: "Password Reset Request Sent",
+        description: data.details || "A password reset email will be sent to the admin. You will be notified once processed.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Request Failed",
+        description: error.message || "Failed to send password reset request. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
@@ -54,29 +78,29 @@ export default function EmployerLogin() {
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
     try {
-      // Simulate Google login process
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      toast({
-        title: "Google Login Successful",
-        description: "You have been logged in with Google",
-      });
-      navigate("/dashboard-selection");
+      // Redirect to Google OAuth endpoint
+      window.location.href = "/api/auth/google";
     } catch (error) {
       toast({
         title: "Google Login Failed",
         description: "Please try again later",
         variant: "destructive",
       });
-    } finally {
       setIsGoogleLoading(false);
     }
   };
 
   const handleForgotPasswordConfirm = () => {
-    toast({
-      title: "Password Reset Request Sent",
-      description: "A password reset email will be sent to the admin. You will be notified once processed.",
-    });
+    const email = getValues("email");
+    if (!email) {
+      toast({
+        title: "Email Required",
+        description: "Please enter your email address first",
+        variant: "destructive",
+      });
+      return;
+    }
+    forgotPasswordMutation.mutate(email);
   };
 
   return (
@@ -216,9 +240,15 @@ export default function EmployerLogin() {
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleForgotPasswordConfirm}>
-                      Send Request
+                    <AlertDialogCancel data-testid="button-forgot-cancel">
+                      Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={handleForgotPasswordConfirm}
+                      disabled={forgotPasswordMutation.isPending}
+                      data-testid="button-forgot-submit"
+                    >
+                      {forgotPasswordMutation.isPending ? "Sending..." : "Send Request"}
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
