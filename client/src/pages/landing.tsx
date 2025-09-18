@@ -20,7 +20,7 @@ export default function Landing() {
 
         {/* Action Buttons */}
         <div className="flex items-center space-x-3">
-          <Link href="/dashboard-selection" data-testid="link-candidate-login">
+          <Link href="/candidate-login" data-testid="link-candidate-login">
             <Button 
               variant="ghost" 
               className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white font-medium"

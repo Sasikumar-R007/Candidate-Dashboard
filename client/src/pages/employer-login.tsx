@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { BrainCircuit, Globe } from "lucide-react";
-import illustrationUrl from "@assets/F1-removebg-preview_1757910210273.png";
+import illustrationUrl from "@assets/recruiter ,Team lead ,Admin_1758168597473.png";
 
 interface LoginForm {
   email: string;
@@ -74,11 +74,11 @@ export default function EmployerLogin() {
             </div>
 
             {/* Illustration */}
-            <div className="flex justify-start">
+            <div className="flex justify-center">
               <img 
                 src={illustrationUrl} 
-                alt="Business analytics illustration" 
-                className="w-64 h-48 object-contain"
+                alt="Track, Improve, Win every hire with data-driven insights" 
+                className="w-full max-w-lg h-auto object-contain"
               />
             </div>
           </div>
