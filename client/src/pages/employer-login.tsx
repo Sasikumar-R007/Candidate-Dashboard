@@ -75,7 +75,7 @@ export default function EmployerLogin() {
             </div>
             
             {/* Business person illustration */}
-            <div className="flex justify-start w-full mt-6 pl-4">
+            <div className="flex justify-start w-full mt-6">
               <img 
                 src={businessPersonUrl} 
                 alt="Business analytics illustration" 
