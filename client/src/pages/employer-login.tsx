@@ -36,7 +36,7 @@ export default function EmployerLogin() {
   return (
     <div className="min-h-screen flex">
       {/* Left Side - Exact Design from Image */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 h-screen relative overflow-hidden">
         <img 
           src={illustrationUrl} 
           alt="Track. Improve. Win every hire with data-driven insights" 
