@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { BrainCircuit } from "lucide-react";
 import backgroundUrl from "@assets/Rectangle 1260_1758176515546.png";
-import businessPersonUrl from "@assets/ChatGPT Image Jul 7, 2025, 07_40_50 PM_1758176567626.png";
+import businessPersonUrl from "@assets/ChatGPT_Image_Jul_7__2025__07_40_50_PM-removebg-preview_1758176923888.png";
 
 interface LoginForm {
   email: string;
@@ -44,7 +44,7 @@ export default function EmployerLogin() {
           className="absolute inset-0 w-full h-full"
           style={{
             backgroundImage: `url(${backgroundUrl})`,
-            backgroundSize: 'cover',
+            backgroundSize: 'auto 100%',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat'
           }}
@@ -53,33 +53,33 @@ export default function EmployerLogin() {
         {/* Content overlay */}
         <div className="relative z-10 flex flex-col justify-between p-8 text-white w-full">
           {/* StaffOS logo at top left */}
-          <div className="flex items-center space-x-3">
-            <BrainCircuit className="w-8 h-8 text-white" />
-            <span className="text-2xl font-bold text-white">StaffOS</span>
+          <div className="flex items-center space-x-2">
+            <BrainCircuit className="w-6 h-6 text-white" />
+            <span className="text-lg font-bold text-white">StaffOS</span>
           </div>
           
           {/* Main content area */}
           <div className="flex-1 flex flex-col justify-center items-start space-y-6">
             {/* Main heading */}
-            <div className="space-y-4">
-              <h1 className="text-4xl lg:text-5xl font-bold leading-tight">
+            <div className="space-y-3">
+              <h1 className="text-2xl lg:text-3xl font-bold leading-tight">
                 Track. Improve.
                 <br />
                 Win every hire with
                 <br />
                 data-driven insights
               </h1>
-              <p className="text-lg text-gray-200">
+              <p className="text-sm text-gray-200">
                 Your hiring success, simplified into powerful metrics
               </p>
             </div>
             
             {/* Business person illustration */}
-            <div className="flex justify-center w-full mt-8">
+            <div className="flex justify-start w-full mt-6 pl-4">
               <img 
                 src={businessPersonUrl} 
                 alt="Business analytics illustration" 
-                className="max-w-md w-full h-auto"
+                className="max-w-sm w-full h-auto"
               />
             </div>
           </div>
