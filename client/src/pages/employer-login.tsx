@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
+import { useLocation } from "wouter";
 import { BrainCircuit } from "lucide-react";
 import backgroundUrl from "@assets/Rectangle 1260_1758176515546.png";
 import businessPersonUrl from "@assets/ChatGPT_Image_Jul_7__2025__07_40_50_PM-removebg-preview_1758176923888.png";
@@ -14,6 +15,7 @@ interface LoginForm {
 
 export default function EmployerLogin() {
   const [isLoading, setIsLoading] = useState(false);
+  const [, navigate] = useLocation();
   
   const {
     register,
@@ -25,11 +27,11 @@ export default function EmployerLogin() {
     setIsLoading(true);
     
     try {
-      // TODO: Implement actual login logic with API endpoint
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      console.log("Login successful");
+      // Navigate to dashboard selection page (profile login page)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      navigate("/dashboard-selection");
     } catch (error) {
-      console.error("Login failed");
+      console.error("Navigation failed");
     } finally {
       setIsLoading(false);
     }
