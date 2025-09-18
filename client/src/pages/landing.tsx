@@ -29,7 +29,7 @@ export default function Landing() {
               Candidate
             </Button>
           </Link>
-          <Link href="/employer-login" data-testid="link-employer-login">
+          <Link href="/dashboard-selection" data-testid="link-employer-login">
             <Button 
               className="bg-purple-800 hover:bg-purple-900 text-white px-6 font-medium"
               data-testid="button-employer-login"
