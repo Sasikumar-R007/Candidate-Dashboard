@@ -53,7 +53,7 @@ export default function EmployerLogin() {
         />
         
         {/* Content overlay */}
-        <div className="relative z-10 flex flex-col justify-between p-8 text-white w-full">
+        <div className="relative z-10 flex flex-col justify-between pr-8 pt-8 pb-8 text-white w-full">
           {/* StaffOS logo at top left */}
           <div className="flex items-center space-x-2">
             <BrainCircuit className="w-6 h-6 text-white" />
