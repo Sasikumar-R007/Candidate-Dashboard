@@ -153,6 +153,7 @@ export default function CandidateLogin() {
     <div className="min-h-screen flex">
       {/* Left Side - Exact Design from Image */}
       <div className="hidden lg:flex lg:w-1/2 items-end relative overflow-hidden">
+        <img
           src={candidateImageUrl} 
           alt="Your Next Opportunity Awaits - Access your opportunities and manage your applications" 
           className="w-full h-full object-cover"
