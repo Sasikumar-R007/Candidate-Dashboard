@@ -57,11 +57,8 @@ export default function CandidateLogin() {
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: async (data: LoginForm) => {
-      return apiRequest('/api/auth/candidate-login', {
-        method: 'POST',
-        body: JSON.stringify(data),
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const res = await apiRequest('POST', '/api/auth/candidate-login', data);
+      return await res.json();
     },
     onSuccess: (response) => {
       if (response.requiresVerification) {
@@ -95,11 +92,8 @@ export default function CandidateLogin() {
   // Register mutation
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterForm) => {
-      return apiRequest('/api/auth/candidate-register', {
-        method: 'POST',
-        body: JSON.stringify(data),
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const res = await apiRequest('POST', '/api/auth/candidate-register', data);
+      return await res.json();
     },
     onSuccess: (response) => {
       setCurrentEmail(response.email);
@@ -126,11 +120,8 @@ export default function CandidateLogin() {
   // OTP verification mutation
   const verifyOTPMutation = useMutation({
     mutationFn: async (data: OTPForm) => {
-      return apiRequest('/api/auth/candidate-verify-otp', {
-        method: 'POST',
-        body: JSON.stringify({ email: currentEmail, otp: data.otp }),
-        headers: { 'Content-Type': 'application/json' }
-      });
+      const res = await apiRequest('POST', '/api/auth/candidate-verify-otp', { email: currentEmail, otp: data.otp });
+      return await res.json();
     },
     onSuccess: () => {
       toast({
