@@ -171,6 +171,22 @@ export const archivedRequirements = pgTable("archived_requirements", {
   originalId: varchar("original_id").notNull(),
 });
 
+export const employees = pgTable("employees", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  employeeId: text("employee_id").notNull().unique(), // STTA001, STTL001, STCL001
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  password: text("password").notNull(),
+  role: text("role").notNull(), // recruiter, team_leader, client, admin
+  age: text("age"),
+  phone: text("phone"),
+  department: text("department"),
+  joiningDate: text("joining_date"),
+  reportingTo: text("reporting_to"),
+  isActive: boolean("is_active").default(true),
+  createdAt: text("created_at").notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
 });
@@ -231,6 +247,10 @@ export const insertArchivedRequirementSchema = createInsertSchema(archivedRequir
   id: true,
 });
 
+export const insertEmployeeSchema = createInsertSchema(employees).omit({
+  id: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
@@ -261,3 +281,5 @@ export type InsertRequirement = z.infer<typeof insertRequirementSchema>;
 export type Requirement = typeof requirements.$inferSelect;
 export type InsertArchivedRequirement = z.infer<typeof insertArchivedRequirementSchema>;
 export type ArchivedRequirement = typeof archivedRequirements.$inferSelect;
+export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
+export type Employee = typeof employees.$inferSelect;

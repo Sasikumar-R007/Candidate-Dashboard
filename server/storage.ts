@@ -16,9 +16,12 @@ import {
   type Requirement,
   type InsertRequirement,
   type ArchivedRequirement,
-  type InsertArchivedRequirement
+  type InsertArchivedRequirement,
+  type Employee,
+  type InsertEmployee
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import bcrypt from "bcrypt";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -53,6 +56,14 @@ export interface IStorage {
   updateRequirement(id: string, updates: Partial<Requirement>): Promise<Requirement | undefined>;
   archiveRequirement(id: string): Promise<ArchivedRequirement | undefined>;
   getArchivedRequirements(): Promise<ArchivedRequirement[]>;
+  
+  // Employee methods
+  getEmployeeByEmail(email: string): Promise<Employee | undefined>;
+  getEmployeeByEmployeeId(employeeId: string): Promise<Employee | undefined>;
+  createEmployee(employee: InsertEmployee): Promise<Employee>;
+  getAllEmployees(): Promise<Employee[]>;
+  updateEmployee(id: string, updates: Partial<Employee>): Promise<Employee | undefined>;
+  deleteEmployee(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -65,6 +76,7 @@ export class MemStorage implements IStorage {
   private savedJobs: Map<string, SavedJob>;
   private requirements: Map<string, Requirement>;
   private archivedRequirements: Map<string, ArchivedRequirement>;
+  private employees: Map<string, Employee>;
 
   constructor() {
     this.users = new Map();
@@ -76,12 +88,13 @@ export class MemStorage implements IStorage {
     this.savedJobs = new Map();
     this.requirements = new Map();
     this.archivedRequirements = new Map();
+    this.employees = new Map();
     
-    // Initialize with sample data
-    this.initSampleData();
+    // Initialize with sample data (async)
+    this.initSampleData().catch(console.error);
   }
 
-  private initSampleData() {
+  private async initSampleData() {
     const userId = randomUUID();
     const user: User = {
       id: userId,
@@ -234,6 +247,80 @@ export class MemStorage implements IStorage {
       };
       this.requirements.set(requirement.id, requirement);
     });
+
+    // Sample employee data
+    const sampleEmployees = [
+      {
+        employeeId: "STTA001",
+        name: "Ram Kumar",
+        email: "ram@gmail.com", 
+        password: "ram123",
+        role: "recruiter",
+        age: "28",
+        phone: "9876543210",
+        department: "Talent Acquisition",
+        joiningDate: "2024-01-15",
+        reportingTo: "Team Lead"
+      },
+      {
+        employeeId: "STTL001",
+        name: "Priya Sharma",
+        email: "priya@gmail.com",
+        password: "priya123", 
+        role: "team_leader",
+        age: "32",
+        phone: "9876543211",
+        department: "Talent Acquisition",
+        joiningDate: "2023-06-10",
+        reportingTo: "Admin"
+      },
+      {
+        employeeId: "STCL001",
+        name: "Arjun Patel",
+        email: "arjun@gmail.com",
+        password: "arjun123",
+        role: "client",
+        age: "35", 
+        phone: "9876543212",
+        department: "Client Relations",
+        joiningDate: "2023-03-20",
+        reportingTo: "Admin"
+      },
+      {
+        employeeId: "ADMIN",
+        name: "Admin User",
+        email: "admin@gmail.com",
+        password: "admin123",
+        role: "admin",
+        age: "40",
+        phone: "9876543213", 
+        department: "Administration",
+        joiningDate: "2022-01-01",
+        reportingTo: "CEO"
+      }
+    ];
+
+    // Hash passwords and create sample employees
+    const saltRounds = 10;
+    for (const emp of sampleEmployees) {
+      const hashedPassword = await bcrypt.hash(emp.password, saltRounds);
+      const employee: Employee = {
+        id: randomUUID(),
+        employeeId: emp.employeeId,
+        name: emp.name,
+        email: emp.email,
+        password: hashedPassword, // Store hashed password
+        role: emp.role,
+        age: emp.age,
+        phone: emp.phone,
+        department: emp.department,
+        joiningDate: emp.joiningDate,
+        reportingTo: emp.reportingTo,
+        isActive: true,
+        createdAt: new Date().toISOString()
+      };
+      this.employees.set(employee.id, employee);
+    }
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -462,6 +549,61 @@ export class MemStorage implements IStorage {
 
   async getArchivedRequirements(): Promise<ArchivedRequirement[]> {
     return Array.from(this.archivedRequirements.values());
+  }
+
+  // Employee methods implementation
+  async getEmployeeByEmail(email: string): Promise<Employee | undefined> {
+    return Array.from(this.employees.values()).find(emp => emp.email === email);
+  }
+
+  async getEmployeeByEmployeeId(employeeId: string): Promise<Employee | undefined> {
+    return Array.from(this.employees.values()).find(emp => emp.employeeId === employeeId);
+  }
+
+  async createEmployee(insertEmployee: InsertEmployee): Promise<Employee> {
+    const id = randomUUID();
+    
+    // Hash password before storing
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(insertEmployee.password, saltRounds);
+    
+    const employee: Employee = {
+      ...insertEmployee,
+      id,
+      password: hashedPassword, // Store hashed password
+      age: insertEmployee.age || null,
+      phone: insertEmployee.phone || null,
+      department: insertEmployee.department || null,
+      joiningDate: insertEmployee.joiningDate || null,
+      reportingTo: insertEmployee.reportingTo || null,
+      isActive: insertEmployee.isActive ?? true,
+      createdAt: new Date().toISOString()
+    };
+    this.employees.set(id, employee);
+    return employee;
+  }
+
+  async getAllEmployees(): Promise<Employee[]> {
+    return Array.from(this.employees.values()).filter(emp => emp.isActive);
+  }
+
+  async updateEmployee(id: string, updates: Partial<Employee>): Promise<Employee | undefined> {
+    const existing = this.employees.get(id);
+    if (!existing) return undefined;
+    
+    const updated: Employee = { ...existing, ...updates };
+    this.employees.set(id, updated);
+    return updated;
+  }
+
+  async deleteEmployee(id: string): Promise<boolean> {
+    const employee = this.employees.get(id);
+    if (!employee) return false;
+    
+    // Soft delete by setting isActive to false
+    const updated = { ...employee, isActive: false };
+    this.employees.set(id, updated);
+    return true;
   }
 }
 

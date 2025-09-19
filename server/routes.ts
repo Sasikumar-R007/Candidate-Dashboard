@@ -2,7 +2,9 @@ import express, { type Express } from "express";
 import { createServer, type Server } from "http";
 import fs from "fs";
 import { storage } from "./storage";
-import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertRequirementSchema } from "@shared/schema";
+import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertRequirementSchema, insertEmployeeSchema } from "@shared/schema";
+import { z } from "zod";
+import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
 
@@ -48,7 +50,59 @@ const upload = multer({
   }
 });
 
+// Validation schemas
+const loginSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(1, "Password is required")
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Employee Authentication Routes
+  app.post("/api/auth/employee-login", async (req, res) => {
+    try {
+      // Validate request body
+      const validationResult = loginSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid input", 
+          errors: validationResult.error.errors 
+        });
+      }
+      
+      const { email, password } = validationResult.data;
+      
+      // Find employee by email
+      const employee = await storage.getEmployeeByEmail(email);
+      if (!employee) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
+      // Check password using bcrypt
+      const isPasswordValid = await bcrypt.compare(password, employee.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+      
+      // Check if employee is active
+      if (!employee.isActive) {
+        return res.status(401).json({ message: "Account is inactive" });
+      }
+      
+      // Return employee data (excluding password) for frontend routing
+      const { password: _, ...employeeData } = employee;
+      res.json({
+        success: true,
+        employee: employeeData,
+        message: "Login successful"
+      });
+    } catch (error) {
+      console.error('Employee login error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // NOTE: Admin endpoints disabled for security - require proper authentication before enabling
+
   // Get current user profile (demo user)
   app.get("/api/profile", async (req, res) => {
     try {

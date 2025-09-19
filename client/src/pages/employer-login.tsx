@@ -65,11 +65,54 @@ export default function EmployerLogin() {
     setIsLoading(true);
     
     try {
-      // Navigate to dashboard selection page (profile login page)
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      navigate("/dashboard-selection");
+      // Call employee authentication API
+      const response = await apiRequest("POST", "/api/auth/employee-login", data);
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Login failed");
+      }
+
+      if (result.success && result.employee) {
+        toast({
+          title: "Login Successful",
+          description: `Welcome back, ${result.employee.name}!`,
+        });
+
+        // Store employee data in sessionStorage for the session
+        sessionStorage.setItem('employee', JSON.stringify(result.employee));
+
+        // Navigate based on employee role
+        switch (result.employee.role) {
+          case 'recruiter':
+            navigate("/recruiter");
+            break;
+          case 'team_leader':
+            navigate("/team-leader");
+            break;
+          case 'client':
+            navigate("/client");
+            break;
+          case 'admin':
+            navigate("/admin");
+            break;
+          default:
+            toast({
+              title: "Unknown Role",
+              description: "Your account role is not recognized. Please contact admin.",
+              variant: "destructive",
+            });
+            break;
+        }
+      } else {
+        throw new Error("Invalid response from server");
+      }
     } catch (error) {
-      console.error("Navigation failed");
+      toast({
+        title: "Login Failed",
+        description: error instanceof Error ? error.message : "Please check your email and password and try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
