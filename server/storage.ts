@@ -18,7 +18,11 @@ import {
   type ArchivedRequirement,
   type InsertArchivedRequirement,
   type Employee,
-  type InsertEmployee
+  type InsertEmployee,
+  type Candidate,
+  type InsertCandidate,
+  type CandidateLoginAttempts,
+  type InsertCandidateLoginAttempts
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
@@ -64,6 +68,24 @@ export interface IStorage {
   getAllEmployees(): Promise<Employee[]>;
   updateEmployee(id: string, updates: Partial<Employee>): Promise<Employee | undefined>;
   deleteEmployee(id: string): Promise<boolean>;
+  
+  // Candidate methods
+  getCandidateByEmail(email: string): Promise<Candidate | undefined>;
+  getCandidateByCandidateId(candidateId: string): Promise<Candidate | undefined>;
+  createCandidate(candidate: InsertCandidate): Promise<Candidate>;
+  getAllCandidates(): Promise<Candidate[]>;
+  updateCandidate(id: string, updates: Partial<Candidate>): Promise<Candidate | undefined>;
+  deleteCandidate(id: string): Promise<boolean>;
+  generateNextCandidateId(): Promise<string>;
+  
+  // Login attempt tracking methods
+  getLoginAttempts(email: string): Promise<CandidateLoginAttempts | undefined>;
+  createOrUpdateLoginAttempts(attempts: InsertCandidateLoginAttempts): Promise<CandidateLoginAttempts>;
+  resetLoginAttempts(email: string): Promise<boolean>;
+  
+  // OTP storage methods
+  storeOTP(email: string, otp: string): Promise<void>;
+  verifyOTP(email: string, otp: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -77,6 +99,9 @@ export class MemStorage implements IStorage {
   private requirements: Map<string, Requirement>;
   private archivedRequirements: Map<string, ArchivedRequirement>;
   private employees: Map<string, Employee>;
+  private candidates: Map<string, Candidate>;
+  private candidateLoginAttempts: Map<string, CandidateLoginAttempts>;
+  private otpStorage: Map<string, { otp: string; expiry: Date; email: string }>;
 
   constructor() {
     this.users = new Map();
@@ -89,6 +114,9 @@ export class MemStorage implements IStorage {
     this.requirements = new Map();
     this.archivedRequirements = new Map();
     this.employees = new Map();
+    this.candidates = new Map();
+    this.candidateLoginAttempts = new Map();
+    this.otpStorage = new Map();
     
     // Initialize with sample data (async)
     this.initSampleData().catch(console.error);
@@ -604,6 +632,172 @@ export class MemStorage implements IStorage {
     const updated = { ...employee, isActive: false };
     this.employees.set(id, updated);
     return true;
+  }
+
+  // Candidate methods using in-memory storage
+  async getCandidateByEmail(email: string): Promise<Candidate | undefined> {
+    const candidatesList = Array.from(this.candidates.values());
+    for (const candidate of candidatesList) {
+      if (candidate.email === email) {
+        return candidate;
+      }
+    }
+    return undefined;
+  }
+
+  async getCandidateByCandidateId(candidateId: string): Promise<Candidate | undefined> {
+    const candidatesList = Array.from(this.candidates.values());
+    for (const candidate of candidatesList) {
+      if (candidate.candidateId === candidateId) {
+        return candidate;
+      }
+    }
+    return undefined;
+  }
+
+  async createCandidate(candidate: InsertCandidate): Promise<Candidate> {
+    const id = randomUUID();
+    const candidateId = candidate.candidateId || await this.generateNextCandidateId();
+    const hashedPassword = await bcrypt.hash(candidate.password, 10);
+    
+    const newCandidate: Candidate = {
+      id,
+      candidateId,
+      fullName: candidate.fullName,
+      email: candidate.email,
+      password: hashedPassword,
+      phone: candidate.phone || null,
+      company: candidate.company || null,
+      designation: candidate.designation || null,
+      age: candidate.age || null,
+      location: candidate.location || null,
+      experience: candidate.experience || null,
+      skills: candidate.skills || null,
+      isActive: candidate.isActive ?? true,
+      isVerified: candidate.isVerified ?? false,
+      createdAt: candidate.createdAt || new Date().toISOString()
+    };
+    
+    this.candidates.set(id, newCandidate);
+    return newCandidate;
+  }
+
+  async getAllCandidates(): Promise<Candidate[]> {
+    return Array.from(this.candidates.values()).filter(candidate => candidate.isActive);
+  }
+
+  async updateCandidate(id: string, updates: Partial<Candidate>): Promise<Candidate | undefined> {
+    const existing = this.candidates.get(id);
+    if (!existing) return undefined;
+    
+    const updated: Candidate = { ...existing, ...updates };
+    this.candidates.set(id, updated);
+    return updated;
+  }
+
+  async deleteCandidate(id: string): Promise<boolean> {
+    const candidate = this.candidates.get(id);
+    if (!candidate) return false;
+    
+    // Soft delete by setting isActive to false
+    const updated = { ...candidate, isActive: false };
+    this.candidates.set(id, updated);
+    return true;
+  }
+
+  async generateNextCandidateId(): Promise<string> {
+    const allCandidates = Array.from(this.candidates.values());
+    
+    if (allCandidates.length === 0) {
+      return "STCA001";
+    }
+
+    // Find the highest ID number
+    let maxNumber = 0;
+    for (const candidate of allCandidates) {
+      const match = candidate.candidateId.match(/STCA(\d+)/);
+      if (match) {
+        const number = parseInt(match[1]);
+        if (number > maxNumber) {
+          maxNumber = number;
+        }
+      }
+    }
+    
+    const nextNumber = maxNumber + 1;
+    return `STCA${nextNumber.toString().padStart(3, '0')}`;
+  }
+
+  // Login attempt tracking methods using in-memory storage
+  async getLoginAttempts(email: string): Promise<CandidateLoginAttempts | undefined> {
+    return this.candidateLoginAttempts.get(email);
+  }
+
+  async createOrUpdateLoginAttempts(attempts: InsertCandidateLoginAttempts): Promise<CandidateLoginAttempts> {
+    const existing = this.candidateLoginAttempts.get(attempts.email);
+    
+    if (existing) {
+      // Update existing record
+      const updated: CandidateLoginAttempts = {
+        ...existing,
+        attempts: attempts.attempts || existing.attempts,
+        lastAttemptAt: attempts.lastAttemptAt || existing.lastAttemptAt,
+        lockedUntil: attempts.lockedUntil || existing.lockedUntil
+      };
+      this.candidateLoginAttempts.set(attempts.email, updated);
+      return updated;
+    } else {
+      // Create new record
+      const id = randomUUID();
+      const newRecord: CandidateLoginAttempts = {
+        id,
+        email: attempts.email,
+        attempts: attempts.attempts || "0",
+        lastAttemptAt: attempts.lastAttemptAt || null,
+        lockedUntil: attempts.lockedUntil || null,
+        createdAt: attempts.createdAt || new Date().toISOString()
+      };
+      this.candidateLoginAttempts.set(attempts.email, newRecord);
+      return newRecord;
+    }
+  }
+
+  async resetLoginAttempts(email: string): Promise<boolean> {
+    const existing = this.candidateLoginAttempts.get(email);
+    if (!existing) return false;
+    
+    const updated: CandidateLoginAttempts = {
+      ...existing,
+      attempts: "0",
+      lastAttemptAt: null,
+      lockedUntil: null
+    };
+    this.candidateLoginAttempts.set(email, updated);
+    return true;
+  }
+
+  // OTP storage methods for verification
+  async storeOTP(email: string, otp: string): Promise<void> {
+    const expiry = new Date();
+    expiry.setMinutes(expiry.getMinutes() + 10); // 10 minutes expiry
+    this.otpStorage.set(email, { otp, expiry, email });
+  }
+
+  async verifyOTP(email: string, otp: string): Promise<boolean> {
+    const stored = this.otpStorage.get(email);
+    if (!stored) return false;
+    
+    if (new Date() > stored.expiry) {
+      this.otpStorage.delete(email);
+      return false;
+    }
+    
+    if (stored.otp === otp) {
+      this.otpStorage.delete(email);
+      return true;
+    }
+    
+    return false;
   }
 }
 

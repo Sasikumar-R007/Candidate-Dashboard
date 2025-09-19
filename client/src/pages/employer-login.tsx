@@ -85,7 +85,7 @@ export default function EmployerLogin() {
         // Navigate based on employee role
         switch (result.employee.role) {
           case 'recruiter':
-            navigate("/recruiter");
+            navigate("/recruiter-login-2");
             break;
           case 'team_leader':
             navigate("/team-leader");

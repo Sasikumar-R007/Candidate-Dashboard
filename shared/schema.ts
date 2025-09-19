@@ -187,6 +187,34 @@ export const employees = pgTable("employees", {
   createdAt: text("created_at").notNull(),
 });
 
+export const candidates = pgTable("candidates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  candidateId: text("candidate_id").notNull().unique(), // STCA001 format
+  fullName: text("full_name").notNull(),
+  email: text("email").notNull().unique(),
+  password: text("password").notNull(),
+  // Additional candidate details
+  phone: text("phone"),
+  company: text("company"),
+  designation: text("designation"),
+  age: text("age"),
+  location: text("location"),
+  experience: text("experience"),
+  skills: text("skills"),
+  isActive: boolean("is_active").default(true),
+  isVerified: boolean("is_verified").default(false),
+  createdAt: text("created_at").notNull(),
+});
+
+export const candidateLoginAttempts = pgTable("candidate_login_attempts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull(),
+  attempts: text("attempts").notNull().default("0"),
+  lastAttemptAt: text("last_attempt_at"),
+  lockedUntil: text("locked_until"), // ISO timestamp for 30-minute lockout
+  createdAt: text("created_at").notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
 });
@@ -251,6 +279,14 @@ export const insertEmployeeSchema = createInsertSchema(employees).omit({
   id: true,
 });
 
+export const insertCandidateSchema = createInsertSchema(candidates).omit({
+  id: true,
+});
+
+export const insertCandidateLoginAttemptsSchema = createInsertSchema(candidateLoginAttempts).omit({
+  id: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
@@ -283,3 +319,7 @@ export type InsertArchivedRequirement = z.infer<typeof insertArchivedRequirement
 export type ArchivedRequirement = typeof archivedRequirements.$inferSelect;
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
 export type Employee = typeof employees.$inferSelect;
+export type InsertCandidate = z.infer<typeof insertCandidateSchema>;
+export type Candidate = typeof candidates.$inferSelect;
+export type InsertCandidateLoginAttempts = z.infer<typeof insertCandidateLoginAttemptsSchema>;
+export type CandidateLoginAttempts = typeof candidateLoginAttempts.$inferSelect;

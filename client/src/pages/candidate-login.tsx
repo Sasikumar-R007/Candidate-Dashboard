@@ -4,6 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { BrainCircuit } from "lucide-react";
 import candidateImageUrl from "@assets/cand f_1758168663913.png";
 
@@ -25,7 +28,6 @@ interface OTPForm {
 
 export default function CandidateLogin() {
   const [isLogin, setIsLogin] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
   const [showOTP, setShowOTP] = useState(false);
   const [, setLocation] = useLocation();
 
@@ -48,43 +50,126 @@ export default function CandidateLogin() {
     formState: { errors: otpErrors },
   } = useForm<OTPForm>();
 
-  const onLogin = async (data: LoginForm) => {
-    setIsLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+  const { toast } = useToast();
+  const [currentEmail, setCurrentEmail] = useState("");
+  const [candidateId, setCandidateId] = useState("");
+
+  // Login mutation
+  const loginMutation = useMutation({
+    mutationFn: async (data: LoginForm) => {
+      return apiRequest('/api/auth/candidate-login', {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    },
+    onSuccess: (response) => {
+      if (response.requiresVerification) {
+        setCurrentEmail(response.email);
+        setShowOTP(true);
+        // For demo purposes, show OTP in alert as requested
+        if (response.otp) {
+          alert(`Demo OTP: ${response.otp}`);
+        }
+        toast({
+          title: "Verification Required",
+          description: response.message,
+        });
+      } else {
+        toast({
+          title: "Login Successful",
+          description: "Welcome back!",
+        });
+        setLocation('/candidate');
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Login Failed",
+        description: error.message || "Invalid credentials",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Register mutation
+  const registerMutation = useMutation({
+    mutationFn: async (data: RegisterForm) => {
+      return apiRequest('/api/auth/candidate-register', {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    },
+    onSuccess: (response) => {
+      setCurrentEmail(response.email);
+      setCandidateId(response.candidateId);
       setShowOTP(true);
-    } catch (error) {
-      console.error("Login failed", error);
-    } finally {
-      setIsLoading(false);
+      // For demo purposes, show OTP in alert as requested
+      if (response.otp) {
+        alert(`Demo OTP: ${response.otp}`);
+      }
+      toast({
+        title: "Registration Successful",
+        description: `Your candidate ID is ${response.candidateId}. Please verify with OTP.`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Registration Failed",
+        description: error.message || "Registration failed",
+        variant: "destructive"
+      });
     }
-  };
+  });
 
-  const onRegister = async (data: RegisterForm) => {
-    setIsLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      // Redirect to career launchpad form
-      setLocation('/candidate-registration');
-    } catch (error) {
-      console.error("Registration failed", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const onVerifyOTP = async (data: OTPForm) => {
-    setIsLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      // Redirect to candidate dashboard
+  // OTP verification mutation
+  const verifyOTPMutation = useMutation({
+    mutationFn: async (data: OTPForm) => {
+      return apiRequest('/api/auth/candidate-verify-otp', {
+        method: 'POST',
+        body: JSON.stringify({ email: currentEmail, otp: data.otp }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Verification Successful",
+        description: "Your account has been verified!",
+      });
       setLocation('/candidate');
-    } catch (error) {
-      console.error("OTP verification failed", error);
-    } finally {
-      setIsLoading(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Verification Failed",
+        description: error.message || "Invalid or expired OTP",
+        variant: "destructive"
+      });
     }
+  });
+
+  const onLogin = (data: LoginForm) => {
+    setCurrentEmail(data.email);
+    loginMutation.mutate(data);
   };
+
+  const onRegister = (data: RegisterForm) => {
+    if (data.password !== data.confirmPassword) {
+      toast({
+        title: "Password Mismatch",
+        description: "Passwords do not match",
+        variant: "destructive"
+      });
+      return;
+    }
+    registerMutation.mutate(data);
+  };
+
+  const onVerifyOTP = (data: OTPForm) => {
+    verifyOTPMutation.mutate(data);
+  };
+
+  const isLoading = loginMutation.isPending || registerMutation.isPending || verifyOTPMutation.isPending;
 
   if (showOTP) {
     return (

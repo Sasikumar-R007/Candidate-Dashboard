@@ -56,6 +56,27 @@ const loginSchema = z.object({
   password: z.string().min(1, "Password is required")
 });
 
+const candidateRegistrationSchema = z.object({
+  fullName: z.string().min(1, "Full name is required"),
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  phone: z.string().optional(),
+  company: z.string().optional(),
+  designation: z.string().optional(),
+  age: z.string().optional(),
+  location: z.string().optional()
+});
+
+const candidateLoginSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  password: z.string().min(1, "Password is required")
+});
+
+const otpVerificationSchema = z.object({
+  email: z.string().email("Invalid email format"),
+  otp: z.string().length(6, "OTP must be 6 digits")
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Employee Authentication Routes
   app.post("/api/auth/employee-login", async (req, res) => {
@@ -98,6 +119,214 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Employee login error:', error);
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Candidate Authentication Routes
+  app.post("/api/auth/candidate-register", async (req, res) => {
+    try {
+      // Validate request body
+      const validationResult = candidateRegistrationSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({
+          message: "Invalid input",
+          errors: validationResult.error.errors
+        });
+      }
+
+      const candidateData = validationResult.data;
+
+      // Check if candidate already exists
+      const existingCandidate = await storage.getCandidateByEmail(candidateData.email);
+      if (existingCandidate) {
+        return res.status(409).json({ message: "Email already registered" });
+      }
+
+      // Generate candidate ID and create candidate
+      const candidateId = await storage.generateNextCandidateId();
+      const newCandidate = await storage.createCandidate({
+        ...candidateData,
+        candidateId,
+        isActive: true,
+        isVerified: false,
+        createdAt: new Date().toISOString()
+      });
+
+      // Generate 6-digit OTP for verification
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      
+      // Store OTP with expiry (10 minutes)
+      await storage.storeOTP(candidateData.email, otp);
+      
+      // For demo purposes, show OTP in alert as requested by user
+      // In production, this would be sent via email
+      res.json({
+        success: true,
+        message: "Registration successful! Please verify with OTP",
+        candidateId: newCandidate.candidateId,
+        otp: otp, // For demo only - in production, would send via email
+        email: newCandidate.email,
+        requiresVerification: true
+      });
+    } catch (error) {
+      console.error('Candidate registration error:', error);
+      res.status(500).json({ message: "Registration failed. Please try again." });
+    }
+  });
+
+  app.post("/api/auth/candidate-login", async (req, res) => {
+    try {
+      // Validate request body
+      const validationResult = candidateLoginSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({
+          message: "Invalid input",
+          errors: validationResult.error.errors
+        });
+      }
+
+      const { email, password } = validationResult.data;
+
+      // Check login attempts and lockout
+      const loginAttempts = await storage.getLoginAttempts(email);
+      const now = new Date().toISOString();
+      
+      if (loginAttempts?.lockedUntil && new Date(loginAttempts.lockedUntil) > new Date()) {
+        return res.status(423).json({
+          message: "You can't login for next 30 mins",
+          locked: true,
+          lockedUntil: loginAttempts.lockedUntil
+        });
+      }
+
+      // Find candidate by email
+      const candidate = await storage.getCandidateByEmail(email);
+      if (!candidate) {
+        // Increment login attempts for failed login
+        await storage.createOrUpdateLoginAttempts({
+          email,
+          attempts: loginAttempts ? (parseInt(loginAttempts.attempts) + 1).toString() : "1",
+          lastAttemptAt: now,
+          lockedUntil: null,
+          createdAt: loginAttempts?.createdAt || now
+        });
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      // Check password using bcrypt
+      const isPasswordValid = await bcrypt.compare(password, candidate.password);
+      if (!isPasswordValid) {
+        const currentAttempts = loginAttempts ? parseInt(loginAttempts.attempts) + 1 : 1;
+        
+        // Check if this is the 3rd failed attempt
+        if (currentAttempts >= 3) {
+          const lockUntil = new Date();
+          lockUntil.setMinutes(lockUntil.getMinutes() + 30);
+          
+          await storage.createOrUpdateLoginAttempts({
+            email,
+            attempts: currentAttempts.toString(),
+            lastAttemptAt: now,
+            lockedUntil: lockUntil.toISOString(),
+            createdAt: loginAttempts?.createdAt || now
+          });
+          
+          return res.status(423).json({
+            message: "You can't login for next 30 mins",
+            locked: true,
+            lockedUntil: lockUntil.toISOString()
+          });
+        } else {
+          await storage.createOrUpdateLoginAttempts({
+            email,
+            attempts: currentAttempts.toString(),
+            lastAttemptAt: now,
+            lockedUntil: null,
+            createdAt: loginAttempts?.createdAt || now
+          });
+          
+          return res.status(401).json({
+            message: "Invalid credentials",
+            attemptsRemaining: 3 - currentAttempts
+          });
+        }
+      }
+
+      // Check if candidate is active
+      if (!candidate.isActive) {
+        return res.status(401).json({ message: "Account is inactive" });
+      }
+
+      // Check if candidate is verified
+      if (!candidate.isVerified) {
+        // Generate new OTP for unverified accounts
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        await storage.storeOTP(candidate.email, otp);
+        
+        return res.status(403).json({
+          message: "Account not verified. Please verify with OTP",
+          requiresVerification: true,
+          otp: otp, // For demo only - in production, would send via email
+          email: candidate.email
+        });
+      }
+
+      // Reset login attempts on successful login
+      await storage.resetLoginAttempts(email);
+
+      // Return candidate data (excluding password) for frontend routing
+      const { password: _, ...candidateData } = candidate;
+      res.json({
+        success: true,
+        candidate: candidateData,
+        message: "Login successful"
+      });
+    } catch (error) {
+      console.error('Candidate login error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post("/api/auth/candidate-verify-otp", async (req, res) => {
+    try {
+      const validationResult = otpVerificationSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({
+          message: "Invalid input",
+          errors: validationResult.error.errors
+        });
+      }
+
+      const { email, otp } = validationResult.data;
+
+      // Find candidate by email
+      const candidate = await storage.getCandidateByEmail(email);
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+
+      // Verify OTP against stored value with expiry check
+      const isOtpValid = await storage.verifyOTP(email, otp);
+      
+      if (isOtpValid) {
+        // Mark candidate as verified
+        await storage.updateCandidate(candidate.id, { isVerified: true });
+
+        // Reset login attempts
+        await storage.resetLoginAttempts(email);
+
+        const { password: _, ...candidateData } = candidate;
+        res.json({
+          success: true,
+          candidate: { ...candidateData, isVerified: true },
+          message: "Verification successful"
+        });
+      } else {
+        res.status(400).json({ message: "Invalid or expired OTP" });
+      }
+    } catch (error) {
+      console.error('OTP verification error:', error);
+      res.status(500).json({ message: "Verification failed" });
     }
   });
 
