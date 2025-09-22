@@ -1,6 +1,9 @@
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { User, Briefcase, Settings, LogOut, UserCircle, MessageCircle } from "lucide-react";
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface SidebarProps {
   activeTab: string;
@@ -9,6 +12,8 @@ interface SidebarProps {
 
 export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: User },
@@ -17,6 +22,38 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
     { id: 'chat', label: 'Chat', icon: MessageCircle },
     { id: 'settings', label: 'Settings', icon: Settings }
   ];
+
+  // Logout mutation for candidates
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/auth/candidate-logout', {});
+      return await res.json();
+    },
+    onSuccess: () => {
+      // Clear any stored session data
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      toast({
+        title: "Logged out successfully",
+        description: "You have been signed out.",
+      });
+      
+      // Navigate to home page
+      navigate('/');
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Logout failed",
+        description: error.message || "Failed to logout. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleLogout = () => {
+    logoutMutation.mutate();
+  };
 
   return (
     <div className="w-16 bg-slate-900 text-white flex-shrink-0 h-screen overflow-hidden fixed left-0 top-0 z-50 flex flex-col">
@@ -67,29 +104,29 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
         })}
       </nav>
       
-      {/* Sign Out Link */}
+      {/* Sign Out Button */}
       <div className="pb-4">
         <div
           className="relative"
           onMouseEnter={() => setHoveredItem('sign-out')}
           onMouseLeave={() => setHoveredItem(null)}
         >
-          <Link href="/" data-testid="link-sign-out-candidate">
-            <button
-              className="w-full h-12 flex items-center justify-center transition-all duration-200 relative group transform hover:scale-105 hover:bg-slate-800 text-slate-400 hover:text-white hover:shadow-md"
-              data-testid="button-nav-sign-out"
-            >
-              <LogOut size={20} />
-              
-              {/* Tooltip */}
-              {hoveredItem === 'sign-out' && (
-                <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-sm rounded whitespace-nowrap z-50 shadow-lg border border-slate-600">
-                  Sign Out
-                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-slate-800 rotate-45 border-l border-t border-slate-600"></div>
-                </div>
-              )}
-            </button>
-          </Link>
+          <button
+            onClick={handleLogout}
+            disabled={logoutMutation.isPending}
+            className="w-full h-12 flex items-center justify-center transition-all duration-200 relative group transform hover:scale-105 hover:bg-slate-800 text-slate-400 hover:text-white hover:shadow-md disabled:opacity-50"
+            data-testid="button-nav-sign-out"
+          >
+            <LogOut size={20} />
+            
+            {/* Tooltip */}
+            {hoveredItem === 'sign-out' && (
+              <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-sm rounded whitespace-nowrap z-50 shadow-lg border border-slate-600">
+                {logoutMutation.isPending ? 'Signing out...' : 'Sign Out'}
+                <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-slate-800 rotate-45 border-l border-t border-slate-600"></div>
+              </div>
+            )}
+          </button>
         </div>
       </div>
     </div>

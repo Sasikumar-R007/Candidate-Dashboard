@@ -1,6 +1,9 @@
-import { Link } from "wouter";
-import { Users, FileText, GitBranch, Trophy, MessageCircle, ChevronRight, User } from "lucide-react";
+import { Link, useLocation } from "wouter";
+import { Users, FileText, GitBranch, Trophy, MessageCircle, ChevronRight, User, LogOut } from "lucide-react";
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface TeamLeaderMainSidebarProps {
   activeTab: string;
@@ -10,6 +13,8 @@ interface TeamLeaderMainSidebarProps {
 export default function TeamLeaderMainSidebar({ activeTab, onTabChange }: TeamLeaderMainSidebarProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
 
   const menuItems = [
     { id: 'dashboard', label: 'Team', icon: Users },
@@ -18,6 +23,38 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange }: TeamLe
     { id: 'performance', label: 'Performance', icon: Trophy },
     { id: 'chat', label: 'Chat', icon: MessageCircle }
   ];
+
+  // Logout mutation for employees (team leaders)
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/auth/employee-logout', {});
+      return await res.json();
+    },
+    onSuccess: () => {
+      // Clear any stored session data
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      toast({
+        title: "Logged out successfully",
+        description: "You have been signed out.",
+      });
+      
+      // Navigate to home page
+      navigate('/');
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Logout failed",
+        description: error.message || "Failed to logout. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleLogout = () => {
+    logoutMutation.mutate();
+  };
 
   const handleTabClick = (tabId: string) => {
     onTabChange(tabId);
@@ -132,15 +169,28 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange }: TeamLe
 
           {/* User Profile Section */}
           <div className="border-t border-slate-700 p-4">
-            <div className="flex items-center">
-              <div className="w-8 h-8 bg-cyan-400 rounded-full flex items-center justify-center mr-3">
-                <User size={16} className="text-slate-900" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-white">Team Leader</p>
-                <p className="text-xs text-slate-400">Admin Panel</p>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center">
+                <div className="w-8 h-8 bg-cyan-400 rounded-full flex items-center justify-center mr-3">
+                  <User size={16} className="text-slate-900" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-white">Team Leader</p>
+                  <p className="text-xs text-slate-400">Admin Panel</p>
+                </div>
               </div>
             </div>
+            
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              disabled={logoutMutation.isPending}
+              className="w-full flex items-center justify-center py-2 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors rounded disabled:opacity-50"
+              data-testid="button-team-leader-logout"
+            >
+              <LogOut size={16} className="mr-2" />
+              {logoutMutation.isPending ? 'Signing out...' : 'Sign Out'}
+            </button>
           </div>
         </div>
       </div>

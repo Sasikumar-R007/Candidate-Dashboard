@@ -17,9 +17,11 @@ import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus } from "luc
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
+import { useToast } from "@/hooks/use-toast";
 
 export default function TeamLeaderDashboard() {
   const [, navigate] = useLocation();
+  const { toast } = useToast();
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [activeTab, setActiveTab] = useState('team');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -121,6 +123,33 @@ export default function TeamLeaderDashboard() {
   const handleSwitchToTeamChat = () => {
     setChatType('team');
     setActiveChatUser(null);
+  };
+
+  // Handle pipeline stage clicks
+  const handlePipelineStageClick = (stage: string) => {
+    // For demo purposes, show an alert with the action options
+    // In a real application, this would open a modal with candidate list
+    const stageActions = {
+      'CLOSURE': 'View candidates ready for closure. You can close selected candidates.',
+      'OFFER_DROP': 'View candidates who dropped offers. You can mark them as rejected.',
+      'OFFER_STAGE': 'View candidates at offer stage. You can reject or move to closure.',
+      'HR_ROUND': 'View candidates in HR round. You can reject or move forward.',
+      'FINAL_ROUND': 'View candidates in final round. You can reject or move forward.',
+      'L3': 'View candidates in L3 interview. You can reject or move forward.',
+      'L2': 'View candidates in L2 interview. You can reject or move forward.',
+      'L1': 'View candidates in L1 interview. You can reject or move forward.',
+      'ASSIGNMENT': 'View candidates with assignments. You can reject or move forward.',
+      'INTRO_CALL': 'View candidates for intro calls. You can reject or schedule calls.',
+      'SHORTLISTED': 'View shortlisted candidates. You can reject or move forward.',
+      'SOURCED': 'View sourced candidates. You can reject or move to shortlist.'
+    };
+
+    const message = stageActions[stage as keyof typeof stageActions] || 'View candidates in this stage.';
+    
+    toast({
+      title: `${stage} Stage`,
+      description: message,
+    });
   };
 
   // Get current chat messages
@@ -1052,11 +1081,10 @@ export default function TeamLeaderDashboard() {
                 <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
                   <div className="flex justify-end">
                     <Button 
-                      variant="ghost" 
-                      className="text-blue-600 hover:text-blue-700 text-sm"
                       onClick={() => setIsClosureDetailsModalOpen(true)}
+                      data-testid="button-see-more-closure"
                     >
-                      See More...
+                      See More
                     </Button>
                   </div>
                 </div>
@@ -1068,54 +1096,102 @@ export default function TeamLeaderDashboard() {
         {/* Right Sidebar with Stats - Fixed, Non-scrollable */}
         <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 h-full overflow-hidden">
           <div className="p-4 space-y-1">
-            <div className="flex justify-between items-center py-3 px-4 bg-green-100 dark:bg-green-900 rounded">
+            <button 
+              onClick={() => handlePipelineStageClick('SOURCED')}
+              className="w-full flex justify-between items-center py-3 px-4 bg-green-100 dark:bg-green-900 rounded hover:bg-green-200 dark:hover:bg-green-800 transition-colors cursor-pointer"
+              data-testid="button-pipeline-sourced"
+            >
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SOURCED</span>
               <span className="text-lg font-bold text-gray-900 dark:text-white">15</span>
-            </div>
-            <div className="flex justify-between items-center py-3 px-4 bg-green-200 dark:bg-green-800 rounded">
+            </button>
+            <button 
+              onClick={() => handlePipelineStageClick('SHORTLISTED')}
+              className="w-full flex justify-between items-center py-3 px-4 bg-green-200 dark:bg-green-800 rounded hover:bg-green-300 dark:hover:bg-green-700 transition-colors cursor-pointer"
+              data-testid="button-pipeline-shortlisted"
+            >
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SHORTLISTED</span>
               <span className="text-lg font-bold text-gray-900 dark:text-white">9</span>
-            </div>
-            <div className="flex justify-between items-center py-3 px-4 bg-green-300 dark:bg-green-700 rounded">
+            </button>
+            <button 
+              onClick={() => handlePipelineStageClick('INTRO_CALL')}
+              className="w-full flex justify-between items-center py-3 px-4 bg-green-300 dark:bg-green-700 rounded hover:bg-green-400 dark:hover:bg-green-600 transition-colors cursor-pointer"
+              data-testid="button-pipeline-intro-call"
+            >
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">INTRO CALL</span>
               <span className="text-lg font-bold text-gray-900 dark:text-white">7</span>
-            </div>
-            <div className="flex justify-between items-center py-3 px-4 bg-green-400 dark:bg-green-600 rounded">
+            </button>
+            <button 
+              onClick={() => handlePipelineStageClick('ASSIGNMENT')}
+              className="w-full flex justify-between items-center py-3 px-4 bg-green-400 dark:bg-green-600 rounded hover:bg-green-500 dark:hover:bg-green-500 transition-colors cursor-pointer"
+              data-testid="button-pipeline-assignment"
+            >
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">ASSIGNMENT</span>
               <span className="text-lg font-bold text-gray-800 dark:text-white">9</span>
-            </div>
-            <div className="flex justify-between items-center py-3 px-4 bg-green-500 dark:bg-green-600 rounded">
+            </button>
+            <button 
+              onClick={() => handlePipelineStageClick('L1')}
+              className="w-full flex justify-between items-center py-3 px-4 bg-green-500 dark:bg-green-600 rounded hover:bg-green-600 dark:hover:bg-green-500 transition-colors cursor-pointer"
+              data-testid="button-pipeline-l1"
+            >
               <span className="text-sm font-medium text-white">L1</span>
               <span className="text-lg font-bold text-white">15</span>
-            </div>
-            <div className="flex justify-between items-center py-3 px-4 bg-green-600 dark:bg-green-500 rounded">
+            </button>
+            <button 
+              onClick={() => handlePipelineStageClick('L2')}
+              className="w-full flex justify-between items-center py-3 px-4 bg-green-600 dark:bg-green-500 rounded hover:bg-green-700 dark:hover:bg-green-400 transition-colors cursor-pointer"
+              data-testid="button-pipeline-l2"
+            >
               <span className="text-sm font-medium text-white">L2</span>
               <span className="text-lg font-bold text-white">9</span>
-            </div>
-            <div className="flex justify-between items-center py-3 px-4 bg-green-700 dark:bg-green-500 rounded">
+            </button>
+            <button 
+              onClick={() => handlePipelineStageClick('L3')}
+              className="w-full flex justify-between items-center py-3 px-4 bg-green-700 dark:bg-green-500 rounded hover:bg-green-800 dark:hover:bg-green-400 transition-colors cursor-pointer"
+              data-testid="button-pipeline-l3"
+            >
               <span className="text-sm font-medium text-white">L3</span>
               <span className="text-lg font-bold text-white">3</span>
-            </div>
-            <div className="flex justify-between items-center py-3 px-4 bg-green-800 dark:bg-green-400 rounded">
+            </button>
+            <button 
+              onClick={() => handlePipelineStageClick('FINAL_ROUND')}
+              className="w-full flex justify-between items-center py-3 px-4 bg-green-800 dark:bg-green-400 rounded hover:bg-green-900 dark:hover:bg-green-300 transition-colors cursor-pointer"
+              data-testid="button-pipeline-final-round"
+            >
               <span className="text-sm font-medium text-white">FINAL ROUND</span>
               <span className="text-lg font-bold text-white">9</span>
-            </div>
-            <div className="flex justify-between items-center py-3 px-4 bg-green-900 dark:bg-green-400 rounded">
+            </button>
+            <button 
+              onClick={() => handlePipelineStageClick('HR_ROUND')}
+              className="w-full flex justify-between items-center py-3 px-4 bg-green-900 dark:bg-green-400 rounded hover:bg-green-950 dark:hover:bg-green-300 transition-colors cursor-pointer"
+              data-testid="button-pipeline-hr-round"
+            >
               <span className="text-sm font-medium text-white">HR ROUND</span>
               <span className="text-lg font-bold text-white">9</span>
-            </div>
-            <div className="flex justify-between items-center py-3 px-4 bg-green-900 dark:bg-green-300 rounded">
+            </button>
+            <button 
+              onClick={() => handlePipelineStageClick('OFFER_STAGE')}
+              className="w-full flex justify-between items-center py-3 px-4 bg-green-900 dark:bg-green-300 rounded hover:bg-green-950 dark:hover:bg-green-200 transition-colors cursor-pointer"
+              data-testid="button-pipeline-offer-stage"
+            >
               <span className="text-sm font-medium text-white">OFFER STAGE</span>
               <span className="text-lg font-bold text-white">9</span>
-            </div>
-            <div className="flex justify-between items-center py-3 px-4 bg-green-950 dark:bg-green-300 rounded">
+            </button>
+            <button 
+              onClick={() => handlePipelineStageClick('CLOSURE')}
+              className="w-full flex justify-between items-center py-3 px-4 bg-green-950 dark:bg-green-300 rounded hover:bg-black dark:hover:bg-green-200 transition-colors cursor-pointer"
+              data-testid="button-pipeline-closure"
+            >
               <span className="text-sm font-medium text-white">CLOSURE</span>
               <span className="text-lg font-bold text-white">3</span>
-            </div>
-            <div className="flex justify-between items-center py-3 px-4 bg-amber-500 dark:bg-amber-600 rounded">
+            </button>
+            <button 
+              onClick={() => handlePipelineStageClick('OFFER_DROP')}
+              className="w-full flex justify-between items-center py-3 px-4 bg-amber-500 dark:bg-amber-600 rounded hover:bg-amber-600 dark:hover:bg-amber-500 transition-colors cursor-pointer"
+              data-testid="button-pipeline-offer-drop"
+            >
               <span className="text-sm font-medium text-white">OFFER DROP</span>
               <span className="text-lg font-bold text-white">3</span>
-            </div>
+            </button>
           </div>
         </div>
       </div>
@@ -1162,13 +1238,11 @@ export default function TeamLeaderDashboard() {
               <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-lg text-gray-900">Team Performance</CardTitle>
                 <Button 
-                  variant="link" 
                   size="sm" 
-                  className="text-blue-600 text-sm"
                   onClick={() => setIsViewTeamPerformanceModalOpen(true)}
                   data-testid="button-view-team-performance"
                 >
-                  view list
+                  View More
                 </Button>
               </CardHeader>
               <CardContent className="p-3">

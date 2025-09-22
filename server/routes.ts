@@ -330,6 +330,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Logout endpoints
+  app.post("/api/auth/candidate-logout", async (req, res) => {
+    try {
+      res.json({
+        success: true,
+        message: "Logged out successfully"
+      });
+    } catch (error) {
+      console.error('Candidate logout error:', error);
+      res.status(500).json({ message: "Logout failed" });
+    }
+  });
+
+  app.post("/api/auth/employee-logout", async (req, res) => {
+    try {
+      res.json({
+        success: true,
+        message: "Logged out successfully"
+      });
+    } catch (error) {
+      console.error('Employee logout error:', error);
+      res.status(500).json({ message: "Logout failed" });
+    }
+  });
+
   // NOTE: Admin endpoints disabled for security - require proper authentication before enabling
 
   // Get current user profile (demo user)
