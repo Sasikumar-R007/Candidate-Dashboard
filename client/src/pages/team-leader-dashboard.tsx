@@ -1355,7 +1355,7 @@ export default function TeamLeaderDashboard() {
                     )}
                   </CardTitle>
                   <p className="text-sm text-gray-600">
-                    {chatType === 'team' ? '5 members online' : 'Private conversation'}
+                    {chatType === 'team' ? 'Team members online' : 'Private conversation'}
                   </p>
                 </CardHeader>
               </Card>
@@ -1418,10 +1418,6 @@ export default function TeamLeaderDashboard() {
                         <i className="fas fa-file-alt mr-2"></i>
                         Share Resume
                       </Button>
-                      <Button variant="outline" size="sm" className="text-sm">
-                        <i className="fas fa-calendar mr-2"></i>
-                        Schedule Meeting
-                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -1435,19 +1431,11 @@ export default function TeamLeaderDashboard() {
               <h3 className="text-lg font-semibold text-gray-900">Chat Participants</h3>
             </div>
             
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1">
               {/* Team Chat Section */}
               <div className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-semibold text-gray-700">Team Chat (5 members)</h4>
-                  <Button 
-                    variant={chatType === 'team' ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={handleSwitchToTeamChat}
-                    data-testid="button-switch-team-chat"
-                  >
-                    Join
-                  </Button>
+                <div className="mb-3">
+                  <h4 className="text-sm font-semibold text-gray-700">Team Members</h4>
                 </div>
                 <div className="space-y-2">
                   {chatTeamMembers.map((member) => (
@@ -1484,45 +1472,6 @@ export default function TeamLeaderDashboard() {
                 </div>
               </div>
 
-              {/* Individual Contacts Section */}
-              <div className="p-4 border-t border-gray-200">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Private Contacts (4 contacts)</h4>
-                <div className="space-y-2">
-                  {individualContacts.map((contact) => (
-                    <div 
-                      key={contact.id} 
-                      className={`flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-gray-50 ${
-                        chatType === 'private' && activeChatUser === contact.id 
-                          ? 'bg-blue-50 border border-blue-200' 
-                          : 'bg-gray-50'
-                      }`}
-                      onClick={() => handleStartPrivateChat(contact.id)}
-                      data-testid={`contact-private-${contact.id}`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-3 h-3 rounded-full ${
-                          contact.status === 'online' ? 'bg-green-500' : 'bg-yellow-500'
-                        }`}></div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{contact.name}</p>
-                          <p className="text-xs text-gray-500">{contact.role}</p>
-                        </div>
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-xs"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStartPrivateChat(contact.id);
-                        }}
-                      >
-                        Chat
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
         </div>

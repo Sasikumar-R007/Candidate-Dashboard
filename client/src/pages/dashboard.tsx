@@ -60,7 +60,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Settings</h2>
-              <p className="text-gray-600">Manage your account preferences and privacy settings</p>
+              <p className="text-gray-600">Access your settings and preferences</p>
             </div>
           </div>
         );

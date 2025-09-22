@@ -265,40 +265,6 @@ export default function ClientProfileHeader({ profile, onProfileUpdate }: Client
               </div>
             </div>
 
-            <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <i className="fas fa-edit mr-2"></i>
-                  Edit profile
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Edit Client Profile</DialogTitle>
-                </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="name" className="text-right">Name</Label>
-                    <Input id="name" defaultValue={currentProfile.name} className="col-span-3" />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="company" className="text-right">Company</Label>
-                    <Input id="company" defaultValue={currentProfile.company} className="col-span-3" />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="email" className="text-right">Email</Label>
-                    <Input id="email" defaultValue={currentProfile.email} className="col-span-3" />
-                  </div>
-                  <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="phone" className="text-right">Phone</Label>
-                    <Input id="phone" defaultValue={currentProfile.phone} className="col-span-3" />
-                  </div>
-                </div>
-                <div className="flex justify-end">
-                  <Button onClick={() => setShowEditModal(false)}>Save Changes</Button>
-                </div>
-              </DialogContent>
-            </Dialog>
           </div>
         </div>
 

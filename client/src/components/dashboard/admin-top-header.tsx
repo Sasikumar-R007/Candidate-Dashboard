@@ -63,11 +63,6 @@ export default function AdminTopHeader({ userName = "Sasi Kumar", companyName = 
                     </div>
                   </div>
                 </div>
-                <div className="mt-3">
-                  <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-full text-sm font-medium transition-colors duration-200">
-                    Manage Account
-                  </button>
-                </div>
               </div>
               
               {/* Menu Items */}
