@@ -114,6 +114,32 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange }: TeamLe
         })}
       </nav>
 
+        {/* Logout Button for Collapsed State */}
+        <div className="border-t border-slate-700">
+          <div
+            className="relative"
+            onMouseEnter={() => setHoveredItem('logout')}
+            onMouseLeave={() => setHoveredItem(null)}
+          >
+            <button
+              onClick={handleLogout}
+              disabled={logoutMutation.isPending}
+              className="w-full h-12 flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+              data-testid="button-team-leader-logout-collapsed"
+            >
+              <LogOut size={20} />
+              
+              {/* Tooltip */}
+              {hoveredItem === 'logout' && !isExpanded && (
+                <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-sm rounded whitespace-nowrap z-50 shadow-lg border border-slate-600">
+                  {logoutMutation.isPending ? 'Signing out...' : 'Sign Out'}
+                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-slate-800 rotate-45 border-l border-t border-slate-600"></div>
+                </div>
+              )}
+            </button>
+          </div>
+        </div>
+
         {/* Menu Toggle */}
         <div className="border-t border-slate-700">
           <button

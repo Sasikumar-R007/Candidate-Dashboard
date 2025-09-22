@@ -1280,13 +1280,11 @@ export default function TeamLeaderDashboard() {
               <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-lg text-gray-900">List of Closures</CardTitle>
                 <Button 
-                  variant="link" 
                   size="sm" 
-                  className="text-blue-600 text-sm"
                   onClick={() => setIsViewClosuresModalOpen(true)}
                   data-testid="button-view-closures"
                 >
-                  view more
+                  View More
                 </Button>
               </CardHeader>
               <CardContent className="p-3">

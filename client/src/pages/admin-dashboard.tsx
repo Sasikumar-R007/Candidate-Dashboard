@@ -1466,11 +1466,10 @@ export default function AdminDashboard() {
                 </div>
                 <div className="flex justify-end mt-4">
                   <Button 
-                    variant="link" 
-                    className="text-blue-600 hover:text-blue-700"
                     onClick={() => setIsPipelineModalOpen(true)}
+                    data-testid="button-see-more-pipeline"
                   >
-                    See More...
+                    See More
                   </Button>
                 </div>
               </CardContent>
@@ -2621,11 +2620,10 @@ export default function AdminDashboard() {
                     <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
                       <div className="flex justify-end">
                         <Button 
-                          variant="ghost" 
-                          className="text-blue-600 hover:text-blue-700 text-sm"
                           onClick={() => setIsClosureModalOpen(true)}
+                          data-testid="button-see-more-closure-admin"
                         >
-                          See More...
+                          See More
                         </Button>
                       </div>
                     </div>
