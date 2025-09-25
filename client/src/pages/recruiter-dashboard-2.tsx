@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import TeamLeaderMainSidebar from '@/components/dashboard/team-leader-main-sidebar';
 import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
 import AdminTopHeader from '@/components/dashboard/admin-top-header';
@@ -43,10 +43,8 @@ export default function RecruiterDashboard2() {
   const [isTodayInterviewsModalOpen, setIsTodayInterviewsModalOpen] = useState(false);
   const [isPendingCasesModalOpen, setIsPendingCasesModalOpen] = useState(false);
   
-  // Interview tracker state with initial counts reset to 0
+  // Interview tracker state with initial empty interviews array
   const [interviewTrackerData, setInterviewTrackerData] = useState({
-    todayScheduled: 0,
-    pendingCases: 0,
     interviews: [] as Array<{
       id: string;
       candidateName: string;
@@ -99,6 +97,18 @@ export default function RecruiterDashboard2() {
     }
   };
 
+  // Derived values using useMemo to prevent state drift
+  const getTodaysInterviews = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return interviewTrackerData.interviews.filter(interview => interview.interviewDate === today);
+  }, [interviewTrackerData.interviews]);
+
+  const getPendingInterviews = useMemo(() => {
+    return interviewTrackerData.interviews.filter(interview => 
+      interview.status === 'scheduled' || interview.status === 'pending'
+    );
+  }, [interviewTrackerData.interviews]);
+
   // Interview tracker functions
   const handleAddInterview = () => {
     if (interviewForm.candidateName && interviewForm.position && interviewForm.client && 
@@ -111,10 +121,7 @@ export default function RecruiterDashboard2() {
       
       setInterviewTrackerData(prev => ({
         ...prev,
-        interviews: [...prev.interviews, newInterview],
-        todayScheduled: prev.interviews.filter(i => i.interviewDate === new Date().toISOString().split('T')[0]).length + 
-                       (interviewForm.interviewDate === new Date().toISOString().split('T')[0] ? 1 : 0),
-        pendingCases: prev.interviews.filter(i => i.status === 'scheduled' || i.status === 'pending').length + 1
+        interviews: [...prev.interviews, newInterview]
       }));
       
       // Reset form
@@ -138,17 +145,6 @@ export default function RecruiterDashboard2() {
 
   const handleViewPendingCases = () => {
     setIsPendingCasesModalOpen(true);
-  };
-
-  const getTodaysInterviews = () => {
-    const today = new Date().toISOString().split('T')[0];
-    return interviewTrackerData.interviews.filter(interview => interview.interviewDate === today);
-  };
-
-  const getPendingInterviews = () => {
-    return interviewTrackerData.interviews.filter(interview => 
-      interview.status === 'scheduled' || interview.status === 'pending'
-    );
   };
 
   // Sample requirements data for recruiter context
@@ -605,7 +601,7 @@ export default function RecruiterDashboard2() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Today's Schedule</span>
                     <div className="flex items-center space-x-2">
-                      <span className="text-2xl font-bold text-gray-900" data-testid="text-today-schedule-count">{getTodaysInterviews().length}</span>
+                      <span className="text-2xl font-bold text-gray-900" data-testid="text-today-schedule-count">{getTodaysInterviews.length}</span>
                       <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1 text-xs" onClick={() => setIsInterviewModalOpen(true)} data-testid="button-add-interview">
                         Add
                       </Button>
@@ -615,7 +611,7 @@ export default function RecruiterDashboard2() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Pending cases</span>
                     <div className="flex items-center space-x-2">
-                      <span className="text-2xl font-bold text-gray-900" data-testid="text-pending-cases-count">{getPendingInterviews().length}</span>
+                      <span className="text-2xl font-bold text-gray-900" data-testid="text-pending-cases-count">{getPendingInterviews.length}</span>
                       <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1 text-xs" onClick={handleViewPendingCases} data-testid="button-view-pending-cases">
                         View
                       </Button>
@@ -1472,7 +1468,7 @@ export default function RecruiterDashboard2() {
             <DialogTitle>Today's Scheduled Interviews</DialogTitle>
           </DialogHeader>
           <div className="overflow-x-auto">
-            {getTodaysInterviews().length === 0 ? (
+            {getTodaysInterviews.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 No interviews scheduled for today
               </div>
@@ -1490,7 +1486,7 @@ export default function RecruiterDashboard2() {
                   </tr>
                 </thead>
                 <tbody>
-                  {getTodaysInterviews().map((interview) => (
+                  {getTodaysInterviews.map((interview) => (
                     <tr key={interview.id} className="border-b" data-testid={`row-interview-${interview.id}`}>
                       <td className="py-2 px-4" data-testid={`text-time-${interview.id}`}>{interview.interviewTime}</td>
                       <td className="py-2 px-4" data-testid={`text-candidate-${interview.id}`}>{interview.candidateName}</td>
@@ -1532,7 +1528,7 @@ export default function RecruiterDashboard2() {
             <DialogTitle>Pending Interview Cases</DialogTitle>
           </DialogHeader>
           <div className="overflow-x-auto">
-            {getPendingInterviews().length === 0 ? (
+            {getPendingInterviews.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 No pending interview cases
               </div>
@@ -1551,7 +1547,7 @@ export default function RecruiterDashboard2() {
                   </tr>
                 </thead>
                 <tbody>
-                  {getPendingInterviews().map((interview) => (
+                  {getPendingInterviews.map((interview) => (
                     <tr key={interview.id} className="border-b" data-testid={`row-pending-${interview.id}`}>
                       <td className="py-2 px-4" data-testid={`text-date-${interview.id}`}>{interview.interviewDate}</td>
                       <td className="py-2 px-4" data-testid={`text-time-${interview.id}`}>{interview.interviewTime}</td>
