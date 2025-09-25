@@ -35,6 +35,16 @@ export default function RecruiterDashboard2() {
   const [isViewTeamPerformanceModalOpen, setIsViewTeamPerformanceModalOpen] = useState(false);
   const [isViewClosuresModalOpen, setIsViewClosuresModalOpen] = useState(false);
   const [newMessage, setNewMessage] = useState("");
+  const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
+  const [isDeliveredModalOpen, setIsDeliveredModalOpen] = useState(false);
+  const [isDefaultedModalOpen, setIsDefaultedModalOpen] = useState(false);
+  const [isPerformanceModalOpen, setIsPerformanceModalOpen] = useState(false);
+  const [isInterviewModalOpen, setIsInterviewModalOpen] = useState(false);
+  const [isTodayInterviewsModalOpen, setIsTodayInterviewsModalOpen] = useState(false);
+  const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
+  const [reason, setReason] = useState('');
+  const [requirementCountModal, setRequirementCountModal] = useState<{isOpen: boolean, requirement: any}>({isOpen: false, requirement: null});
   const [chatMessages, setChatMessages] = useState([
     { id: 1, sender: "Kumaravel R", message: "Good morning! Please review today's recruitment targets", time: "9:00 AM", isOwn: true },
     { id: 2, sender: "Priya", message: "Good morning sir. I've shortlisted 5 candidates for the Frontend role.", time: "9:05 AM", isOwn: false },
@@ -77,6 +87,41 @@ export default function RecruiterDashboard2() {
   // Available recruiting team members
   const recruitingTeam = ['Priya', 'Amit', 'Sowmiya', 'Rajesh', 'Kavitha', 'Vinay'];
 
+  // Status options for dropdowns
+  const statuses = ['In-Process', 'Shortlisted', 'Interview Scheduled', 'Interview On-Going', 'Final Round', 'HR Round', 'Selected', 'Screened Out'];
+  const rejectionReasons = ['Skill mismatch', 'Lack of communication', 'Inadequate experience', 'Unprofessional behavior', 'Other'];
+
+  // Applicant data with state management
+  const [applicantData, setApplicantData] = useState([
+    { id: 1, appliedOn: '06-06-2025', candidateName: 'Aarav', company: 'TechCorp', roleApplied: 'Frontend Developer', submission: 'Inbound', currentStatus: 'In-Process' },
+    { id: 2, appliedOn: '08-06-2025', candidateName: 'Arjun', company: 'Designify', roleApplied: 'UI/UX Designer', submission: 'Uploaded', currentStatus: 'In-Process' },
+    { id: 3, appliedOn: '20-06-2025', candidateName: 'Shaurya', company: 'CodeLabs', roleApplied: 'Backend Developer', submission: 'Uploaded', currentStatus: 'In-Process' },
+    { id: 4, appliedOn: '01-07-2025', candidateName: 'Vihaan', company: 'AppLogic', roleApplied: 'QA Tester', submission: 'Inbound', currentStatus: 'In-Process' },
+    { id: 5, appliedOn: '23-07-2025', candidateName: 'Aditya', company: 'Bug Catchers', roleApplied: 'Mobile App Developer', submission: 'Inbound', currentStatus: 'In-Process' },
+  ]);
+
+  // Handle status change for applicants
+  const handleStatusChange = (applicant: any, newStatus: string) => {
+    if (newStatus === 'Screened Out') {
+      setSelectedCandidate({ ...applicant, status: newStatus });
+      setIsReasonModalOpen(true);
+    } else {
+      setApplicantData(prev => 
+        prev.map(a => a.id === applicant.id ? { ...a, currentStatus: newStatus } : a)
+      );
+    }
+  };
+
+  // Archive candidate when screened out
+  const archiveCandidate = () => {
+    if (selectedCandidate) {
+      setApplicantData(prev => prev.filter(a => a.id !== selectedCandidate.id));
+      setIsReasonModalOpen(false);
+      setSelectedCandidate(null);
+      setReason('');
+    }
+  };
+
   const handleAssign = (requirement: any) => {
     setSelectedRequirement(requirement);
     setIsReallocating(false);
@@ -106,7 +151,6 @@ export default function RecruiterDashboard2() {
     }
   };
 
-  const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
   const [selectedMember, setSelectedMember] = useState<any>(null);
 
@@ -176,13 +220,6 @@ export default function RecruiterDashboard2() {
   };
 
   const renderRecruiterContent = () => {
-    const applicantData = [
-      { appliedOn: '06-06-2025', candidateName: 'Aarav', company: 'TechCorp', roleApplied: 'Frontend Developer', submission: 'Inbound', currentStatus: 'In-Process' },
-      { appliedOn: '08-06-2025', candidateName: 'Arjun', company: 'Designify', roleApplied: 'UI/UX Designer', submission: 'Uploaded', currentStatus: 'In-Process' },
-      { appliedOn: '20-06-2025', candidateName: 'Shaurya', company: 'CodeLabs', roleApplied: 'Backend Developer', submission: 'Uploaded', currentStatus: 'In-Process' },
-      { appliedOn: '01-07-2025', candidateName: 'Vihaan', company: 'AppLogic', roleApplied: 'QA Tester', submission: 'Inbound', currentStatus: 'In-Process' },
-      { appliedOn: '23-07-2025', candidateName: 'Aditya', company: 'Bug Catchers', roleApplied: 'Mobile App Developer', submission: 'Inbound', currentStatus: 'In-Process' },
-    ];
 
     return (
       <div className="flex min-h-screen">
@@ -227,11 +264,16 @@ export default function RecruiterDashboard2() {
                               </span>
                             </td>
                             <td className="py-3 px-6">
-                              <select className="border border-gray-300 rounded px-3 py-1 text-sm" defaultValue={applicant.currentStatus}>
-                                <option value="In-Process">In-Process</option>
-                                <option value="Completed">Completed</option>
-                                <option value="Rejected">Rejected</option>
-                              </select>
+                              <Select value={applicant.currentStatus} onValueChange={(value) => handleStatusChange(applicant, value)}>
+                                <SelectTrigger className="w-32 h-8 text-sm">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {statuses.map((status) => (
+                                    <SelectItem key={status} value={status}>{status}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </td>
                           </tr>
                         ))}
@@ -249,6 +291,7 @@ export default function RecruiterDashboard2() {
                     <Button 
                       variant="link"
                       className="text-sm text-blue-600 hover:text-blue-800 p-0"
+                      onClick={() => setIsTargetModalOpen(true)}
                       data-testid="button-view-all-targets"
                     >
                       View All
@@ -342,14 +385,14 @@ export default function RecruiterDashboard2() {
                         <div className="text-center">
                           <div className="text-sm text-gray-300 mb-2">Delivered</div>
                           <div className="text-4xl font-bold text-white mb-3">3</div>
-                          <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white" data-testid="button-view-delivered">
+                          <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white" onClick={() => setIsDeliveredModalOpen(true)} data-testid="button-view-delivered">
                             View
                           </Button>
                         </div>
                         <div className="text-center">
                           <div className="text-sm text-gray-300 mb-2">Defaulted</div>
                           <div className="text-4xl font-bold text-white mb-3">1</div>
-                          <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white" data-testid="button-view-defaulted">
+                          <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white" onClick={() => setIsDefaultedModalOpen(true)} data-testid="button-view-defaulted">
                             View
                           </Button>
                         </div>
@@ -365,7 +408,7 @@ export default function RecruiterDashboard2() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <Button size="sm" variant="link" className="text-blue-600 p-0" data-testid="button-view-more-performance">
+                        <Button size="sm" variant="link" className="text-blue-600 p-0" onClick={() => setIsPerformanceModalOpen(true)} data-testid="button-view-more-performance">
                           View More
                         </Button>
                       </div>
@@ -482,7 +525,7 @@ export default function RecruiterDashboard2() {
                     <span className="text-sm text-gray-600">Today's Schedule</span>
                     <div className="flex items-center space-x-2">
                       <span className="text-2xl font-bold text-gray-900">4</span>
-                      <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1 text-xs">
+                      <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1 text-xs" onClick={() => setIsInterviewModalOpen(true)}>
                         Add
                       </Button>
                     </div>
@@ -492,7 +535,7 @@ export default function RecruiterDashboard2() {
                     <span className="text-sm text-gray-600">Pending cases</span>
                     <div className="flex items-center space-x-2">
                       <span className="text-2xl font-bold text-gray-900">10</span>
-                      <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1 text-xs">
+                      <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1 text-xs" onClick={() => setIsTodayInterviewsModalOpen(true)}>
                         View
                       </Button>
                     </div>
@@ -557,7 +600,7 @@ export default function RecruiterDashboard2() {
                             <td className="py-3 px-4 text-gray-900">{req.spoc}</td>
                             <td className="py-3 px-4 text-gray-900">{req.spocEmail}</td>
                             <td className="py-3 px-4">
-                              <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white rounded">
+                              <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white rounded" onClick={() => setRequirementCountModal({isOpen: true, requirement: req})}>
                                 {req.count}
                               </Button>
                             </td>
@@ -1128,6 +1171,278 @@ export default function RecruiterDashboard2() {
     <div className="min-h-screen">
       <TeamLeaderMainSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
       {renderMainContent()}
+
+      {/* Target Modal */}
+      <Dialog open={isTargetModalOpen} onOpenChange={setIsTargetModalOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Target Details</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-4 bg-blue-50 rounded">
+                  <span className="font-medium">Q1 Target</span>
+                  <span className="text-lg font-bold">15,00,000</span>
+                </div>
+                <div className="flex justify-between items-center p-4 bg-green-50 rounded">
+                  <span className="font-medium">Q1 Achieved</span>
+                  <span className="text-lg font-bold">10,00,000</span>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center p-4 bg-orange-50 rounded">
+                  <span className="font-medium">Q2 Target</span>
+                  <span className="text-lg font-bold">18,00,000</span>
+                </div>
+                <div className="flex justify-between items-center p-4 bg-purple-50 rounded">
+                  <span className="font-medium">Total Incentive</span>
+                  <span className="text-lg font-bold">75,000</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delivered Modal */}
+      <Dialog open={isDeliveredModalOpen} onOpenChange={setIsDeliveredModalOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Delivered Candidates</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 px-4">Candidate</th>
+                  <th className="text-left py-2 px-4">Position</th>
+                  <th className="text-left py-2 px-4">Client</th>
+                  <th className="text-left py-2 px-4">Delivered Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b">
+                  <td className="py-2 px-4">Aarav</td>
+                  <td className="py-2 px-4">Frontend Developer</td>
+                  <td className="py-2 px-4">TechCorp</td>
+                  <td className="py-2 px-4">12-Aug-2025</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2 px-4">Arjun</td>
+                  <td className="py-2 px-4">UI/UX Designer</td>
+                  <td className="py-2 px-4">Designify</td>
+                  <td className="py-2 px-4">11-Aug-2025</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2 px-4">Shaurya</td>
+                  <td className="py-2 px-4">Backend Developer</td>
+                  <td className="py-2 px-4">CodeLabs</td>
+                  <td className="py-2 px-4">10-Aug-2025</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Defaulted Modal */}
+      <Dialog open={isDefaultedModalOpen} onOpenChange={setIsDefaultedModalOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Defaulted Candidates</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 px-4">Candidate</th>
+                  <th className="text-left py-2 px-4">Position</th>
+                  <th className="text-left py-2 px-4">Client</th>
+                  <th className="text-left py-2 px-4">Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b">
+                  <td className="py-2 px-4">Vihaan</td>
+                  <td className="py-2 px-4">QA Tester</td>
+                  <td className="py-2 px-4">AppLogic</td>
+                  <td className="py-2 px-4">No response</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Performance Modal */}
+      <Dialog open={isPerformanceModalOpen} onOpenChange={setIsPerformanceModalOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Overall Performance Details</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center p-4 bg-green-50 rounded">
+                <div className="text-2xl font-bold text-green-600">85%</div>
+                <div className="text-sm text-gray-600">Success Rate</div>
+              </div>
+              <div className="text-center p-4 bg-blue-50 rounded">
+                <div className="text-2xl font-bold text-blue-600">12</div>
+                <div className="text-sm text-gray-600">Total Closures</div>
+              </div>
+              <div className="text-center p-4 bg-purple-50 rounded">
+                <div className="text-2xl font-bold text-purple-600">45,000</div>
+                <div className="text-sm text-gray-600">Total Incentives</div>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Interview Modal */}
+      <Dialog open={isInterviewModalOpen} onOpenChange={setIsInterviewModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Schedule New Interview</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="candidateName">Candidate Name</Label>
+                <Input id="candidateName" placeholder="Enter candidate name" />
+              </div>
+              <div>
+                <Label htmlFor="position">Position</Label>
+                <Input id="position" placeholder="Enter position" />
+              </div>
+              <div>
+                <Label htmlFor="client">Client</Label>
+                <Input id="client" placeholder="Enter client name" />
+              </div>
+              <div>
+                <Label htmlFor="interviewDate">Interview Date</Label>
+                <Input id="interviewDate" type="date" />
+              </div>
+              <div>
+                <Label htmlFor="interviewTime">Interview Time</Label>
+                <Input id="interviewTime" type="time" />
+              </div>
+              <div>
+                <Label htmlFor="interviewType">Interview Type</Label>
+                <Select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="video">Video Call</SelectItem>
+                    <SelectItem value="phone">Phone Call</SelectItem>
+                    <SelectItem value="in-person">In Person</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setIsInterviewModalOpen(false)}>Cancel</Button>
+              <Button onClick={() => setIsInterviewModalOpen(false)}>Schedule Interview</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Today's Interviews Modal */}
+      <Dialog open={isTodayInterviewsModalOpen} onOpenChange={setIsTodayInterviewsModalOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Today's Scheduled Interviews</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-2 px-4">Time</th>
+                  <th className="text-left py-2 px-4">Candidate</th>
+                  <th className="text-left py-2 px-4">Position</th>
+                  <th className="text-left py-2 px-4">Client</th>
+                  <th className="text-left py-2 px-4">Type</th>
+                  <th className="text-left py-2 px-4">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b">
+                  <td className="py-2 px-4">10:00 AM</td>
+                  <td className="py-2 px-4">Keerthana</td>
+                  <td className="py-2 px-4">Frontend Developer</td>
+                  <td className="py-2 px-4">TechCorp</td>
+                  <td className="py-2 px-4">Video Call</td>
+                  <td className="py-2 px-4"><span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">Scheduled</span></td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2 px-4">2:00 PM</td>
+                  <td className="py-2 px-4">Vishnu Purana</td>
+                  <td className="py-2 px-4">Backend Developer</td>
+                  <td className="py-2 px-4">CodeLabs</td>
+                  <td className="py-2 px-4">Phone Call</td>
+                  <td className="py-2 px-4"><span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">In Progress</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Requirement Count Modal */}
+      <Dialog open={requirementCountModal.isOpen} onOpenChange={(open) => setRequirementCountModal({isOpen: open, requirement: null})}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Set Requirement Count</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="position">Position: {requirementCountModal.requirement?.position}</Label>
+            </div>
+            <div>
+              <Label htmlFor="count">Required Count</Label>
+              <Input id="count" type="number" placeholder="Enter count" />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setRequirementCountModal({isOpen: false, requirement: null})}>Cancel</Button>
+              <Button onClick={() => setRequirementCountModal({isOpen: false, requirement: null})}>Save</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reason Modal for Screened Out */}
+      <Dialog open={isReasonModalOpen} onOpenChange={setIsReasonModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reason for Screening Out</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="candidate">Candidate: {selectedCandidate?.candidateName}</Label>
+            </div>
+            <div>
+              <Label htmlFor="reason">Reason</Label>
+              <Select value={reason} onValueChange={setReason}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select reason" />
+                </SelectTrigger>
+                <SelectContent>
+                  {rejectionReasons.map((r) => (
+                    <SelectItem key={r} value={r}>{r}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setIsReasonModalOpen(false)}>Cancel</Button>
+              <Button onClick={archiveCandidate} className="bg-red-600 hover:bg-red-700">Archive Candidate</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
