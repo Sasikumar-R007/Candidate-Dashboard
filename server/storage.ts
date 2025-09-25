@@ -26,6 +26,7 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
+import { DatabaseStorage } from "./database-storage";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -801,4 +802,4 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
