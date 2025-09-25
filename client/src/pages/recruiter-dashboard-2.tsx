@@ -41,6 +41,35 @@ export default function RecruiterDashboard2() {
   const [isPerformanceModalOpen, setIsPerformanceModalOpen] = useState(false);
   const [isInterviewModalOpen, setIsInterviewModalOpen] = useState(false);
   const [isTodayInterviewsModalOpen, setIsTodayInterviewsModalOpen] = useState(false);
+  const [isPendingCasesModalOpen, setIsPendingCasesModalOpen] = useState(false);
+  
+  // Interview tracker state with initial counts reset to 0
+  const [interviewTrackerData, setInterviewTrackerData] = useState({
+    todayScheduled: 0,
+    pendingCases: 0,
+    interviews: [] as Array<{
+      id: string;
+      candidateName: string;
+      position: string;
+      client: string;
+      interviewDate: string;
+      interviewTime: string;
+      interviewType: string;
+      interviewRound: string;
+      status: string;
+    }>
+  });
+  
+  // Interview form state
+  const [interviewForm, setInterviewForm] = useState({
+    candidateName: '',
+    position: '',
+    client: '',
+    interviewDate: '',
+    interviewTime: '',
+    interviewType: 'Video Call',
+    interviewRound: 'L1'
+  });
   const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
   const [reason, setReason] = useState('');
@@ -68,6 +97,58 @@ export default function RecruiterDashboard2() {
       setChatMessages([...chatMessages, newMsg]);
       setNewMessage("");
     }
+  };
+
+  // Interview tracker functions
+  const handleAddInterview = () => {
+    if (interviewForm.candidateName && interviewForm.position && interviewForm.client && 
+        interviewForm.interviewDate && interviewForm.interviewTime) {
+      const newInterview = {
+        id: Date.now().toString(),
+        ...interviewForm,
+        status: 'scheduled'
+      };
+      
+      setInterviewTrackerData(prev => ({
+        ...prev,
+        interviews: [...prev.interviews, newInterview],
+        todayScheduled: prev.interviews.filter(i => i.interviewDate === new Date().toISOString().split('T')[0]).length + 
+                       (interviewForm.interviewDate === new Date().toISOString().split('T')[0] ? 1 : 0),
+        pendingCases: prev.interviews.filter(i => i.status === 'scheduled' || i.status === 'pending').length + 1
+      }));
+      
+      // Reset form
+      setInterviewForm({
+        candidateName: '',
+        position: '',
+        client: '',
+        interviewDate: '',
+        interviewTime: '',
+        interviewType: 'Video Call',
+        interviewRound: 'L1'
+      });
+      
+      setIsInterviewModalOpen(false);
+    }
+  };
+
+  const handleViewTodaySchedule = () => {
+    setIsTodayInterviewsModalOpen(true);
+  };
+
+  const handleViewPendingCases = () => {
+    setIsPendingCasesModalOpen(true);
+  };
+
+  const getTodaysInterviews = () => {
+    const today = new Date().toISOString().split('T')[0];
+    return interviewTrackerData.interviews.filter(interview => interview.interviewDate === today);
+  };
+
+  const getPendingInterviews = () => {
+    return interviewTrackerData.interviews.filter(interview => 
+      interview.status === 'scheduled' || interview.status === 'pending'
+    );
   };
 
   // Sample requirements data for recruiter context
@@ -510,7 +591,7 @@ export default function RecruiterDashboard2() {
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">Total Applications</h3>
                 <div className="text-5xl font-bold text-gray-900 mb-2">20</div>
                 <div className="text-right">
-                  <Button size="sm" variant="link" className="text-blue-600 p-0 text-xs">
+                  <Button size="sm" variant="link" className="text-blue-600 p-0 text-xs" onClick={() => window.location.href = '/master-database'} data-testid="button-see-all-applications">
                     See All
                   </Button>
                 </div>
@@ -524,8 +605,8 @@ export default function RecruiterDashboard2() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Today's Schedule</span>
                     <div className="flex items-center space-x-2">
-                      <span className="text-2xl font-bold text-gray-900">4</span>
-                      <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1 text-xs" onClick={() => setIsInterviewModalOpen(true)}>
+                      <span className="text-2xl font-bold text-gray-900" data-testid="text-today-schedule-count">{getTodaysInterviews().length}</span>
+                      <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1 text-xs" onClick={() => setIsInterviewModalOpen(true)} data-testid="button-add-interview">
                         Add
                       </Button>
                     </div>
@@ -534,8 +615,8 @@ export default function RecruiterDashboard2() {
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Pending cases</span>
                     <div className="flex items-center space-x-2">
-                      <span className="text-2xl font-bold text-gray-900">10</span>
-                      <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1 text-xs" onClick={() => setIsTodayInterviewsModalOpen(true)}>
+                      <span className="text-2xl font-bold text-gray-900" data-testid="text-pending-cases-count">{getPendingInterviews().length}</span>
+                      <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1 text-xs" onClick={handleViewPendingCases} data-testid="button-view-pending-cases">
                         View
                       </Button>
                     </div>
@@ -1310,41 +1391,75 @@ export default function RecruiterDashboard2() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="candidateName">Candidate Name</Label>
-                <Input id="candidateName" placeholder="Enter candidate name" />
+                <Input 
+                  id="candidateName" 
+                  value={interviewForm.candidateName}
+                  onChange={(e) => setInterviewForm(prev => ({...prev, candidateName: e.target.value}))}
+                  placeholder="Enter candidate name" 
+                  data-testid="input-candidate-name"
+                />
               </div>
               <div>
                 <Label htmlFor="position">Position</Label>
-                <Input id="position" placeholder="Enter position" />
+                <Input 
+                  id="position" 
+                  value={interviewForm.position}
+                  onChange={(e) => setInterviewForm(prev => ({...prev, position: e.target.value}))}
+                  placeholder="Enter position" 
+                  data-testid="input-position"
+                />
               </div>
               <div>
                 <Label htmlFor="client">Client</Label>
-                <Input id="client" placeholder="Enter client name" />
+                <Input 
+                  id="client" 
+                  value={interviewForm.client}
+                  onChange={(e) => setInterviewForm(prev => ({...prev, client: e.target.value}))}
+                  placeholder="Enter client name" 
+                  data-testid="input-client"
+                />
               </div>
               <div>
                 <Label htmlFor="interviewDate">Interview Date</Label>
-                <Input id="interviewDate" type="date" />
+                <Input 
+                  id="interviewDate" 
+                  type="date" 
+                  value={interviewForm.interviewDate}
+                  onChange={(e) => setInterviewForm(prev => ({...prev, interviewDate: e.target.value}))}
+                  data-testid="input-interview-date"
+                />
               </div>
               <div>
                 <Label htmlFor="interviewTime">Interview Time</Label>
-                <Input id="interviewTime" type="time" />
+                <Input 
+                  id="interviewTime" 
+                  type="time" 
+                  value={interviewForm.interviewTime}
+                  onChange={(e) => setInterviewForm(prev => ({...prev, interviewTime: e.target.value}))}
+                  data-testid="input-interview-time"
+                />
               </div>
               <div>
                 <Label htmlFor="interviewType">Interview Type</Label>
-                <Select>
-                  <SelectTrigger>
+                <Select value={interviewForm.interviewType} onValueChange={(value) => setInterviewForm(prev => ({...prev, interviewType: value}))}>
+                  <SelectTrigger data-testid="select-interview-type">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="video">Video Call</SelectItem>
-                    <SelectItem value="phone">Phone Call</SelectItem>
-                    <SelectItem value="in-person">In Person</SelectItem>
+                    <SelectItem value="Video Call">Video Call</SelectItem>
+                    <SelectItem value="Phone Call">Phone Call</SelectItem>
+                    <SelectItem value="In Person">In Person</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsInterviewModalOpen(false)}>Cancel</Button>
-              <Button onClick={() => setIsInterviewModalOpen(false)}>Schedule Interview</Button>
+              <Button variant="outline" onClick={() => setIsInterviewModalOpen(false)} data-testid="button-cancel-interview">
+                Cancel
+              </Button>
+              <Button onClick={handleAddInterview} data-testid="button-schedule-interview">
+                Schedule Interview
+              </Button>
             </div>
           </div>
         </DialogContent>
@@ -1357,36 +1472,116 @@ export default function RecruiterDashboard2() {
             <DialogTitle>Today's Scheduled Interviews</DialogTitle>
           </DialogHeader>
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2 px-4">Time</th>
-                  <th className="text-left py-2 px-4">Candidate</th>
-                  <th className="text-left py-2 px-4">Position</th>
-                  <th className="text-left py-2 px-4">Client</th>
-                  <th className="text-left py-2 px-4">Type</th>
-                  <th className="text-left py-2 px-4">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b">
-                  <td className="py-2 px-4">10:00 AM</td>
-                  <td className="py-2 px-4">Keerthana</td>
-                  <td className="py-2 px-4">Frontend Developer</td>
-                  <td className="py-2 px-4">TechCorp</td>
-                  <td className="py-2 px-4">Video Call</td>
-                  <td className="py-2 px-4"><span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">Scheduled</span></td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-2 px-4">2:00 PM</td>
-                  <td className="py-2 px-4">Vishnu Purana</td>
-                  <td className="py-2 px-4">Backend Developer</td>
-                  <td className="py-2 px-4">CodeLabs</td>
-                  <td className="py-2 px-4">Phone Call</td>
-                  <td className="py-2 px-4"><span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">In Progress</span></td>
-                </tr>
-              </tbody>
-            </table>
+            {getTodaysInterviews().length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No interviews scheduled for today
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 px-4">Time</th>
+                    <th className="text-left py-2 px-4">Candidate</th>
+                    <th className="text-left py-2 px-4">Position</th>
+                    <th className="text-left py-2 px-4">Client</th>
+                    <th className="text-left py-2 px-4">Type</th>
+                    <th className="text-left py-2 px-4">Round</th>
+                    <th className="text-left py-2 px-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {getTodaysInterviews().map((interview) => (
+                    <tr key={interview.id} className="border-b" data-testid={`row-interview-${interview.id}`}>
+                      <td className="py-2 px-4" data-testid={`text-time-${interview.id}`}>{interview.interviewTime}</td>
+                      <td className="py-2 px-4" data-testid={`text-candidate-${interview.id}`}>{interview.candidateName}</td>
+                      <td className="py-2 px-4" data-testid={`text-position-${interview.id}`}>{interview.position}</td>
+                      <td className="py-2 px-4" data-testid={`text-client-${interview.id}`}>{interview.client}</td>
+                      <td className="py-2 px-4" data-testid={`text-type-${interview.id}`}>{interview.interviewType}</td>
+                      <td className="py-2 px-4" data-testid={`text-round-${interview.id}`}>{interview.interviewRound}</td>
+                      <td className="py-2 px-4">
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          interview.status === 'scheduled' ? 'bg-green-100 text-green-800' :
+                          interview.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
+                          interview.status === 'completed' ? 'bg-gray-100 text-gray-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`} data-testid={`status-${interview.id}`}>
+                          {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+          <div className="flex justify-between mt-4">
+            <Button variant="outline" onClick={() => window.location.href = '/master-database'} data-testid="button-view-all-interviews">
+              View All Interviews
+            </Button>
+            <Button onClick={() => setIsTodayInterviewsModalOpen(false)} data-testid="button-close-today-interviews">
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Pending Cases Modal */}
+      <Dialog open={isPendingCasesModalOpen} onOpenChange={setIsPendingCasesModalOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Pending Interview Cases</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-x-auto">
+            {getPendingInterviews().length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No pending interview cases
+              </div>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 px-4">Date</th>
+                    <th className="text-left py-2 px-4">Time</th>
+                    <th className="text-left py-2 px-4">Candidate</th>
+                    <th className="text-left py-2 px-4">Position</th>
+                    <th className="text-left py-2 px-4">Client</th>
+                    <th className="text-left py-2 px-4">Type</th>
+                    <th className="text-left py-2 px-4">Round</th>
+                    <th className="text-left py-2 px-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {getPendingInterviews().map((interview) => (
+                    <tr key={interview.id} className="border-b" data-testid={`row-pending-${interview.id}`}>
+                      <td className="py-2 px-4" data-testid={`text-date-${interview.id}`}>{interview.interviewDate}</td>
+                      <td className="py-2 px-4" data-testid={`text-time-${interview.id}`}>{interview.interviewTime}</td>
+                      <td className="py-2 px-4" data-testid={`text-candidate-${interview.id}`}>{interview.candidateName}</td>
+                      <td className="py-2 px-4" data-testid={`text-position-${interview.id}`}>{interview.position}</td>
+                      <td className="py-2 px-4" data-testid={`text-client-${interview.id}`}>{interview.client}</td>
+                      <td className="py-2 px-4" data-testid={`text-type-${interview.id}`}>{interview.interviewType}</td>
+                      <td className="py-2 px-4" data-testid={`text-round-${interview.id}`}>{interview.interviewRound}</td>
+                      <td className="py-2 px-4">
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          interview.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800' :
+                          interview.status === 'pending' ? 'bg-orange-100 text-orange-800' :
+                          'bg-red-100 text-red-800'
+                        }`} data-testid={`status-${interview.id}`}>
+                          {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+          <div className="flex justify-between mt-4">
+            <Button variant="outline" onClick={() => window.location.href = '/master-database'} data-testid="button-view-all-pending">
+              View All Cases
+            </Button>
+            <Button onClick={() => setIsPendingCasesModalOpen(false)} data-testid="button-close-pending-cases">
+              Close
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

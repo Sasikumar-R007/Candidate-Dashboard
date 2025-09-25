@@ -20,6 +20,7 @@ import RecruiterActiveJobs from "@/pages/recruiter-active-jobs";
 import RecruiterNewApplications from "@/pages/recruiter-new-applications";
 import NotFound from "@/pages/not-found";
 import Archives from "@/pages/archives";
+import MasterDatabase from "@/pages/master-database";
 
 function Router() {
   return (
@@ -39,6 +40,7 @@ function Router() {
       <Route path="/recruiter-active-jobs" component={RecruiterActiveJobs} />
       <Route path="/recruiter-new-applications" component={RecruiterNewApplications} />
       <Route path="/archives" component={Archives} />
+      <Route path="/master-database" component={MasterDatabase} />
       <Route component={NotFound} />
     </Switch>
   );

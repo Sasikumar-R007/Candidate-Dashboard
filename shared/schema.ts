@@ -215,6 +215,33 @@ export const candidateLoginAttempts = pgTable("candidate_login_attempts", {
   createdAt: text("created_at").notNull(),
 });
 
+export const interviewTracker = pgTable("interview_tracker", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  candidateName: text("candidate_name").notNull(),
+  position: text("position").notNull(),
+  client: text("client").notNull(),
+  interviewDate: text("interview_date").notNull(),
+  interviewTime: text("interview_time").notNull(),
+  interviewType: text("interview_type").notNull(), // video, phone, in-person
+  interviewRound: text("interview_round").notNull(), // L1, L2, HR, etc.
+  status: text("status").notNull().default("scheduled"), // scheduled, completed, cancelled, rescheduled
+  recruiterName: text("recruiter_name").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at"),
+});
+
+export const interviewTrackerCounts = pgTable("interview_tracker_counts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  todayScheduled: text("today_scheduled").notNull().default("0"),
+  pendingCases: text("pending_cases").notNull().default("0"),
+  completedToday: text("completed_today").notNull().default("0"),
+  rescheduledToday: text("rescheduled_today").notNull().default("0"),
+  cancelledToday: text("cancelled_today").notNull().default("0"),
+  recruiterName: text("recruiter_name").notNull(),
+  date: text("date").notNull(),
+  updatedAt: text("updated_at"),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
 });
@@ -287,6 +314,14 @@ export const insertCandidateLoginAttemptsSchema = createInsertSchema(candidateLo
   id: true,
 });
 
+export const insertInterviewTrackerSchema = createInsertSchema(interviewTracker).omit({
+  id: true,
+});
+
+export const insertInterviewTrackerCountsSchema = createInsertSchema(interviewTrackerCounts).omit({
+  id: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
@@ -323,3 +358,7 @@ export type InsertCandidate = z.infer<typeof insertCandidateSchema>;
 export type Candidate = typeof candidates.$inferSelect;
 export type InsertCandidateLoginAttempts = z.infer<typeof insertCandidateLoginAttemptsSchema>;
 export type CandidateLoginAttempts = typeof candidateLoginAttempts.$inferSelect;
+export type InsertInterviewTracker = z.infer<typeof insertInterviewTrackerSchema>;
+export type InterviewTracker = typeof interviewTracker.$inferSelect;
+export type InsertInterviewTrackerCounts = z.infer<typeof insertInterviewTrackerCountsSchema>;
+export type InterviewTrackerCounts = typeof interviewTrackerCounts.$inferSelect;
