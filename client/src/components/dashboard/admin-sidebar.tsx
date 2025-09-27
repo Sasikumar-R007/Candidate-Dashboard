@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth, useEmployeeAuth } from "@/contexts/auth-context";
+import { SignOutDialog } from "@/components/ui/sign-out-dialog";
 // import scalingXLogo from "@/assets/images/scaling-x-logo.png";
 
 interface AdminSidebarProps {
@@ -14,8 +16,11 @@ interface AdminSidebarProps {
 export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { logout } = useAuth();
+  const employee = useEmployeeAuth();
 
   const menuItems = [
     { id: 'dashboard', label: 'Team', icon: Users },
@@ -35,8 +40,9 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
       return await res.json();
     },
     onSuccess: () => {
-      localStorage.clear();
-      sessionStorage.clear();
+      // Use auth context logout
+      logout();
+      
       toast({
         title: "Logged out successfully",
         description: "You have been signed out.",
@@ -53,7 +59,12 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
   });
 
   const handleLogout = () => {
+    setShowSignOutDialog(true);
+  };
+
+  const confirmLogout = () => {
     logoutMutation.mutate();
+    setShowSignOutDialog(false);
   };
 
   const handleTabClick = (tabId: string) => {
@@ -193,6 +204,14 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
         </div>
       </div>
     )}
+    
+    <SignOutDialog
+      open={showSignOutDialog}
+      onOpenChange={setShowSignOutDialog}
+      onConfirm={confirmLogout}
+      userName={employee?.name}
+      isLoading={logoutMutation.isPending}
+    />
     </>
   );
 }

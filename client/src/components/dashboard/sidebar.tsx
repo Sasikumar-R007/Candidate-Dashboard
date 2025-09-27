@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth, useCandidateAuth } from "@/contexts/auth-context";
+import { SignOutDialog } from "@/components/ui/sign-out-dialog";
 
 interface SidebarProps {
   activeTab: string;
@@ -12,8 +14,11 @@ interface SidebarProps {
 
 export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { logout } = useAuth();
+  const candidate = useCandidateAuth();
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: User },
@@ -30,9 +35,8 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
       return await res.json();
     },
     onSuccess: () => {
-      // Clear any stored session data
-      localStorage.clear();
-      sessionStorage.clear();
+      // Use auth context logout
+      logout();
       
       toast({
         title: "Logged out successfully",
@@ -52,7 +56,12 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   });
 
   const handleLogout = () => {
+    setShowSignOutDialog(true);
+  };
+
+  const confirmLogout = () => {
     logoutMutation.mutate();
+    setShowSignOutDialog(false);
   };
 
   return (
@@ -129,6 +138,14 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
           </button>
         </div>
       </div>
+      
+      <SignOutDialog
+        open={showSignOutDialog}
+        onOpenChange={setShowSignOutDialog}
+        onConfirm={confirmLogout}
+        userName={candidate?.fullName}
+        isLoading={logoutMutation.isPending}
+      />
     </div>
   );
 }
