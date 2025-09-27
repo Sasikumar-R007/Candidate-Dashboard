@@ -7,6 +7,8 @@ import { z } from "zod";
 import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
+import pdfParse from "pdf-parse";
+import mammoth from "mammoth";
 
 // Ensure uploads directory exists
 const uploadsDir = 'uploads';
@@ -76,6 +78,223 @@ const otpVerificationSchema = z.object({
   email: z.string().email("Invalid email format"),
   otp: z.string().length(6, "OTP must be 6 digits")
 });
+
+// Resume parsing utilities
+function extractNameFromText(text: string): string | null {
+  // Simple name extraction - look for patterns at the beginning of the resume
+  const lines = text.split('\n').filter(line => line.trim().length > 0);
+  
+  // Look for name patterns in first few lines
+  for (let i = 0; i < Math.min(5, lines.length); i++) {
+    const line = lines[i].trim();
+    
+    // Skip common headers
+    if (line.toLowerCase().includes('resume') || 
+        line.toLowerCase().includes('curriculum') ||
+        line.toLowerCase().includes('vitae')) {
+      continue;
+    }
+    
+    // Look for likely name pattern (2-4 words, each capitalized, no numbers)
+    const namePattern = /^[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}$/;
+    if (namePattern.test(line)) {
+      return line;
+    }
+  }
+  
+  return null;
+}
+
+function extractEmailFromText(text: string): string | null {
+  const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
+  const match = text.match(emailPattern);
+  return match ? match[0] : null;
+}
+
+function extractPhoneFromText(text: string): string | null {
+  // Multiple phone patterns
+  const phonePatterns = [
+    /(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}/,  // US format
+    /(\+?\d{1,3}[-.\s]?)?\d{10}/,  // 10 digit
+    /(\+?\d{1,3}[-.\s]?)?\d{3}[-.\s]?\d{3}[-.\s]?\d{4}/,  // Various formats
+  ];
+  
+  for (const pattern of phonePatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      return match[0].replace(/\D/g, ''); // Remove non-digits
+    }
+  }
+  
+  return null;
+}
+
+async function parseResumeFile(filePath: string, fileType: string): Promise<{
+  text: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+}> {
+  try {
+    let text = '';
+    
+    if (fileType === 'pdf') {
+      const dataBuffer = fs.readFileSync(filePath);
+      const pdfData = await pdfParse(dataBuffer);
+      text = pdfData.text;
+    } else if (fileType === 'docx') {
+      const result = await mammoth.extractRawText({ path: filePath });
+      text = result.value;
+    }
+    
+    const name = extractNameFromText(text);
+    const email = extractEmailFromText(text);
+    const phone = extractPhoneFromText(text);
+    
+    return { text, name, email, phone };
+  } catch (error) {
+    console.error('Error parsing file:', error);
+    throw new Error(`Failed to parse ${fileType} file`);
+  }
+}
+
+async function processBulkUpload(jobId: string): Promise<void> {
+  try {
+    const job = await storage.getBulkUploadJob(jobId);
+    if (!job) {
+      throw new Error('Job not found');
+    }
+    
+    const files = await storage.getBulkUploadFilesByJobId(jobId);
+    let processedCount = 0;
+    let successCount = 0;
+    let failedCount = 0;
+    
+    for (const file of files) {
+      try {
+        // Update file status to processing
+        await storage.updateBulkUploadFile(file.id, { 
+          status: 'processing',
+          processedAt: new Date().toISOString()
+        });
+        
+        // Parse the resume file
+        const filePath = path.join(uploadsDir, file.fileName);
+        const parsed = await parseResumeFile(filePath, file.fileType);
+        
+        // Create candidate if we have email
+        let candidateId = null;
+        if (parsed.email) {
+          try {
+            // Check if candidate with this email already exists
+            const existingCandidate = await storage.getCandidateByEmail(parsed.email);
+            
+            if (!existingCandidate) {
+              // Generate candidate ID
+              const nextCandidateId = await storage.generateNextCandidateId();
+              
+              // Create new candidate
+              const candidate = await storage.createCandidate({
+                candidateId: nextCandidateId,
+                fullName: parsed.name || 'Unknown',
+                email: parsed.email,
+                password: await bcrypt.hash('defaultPassword123', 10), // Default password
+                phone: parsed.phone,
+                createdAt: new Date().toISOString()
+              });
+              
+              candidateId = candidate.id;
+              successCount++;
+            } else {
+              candidateId = existingCandidate.id;
+              successCount++;
+            }
+          } catch (candidateError) {
+            console.error('Error creating candidate:', candidateError);
+            failedCount++;
+            
+            await storage.updateBulkUploadFile(file.id, {
+              status: 'failed',
+              errorMessage: 'Failed to create candidate profile'
+            });
+            continue;
+          }
+        }
+        
+        // Update file with extracted data
+        await storage.updateBulkUploadFile(file.id, {
+          status: parsed.email ? 'success' : 'failed',
+          candidateId,
+          parsedText: parsed.text.substring(0, 5000), // Limit text length
+          extractedName: parsed.name,
+          extractedEmail: parsed.email,
+          extractedPhone: parsed.phone,
+          errorMessage: parsed.email ? null : 'No email found in resume'
+        });
+        
+        if (!parsed.email) {
+          failedCount++;
+        }
+        
+      } catch (fileError) {
+        console.error(`Error processing file ${file.originalName}:`, fileError);
+        failedCount++;
+        
+        await storage.updateBulkUploadFile(file.id, {
+          status: 'failed',
+          errorMessage: fileError instanceof Error ? fileError.message : 'Unknown processing error'
+        });
+      }
+      
+      processedCount++;
+      
+      // Update job progress
+      await storage.updateBulkUploadJob(jobId, {
+        processedFiles: processedCount.toString(),
+        successfulFiles: successCount.toString(),
+        failedFiles: failedCount.toString()
+      });
+    }
+    
+    // Mark job as completed
+    await storage.updateBulkUploadJob(jobId, {
+      status: 'completed',
+      completedAt: new Date().toISOString()
+    });
+    
+    // Create notification for admin
+    await storage.createNotification({
+      userId: job.adminId,
+      type: 'bulk_upload_complete',
+      title: 'Bulk Resume Upload Complete',
+      message: `Processed ${processedCount} files. ${successCount} successful, ${failedCount} failed.`,
+      relatedJobId: jobId,
+      createdAt: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('Bulk upload processing error:', error);
+    
+    // Mark job as failed
+    await storage.updateBulkUploadJob(jobId, {
+      status: 'failed',
+      completedAt: new Date().toISOString()
+    });
+    
+    // Create error notification
+    const job = await storage.getBulkUploadJob(jobId);
+    if (job) {
+      await storage.createNotification({
+        userId: job.adminId,
+        type: 'bulk_upload_failed',
+        title: 'Bulk Resume Upload Failed',
+        message: `Bulk upload processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        relatedJobId: jobId,
+        createdAt: new Date().toISOString()
+      });
+    }
+  }
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Employee Authentication Routes
@@ -1290,6 +1509,184 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/auth/google/callback", async (req, res) => {
     // Placeholder for Google OAuth callback
     res.status(501).json({ message: "Google OAuth callback not yet implemented" });
+  });
+
+  // Bulk Resume Upload Endpoints
+
+  // Create a specialized bulk upload handler for multiple files
+  const bulkUpload = multer({
+    storage: multer.diskStorage({
+      destination: function (req, file, cb) {
+        cb(null, uploadsDir);
+      },
+      filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+      }
+    }),
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB limit for resumes
+      files: 1000, // Allow up to 1000 files
+    },
+    fileFilter: (req, file, cb) => {
+      // Only allow PDF and DOCX files for bulk upload
+      const allowedExtensions = /\.(pdf|docx)$/i;
+      const extname = allowedExtensions.test(file.originalname.toLowerCase());
+      
+      const allowedMimeTypes = [
+        'application/pdf',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      ];
+      const mimetype = allowedMimeTypes.includes(file.mimetype);
+      
+      if (extname && mimetype) {
+        return cb(null, true);
+      } else {
+        cb(new Error('Only PDF and DOCX files are allowed for bulk upload!'));
+      }
+    }
+  });
+
+  // Bulk resume upload endpoint
+  app.post("/api/admin/bulk-resume-upload", bulkUpload.array('resumes', 1000), async (req, res) => {
+    try {
+      const files = req.files as Express.Multer.File[];
+      
+      if (!files || files.length === 0) {
+        return res.status(400).json({ message: "No files uploaded" });
+      }
+
+      // Generate unique job ID
+      const jobId = `bulk_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      const adminId = req.body.adminId || "admin"; // In real app, get from session
+      
+      // Create bulk upload job
+      const bulkJob = await storage.createBulkUploadJob({
+        jobId,
+        adminId,
+        totalFiles: files.length.toString(),
+        createdAt: new Date().toISOString()
+      });
+
+      // Create file records for tracking
+      const filePromises = files.map(async (file) => {
+        return await storage.createBulkUploadFile({
+          jobId,
+          fileName: file.filename,
+          originalName: file.originalname,
+          fileSize: file.size.toString(),
+          fileType: file.originalname.toLowerCase().endsWith('.pdf') ? 'pdf' : 'docx',
+          resumeUrl: `/uploads/${file.filename}`
+        });
+      });
+
+      await Promise.all(filePromises);
+
+      // Start background processing (simplified - in production use proper queue)
+      processBulkUpload(jobId).catch(console.error);
+
+      res.json({
+        success: true,
+        jobId,
+        message: `${files.length} files uploaded successfully. Processing started.`,
+        totalFiles: files.length
+      });
+
+    } catch (error) {
+      console.error('Bulk upload error:', error);
+      res.status(500).json({ message: "Failed to process bulk upload" });
+    }
+  });
+
+  // Get bulk upload job status
+  app.get("/api/admin/bulk-upload-jobs/:jobId/status", async (req, res) => {
+    try {
+      const { jobId } = req.params;
+      
+      const job = await storage.getBulkUploadJob(jobId);
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+
+      const files = await storage.getBulkUploadFilesByJobId(jobId);
+      
+      res.json({
+        job,
+        files: files.map(f => ({
+          id: f.id,
+          originalName: f.originalName,
+          status: f.status,
+          errorMessage: f.errorMessage,
+          extractedName: f.extractedName,
+          extractedEmail: f.extractedEmail,
+          extractedPhone: f.extractedPhone
+        }))
+      });
+
+    } catch (error) {
+      console.error('Get job status error:', error);
+      res.status(500).json({ message: "Failed to get job status" });
+    }
+  });
+
+  // Get notifications for user
+  app.get("/api/notifications/:userId", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const notifications = await storage.getNotificationsByUserId(userId);
+      
+      res.json(notifications);
+    } catch (error) {
+      console.error('Get notifications error:', error);
+      res.status(500).json({ message: "Failed to get notifications" });
+    }
+  });
+
+  // Mark notification as read
+  app.post("/api/notifications/:id/read", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const notification = await storage.markNotificationAsRead(id);
+      
+      if (!notification) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      
+      res.json(notification);
+    } catch (error) {
+      console.error('Mark notification as read error:', error);
+      res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
+  // Get error report for failed bulk upload
+  app.get("/api/admin/bulk-upload-jobs/:jobId/error-report", async (req, res) => {
+    try {
+      const { jobId } = req.params;
+      
+      const files = await storage.getBulkUploadFilesByJobId(jobId);
+      const failedFiles = files.filter(f => f.status === 'failed');
+      
+      if (failedFiles.length === 0) {
+        return res.status(404).json({ message: "No failed files found" });
+      }
+
+      // Generate CSV content
+      const csvHeader = "File Name,Error Message,File Size,File Type\n";
+      const csvContent = failedFiles.map(f => 
+        `"${f.originalName}","${f.errorMessage}","${f.fileSize}","${f.fileType}"`
+      ).join('\n');
+      
+      const csvData = csvHeader + csvContent;
+      
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="bulk-upload-errors-${jobId}.csv"`);
+      res.send(csvData);
+      
+    } catch (error) {
+      console.error('Error report generation error:', error);
+      res.status(500).json({ message: "Failed to generate error report" });
+    }
   });
 
   const httpServer = createServer(app);

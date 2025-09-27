@@ -13,6 +13,7 @@ import AddTeamLeaderModal from '@/components/dashboard/modals/add-team-leader-mo
 import AddTalentAdvisorModal from '@/components/dashboard/modals/add-talent-advisor-modal';
 import AddRecruiterModal from '@/components/dashboard/modals/add-recruiter-modal';
 import AddTeamLeaderModalNew from '@/components/dashboard/modals/add-team-leader-modal-new';
+import BulkResumeUpload from '@/components/dashboard/bulk-resume-upload';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";

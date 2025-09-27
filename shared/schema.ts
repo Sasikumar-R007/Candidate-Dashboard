@@ -242,6 +242,51 @@ export const interviewTrackerCounts = pgTable("interview_tracker_counts", {
   updatedAt: text("updated_at"),
 });
 
+// Bulk upload tables
+export const bulkUploadJobs = pgTable("bulk_upload_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: text("job_id").notNull().unique(),
+  adminId: text("admin_id").notNull(),
+  status: text("status").notNull().default("processing"), // processing, completed, failed
+  totalFiles: text("total_files").notNull(),
+  processedFiles: text("processed_files").notNull().default("0"),
+  successfulFiles: text("successful_files").notNull().default("0"),
+  failedFiles: text("failed_files").notNull().default("0"),
+  errorReportUrl: text("error_report_url"),
+  createdAt: text("created_at").notNull(),
+  completedAt: text("completed_at"),
+});
+
+export const bulkUploadFiles = pgTable("bulk_upload_files", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: text("job_id").notNull(),
+  fileName: text("file_name").notNull(),
+  originalName: text("original_name").notNull(),
+  fileSize: text("file_size").notNull(),
+  fileType: text("file_type").notNull(), // pdf, docx
+  status: text("status").notNull().default("pending"), // pending, processing, success, failed
+  candidateId: text("candidate_id"), // Created candidate ID if successful
+  errorMessage: text("error_message"),
+  parsedText: text("parsed_text"),
+  extractedName: text("extracted_name"),
+  extractedEmail: text("extracted_email"),
+  extractedPhone: text("extracted_phone"),
+  resumeUrl: text("resume_url"),
+  processedAt: text("processed_at"),
+});
+
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  type: text("type").notNull(), // bulk_upload_complete, bulk_upload_failed, general
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  status: text("status").notNull().default("unread"), // read, unread
+  relatedJobId: text("related_job_id"), // For bulk upload notifications
+  createdAt: text("created_at").notNull(),
+  readAt: text("read_at"),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
 });
@@ -322,6 +367,18 @@ export const insertInterviewTrackerCountsSchema = createInsertSchema(interviewTr
   id: true,
 });
 
+export const insertBulkUploadJobSchema = createInsertSchema(bulkUploadJobs).omit({
+  id: true,
+});
+
+export const insertBulkUploadFileSchema = createInsertSchema(bulkUploadFiles).omit({
+  id: true,
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
@@ -362,3 +419,9 @@ export type InsertInterviewTracker = z.infer<typeof insertInterviewTrackerSchema
 export type InterviewTracker = typeof interviewTracker.$inferSelect;
 export type InsertInterviewTrackerCounts = z.infer<typeof insertInterviewTrackerCountsSchema>;
 export type InterviewTrackerCounts = typeof interviewTrackerCounts.$inferSelect;
+export type InsertBulkUploadJob = z.infer<typeof insertBulkUploadJobSchema>;
+export type BulkUploadJob = typeof bulkUploadJobs.$inferSelect;
+export type InsertBulkUploadFile = z.infer<typeof insertBulkUploadFileSchema>;
+export type BulkUploadFile = typeof bulkUploadFiles.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;

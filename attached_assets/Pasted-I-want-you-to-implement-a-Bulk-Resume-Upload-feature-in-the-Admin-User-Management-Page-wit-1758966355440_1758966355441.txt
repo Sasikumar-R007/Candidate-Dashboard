@@ -1,0 +1,56 @@
+I want you to implement a **Bulk Resume Upload** feature in the **Admin → User Management Page** with the following requirements:
+
+1. **Frontend (React + Tailwind)**
+   - Add a new section in the admin's User Management page: "Bulk Resume Upload"
+   - Use drag-and-drop file upload (react-dropzone or filepond)
+   - Support multiple file upload (500–1000 files at once)
+   - Allow only .pdf and .docx files
+   - Show a preview list of files (name + size) before uploading
+   - Show a progress bar for uploads
+   - Disable submit button until all uploads are done
+   - After submission, show a notification that files are being processed
+   - Show real-time status updates (e.g. "Processing X of Y resumes...")
+   - After processing, display:
+     - ✅ count of successfully created profiles
+     - ⚠️ count of failed ones
+     - A download link for an error report (CSV)
+
+2. **Backend (Node.js + Express)**
+   - API endpoint: POST `/api/admin/bulk-resume-upload`
+   - Accept multiple files using multer (or busboy)
+   - Upload files to cloud storage (AWS S3 or local `/uploads` for now)
+   - Add a background job (BullMQ or simple queue) to process each file asynchronously
+   - Resume Parsing:
+     - For PDF: use `pdf-parse` to extract text
+     - For DOCX: use `mammoth` to extract text
+     - Extract at least name, email, and phone using regex
+     - Save results to MongoDB as new candidate profiles
+   - If a file fails to parse, log the filename and reason
+
+3. **Notifications & Alerts**
+   - Create a simple Notification model (userId, message, status)
+   - When upload is complete, generate a notification for the admin
+   - Frontend should fetch notifications periodically and display them in a toast/alert
+
+4. **Error Handling**
+   - Return meaningful errors if:
+     - File type is invalid
+     - File size is too big
+     - Parsing fails
+   - Generate an error report CSV with failed files and reasons
+   - Send this error report link in the final API response
+
+5. **Scalability**
+   - Process files in batches/chunks to avoid server overload
+   - Make the backend endpoint respond quickly (don’t block until all resumes are processed)
+   - Return a jobId to the frontend so it can poll job status
+
+Deliver:
+- Complete React component for bulk upload (with Tailwind styling)
+- Backend route with multer setup, S3/local upload, queue processing
+- Sample regex code for extracting email, phone, and name
+- Notification model, backend routes, and frontend notification component
+- Example MongoDB schema for Candidate (name, email, phone, resumeUrl, parsedText)
+- Error handling, progress updates, and final success/failed counts
+
+Write clean, production-ready, well-commented code for all parts.
