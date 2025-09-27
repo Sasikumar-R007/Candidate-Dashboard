@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -37,24 +37,50 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
   // Form data states
   const [formData, setFormData] = useState({
     // Common fields
-    name: employee?.name || candidate?.fullName || '',
-    email: employee?.email || candidate?.email || '',
-    phone: employee?.phone || candidate?.phone || '',
+    name: '',
+    email: '',
+    phone: '',
     
     // Employee specific
-    role: employee?.role || '',
-    department: employee?.department || '',
-    employeeId: employee?.employeeId || '',
-    joiningDate: employee?.joiningDate || '',
-    reportingTo: employee?.reportingTo || '',
+    role: '',
+    department: '',
+    employeeId: '',
+    joiningDate: '',
+    reportingTo: '',
     
     // Candidate specific
-    company: candidate?.company || '',
-    designation: candidate?.designation || '',
-    location: candidate?.location || '',
-    experience: candidate?.experience || '',
-    skills: candidate?.skills || '',
+    company: '',
+    designation: '',
+    location: '',
+    experience: '',
+    skills: '',
   });
+
+  // Sync form data with auth context when user data loads
+  useEffect(() => {
+    const updatedFormData = {
+      // Common fields
+      name: employee?.name || candidate?.fullName || '',
+      email: employee?.email || candidate?.email || '',
+      phone: employee?.phone || candidate?.phone || '',
+      
+      // Employee specific
+      role: employee?.role || '',
+      department: employee?.department || '',
+      employeeId: employee?.employeeId || '',
+      joiningDate: employee?.joiningDate || '',
+      reportingTo: employee?.reportingTo || '',
+      
+      // Candidate specific
+      company: candidate?.company || '',
+      designation: candidate?.designation || '',
+      location: candidate?.location || '',
+      experience: candidate?.experience || '',
+      skills: candidate?.skills || '',
+    };
+    
+    setFormData(updatedFormData);
+  }, [employee, candidate]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));

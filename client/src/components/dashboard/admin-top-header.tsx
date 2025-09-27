@@ -1,14 +1,66 @@
 import { useState } from "react";
 import { ChevronDown, User, Settings, LogOut, HelpCircle } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth, useEmployeeAuth } from "@/contexts/auth-context";
+import { SignOutDialog } from "@/components/ui/sign-out-dialog";
+import { ProfileSettingsModal } from "@/components/dashboard/modals/profile-settings-modal";
 
 interface AdminTopHeaderProps {
-  userName: string;
-  companyName: string;
+  companyName?: string;
 }
 
-export default function AdminTopHeader({ userName = "Sasi Kumar", companyName = "Gumlat Marketing Private Limited" }: AdminTopHeaderProps) {
+export default function AdminTopHeader({ companyName = "Gumlat Marketing Private Limited" }: AdminTopHeaderProps) {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
+  const [showProfileSettings, setShowProfileSettings] = useState(false);
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const { logout } = useAuth();
+  const employee = useEmployeeAuth();
+  
+  const userName = employee?.name || "Admin User";
+  const displayCompanyName = companyName;
+  
+  // Logout mutation for employees (admin)
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/auth/employee-logout', {});
+      return await res.json();
+    },
+    onSuccess: () => {
+      logout();
+      toast({
+        title: "Logged out successfully",
+        description: "You have been signed out.",
+      });
+      navigate('/');
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Logout failed",
+        description: error.message || "Failed to logout. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const handleLogout = () => {
+    setShowUserDropdown(false);
+    setShowSignOutDialog(true);
+  };
+
+  const confirmLogout = () => {
+    logoutMutation.mutate();
+    setShowSignOutDialog(false);
+  };
+
+  const handleProfileSettings = () => {
+    setShowUserDropdown(false);
+    setShowProfileSettings(true);
+  };
 
   return (
     <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 relative z-30 sticky top-0">
@@ -59,7 +111,7 @@ export default function AdminTopHeader({ userName = "Sasi Kumar", companyName = 
                       {userName}
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                      Admin Account - {companyName}
+                      {employee?.role || "Admin"} - {displayCompanyName}
                     </div>
                   </div>
                 </div>
@@ -67,7 +119,11 @@ export default function AdminTopHeader({ userName = "Sasi Kumar", companyName = 
               
               {/* Menu Items */}
               <div className="py-2">
-                <button className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150">
+                <button 
+                  onClick={handleProfileSettings}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
+                  data-testid="button-profile-settings"
+                >
                   <User size={16} />
                   <span>Profile Settings</span>
                 </button>
@@ -79,17 +135,33 @@ export default function AdminTopHeader({ userName = "Sasi Kumar", companyName = 
                 
                 <hr className="my-2 border-gray-200 dark:border-gray-600" />
                 
-                <Link href="/" data-testid="link-logout">
-                  <button className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-150">
-                    <LogOut size={16} />
-                    <span>Sign out</span>
-                  </button>
-                </Link>
+                <button 
+                  onClick={handleLogout}
+                  disabled={logoutMutation.isPending}
+                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-150 disabled:opacity-50"
+                  data-testid="button-admin-header-logout"
+                >
+                  <LogOut size={16} />
+                  <span>{logoutMutation.isPending ? 'Signing out...' : 'Sign out'}</span>
+                </button>
               </div>
             </div>
           )}
         </div>
       </div>
+      
+      <SignOutDialog
+        open={showSignOutDialog}
+        onOpenChange={setShowSignOutDialog}
+        onConfirm={confirmLogout}
+        userName={userName}
+        isLoading={logoutMutation.isPending}
+      />
+      
+      <ProfileSettingsModal
+        open={showProfileSettings}
+        onOpenChange={setShowProfileSettings}
+      />
     </header>
   );
 }
