@@ -69,28 +69,64 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
 
   // Sync form data with auth context when user data loads
   useEffect(() => {
-    const updatedFormData = {
-      // Common fields
-      name: employee?.name || candidate?.fullName || '',
-      email: employee?.email || candidate?.email || '',
-      phone: employee?.phone || candidate?.phone || '',
+    const loadProfileData = async () => {
+      let profileData = {};
       
-      // Employee specific
-      role: employee?.role || '',
-      department: employee?.department || '',
-      employeeId: employee?.employeeId || '',
-      joiningDate: employee?.joiningDate || '',
-      reportingTo: employee?.reportingTo || '',
+      // Load role-specific profile data from API
+      if (employee?.role) {
+        try {
+          let endpoint = '';
+          switch (employee.role) {
+            case 'recruiter':
+              endpoint = '/api/recruiter/profile';
+              break;
+            case 'team_leader':
+              endpoint = '/api/team-leader/profile';
+              break;
+            case 'admin':
+              endpoint = '/api/admin/profile';
+              break;
+            case 'client':
+              endpoint = '/api/client/profile';
+              break;
+          }
+          
+          if (endpoint) {
+            const response = await fetch(endpoint);
+            if (response.ok) {
+              profileData = await response.json();
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load profile data:', error);
+        }
+      }
       
-      // Candidate specific
-      company: candidate?.company || '',
-      designation: candidate?.designation || '',
-      location: candidate?.location || '',
-      experience: candidate?.experience || '',
-      skills: candidate?.skills || '',
+      const updatedFormData = {
+        // Common fields - use API data first, then auth context as fallback
+        name: (profileData as any)?.name || employee?.name || candidate?.fullName || '',
+        email: (profileData as any)?.email || employee?.email || candidate?.email || '',
+        phone: (profileData as any)?.phone || employee?.phone || candidate?.phone || '',
+        
+        // Employee specific
+        role: (profileData as any)?.role || employee?.role || '',
+        department: (profileData as any)?.department || employee?.department || '',
+        employeeId: (profileData as any)?.employeeId || employee?.employeeId || '',
+        joiningDate: (profileData as any)?.joiningDate || employee?.joiningDate || '',
+        reportingTo: (profileData as any)?.reportingTo || employee?.reportingTo || '',
+        
+        // Candidate specific
+        company: candidate?.company || '',
+        designation: candidate?.designation || '',
+        location: candidate?.location || '',
+        experience: candidate?.experience || '',
+        skills: candidate?.skills || '',
+      };
+      
+      setFormData(updatedFormData);
     };
     
-    setFormData(updatedFormData);
+    loadProfileData();
   }, [employee, candidate]);
 
   const handleInputChange = (field: string, value: string) => {
@@ -141,7 +177,7 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email: user?.email,
+          email: employee?.email || candidate?.email,
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword,
         }),
@@ -192,11 +228,29 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
   const handleImageUpload = async (file: File, type: 'banner' | 'profile') => {
     try {
       const formData = new FormData();
-      formData.append(type === 'banner' ? 'banner' : 'profile', file);
+      formData.append('file', file);
       
-      const endpoint = user?.type === 'employee' 
-        ? `/api/upload/${type}` 
-        : `/api/upload/${type}`;
+      let endpoint = '';
+      if (user?.type === 'employee' && employee?.role) {
+        switch (employee.role) {
+          case 'recruiter':
+            endpoint = `/api/recruiter/upload/${type}`;
+            break;
+          case 'team_leader':
+            endpoint = `/api/team-leader/upload/${type}`;
+            break;
+          case 'admin':
+            endpoint = `/api/admin/upload/${type}`;
+            break;
+          case 'client':
+            endpoint = `/api/client/upload/${type}`;
+            break;
+          default:
+            endpoint = `/api/upload/${type}`;
+        }
+      } else {
+        endpoint = `/api/upload/${type}`;
+      }
       
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -235,10 +289,29 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
       if (bannerUrl) updateData.bannerImage = bannerUrl;
       if (profileUrl) updateData.profilePicture = profileUrl;
 
-      // API endpoint based on user type
-      const apiEndpoint = user?.type === 'employee' 
-        ? '/api/employee/profile' 
-        : '/api/candidate/profile';
+      // API endpoint based on user type and role
+      let apiEndpoint = '/api/profile'; // Default fallback
+      
+      if (user?.type === 'employee' && employee?.role) {
+        switch (employee.role) {
+          case 'recruiter':
+            apiEndpoint = '/api/recruiter/profile';
+            break;
+          case 'team_leader':
+            apiEndpoint = '/api/team-leader/profile';
+            break;
+          case 'admin':
+            apiEndpoint = '/api/admin/profile';
+            break;
+          case 'client':
+            apiEndpoint = '/api/client/profile';
+            break;
+          default:
+            apiEndpoint = '/api/employee/profile';
+        }
+      } else if (user?.type === 'candidate') {
+        apiEndpoint = '/api/candidate/profile';
+      }
 
       const response = await fetch(apiEndpoint, {
         method: 'PATCH',

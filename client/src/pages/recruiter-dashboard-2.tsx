@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus } from "lucide-react";
+import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
@@ -73,6 +73,58 @@ export default function RecruiterDashboard2() {
   const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
   const [reason, setReason] = useState('');
   const [requirementCountModal, setRequirementCountModal] = useState<{isOpen: boolean, requirement: any}>({isOpen: false, requirement: null});
+  
+  // New state variables for Post Jobs and Upload Resume functionality
+  const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [isUploadResumeModalOpen, setIsUploadResumeModalOpen] = useState(false);
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [resumeFormData, setResumeFormData] = useState({
+    firstName: '',
+    lastName: '',
+    mobileNumber: '',
+    whatsappNumber: '',
+    primaryEmail: '',
+    secondaryEmail: '',
+    highestQualification: '',
+    collegeName: '',
+    linkedin: '',
+    pedigreeLevel: '',
+    currentLocation: '',
+    noticePeriod: '',
+    website: '',
+    portfolio1: '',
+    currentCompany: '',
+    portfolio2: '',
+    currentRole: '',
+    portfolio3: '',
+    companyDomain: '',
+    companyLevel: '',
+    skills: ['', '', '', '', '']
+  });
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [resumeFormError, setResumeFormError] = useState('');
+  const [jobFormData, setJobFormData] = useState({
+    companyName: '',
+    companyTagline: '',
+    companyType: '',
+    market: '',
+    field: '',
+    noOfPositions: '',
+    role: '',
+    experience: '',
+    location: '',
+    workMode: '',
+    salaryPackage: '',
+    aboutCompany: '',
+    roleDefinitions: '',
+    keyResponsibility: '',
+    primarySkills: ['', '', ''],
+    secondarySkills: ['', ''],
+    knowledgeOnly: [''],
+    companyLogo: ''
+  });
   const [chatMessages, setChatMessages] = useState([
     { id: 1, sender: "Kumaravel R", message: "Good morning! Please review today's recruitment targets", time: "9:00 AM", isOwn: true },
     { id: 2, sender: "Priya", message: "Good morning sir. I've shortlisted 5 candidates for the Frontend role.", time: "9:05 AM", isOwn: false },
@@ -96,6 +148,47 @@ export default function RecruiterDashboard2() {
       setChatMessages([...chatMessages, newMsg]);
       setNewMessage("");
     }
+  };
+
+  // Form validation and handling functions for Post Jobs and Upload Resume
+  const validateForm = () => {
+    const required = ['companyName', 'experience', 'salaryPackage', 'aboutCompany', 'roleDefinitions', 'keyResponsibility'];
+    return required.every(field => jobFormData[field].trim() !== '');
+  };
+
+  const handlePostJob = () => {
+    if (!validateForm()) {
+      // Show inline error message instead of alert
+      setFormError('Please fill out all required fields');
+      return;
+    }
+    
+    setIsPostJobModalOpen(false);
+    setShowSuccessAlert(true);
+    setFormError(''); // Clear any form errors
+    setTimeout(() => setShowSuccessAlert(false), 3000);
+    
+    // Reset form
+    setJobFormData({
+      companyName: '',
+      companyTagline: '',
+      companyType: '',
+      market: '',
+      field: '',
+      noOfPositions: '',
+      role: '',
+      experience: '',
+      location: '',
+      workMode: '',
+      salaryPackage: '',
+      aboutCompany: '',
+      roleDefinitions: '',
+      keyResponsibility: '',
+      primarySkills: ['', '', ''],
+      secondarySkills: ['', ''],
+      knowledgeOnly: [''],
+      companyLogo: ''
+    });
   };
 
   // Derived values using useMemo to prevent state drift
@@ -306,6 +399,75 @@ export default function RecruiterDashboard2() {
           <div className="flex h-screen">
             {/* Main Content - Middle Section (Scrollable) */}
             <div className="px-6 py-6 space-y-6 flex-1 overflow-y-auto h-full">
+
+              {/* Success Alert */}
+              {showSuccessAlert && (
+                <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+                  Job posted successfully!
+                </div>
+              )}
+
+              {/* Three Buttons and Feature Boxes Section */}
+              <div className="mb-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h2>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => setIsPostJobModalOpen(true)}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
+                      data-testid="button-post-jobs">
+                      Post Jobs
+                    </button>
+                    <button 
+                      onClick={() => setIsUploadResumeModalOpen(true)}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
+                      data-testid="button-upload-resume">
+                      Upload Resume
+                    </button>
+                    <button 
+                      onClick={() => navigate('/source-resume')}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
+                      data-testid="button-source-resume">
+                      Source Resume
+                    </button>
+                  </div>
+                </div>
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <button
+                    onClick={() => navigate('/recruiter-active-jobs')}
+                    className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-shadow duration-300 text-left w-full"
+                    data-testid="card-active-jobs">
+                    <div className="text-center">
+                      <div className="flex justify-center mb-4">
+                        <i className="fas fa-briefcase text-2xl text-gray-600 dark:text-gray-400"></i>
+                      </div>
+                      <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Active jobs</h3>
+                      <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">12</div>
+                      <div className="inline-block bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-2 py-1 rounded font-bold">
+                        Total Jobs Posted: 25
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => navigate('/recruiter-new-applications')}
+                    className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-shadow duration-300 text-left w-full"
+                    data-testid="card-new-applications">
+                    <div className="text-center">
+                      <div className="flex justify-center mb-4">
+                        <i className="fas fa-user text-2xl text-gray-600 dark:text-gray-400"></i>
+                      </div>
+                      <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">New applications:</h3>
+                      <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">12</div>
+                      <div className="inline-block bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-2 py-1 rounded font-bold">
+                        Candidates Applied: 82
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
 
               {/* Applicant Overview Table */}
               <Card className="bg-white border border-gray-200">
@@ -1636,6 +1798,303 @@ export default function RecruiterDashboard2() {
             <div className="flex justify-end space-x-2">
               <Button variant="outline" onClick={() => setIsReasonModalOpen(false)}>Cancel</Button>
               <Button onClick={archiveCandidate} className="bg-red-600 hover:bg-red-700">Archive Candidate</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Post Job Modal */}
+      <Dialog open={isPostJobModalOpen} onOpenChange={setIsPostJobModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden">
+          <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(95vh - 4rem)' }}>
+            <DialogHeader>
+              <DialogTitle>Post Job</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4 pt-4">
+              {/* Error message */}
+              {formError && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                  {formError}
+                </div>
+              )}
+
+              {/* Company Name */}
+              <div>
+                <Label htmlFor="companyName" className="text-sm font-medium text-gray-700">Company Name *</Label>
+                <Input
+                  id="companyName"
+                  placeholder="Enter company name"
+                  value={jobFormData.companyName}
+                  onChange={(e) => setJobFormData({...jobFormData, companyName: e.target.value})}
+                  className="mt-1"
+                  data-testid="input-company-name"
+                />
+              </div>
+
+              {/* Company Tagline */}
+              <div>
+                <Label htmlFor="companyTagline" className="text-sm font-medium text-gray-700">Company Tagline</Label>
+                <Input
+                  id="companyTagline"
+                  placeholder="Enter company tagline"
+                  value={jobFormData.companyTagline}
+                  onChange={(e) => setJobFormData({...jobFormData, companyTagline: e.target.value})}
+                  className="mt-1"
+                  data-testid="input-company-tagline"
+                />
+              </div>
+
+              {/* Experience */}
+              <div>
+                <Label htmlFor="experience" className="text-sm font-medium text-gray-700">Experience *</Label>
+                <Input
+                  id="experience"
+                  placeholder="e.g., 3-5 years"
+                  value={jobFormData.experience}
+                  onChange={(e) => setJobFormData({...jobFormData, experience: e.target.value})}
+                  className="mt-1"
+                  data-testid="input-experience"
+                />
+              </div>
+
+              {/* Salary Package */}
+              <div>
+                <Label htmlFor="salaryPackage" className="text-sm font-medium text-gray-700">Salary Package *</Label>
+                <Input
+                  id="salaryPackage"
+                  placeholder="e.g., 10-15 LPA"
+                  value={jobFormData.salaryPackage}
+                  onChange={(e) => setJobFormData({...jobFormData, salaryPackage: e.target.value})}
+                  className="mt-1"
+                  data-testid="input-salary-package"
+                />
+              </div>
+
+              {/* About Company */}
+              <div>
+                <Label htmlFor="aboutCompany" className="text-sm font-medium text-gray-700">About Company *</Label>
+                <textarea
+                  id="aboutCompany"
+                  placeholder="Describe the company..."
+                  value={jobFormData.aboutCompany}
+                  onChange={(e) => setJobFormData({...jobFormData, aboutCompany: e.target.value})}
+                  className="mt-1 w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                  data-testid="textarea-about-company"
+                />
+              </div>
+
+              {/* Role Definitions */}
+              <div>
+                <Label htmlFor="roleDefinitions" className="text-sm font-medium text-gray-700">Role Definitions *</Label>
+                <textarea
+                  id="roleDefinitions"
+                  placeholder="Define the role responsibilities..."
+                  value={jobFormData.roleDefinitions}
+                  onChange={(e) => setJobFormData({...jobFormData, roleDefinitions: e.target.value})}
+                  className="mt-1 w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                  data-testid="textarea-role-definitions"
+                />
+              </div>
+
+              {/* Key Responsibility */}
+              <div>
+                <Label htmlFor="keyResponsibility" className="text-sm font-medium text-gray-700">Key Responsibility *</Label>
+                <textarea
+                  id="keyResponsibility"
+                  placeholder="List key responsibilities..."
+                  value={jobFormData.keyResponsibility}
+                  onChange={(e) => setJobFormData({...jobFormData, keyResponsibility: e.target.value})}
+                  className="mt-1 w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  rows={3}
+                  data-testid="textarea-key-responsibility"
+                />
+              </div>
+
+              {/* Primary Skills */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Primary Skills</Label>
+                <div className="space-y-2">
+                  {jobFormData.primarySkills.map((skill, index) => (
+                    <Input
+                      key={index}
+                      placeholder={`Primary skill ${index + 1}`}
+                      value={skill}
+                      onChange={(e) => {
+                        const newSkills = [...jobFormData.primarySkills];
+                        newSkills[index] = e.target.value;
+                        setJobFormData({...jobFormData, primarySkills: newSkills});
+                      }}
+                      className="mt-1"
+                      data-testid={`input-primary-skill-${index}`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  onClick={handlePostJob}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  data-testid="button-submit-job"
+                >
+                  Post Job
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsPostJobModalOpen(false)}
+                  data-testid="button-cancel-job"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Upload Resume Modal */}
+      <Dialog open={isUploadResumeModalOpen} onOpenChange={setIsUploadResumeModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden">
+          <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(95vh - 4rem)' }}>
+            <DialogHeader>
+              <DialogTitle>Upload Resume</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4 pt-4">
+              {/* Error message */}
+              {resumeFormError && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                  {resumeFormError}
+                </div>
+              )}
+
+              {/* Personal Details */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">First Name</Label>
+                  <Input
+                    id="firstName"
+                    placeholder="Enter first name"
+                    value={resumeFormData.firstName}
+                    onChange={(e) => setResumeFormData({...resumeFormData, firstName: e.target.value})}
+                    className="mt-1"
+                    data-testid="input-first-name"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    placeholder="Enter last name"
+                    value={resumeFormData.lastName}
+                    onChange={(e) => setResumeFormData({...resumeFormData, lastName: e.target.value})}
+                    className="mt-1"
+                    data-testid="input-last-name"
+                  />
+                </div>
+              </div>
+
+              {/* Contact Details */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="mobileNumber" className="text-sm font-medium text-gray-700">Mobile Number</Label>
+                  <Input
+                    id="mobileNumber"
+                    placeholder="Enter mobile number"
+                    value={resumeFormData.mobileNumber}
+                    onChange={(e) => setResumeFormData({...resumeFormData, mobileNumber: e.target.value})}
+                    className="mt-1"
+                    data-testid="input-mobile-number"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="primaryEmail" className="text-sm font-medium text-gray-700">Primary Email</Label>
+                  <Input
+                    id="primaryEmail"
+                    type="email"
+                    placeholder="Enter primary email"
+                    value={resumeFormData.primaryEmail}
+                    onChange={(e) => setResumeFormData({...resumeFormData, primaryEmail: e.target.value})}
+                    className="mt-1"
+                    data-testid="input-primary-email"
+                  />
+                </div>
+              </div>
+
+              {/* Resume Upload */}
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Upload Resume (PDF/Image)</p>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                  <div className="flex flex-col items-center">
+                    <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-600 mb-2">Choose File Drag File</p>
+                    {resumeFile && (
+                      <p className="text-sm text-green-600">{resumeFile.name}</p>
+                    )}
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
+                      className="hidden"
+                      id="resume-upload"
+                      data-testid="input-resume-file"
+                    />
+                    <label
+                      htmlFor="resume-upload"
+                      className="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm cursor-pointer hover:bg-blue-700"
+                    >
+                      Choose File
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Skills */}
+              <div>
+                <Label className="text-sm font-medium text-gray-700">Skills</Label>
+                <div className="space-y-2">
+                  {resumeFormData.skills.map((skill, index) => (
+                    <Input
+                      key={index}
+                      placeholder={`Skill ${index + 1}`}
+                      value={skill}
+                      onChange={(e) => {
+                        const newSkills = [...resumeFormData.skills];
+                        newSkills[index] = e.target.value;
+                        setResumeFormData({...resumeFormData, skills: newSkills});
+                      }}
+                      className="mt-1"
+                      data-testid={`input-skill-${index}`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  onClick={() => {
+                    setIsUploadResumeModalOpen(false);
+                    setShowSuccessAlert(true);
+                    setTimeout(() => setShowSuccessAlert(false), 3000);
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700"
+                  data-testid="button-submit-resume"
+                >
+                  Upload Resume
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsUploadResumeModalOpen(false)}
+                  data-testid="button-cancel-resume"
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronDown, User, Settings, LogOut, HelpCircle } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
@@ -16,12 +16,50 @@ export default function AdminTopHeader({ companyName = "Gumlat Marketing Private
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
+  const [profileData, setProfileData] = useState<any>(null);
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { logout } = useAuth();
   const employee = useEmployeeAuth();
   
-  const userName = employee?.name || "Admin User";
+  // Load role-specific profile data
+  useEffect(() => {
+    const loadProfileData = async () => {
+      if (!employee?.role) return;
+      
+      try {
+        let endpoint = '';
+        switch (employee.role) {
+          case 'recruiter':
+            endpoint = '/api/recruiter/profile';
+            break;
+          case 'team_leader':
+            endpoint = '/api/team-leader/profile';
+            break;
+          case 'admin':
+            endpoint = '/api/admin/profile';
+            break;
+          case 'client':
+            endpoint = '/api/client/profile';
+            break;
+        }
+        
+        if (endpoint) {
+          const response = await fetch(endpoint);
+          if (response.ok) {
+            const data = await response.json();
+            setProfileData(data);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load profile data:', error);
+      }
+    };
+    
+    loadProfileData();
+  }, [employee?.role]);
+  
+  const userName = profileData?.name || employee?.name || "Admin User";
   const displayCompanyName = companyName;
   
   // Logout mutation for employees (admin)
@@ -90,7 +128,7 @@ export default function AdminTopHeader({ companyName = "Gumlat Marketing Private
             data-testid="button-user-dropdown"
           >
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white text-sm font-medium">
-              {userName.split(' ').map(n => n[0]).join('').toUpperCase()}
+              {userName.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
             </div>
             <span className="text-sm font-medium">{userName}</span>
             <ChevronDown 
@@ -106,7 +144,7 @@ export default function AdminTopHeader({ companyName = "Gumlat Marketing Private
               <div className="px-4 pb-4 border-b border-gray-200 dark:border-gray-600">
                 <div className="flex items-center space-x-4">
                   <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white text-xl font-medium flex-shrink-0">
-                    {userName.split(' ').map(n => n[0]).join('').toUpperCase()}
+                    {userName.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">
