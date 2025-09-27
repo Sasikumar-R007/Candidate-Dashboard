@@ -37,7 +37,7 @@ import {
   candidates,
   candidateLoginAttempts
 } from "@shared/schema";
-import { db } from "./db";
+// import { db } from "./db"; // Commented out since we're using MemStorage
 import { eq, and, desc } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import type { IStorage } from "./storage";
