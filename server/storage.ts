@@ -26,7 +26,7 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
-import { DatabaseStorage } from "./database-storage";
+// import { DatabaseStorage } from "./database-storage"; // Commented out since we're using MemStorage
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
