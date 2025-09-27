@@ -355,6 +355,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Temporary seed endpoint to initialize sample employees for testing
+  app.post("/api/seed-employees", async (req, res) => {
+    try {
+      // Check if employees already exist
+      const existingEmployees = await storage.getAllEmployees();
+      if (existingEmployees.length > 0) {
+        return res.json({ message: "Employees already exist", count: existingEmployees.length });
+      }
+
+      // Create sample employees
+      const currentTimestamp = new Date().toISOString();
+      const sampleEmployees = [
+        {
+          employeeId: "STTA001",
+          name: "Ram Kumar",
+          email: "ram@gmail.com", 
+          password: "ram123",
+          role: "recruiter",
+          age: "28",
+          phone: "9876543210",
+          department: "Talent Acquisition",
+          joiningDate: "2024-01-15",
+          reportingTo: "Team Lead",
+          createdAt: currentTimestamp
+        },
+        {
+          employeeId: "STTL001",
+          name: "Priya Sharma",
+          email: "priya@gmail.com",
+          password: "priya123", 
+          role: "team_leader",
+          age: "32",
+          phone: "9876543211",
+          department: "Talent Acquisition",
+          joiningDate: "2023-06-10",
+          reportingTo: "Admin",
+          createdAt: currentTimestamp
+        },
+        {
+          employeeId: "STCL001",
+          name: "Arjun Patel",
+          email: "arjun@gmail.com",
+          password: "arjun123",
+          role: "client",
+          age: "35", 
+          phone: "9876543212",
+          department: "Client Relations",
+          joiningDate: "2023-03-20",
+          reportingTo: "Admin",
+          createdAt: currentTimestamp
+        },
+        {
+          employeeId: "ADMIN",
+          name: "Admin User",
+          email: "admin@gmail.com",
+          password: "admin123",
+          role: "admin",
+          age: "40",
+          phone: "9876543213", 
+          department: "Administration",
+          joiningDate: "2022-01-01",
+          reportingTo: "CEO",
+          createdAt: currentTimestamp
+        }
+      ];
+
+      const createdEmployees = [];
+      for (const emp of sampleEmployees) {
+        const employee = await storage.createEmployee(emp);
+        createdEmployees.push({ id: employee.id, name: employee.name, email: employee.email, role: employee.role });
+      }
+
+      res.json({ 
+        message: "Sample employees created successfully", 
+        employees: createdEmployees 
+      });
+    } catch (error) {
+      console.error('Seed employees error:', error);
+      res.status(500).json({ message: "Failed to create sample employees", error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
   // NOTE: Admin endpoints disabled for security - require proper authentication before enabling
 
   // Get current user profile (demo user)
