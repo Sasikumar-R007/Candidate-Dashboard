@@ -69,6 +69,7 @@ export interface IStorage {
   getAllEmployees(): Promise<Employee[]>;
   updateEmployee(id: string, updates: Partial<Employee>): Promise<Employee | undefined>;
   deleteEmployee(id: string): Promise<boolean>;
+  updateEmployeePassword(email: string, newPasswordHash: string): Promise<boolean>;
   
   // Candidate methods
   getCandidateByEmail(email: string): Promise<Candidate | undefined>;
@@ -78,6 +79,7 @@ export interface IStorage {
   updateCandidate(id: string, updates: Partial<Candidate>): Promise<Candidate | undefined>;
   deleteCandidate(id: string): Promise<boolean>;
   generateNextCandidateId(): Promise<string>;
+  updateCandidatePassword(email: string, newPasswordHash: string): Promise<boolean>;
   
   // Login attempt tracking methods
   getLoginAttempts(email: string): Promise<CandidateLoginAttempts | undefined>;
@@ -799,6 +801,28 @@ export class MemStorage implements IStorage {
     }
     
     return false;
+  }
+
+  async updateEmployeePassword(email: string, newPasswordHash: string): Promise<boolean> {
+    // Find employee by email
+    const employee = Array.from(this.employees.values()).find(emp => emp.email === email);
+    if (!employee) return false;
+    
+    // Update password
+    const updated: Employee = { ...employee, password: newPasswordHash };
+    this.employees.set(employee.id, updated);
+    return true;
+  }
+
+  async updateCandidatePassword(email: string, newPasswordHash: string): Promise<boolean> {
+    // Find candidate by email
+    const candidate = Array.from(this.candidates.values()).find(cand => cand.email === email);
+    if (!candidate) return false;
+    
+    // Update password
+    const updated: Candidate = { ...candidate, password: newPasswordHash };
+    this.candidates.set(candidate.id, updated);
+    return true;
   }
 }
 

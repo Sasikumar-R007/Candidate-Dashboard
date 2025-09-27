@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/theme-context';
+import { useEmployeeAuth } from '@/contexts/auth-context';
 import FileUploadModal from './modals/file-upload-modal';
-import TeamLeaderEditProfileModal from './modals/team-leader-edit-profile-modal';
+import { ProfileSettingsModal } from './modals/profile-settings-modal';
 
 interface TeamLeaderProfile {
   name: string;
@@ -31,6 +32,7 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentProfile, setCurrentProfile] = useState(profile);
+  const employee = useEmployeeAuth();
   
   const { isDarkMode, toggleTheme } = useTheme();
 
@@ -128,6 +130,26 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
   const handleProfileSave = (updatedProfile: any) => {
     setCurrentProfile(updatedProfile);
     // TODO: Send updated profile to API
+  };
+
+  // Use employee data from auth context for most current info, fallback to props/local state for images and team-specific data
+  const displayProfile = {
+    name: employee?.name || profile.name,
+    role: employee?.role || profile.role,
+    employeeId: employee?.employeeId || profile.employeeId,
+    phone: employee?.phone || profile.phone,
+    email: employee?.email || profile.email,
+    joiningDate: employee?.joiningDate || profile.joiningDate,
+    department: employee?.department || profile.department,
+    reportingTo: employee?.reportingTo || profile.reportingTo,
+    totalContribution: profile.totalContribution,
+    bannerImage: currentProfile?.bannerImage || profile.bannerImage,
+    profilePicture: currentProfile?.profilePicture || profile.profilePicture,
+    // Team leader specific fields
+    members: profile.members,
+    tenure: profile.tenure,
+    qtrsAchieved: profile.qtrsAchieved,
+    nextMilestone: profile.nextMilestone,
   };
 
   return (
@@ -258,11 +280,9 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
         isUploading={false}
       />
 
-      <TeamLeaderEditProfileModal
+      <ProfileSettingsModal
         open={showEditModal}
         onOpenChange={setShowEditModal}
-        profile={currentProfile}
-        onSave={handleProfileSave}
       />
     </div>
   );

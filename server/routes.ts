@@ -330,6 +330,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Password change endpoints
+  app.post("/api/employee/change-password", async (req, res) => {
+    try {
+      const { email, currentPassword, newPassword } = req.body;
+      
+      if (!email || !currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Email, current password and new password are required" });
+      }
+      
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "New password must be at least 6 characters long" });
+      }
+      
+      // Find employee by email
+      const employee = await storage.getEmployeeByEmail(email);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      
+      // Verify current password
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, employee.password);
+      if (!isCurrentPasswordValid) {
+        return res.status(401).json({ message: "Current password is incorrect" });
+      }
+      
+      // Hash new password
+      const saltRounds = 10;
+      const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
+      
+      // Update password in storage
+      const updateSuccess = await storage.updateEmployeePassword(email, hashedNewPassword);
+      if (!updateSuccess) {
+        return res.status(500).json({ message: "Failed to update password" });
+      }
+      
+      res.json({
+        success: true,
+        message: "Password changed successfully"
+      });
+    } catch (error) {
+      console.error('Employee password change error:', error);
+      res.status(500).json({ message: "Password change failed" });
+    }
+  });
+
+  app.post("/api/candidate/change-password", async (req, res) => {
+    try {
+      const { email, currentPassword, newPassword } = req.body;
+      
+      if (!email || !currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Email, current password and new password are required" });
+      }
+      
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: "New password must be at least 6 characters long" });
+      }
+      
+      // Find candidate by email
+      const candidate = await storage.getCandidateByEmail(email);
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+      
+      // Verify current password
+      const isCurrentPasswordValid = await bcrypt.compare(currentPassword, candidate.password);
+      if (!isCurrentPasswordValid) {
+        return res.status(401).json({ message: "Current password is incorrect" });
+      }
+      
+      // Hash new password
+      const saltRounds = 10;
+      const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
+      
+      // Update password in storage
+      const updateSuccess = await storage.updateCandidatePassword(email, hashedNewPassword);
+      if (!updateSuccess) {
+        return res.status(500).json({ message: "Failed to update password" });
+      }
+      
+      res.json({
+        success: true,
+        message: "Password changed successfully"
+      });
+    } catch (error) {
+      console.error('Candidate password change error:', error);
+      res.status(500).json({ message: "Password change failed" });
+    }
+  });
+
   // Logout endpoints
   app.post("/api/auth/candidate-logout", async (req, res) => {
     try {

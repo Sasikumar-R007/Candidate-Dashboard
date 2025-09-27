@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, Upload, User, Contact, Briefcase, Award, Shield, X } from "lucide-react";
+import { Camera, Upload, User, Contact, Briefcase, Award, Shield, X, Lock, Eye, EyeOff } from "lucide-react";
 import { useAuth, useEmployeeAuth, useCandidateAuth } from "@/contexts/auth-context";
 import type { Employee, Candidate } from '@shared/schema';
 
@@ -33,6 +33,17 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
   const [profileFile, setProfileFile] = useState<File | null>(null);
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [profilePreview, setProfilePreview] = useState<string | null>(null);
+  
+  // Password change states
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   
   // Form data states
   const [formData, setFormData] = useState({
@@ -84,6 +95,83 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handlePasswordChange = (field: string, value: string) => {
+    setPasswordData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handlePasswordSave = async () => {
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all password fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast({
+        title: "Password Mismatch",
+        description: "New password and confirm password do not match.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      toast({
+        title: "Password Too Short",
+        description: "New password must be at least 6 characters long.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const endpoint = user?.type === 'employee' 
+        ? '/api/employee/change-password' 
+        : '/api/candidate/change-password';
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: user?.email,
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to change password');
+      }
+
+      toast({
+        title: "Password Changed",
+        description: "Your password has been updated successfully.",
+      });
+
+      // Clear password fields
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (error: any) {
+      toast({
+        title: "Password Change Failed",
+        description: error.message || "Failed to change password. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const handleFileSelect = (type: 'banner' | 'profile', file: File) => {
@@ -218,7 +306,7 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
 
         <div className="mt-6">
           <Tabs defaultValue="basic" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="basic" className="flex items-center gap-2">
                 <User className="h-4 w-4" />
                 Basic Info
@@ -234,6 +322,10 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
               <TabsTrigger value="work" className="flex items-center gap-2">
                 {user?.type === 'employee' ? <Briefcase className="h-4 w-4" /> : <Award className="h-4 w-4" />}
                 {user?.type === 'employee' ? 'Work Details' : 'Experience'}
+              </TabsTrigger>
+              <TabsTrigger value="security" className="flex items-center gap-2">
+                <Lock className="h-4 w-4" />
+                Security
               </TabsTrigger>
             </TabsList>
 
@@ -520,6 +612,118 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
                       </div>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="security" className="mt-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Lock className="h-5 w-5" />
+                    Password & Security
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="currentPassword">Current Password</Label>
+                      <div className="relative">
+                        <Input
+                          id="currentPassword"
+                          type={showCurrentPassword ? "text" : "password"}
+                          value={passwordData.currentPassword}
+                          onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
+                          placeholder="Enter your current password"
+                          data-testid="input-current-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                          data-testid="button-toggle-current-password"
+                        >
+                          {showCurrentPassword ? (
+                            <EyeOff className="h-4 w-4 text-gray-400" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-gray-400" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="newPassword">New Password</Label>
+                      <div className="relative">
+                        <Input
+                          id="newPassword"
+                          type={showNewPassword ? "text" : "password"}
+                          value={passwordData.newPassword}
+                          onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
+                          placeholder="Enter your new password"
+                          data-testid="input-new-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                          data-testid="button-toggle-new-password"
+                        >
+                          {showNewPassword ? (
+                            <EyeOff className="h-4 w-4 text-gray-400" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-gray-400" />
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        Password must be at least 6 characters long
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                      <div className="relative">
+                        <Input
+                          id="confirmPassword"
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={passwordData.confirmPassword}
+                          onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
+                          placeholder="Confirm your new password"
+                          data-testid="input-confirm-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                          data-testid="button-toggle-confirm-password"
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="h-4 w-4 text-gray-400" />
+                          ) : (
+                            <Eye className="h-4 w-4 text-gray-400" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="pt-4">
+                      <Button 
+                        onClick={handlePasswordSave} 
+                        disabled={isChangingPassword || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
+                        data-testid="button-change-password"
+                      >
+                        {isChangingPassword ? (
+                          <>
+                            <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
+                            Changing Password...
+                          </>
+                        ) : (
+                          'Change Password'
+                        )}
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>

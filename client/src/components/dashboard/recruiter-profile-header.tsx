@@ -3,8 +3,9 @@ import { Button } from '@/components/ui/button';
 import { useTheme } from '@/contexts/theme-context';
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from '@tanstack/react-query';
+import { useEmployeeAuth } from '@/contexts/auth-context';
 import FileUploadModal from './modals/file-upload-modal';
-import TeamLeaderEditProfileModal from './modals/team-leader-edit-profile-modal';
+import { ProfileSettingsModal } from './modals/profile-settings-modal';
 
 interface RecruiterProfile {
   id: string;
@@ -34,6 +35,7 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
   const [isProfileUploading, setIsProfileUploading] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const employee = useEmployeeAuth();
   
   const { isDarkMode, toggleTheme } = useTheme();
 
@@ -147,7 +149,21 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
     }
   };
 
-  const displayProfile = currentProfile || profile;
+  // Use employee data from auth context for most current info, fallback to props/local state for images
+  const displayProfile = {
+    id: employee?.id || profile.id,
+    name: employee?.name || profile.name,
+    role: employee?.role || profile.role,
+    employeeId: employee?.employeeId || profile.employeeId,
+    phone: employee?.phone || profile.phone,
+    email: employee?.email || profile.email,
+    joiningDate: employee?.joiningDate || profile.joiningDate,
+    department: employee?.department || profile.department,
+    reportingTo: employee?.reportingTo || profile.reportingTo,
+    totalContribution: profile.totalContribution, // This is specific to recruiter and not in employee auth
+    bannerImage: currentProfile?.bannerImage || profile.bannerImage,
+    profilePicture: currentProfile?.profilePicture || profile.profilePicture,
+  };
 
   return (
     <div className="relative">
@@ -311,10 +327,9 @@ export default function RecruiterProfileHeader({ profile }: RecruiterProfileHead
         isUploading={isProfileUploading}
       />
 
-      <TeamLeaderEditProfileModal
+      <ProfileSettingsModal
         open={showEditModal}
         onOpenChange={setShowEditModal}
-        profile={displayProfile}
       />
     </div>
   );
