@@ -41,11 +41,13 @@ export default function SimpleClientHeader({
       navigate('/');
     },
     onError: (error: any) => {
+      // Even if API fails, clear the session to ensure user is logged out
+      logout();
       toast({
-        title: "Logout failed",
-        description: error.message || "Failed to logout. Please try again.",
-        variant: "destructive"
+        title: "Logged out",
+        description: "You have been signed out (session cleared locally).",
       });
+      navigate('/');
     }
   });
 
@@ -62,6 +64,11 @@ export default function SimpleClientHeader({
   const handleProfileSettings = () => {
     setShowUserDropdown(false);
     setShowProfileSettings(true);
+  };
+
+  const handleAccountSettings = () => {
+    setShowUserDropdown(false);
+    setShowProfileSettings(true); // For now, account settings opens the same modal
   };
   return (
     <div className="bg-white border-b border-gray-200 px-6 py-4">
@@ -130,7 +137,11 @@ export default function SimpleClientHeader({
                     <span>Profile Settings</span>
                   </button>
                   
-                  <button className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150">
+                  <button 
+                    onClick={handleAccountSettings}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
+                    data-testid="button-candidate-account-settings"
+                  >
                     <Settings size={16} />
                     <span>Account Settings</span>
                   </button>

@@ -39,11 +39,13 @@ export default function AdminTopHeader({ companyName = "Gumlat Marketing Private
       navigate('/');
     },
     onError: (error: any) => {
+      // Even if API fails, clear the session to ensure user is logged out
+      logout();
       toast({
-        title: "Logout failed",
-        description: error.message || "Failed to logout. Please try again.",
-        variant: "destructive"
+        title: "Logged out",
+        description: "You have been signed out (session cleared locally).",
       });
+      navigate('/');
     }
   });
 
@@ -128,10 +130,13 @@ export default function AdminTopHeader({ companyName = "Gumlat Marketing Private
                   <span>Profile Settings</span>
                 </button>
                 
-                <button className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150">
-                  <Settings size={16} />
-                  <span>Admin Settings</span>
-                </button>
+                {/* Only show Admin Settings for admin users */}
+                {employee?.role === 'admin' && (
+                  <button className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150">
+                    <Settings size={16} />
+                    <span>Admin Settings</span>
+                  </button>
+                )}
                 
                 <hr className="my-2 border-gray-200 dark:border-gray-600" />
                 

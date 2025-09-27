@@ -779,8 +779,21 @@ export default function AdminDashboard() {
                     <span className="text-sm text-gray-600 dark:text-gray-400">Romania</span>
                   </div>
                 </div>
-                <div className="h-16 bg-gray-100 dark:bg-gray-800 rounded mt-2 flex items-center justify-center">
-                  <img src="/src/assets/sample-graph.png" alt="Performance Chart" className="h-full w-full object-contain" />
+                <div className="h-16 mt-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={[
+                      { month: 'Jan', performance: 65 },
+                      { month: 'Feb', performance: 78 },
+                      { month: 'Mar', performance: 85 },
+                      { month: 'Apr', performance: 72 },
+                      { month: 'May', performance: 90 },
+                      { month: 'Jun', performance: 88 }
+                    ]}>
+                      <Line type="monotone" dataKey="performance" stroke="#8884d8" strokeWidth={2} dot={false} />
+                      <XAxis dataKey="month" hide />
+                      <YAxis hide />
+                    </LineChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             </div>

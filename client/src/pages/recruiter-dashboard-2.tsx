@@ -17,6 +17,7 @@ import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus } from "luc
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 
 export default function RecruiterDashboard2() {
   const [, navigate] = useLocation();
@@ -490,15 +491,20 @@ export default function RecruiterDashboard2() {
                         </Button>
                       </div>
                       <div className="h-24 flex items-center justify-center">
-                        {/* Simple line chart placeholder */}
-                        <div className="w-full h-16 bg-gray-100 rounded flex items-end justify-around px-4">
-                          <div className="w-1 bg-orange-400 rounded" style={{height: '30%'}}></div>
-                          <div className="w-1 bg-orange-400 rounded" style={{height: '45%'}}></div>
-                          <div className="w-1 bg-orange-400 rounded" style={{height: '60%'}}></div>
-                          <div className="w-1 bg-orange-400 rounded" style={{height: '55%'}}></div>
-                          <div className="w-1 bg-orange-400 rounded" style={{height: '70%'}}></div>
-                          <div className="w-1 bg-orange-400 rounded" style={{height: '40%'}}></div>
-                        </div>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={[
+                            { day: 'Mon', performance: 30 },
+                            { day: 'Tue', performance: 45 },
+                            { day: 'Wed', performance: 60 },
+                            { day: 'Thu', performance: 55 },
+                            { day: 'Fri', performance: 70 },
+                            { day: 'Sat', performance: 40 }
+                          ]}>
+                            <XAxis dataKey="day" hide />
+                            <YAxis hide />
+                            <Line type="monotone" dataKey="performance" stroke="#FB923C" strokeWidth={2} dot={false} />
+                          </LineChart>
+                        </ResponsiveContainer>
                       </div>
                     </div>
                   </div>

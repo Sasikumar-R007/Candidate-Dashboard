@@ -13,6 +13,7 @@ import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, 
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import SimpleClientHeader from '@/components/dashboard/simple-client-header';
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 
 interface ChatUser {
   id: number;
@@ -857,22 +858,24 @@ export default function ClientDashboard() {
               {/* First Chart Area */}
               <div className="space-y-4">
                 <div className="h-48 bg-blue-50 border border-blue-100 rounded-lg p-4">
-                  <div className="h-full flex items-center justify-center relative">
-                    {/* Sample line chart visualization */}
-                    <svg width="280" height="160" className="absolute">
-                      <defs>
-                        <linearGradient id="blueGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.3"/>
-                          <stop offset="100%" stopColor="#3B82F6" stopOpacity="0.1"/>
-                        </linearGradient>
-                      </defs>
-                      <path d="M20,120 L60,80 L100,100 L140,60 L180,90 L220,70 L260,50" 
-                            stroke="#3B82F6" strokeWidth="2" fill="none"/>
-                      <path d="M20,140 L60,110 L100,130 L140,90 L180,120 L220,100 L260,80" 
-                            stroke="#EF4444" strokeWidth="2" fill="none"/>
-                      <path d="M20,130 L60,95 L100,115 L140,75 L180,105 L220,85 L260,65" 
-                            stroke="#10B981" strokeWidth="2" fill="none"/>
-                    </svg>
+                  <div className="h-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={[
+                        { day: 'Mon', applications: 65, interviews: 45, offers: 32 },
+                        { day: 'Tue', applications: 78, interviews: 52, offers: 35 },
+                        { day: 'Wed', applications: 85, interviews: 58, offers: 42 },
+                        { day: 'Thu', applications: 72, interviews: 48, offers: 38 },
+                        { day: 'Fri', applications: 90, interviews: 65, offers: 45 },
+                        { day: 'Sat', applications: 88, interviews: 62, offers: 41 },
+                        { day: 'Sun', applications: 95, interviews: 68, offers: 48 }
+                      ]}>
+                        <XAxis dataKey="day" hide />
+                        <YAxis hide />
+                        <Line type="monotone" dataKey="applications" stroke="#3B82F6" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="interviews" stroke="#EF4444" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="offers" stroke="#10B981" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
               </div>
@@ -880,22 +883,24 @@ export default function ClientDashboard() {
               {/* Second Chart Area */}
               <div className="space-y-4">
                 <div className="h-48 bg-green-50 border border-green-100 rounded-lg p-4">
-                  <div className="h-full flex items-center justify-center relative">
-                    {/* Sample line chart visualization */}
-                    <svg width="280" height="160" className="absolute">
-                      <defs>
-                        <linearGradient id="greenGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                          <stop offset="0%" stopColor="#10B981" stopOpacity="0.3"/>
-                          <stop offset="100%" stopColor="#10B981" stopOpacity="0.1"/>
-                        </linearGradient>
-                      </defs>
-                      <path d="M20,100 L60,70 L100,85 L140,50 L180,75 L220,60 L260,45" 
-                            stroke="#10B981" strokeWidth="2" fill="none"/>
-                      <path d="M20,120 L60,90 L100,105 L140,70 L180,95 L220,80 L260,65" 
-                            stroke="#F59E0B" strokeWidth="2" fill="none"/>
-                      <path d="M20,110 L60,80 L100,95 L140,60 L180,85 L220,70 L260,55" 
-                            stroke="#EF4444" strokeWidth="2" fill="none"/>
-                    </svg>
+                  <div className="h-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={[
+                        { week: 'W1', hired: 55, pending: 40, rejected: 25 },
+                        { week: 'W2', hired: 70, pending: 50, rejected: 30 },
+                        { week: 'W3', hired: 85, pending: 60, rejected: 35 },
+                        { week: 'W4', hired: 95, pending: 70, rejected: 40 },
+                        { week: 'W5', hired: 75, pending: 55, rejected: 32 },
+                        { week: 'W6', hired: 90, pending: 65, rejected: 38 },
+                        { week: 'W7', hired: 105, pending: 75, retired: 45 }
+                      ]}>
+                        <XAxis dataKey="week" hide />
+                        <YAxis hide />
+                        <Line type="monotone" dataKey="hired" stroke="#10B981" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="pending" stroke="#F59E0B" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="rejected" stroke="#EF4444" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
               </div>
