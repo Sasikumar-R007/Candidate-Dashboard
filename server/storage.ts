@@ -802,4 +802,5 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Switch to database storage now that database is provisioned
+export const storage = new DatabaseStorage();
