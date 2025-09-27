@@ -7,7 +7,7 @@ import { z } from "zod";
 import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
-import pdfParse from "pdf-parse";
+// import pdfParse from "pdf-parse"; // Use dynamic import to avoid initialization issues
 import mammoth from "mammoth";
 
 // Ensure uploads directory exists
@@ -140,6 +140,7 @@ async function parseResumeFile(filePath: string, fileType: string): Promise<{
     
     if (fileType === 'pdf') {
       const dataBuffer = fs.readFileSync(filePath);
+      const pdfParse = (await import('pdf-parse')).default;
       const pdfData = await pdfParse(dataBuffer);
       text = pdfData.text;
     } else if (fileType === 'docx') {
