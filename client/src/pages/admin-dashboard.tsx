@@ -1503,7 +1503,12 @@ export default function AdminDashboard() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Resume Database</CardTitle>
-                <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">View Full Database</Button>
+                <Button 
+                  className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={() => navigate('/master-database')}
+                >
+                  View Full Database
+                </Button>
               </CardHeader>
               <CardContent>
                 {/* Summary Cards */}

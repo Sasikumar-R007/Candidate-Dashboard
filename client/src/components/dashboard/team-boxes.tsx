@@ -36,22 +36,22 @@ export default function TeamBoxes() {
               <img 
                 src={team.image} 
                 alt={team.name}
-                className="w-12 h-12 rounded-full object-cover"
+                className="w-12 h-12 object-cover"
               />
             </div>
             
             <div className="grid grid-cols-4 gap-4">
-              <div className="text-center">
+              <div className="text-center border-r border-gray-200">
                 <p className="text-xs font-medium text-red-500 mb-1">Members</p>
                 <p className="text-xl font-bold text-gray-900">{team.members}</p>
               </div>
-              <div className="text-center">
+              <div className="text-center border-r border-gray-200">
                 <p className="text-xs font-medium text-blue-500 mb-1">Tenure</p>
                 <p className="text-xl font-bold text-gray-900">
                   {team.tenure} <span className="text-sm text-gray-500">years</span>
                 </p>
               </div>
-              <div className="text-center">
+              <div className="text-center border-r border-gray-200">
                 <p className="text-xs font-medium text-green-500 mb-1">Qtrs Achieved</p>
                 <p className="text-xl font-bold text-gray-900">{team.qtrsAchieved}</p>
               </div>
