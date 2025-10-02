@@ -1302,6 +1302,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Update employee profile
       const updatedEmployee = await storage.updateEmployee(employee.id, updates);
+      if (!updatedEmployee) {
+        return res.status(500).json({ message: "Failed to update profile" });
+      }
       
       // Format response
       const profile = {
@@ -1376,6 +1379,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Update employee profile
       const updatedEmployee = await storage.updateEmployee(employee.id, updates);
+      if (!updatedEmployee) {
+        return res.status(500).json({ message: "Failed to update profile" });
+      }
       
       // Format response
       const profile = {
@@ -1487,6 +1493,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Update employee profile
       const updatedEmployee = await storage.updateEmployee(employee.id, updates);
+      if (!updatedEmployee) {
+        return res.status(500).json({ message: "Failed to update profile" });
+      }
       
       // Format response
       const profile = {
