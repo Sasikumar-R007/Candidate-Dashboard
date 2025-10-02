@@ -32,7 +32,7 @@ import {
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
-// import { DatabaseStorage } from "./database-storage"; // Commented out since we're using MemStorage
+import { DatabaseStorage } from "./database-storage";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -969,4 +969,4 @@ export class MemStorage implements IStorage {
 }
 
 // Switch to database storage now that database is provisioned
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
