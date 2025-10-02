@@ -25,22 +25,22 @@ export default function AdminTopHeader({ companyName = "Gumlat Marketing Private
   // Load role-specific profile data
   useEffect(() => {
     const loadProfileData = async () => {
-      if (!employee?.role) return;
+      if (!employee?.role || !employee?.email) return;
       
       try {
         let endpoint = '';
         switch (employee.role) {
           case 'recruiter':
-            endpoint = '/api/recruiter/profile';
+            endpoint = `/api/recruiter/profile?email=${encodeURIComponent(employee.email)}`;
             break;
           case 'team_leader':
-            endpoint = '/api/team-leader/profile';
+            endpoint = `/api/team-leader/profile?email=${encodeURIComponent(employee.email)}`;
             break;
           case 'admin':
-            endpoint = '/api/admin/profile';
+            endpoint = `/api/admin/profile?email=${encodeURIComponent(employee.email)}`;
             break;
           case 'client':
-            endpoint = '/api/client/profile';
+            endpoint = `/api/client/profile?email=${encodeURIComponent(employee.email)}`;
             break;
         }
         
@@ -57,7 +57,7 @@ export default function AdminTopHeader({ companyName = "Gumlat Marketing Private
     };
     
     loadProfileData();
-  }, [employee?.role]);
+  }, [employee?.role, employee?.email]);
   
   const userName = profileData?.name || employee?.name || "Admin User";
   const displayCompanyName = companyName;
