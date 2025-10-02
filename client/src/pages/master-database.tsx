@@ -4,13 +4,43 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { useLocation } from "wouter";
 import { ArrowLeft, Download, Filter, Search, Upload } from "lucide-react";
+import BulkResumeUpload from "@/components/dashboard/bulk-resume-upload";
 
 export default function MasterDatabase() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importTab, setImportTab] = useState("profile");
+  
+  const [resumeFormData, setResumeFormData] = useState({
+    firstName: '',
+    lastName: '',
+    mobileNumber: '',
+    whatsappNumber: '',
+    primaryEmail: '',
+    secondaryEmail: '',
+    highestQualification: '',
+    collegeName: '',
+    linkedin: '',
+    pedigreeLevel: '',
+    currentLocation: '',
+    noticePeriod: '',
+    website: '',
+    portfolio1: '',
+    currentCompany: '',
+    portfolio2: '',
+    currentRole: '',
+    portfolio3: '',
+    companyDomain: '',
+    companyLevel: '',
+    skills: ['', '', '', '', '']
+  });
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
 
   // Sample data for different database sections
   const resumeDatabase = [
@@ -111,7 +141,13 @@ export default function MasterDatabase() {
               <Download size={16} />
               Export Data
             </Button>
-            <Button variant="outline" size="sm" className="flex items-center gap-2" data-testid="button-import-data">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex items-center gap-2" 
+              data-testid="button-import-data"
+              onClick={() => setIsImportModalOpen(true)}
+            >
               <Upload size={16} />
               Import Data
             </Button>
@@ -384,6 +420,358 @@ export default function MasterDatabase() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Import Data Modal with Two Tabs */}
+      <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Import Data</DialogTitle>
+          </DialogHeader>
+          
+          <Tabs value={importTab} onValueChange={setImportTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="profile" data-testid="tab-profile-upload">Profile Upload</TabsTrigger>
+              <TabsTrigger value="bulk" data-testid="tab-bulk-upload">Bulk Upload</TabsTrigger>
+            </TabsList>
+
+            {/* Profile Upload Tab */}
+            <TabsContent value="profile" className="mt-6">
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>First Name *</Label>
+                    <Input
+                      value={resumeFormData.firstName}
+                      onChange={(e) => setResumeFormData({...resumeFormData, firstName: e.target.value})}
+                      placeholder="First Name"
+                      data-testid="input-first-name"
+                    />
+                  </div>
+                  <div>
+                    <Label>Last Name *</Label>
+                    <Input
+                      value={resumeFormData.lastName}
+                      onChange={(e) => setResumeFormData({...resumeFormData, lastName: e.target.value})}
+                      placeholder="Last Name"
+                      data-testid="input-last-name"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Mobile Number *</Label>
+                    <Input
+                      value={resumeFormData.mobileNumber}
+                      onChange={(e) => setResumeFormData({...resumeFormData, mobileNumber: e.target.value})}
+                      placeholder="Mobile Number"
+                      data-testid="input-mobile-number"
+                    />
+                  </div>
+                  <div>
+                    <Label>WhatsApp Number</Label>
+                    <Input
+                      value={resumeFormData.whatsappNumber}
+                      onChange={(e) => setResumeFormData({...resumeFormData, whatsappNumber: e.target.value})}
+                      placeholder="WhatsApp Number"
+                      data-testid="input-whatsapp-number"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Primary Email *</Label>
+                    <Input
+                      type="email"
+                      value={resumeFormData.primaryEmail}
+                      onChange={(e) => setResumeFormData({...resumeFormData, primaryEmail: e.target.value})}
+                      placeholder="Primary Email"
+                      data-testid="input-primary-email"
+                    />
+                  </div>
+                  <div>
+                    <Label>Secondary Email</Label>
+                    <Input
+                      type="email"
+                      value={resumeFormData.secondaryEmail}
+                      onChange={(e) => setResumeFormData({...resumeFormData, secondaryEmail: e.target.value})}
+                      placeholder="Secondary Email"
+                      data-testid="input-secondary-email"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Highest Qualification *</Label>
+                    <Select
+                      value={resumeFormData.highestQualification}
+                      onValueChange={(value) => setResumeFormData({...resumeFormData, highestQualification: value})}
+                    >
+                      <SelectTrigger data-testid="select-highest-qualification">
+                        <SelectValue placeholder="Select Qualification" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Bachelor's Degree">Bachelor's Degree</SelectItem>
+                        <SelectItem value="Master's Degree">Master's Degree</SelectItem>
+                        <SelectItem value="PhD">PhD</SelectItem>
+                        <SelectItem value="Diploma">Diploma</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>College Name *</Label>
+                    <Input
+                      value={resumeFormData.collegeName}
+                      onChange={(e) => setResumeFormData({...resumeFormData, collegeName: e.target.value})}
+                      placeholder="College Name"
+                      data-testid="input-college-name"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>LinkedIn Profile</Label>
+                    <Input
+                      value={resumeFormData.linkedin}
+                      onChange={(e) => setResumeFormData({...resumeFormData, linkedin: e.target.value})}
+                      placeholder="LinkedIn Profile URL"
+                      data-testid="input-linkedin"
+                    />
+                  </div>
+                  <div>
+                    <Label>Pedigree Level *</Label>
+                    <Select
+                      value={resumeFormData.pedigreeLevel}
+                      onValueChange={(value) => setResumeFormData({...resumeFormData, pedigreeLevel: value})}
+                    >
+                      <SelectTrigger data-testid="select-pedigree-level">
+                        <SelectValue placeholder="Select Level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Tier 1">Tier 1</SelectItem>
+                        <SelectItem value="Tier 2">Tier 2</SelectItem>
+                        <SelectItem value="Tier 3">Tier 3</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Current Location *</Label>
+                    <Select
+                      value={resumeFormData.currentLocation}
+                      onValueChange={(value) => setResumeFormData({...resumeFormData, currentLocation: value})}
+                    >
+                      <SelectTrigger data-testid="select-current-location">
+                        <SelectValue placeholder="Select Location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Mumbai">Mumbai</SelectItem>
+                        <SelectItem value="Delhi">Delhi</SelectItem>
+                        <SelectItem value="Bangalore">Bangalore</SelectItem>
+                        <SelectItem value="Chennai">Chennai</SelectItem>
+                        <SelectItem value="Hyderabad">Hyderabad</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Notice Period</Label>
+                    <Select
+                      value={resumeFormData.noticePeriod}
+                      onValueChange={(value) => setResumeFormData({...resumeFormData, noticePeriod: value})}
+                    >
+                      <SelectTrigger data-testid="select-notice-period">
+                        <SelectValue placeholder="Select Notice Period" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Immediate">Immediate</SelectItem>
+                        <SelectItem value="15 days">15 days</SelectItem>
+                        <SelectItem value="30 days">30 days</SelectItem>
+                        <SelectItem value="60 days">60 days</SelectItem>
+                        <SelectItem value="90 days">90 days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Website URL</Label>
+                    <Input
+                      value={resumeFormData.website}
+                      onChange={(e) => setResumeFormData({...resumeFormData, website: e.target.value})}
+                      placeholder="Website URL"
+                      data-testid="input-website"
+                    />
+                  </div>
+                  <div>
+                    <Label>Portfolio 1 URL</Label>
+                    <Input
+                      value={resumeFormData.portfolio1}
+                      onChange={(e) => setResumeFormData({...resumeFormData, portfolio1: e.target.value})}
+                      placeholder="Portfolio 1 URL"
+                      data-testid="input-portfolio1"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Current Company *</Label>
+                    <Input
+                      value={resumeFormData.currentCompany}
+                      onChange={(e) => setResumeFormData({...resumeFormData, currentCompany: e.target.value})}
+                      placeholder="Current Company"
+                      data-testid="input-current-company"
+                    />
+                  </div>
+                  <div>
+                    <Label>Portfolio 2 URL</Label>
+                    <Input
+                      value={resumeFormData.portfolio2}
+                      onChange={(e) => setResumeFormData({...resumeFormData, portfolio2: e.target.value})}
+                      placeholder="Portfolio 2 URL"
+                      data-testid="input-portfolio2"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Current Role *</Label>
+                    <Input
+                      value={resumeFormData.currentRole}
+                      onChange={(e) => setResumeFormData({...resumeFormData, currentRole: e.target.value})}
+                      placeholder="Current Role"
+                      data-testid="input-current-role"
+                    />
+                  </div>
+                  <div>
+                    <Label>Portfolio 3 URL</Label>
+                    <Input
+                      value={resumeFormData.portfolio3}
+                      onChange={(e) => setResumeFormData({...resumeFormData, portfolio3: e.target.value})}
+                      placeholder="Portfolio 3 URL"
+                      data-testid="input-portfolio3"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Company Domain *</Label>
+                    <Select
+                      value={resumeFormData.companyDomain}
+                      onValueChange={(value) => setResumeFormData({...resumeFormData, companyDomain: value})}
+                    >
+                      <SelectTrigger data-testid="select-company-domain">
+                        <SelectValue placeholder="Select Domain" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="IT">IT</SelectItem>
+                        <SelectItem value="Finance">Finance</SelectItem>
+                        <SelectItem value="Healthcare">Healthcare</SelectItem>
+                        <SelectItem value="E-commerce">E-commerce</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Company Level *</Label>
+                    <Select
+                      value={resumeFormData.companyLevel}
+                      onValueChange={(value) => setResumeFormData({...resumeFormData, companyLevel: value})}
+                    >
+                      <SelectTrigger data-testid="select-company-level">
+                        <SelectValue placeholder="Select Level" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Startup">Startup</SelectItem>
+                        <SelectItem value="Mid-size">Mid-size</SelectItem>
+                        <SelectItem value="Enterprise">Enterprise</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Skills *</Label>
+                  <div className="text-sm text-gray-500 mb-2">Add up to 15 skills</div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {resumeFormData.skills.slice(0, 15).map((skill, index) => (
+                      <Input
+                        key={index}
+                        value={skill}
+                        onChange={(e) => {
+                          const newSkills = [...resumeFormData.skills];
+                          newSkills[index] = e.target.value;
+                          setResumeFormData({...resumeFormData, skills: newSkills});
+                        }}
+                        placeholder={`Skill ${index + 1}`}
+                        data-testid={`input-skill-${index}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Upload Resume (Optional)</Label>
+                  <Input
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) setResumeFile(file);
+                    }}
+                    data-testid="input-resume-file"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsImportModalOpen(false)}
+                    data-testid="button-cancel-profile"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      // Handle profile upload submission here
+                      console.log('Profile data:', resumeFormData);
+                      console.log('Resume file:', resumeFile);
+                      setIsImportModalOpen(false);
+                    }}
+                    data-testid="button-submit-profile"
+                  >
+                    Submit Profile
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Bulk Upload Tab */}
+            <TabsContent value="bulk" className="mt-6">
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <h3 className="font-medium text-blue-900 mb-2">Bulk Upload Instructions</h3>
+                  <ul className="text-sm text-blue-800 space-y-1">
+                    <li>• Upload up to 500 resumes at once</li>
+                    <li>• Accepted formats: PDF (.pdf) and Word (.docx)</li>
+                    <li>• Maximum file size: 10MB per resume</li>
+                    <li>• Files will be automatically parsed and stored in Master Database</li>
+                  </ul>
+                </div>
+                
+                <BulkResumeUpload />
+              </div>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
