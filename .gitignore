@@ -4,3 +4,11 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+uploads/*.jpg
+uploads/*.png
+uploads/*.pdf
+uploads/*.webp
+uploads/*.docx
+uploads/*.avif
+.env
+.env.local
