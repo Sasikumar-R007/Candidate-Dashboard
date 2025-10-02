@@ -22,7 +22,7 @@ export function log(message: string, source = "express") {
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
     middlewareMode: true,
-    hmr: false, // Disable HMR websockets to fix connection issues in Replit
+    hmr: false, // Disable HMR in Replit - causes WebSocket security issues with HTTPS
     host: "0.0.0.0",
     allowedHosts: true as const,
     cors: true,

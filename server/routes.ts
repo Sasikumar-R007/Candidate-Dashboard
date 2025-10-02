@@ -106,9 +106,36 @@ function extractNameFromText(text: string): string | null {
 }
 
 function extractEmailFromText(text: string): string | null {
-  const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/;
-  const match = text.match(emailPattern);
-  return match ? match[0] : null;
+  // More comprehensive email patterns
+  const emailPatterns = [
+    // Standard email pattern
+    /\b[A-Za-z0-9][A-Za-z0-9._%+-]*@[A-Za-z0-9][A-Za-z0-9.-]*\.[A-Za-z]{2,}\b/gi,
+    // Email with special characters
+    /\b[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*\b/gi,
+  ];
+  
+  for (const pattern of emailPatterns) {
+    const matches = text.match(pattern);
+    if (matches && matches.length > 0) {
+      // Filter out common false positives
+      const validEmail = matches.find(email => {
+        const lower = email.toLowerCase();
+        // Exclude common false positives
+        return !lower.includes('example.com') && 
+               !lower.includes('sample.com') &&
+               !lower.includes('test.com') &&
+               !lower.includes('domain.com') &&
+               lower.split('@')[1].includes('.') && // Must have TLD
+               lower.split('@')[0].length > 0; // Must have username
+      });
+      
+      if (validEmail) {
+        return validEmail.toLowerCase();
+      }
+    }
+  }
+  
+  return null;
 }
 
 function extractPhoneFromText(text: string): string | null {
@@ -135,27 +162,60 @@ async function parseResumeFile(filePath: string, fileType: string): Promise<{
   email: string | null;
   phone: string | null;
 }> {
+  let text = '';
+  
   try {
-    let text = '';
-    
     if (fileType === 'pdf') {
-      const dataBuffer = fs.readFileSync(filePath);
-      const pdfParse = (await import('pdf-parse')).default;
-      const pdfData = await pdfParse(dataBuffer);
-      text = pdfData.text;
+      try {
+        // Read the file buffer
+        const dataBuffer = fs.readFileSync(filePath);
+        
+        // Import pdf-parse with proper error handling
+        let pdfParse;
+        try {
+          const pdfParseModule = await import('pdf-parse');
+          pdfParse = pdfParseModule.default || pdfParseModule;
+        } catch (importError) {
+          console.error('Error importing pdf-parse:', importError);
+          throw new Error('PDF parser not available');
+        }
+        
+        // Parse the PDF with options to handle errors gracefully
+        const pdfData = await pdfParse(dataBuffer, {
+          // Disable auto-loading of test files
+          max: 0
+        });
+        text = pdfData.text || '';
+        
+      } catch (pdfError: any) {
+        console.error('PDF parsing error:', pdfError.message);
+        // If PDF parsing fails completely, return empty text instead of throwing
+        // This allows email extraction to fail gracefully
+        text = '';
+      }
     } else if (fileType === 'docx') {
-      const result = await mammoth.extractRawText({ path: filePath });
-      text = result.value;
+      try {
+        const result = await mammoth.extractRawText({ path: filePath });
+        text = result.value || '';
+      } catch (docxError: any) {
+        console.error('DOCX parsing error:', docxError.message);
+        text = '';
+      }
     }
     
+    // Extract name first (needs line breaks preserved)
     const name = extractNameFromText(text);
-    const email = extractEmailFromText(text);
-    const phone = extractPhoneFromText(text);
+    
+    // Then normalize text for email and phone extraction
+    const normalizedText = text.replace(/\s+/g, ' ').trim();
+    const email = extractEmailFromText(normalizedText);
+    const phone = extractPhoneFromText(normalizedText);
     
     return { text, name, email, phone };
-  } catch (error) {
-    console.error('Error parsing file:', error);
-    throw new Error(`Failed to parse ${fileType} file`);
+  } catch (error: any) {
+    console.error('Error parsing file:', error.message);
+    // Return empty data instead of throwing - let the email validation handle the failure
+    return { text: '', name: null, email: null, phone: null };
   }
 }
 
