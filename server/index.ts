@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import cors from "cors";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { scheduleDataRetentionCleanup } from "./data-retention";
 
 const app = express();
 
@@ -96,5 +97,9 @@ app.use((req, res, next) => {
     if (process.env.FRONTEND_URL) {
       log(`Frontend URL: ${process.env.FRONTEND_URL}`);
     }
+    
+    // Schedule data retention cleanup to run daily at 2 AM
+    scheduleDataRetentionCleanup();
+    log(`📅 Data retention cleanup scheduled (runs daily at 2 AM)`);
   });
 })();

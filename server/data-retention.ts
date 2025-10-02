@@ -34,21 +34,39 @@ export async function cleanupLoginAttempts(): Promise<number> {
 
 /**
  * Clean up activities older than 90 days
+ * Note: Activities table uses text dates, so we need to parse and compare them
  */
 export async function cleanupActivities(): Promise<number> {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - RETENTION_POLICIES.ACTIVITIES);
   
-  // Convert date to string format matching the activities.date field (DD-MM-YYYY)
-  // Note: This is a simplified version; you may need to adjust based on actual date format
-  const cutoffDateStr = cutoffDate.toISOString();
-  
   try {
-    const result = await db
-      .delete(activities)
-      .where(sql`${activities.date} < ${cutoffDateStr}`);
+    // Fetch all activities and filter in memory since dates are stored as text
+    const allActivities = await db.select().from(activities);
+    const toDelete: string[] = [];
     
-    const deletedCount = result.rowCount ?? 0;
+    for (const activity of allActivities) {
+      try {
+        // Try to parse date in various formats (DD-MM-YYYY, ISO, etc.)
+        const activityDate = parseActivityDate(activity.date);
+        if (activityDate && activityDate < cutoffDate) {
+          toDelete.push(activity.id);
+        }
+      } catch (error) {
+        // Skip activities with unparseable dates
+        continue;
+      }
+    }
+    
+    // Delete activities in batches
+    let deletedCount = 0;
+    if (toDelete.length > 0) {
+      for (const id of toDelete) {
+        await db.delete(activities).where(sql`${activities.id} = ${id}`);
+        deletedCount++;
+      }
+    }
+    
     console.log(`[Data Retention] Deleted ${deletedCount} activity records older than ${RETENTION_POLICIES.ACTIVITIES} days`);
     return deletedCount;
   } catch (error) {
@@ -58,14 +76,43 @@ export async function cleanupActivities(): Promise<number> {
 }
 
 /**
+ * Helper function to parse activity dates in various formats
+ */
+function parseActivityDate(dateStr: string): Date | null {
+  if (!dateStr) return null;
+  
+  // Try DD-MM-YYYY format
+  const ddmmyyyyMatch = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (ddmmyyyyMatch) {
+    const [, day, month, year] = ddmmyyyyMatch;
+    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  }
+  
+  // Try ISO format
+  const isoDate = new Date(dateStr);
+  if (!isNaN(isoDate.getTime())) {
+    return isoDate;
+  }
+  
+  return null;
+}
+
+/**
  * Clean up meetings older than 90 days
- * Note: This assumes you have a meetings table with date tracking
+ * Note: Meetings table in current schema doesn't have date tracking.
+ * This is a placeholder for future implementation when the schema is updated.
  */
 export async function cleanupMeetings(): Promise<number> {
-  // Since meetings table doesn't have a date field in the current schema,
-  // we'll skip this for now or log a message
-  console.log(`[Data Retention] Meetings table cleanup skipped - no date tracking field in current schema`);
-  return 0;
+  try {
+    // The current meetings table only has 'type' and 'count' fields
+    // No date tracking exists, so we cannot implement time-based cleanup
+    // This will need to be implemented when the schema is updated to include date fields
+    console.log(`[Data Retention] Meetings cleanup skipped - schema does not include date fields for retention policy`);
+    return 0;
+  } catch (error) {
+    console.error('[Data Retention] Error in meetings cleanup:', error);
+    return 0;
+  }
 }
 
 /**
