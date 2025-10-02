@@ -35,9 +35,18 @@ import {
   archivedRequirements,
   employees,
   candidates,
-  candidateLoginAttempts
+  candidateLoginAttempts,
+  bulkUploadJobs,
+  bulkUploadFiles,
+  notifications,
+  type BulkUploadJob,
+  type InsertBulkUploadJob,
+  type BulkUploadFile,
+  type InsertBulkUploadFile,
+  type Notification,
+  type InsertNotification
 } from "@shared/schema";
-// import { db } from "./db"; // Commented out since we're using MemStorage
+import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import type { IStorage } from "./storage";
@@ -405,5 +414,96 @@ export class DatabaseStorage implements IStorage {
     }
     
     return false;
+  }
+
+  // Password update methods
+  async updateEmployeePassword(email: string, newPasswordHash: string): Promise<boolean> {
+    const result = await db
+      .update(employees)
+      .set({ password: newPasswordHash })
+      .where(eq(employees.email, email));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async updateCandidatePassword(email: string, newPasswordHash: string): Promise<boolean> {
+    const result = await db
+      .update(candidates)
+      .set({ password: newPasswordHash })
+      .where(eq(candidates.email, email));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Bulk upload methods
+  async createBulkUploadJob(insertJob: InsertBulkUploadJob): Promise<BulkUploadJob> {
+    const [job] = await db.insert(bulkUploadJobs).values(insertJob).returning();
+    return job;
+  }
+
+  async getBulkUploadJob(jobId: string): Promise<BulkUploadJob | undefined> {
+    const [job] = await db.select().from(bulkUploadJobs).where(eq(bulkUploadJobs.jobId, jobId));
+    return job || undefined;
+  }
+
+  async updateBulkUploadJob(jobId: string, updates: Partial<BulkUploadJob>): Promise<BulkUploadJob | undefined> {
+    const [job] = await db
+      .update(bulkUploadJobs)
+      .set(updates)
+      .where(eq(bulkUploadJobs.jobId, jobId))
+      .returning();
+    return job || undefined;
+  }
+
+  async getAllBulkUploadJobs(): Promise<BulkUploadJob[]> {
+    return await db.select().from(bulkUploadJobs).orderBy(desc(bulkUploadJobs.createdAt));
+  }
+
+  async createBulkUploadFile(insertFile: InsertBulkUploadFile): Promise<BulkUploadFile> {
+    const [file] = await db.insert(bulkUploadFiles).values(insertFile).returning();
+    return file;
+  }
+
+  async getBulkUploadFile(id: string): Promise<BulkUploadFile | undefined> {
+    const [file] = await db.select().from(bulkUploadFiles).where(eq(bulkUploadFiles.id, id));
+    return file || undefined;
+  }
+
+  async getBulkUploadFilesByJobId(jobId: string): Promise<BulkUploadFile[]> {
+    return await db.select().from(bulkUploadFiles).where(eq(bulkUploadFiles.jobId, jobId));
+  }
+
+  async updateBulkUploadFile(id: string, updates: Partial<BulkUploadFile>): Promise<BulkUploadFile | undefined> {
+    const [file] = await db
+      .update(bulkUploadFiles)
+      .set(updates)
+      .where(eq(bulkUploadFiles.id, id))
+      .returning();
+    return file || undefined;
+  }
+
+  // Notification methods
+  async createNotification(insertNotification: InsertNotification): Promise<Notification> {
+    const [notification] = await db.insert(notifications).values(insertNotification).returning();
+    return notification;
+  }
+
+  async getNotificationsByUserId(userId: string): Promise<Notification[]> {
+    return await db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt));
+  }
+
+  async markNotificationAsRead(id: string): Promise<Notification | undefined> {
+    const [notification] = await db
+      .update(notifications)
+      .set({ 
+        status: 'read',
+        readAt: new Date().toISOString()
+      })
+      .where(eq(notifications.id, id))
+      .returning();
+    return notification || undefined;
+  }
+
+  async deleteNotification(id: string): Promise<boolean> {
+    const result = await db.delete(notifications).where(eq(notifications.id, id));
+    return (result.rowCount ?? 0) > 0;
   }
 }
