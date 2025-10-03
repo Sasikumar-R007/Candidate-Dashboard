@@ -3,7 +3,17 @@ import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from "ws";
 import * as schema from "@shared/schema";
 
-neonConfig.webSocketConstructor = ws;
+// Configure WebSocket to handle SSL certificates properly in Replit environment
+class CustomWebSocket extends ws {
+  constructor(address: string | URL, protocols?: string | string[]) {
+    super(address, protocols, {
+      rejectUnauthorized: false
+    });
+  }
+}
+
+neonConfig.webSocketConstructor = CustomWebSocket as typeof ws;
+neonConfig.pipelineConnect = false;
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
