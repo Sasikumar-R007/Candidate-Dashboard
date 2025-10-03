@@ -5624,29 +5624,33 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { code: "STCL001", brand: "WhatsIQ", location: "Bangalore", spoc: "David Wilson", website: "www.whatsiq.com", status: "ACTIVE", statusClass: "bg-green-100 text-green-800" },
-                    { code: "STCL002", brand: "Kombat", location: "Chennai", spoc: "Tom Anderson", website: "www.kombat.com", status: "ACTIVE", statusClass: "bg-green-100 text-green-800" },
-                    { code: "STCL003", brand: "Vertas", location: "Gurgaon", spoc: "Robert Kim", website: "www.vertas.com", status: "ACTIVE", statusClass: "bg-green-100 text-green-800" },
-                    { code: "STCL004", brand: "Superlike", location: "Pune", spoc: "Kevin Brown", website: "www.superlike.com", status: "FROZEN", statusClass: "bg-orange-100 text-orange-800" },
-                    { code: "STCL005", brand: "Hitchcock", location: "Mumbai", spoc: "Mel Gibson", website: "www.hitchcock.com", status: "CHURNED", statusClass: "bg-red-100 text-red-800" },
-                    { code: "STCL006", brand: "TechCorp", location: "Hyderabad", spoc: "Alice Johnson", website: "www.techcorp.com", status: "ACTIVE", statusClass: "bg-green-100 text-green-800" },
-                    { code: "STCL007", brand: "DataFlow", location: "Kolkata", spoc: "Bob Smith", website: "www.dataflow.com", status: "FROZEN", statusClass: "bg-orange-100 text-orange-800" },
-                    { code: "STCL008", brand: "CloudNine", location: "Delhi", spoc: "Charlie Brown", website: "www.cloudnine.com", status: "ACTIVE", statusClass: "bg-green-100 text-green-800" },
-                    { code: "STCL009", brand: "NetSecure", location: "Ahmedabad", spoc: "Diana Prince", website: "www.netsecure.com", status: "CHURNED", statusClass: "bg-red-100 text-red-800" },
-                    { code: "STCL010", brand: "WebDev", location: "Jaipur", spoc: "Eric Wayne", website: "www.webdev.com", status: "ACTIVE", statusClass: "bg-green-100 text-green-800" }
-                  ].map((row, index) => (
-                    <tr key={index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-                      <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.code}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.brand}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.location}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.spoc}</td>
-                      <td className="py-3 px-3 text-blue-600 dark:text-blue-400">{row.website}</td>
-                      <td className="py-3 px-3">
-                        <span className={`${row.statusClass} text-sm font-semibold px-3 py-1 rounded-full`}>• {row.status}</span>
-                      </td>
+                  {isLoadingClients ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading clients...</td>
                     </tr>
-                  ))}
+                  ) : clients.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">No clients found. Click "+ Add Client" to add one.</td>
+                    </tr>
+                  ) : (
+                    clients.map((row: any, index: number) => {
+                      const statusClass = row.currentStatus === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
+                                        row.currentStatus === 'frozen' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' : 
+                                        'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+                      return (
+                        <tr key={row.id || index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.clientCode}</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.brandName}</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.location || 'N/A'}</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.spoc || 'N/A'}</td>
+                          <td className="py-3 px-3 text-blue-600 dark:text-blue-400">{row.website || 'N/A'}</td>
+                          <td className="py-3 px-3">
+                            <span className={`${statusClass} text-sm font-semibold px-3 py-1 rounded-full`}>• {(row.currentStatus || 'active').toUpperCase()}</span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -5674,27 +5678,26 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { id: "STTA001", name: "Sundhar Raj", father: "David Wilson", status: "Intern", joining: "12-05-2025", ctc: "10,000" },
-                    { id: "STTA002", name: "kavitha", father: "Tom Anderson", status: "Permanent", joining: "10-07-2025", ctc: "15,000" },
-                    { id: "STTA003", name: "Vignesh", father: "Robert Kim", status: "Probation", joining: "22-10-2025", ctc: "12,000" },
-                    { id: "STTA004", name: "Saran", father: "Kevin Brown", status: "Probation", joining: "02-11-2025", ctc: "9,500" },
-                    { id: "STTL005", name: "Helen", father: "Mel Gibson", status: "Permanent", joining: "12-12-2025", ctc: "14,000" },
-                    { id: "STTA006", name: "Priya", father: "John Smith", status: "Intern", joining: "15-01-2025", ctc: "8,000" },
-                    { id: "STTA007", name: "Rajesh", father: "Michael Johnson", status: "Permanent", joining: "20-03-2025", ctc: "18,000" },
-                    { id: "STTA008", name: "Sneha", father: "William Brown", status: "Probation", joining: "05-06-2025", ctc: "11,500" },
-                    { id: "STTA009", name: "Arjun", father: "James Davis", status: "Permanent", joining: "25-08-2025", ctc: "16,000" },
-                    { id: "STTA010", name: "Lakshmi", father: "Robert Wilson", status: "Intern", joining: "30-09-2025", ctc: "9,000" }
-                  ].map((row, index) => (
-                    <tr key={index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-                      <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.id}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.name}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.father}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.status}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.joining}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.ctc}</td>
+                  {isLoadingEmployees ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading employees...</td>
                     </tr>
-                  ))}
+                  ) : employees.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">No employees found. Click "+ Add Employee" to add one.</td>
+                    </tr>
+                  ) : (
+                    employees.map((row: any, index: number) => (
+                      <tr key={row.id || index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                        <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.employeeId}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.name}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">-</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.role || 'N/A'}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.joiningDate || 'N/A'}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">-</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -5722,27 +5725,26 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { id: "STTA001", name: "Sundhar Raj", applicants: 500, uploads: 1000, email: "sundhar@staffos.com", dept: "IT Recruitment" },
-                    { id: "STTA002", name: "Kavitha", applicants: 220, uploads: 850, email: "kavitha@staffos.com", dept: "Non-IT Recruitment" },
-                    { id: "STTA003", name: "Vignesh", applicants: 600, uploads: 1200, email: "vignesh@staffos.com", dept: "IT Recruitment" },
-                    { id: "STTA004", name: "Saran", applicants: 780, uploads: 1000, email: "saran@staffos.com", dept: "Sales Recruitment" },
-                    { id: "STTL005", name: "Helen", applicants: 50, uploads: 800, email: "helen@staffos.com", dept: "HR Recruitment" },
-                    { id: "STTA006", name: "Priya", applicants: 450, uploads: 950, email: "priya@staffos.com", dept: "IT Recruitment" },
-                    { id: "STTA007", name: "Rajesh", applicants: 680, uploads: 1100, email: "rajesh@staffos.com", dept: "Finance Recruitment" },
-                    { id: "STTA008", name: "Sneha", applicants: 320, uploads: 890, email: "sneha@staffos.com", dept: "Marketing Recruitment" },
-                    { id: "STTA009", name: "Arjun", applicants: 540, uploads: 1050, email: "arjun@staffos.com", dept: "IT Recruitment" },
-                    { id: "STTA010", name: "Lakshmi", applicants: 410, uploads: 920, email: "lakshmi@staffos.com", dept: "Non-IT Recruitment" }
-                  ].map((row, index) => (
-                    <tr key={index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-                      <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.id}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.name}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.applicants}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.uploads}</td>
-                      <td className="py-3 px-3 text-blue-600 dark:text-blue-400">{row.email}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.dept}</td>
+                  {isLoadingEmployees ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading employees...</td>
                     </tr>
-                  ))}
+                  ) : employees.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">No employees found. Click "+ Add Employee" to add one.</td>
+                    </tr>
+                  ) : (
+                    employees.map((row: any, index: number) => (
+                      <tr key={row.id || index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                        <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.employeeId}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.name}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">-</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">-</td>
+                        <td className="py-3 px-3 text-blue-600 dark:text-blue-400">{row.email}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.department || 'N/A'}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
