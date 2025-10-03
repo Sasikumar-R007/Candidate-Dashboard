@@ -18,10 +18,12 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { useEmployeeAuth } from "@/contexts/auth-context";
 
 export default function TeamLeaderDashboard() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const employee = useEmployeeAuth();
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [activeTab, setActiveTab] = useState('team');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -236,7 +238,13 @@ export default function TeamLeaderDashboard() {
 
   // Use API data
   const { data: teamLeaderProfile } = useQuery({
-    queryKey: ['/api/team-leader/profile'],
+    queryKey: ['/api/team-leader/profile', employee?.email],
+    enabled: !!employee?.email,
+    queryFn: async () => {
+      const response = await fetch(`/api/team-leader/profile?email=${encodeURIComponent(employee!.email)}`);
+      if (!response.ok) throw new Error('Failed to fetch profile');
+      return response.json();
+    }
   });
 
   const { data: teamMembers } = useQuery({
