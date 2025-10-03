@@ -453,6 +453,26 @@ export default function AdminDashboard() {
     }
   });
 
+  // Fetch employees from database
+  const { data: employees = [], isLoading: isLoadingEmployees } = useQuery({
+    queryKey: ['admin', 'employees'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/employees');
+      if (!response.ok) throw new Error('Failed to fetch employees');
+      return response.json();
+    }
+  });
+
+  // Fetch clients from database
+  const { data: clients = [], isLoading: isLoadingClients } = useQuery({
+    queryKey: ['admin', 'clients'],
+    queryFn: async () => {
+      const response = await fetch('/api/admin/clients');
+      if (!response.ok) throw new Error('Failed to fetch clients');
+      return response.json();
+    }
+  });
+
   // Archive requirement mutation
   const archiveRequirementMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -528,6 +548,7 @@ export default function AdminDashboard() {
       return response.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'clients'] });
       toast({
         title: "Success",
         description: "Client created successfully!",
@@ -568,6 +589,7 @@ export default function AdminDashboard() {
       return response.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'employees'] });
       toast({
         title: "Success",
         description: "Employee created successfully!",
@@ -2830,21 +2852,25 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {[
-                          { id: "STTA001", name: "Sundhar Raj", team: "Arun", applicants: 500, uploads: 1000 },
-                          { id: "STTA002", name: "kavitha", team: "Anusha", applicants: 220, uploads: 850 },
-                          { id: "STTA003", name: "Vignesh", team: "Arun", applicants: 600, uploads: 1200 },
-                          { id: "STTA004", name: "Saran", team: "Anusha", applicants: 780, uploads: 1000 },
-                          { id: "STTL005", name: "Helen", team: "Anusha", applicants: 50, uploads: 900 }
-                        ].slice(0, 5).map((row, index) => (
-                          <tr key={index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-                            <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{row.id}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.name}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.team}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.applicants}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.uploads}</td>
+                        {isLoadingEmployees ? (
+                          <tr>
+                            <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading employees...</td>
                           </tr>
-                        ))}
+                        ) : employees.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">No employees found. Click "+ Add Employee" to add one.</td>
+                          </tr>
+                        ) : (
+                          employees.slice(0, 5).map((row: any, index: number) => (
+                            <tr key={row.id || index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                              <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{row.employeeId}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.name}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.department || 'N/A'}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">-</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">-</td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -2876,22 +2902,26 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {[
-                          { id: "STTA001", name: "Sundhar Raj", father: "David Wilson", status: "Intern", joining: "12-05-2025", ctc: "10,000" },
-                          { id: "STTA002", name: "kavitha", father: "Tom Anderson", status: "Permanent", joining: "10-07-2025", ctc: "15,000" },
-                          { id: "STTA003", name: "Vignesh", father: "Robert Kim", status: "Probation", joining: "22-10-2025", ctc: "12,000" },
-                          { id: "STTA004", name: "Saran", father: "Kevin Brown", status: "Probation", joining: "02-11-2025", ctc: "9,500" },
-                          { id: "STTL005", name: "Helen", father: "Mel Gibson", status: "Permanent", joining: "12-12-2025", ctc: "14,000" }
-                        ].slice(0, 5).map((row, index) => (
-                          <tr key={index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-                            <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{row.id}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.name}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.father}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.status}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.joining}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.ctc}</td>
+                        {isLoadingEmployees ? (
+                          <tr>
+                            <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading employees...</td>
                           </tr>
-                        ))}
+                        ) : employees.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">No employees found. Click "+ Add Employee" to add one.</td>
+                          </tr>
+                        ) : (
+                          employees.slice(0, 5).map((row: any, index: number) => (
+                            <tr key={row.id || index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                              <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{row.employeeId}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.name}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">-</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.role || 'N/A'}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.joiningDate || 'N/A'}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">-</td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -2923,24 +2953,33 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {[
-                          { code: "STCL001", brand: "WhatsIQ", location: "Bangalore", spoc: "David Wilson", website: "www.whatsiq.com", status: "ACTIVE", statusClass: "bg-green-100 text-green-800" },
-                          { code: "STCL002", brand: "Kombat", location: "Chennai", spoc: "Tom Anderson", website: "www.kombat.com", status: "ACTIVE", statusClass: "bg-green-100 text-green-800" },
-                          { code: "STCL003", brand: "Vertas", location: "Gurgaon", spoc: "Robert Kim", website: "www.vertas.com", status: "ACTIVE", statusClass: "bg-green-100 text-green-800" },
-                          { code: "STCL004", brand: "Superlike", location: "Pune", spoc: "Kevin Brown", website: "www.superlike.com", status: "FROZEN", statusClass: "bg-orange-100 text-orange-800" },
-                          { code: "STCL005", brand: "Hitchcock", location: "Mumbai", spoc: "Mel Gibson", website: "www.hitchcock.com", status: "CHURNED", statusClass: "bg-red-100 text-red-800" }
-                        ].slice(0, 5).map((row, index) => (
-                          <tr key={index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-                            <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{row.code}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.brand}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.location}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.spoc}</td>
-                            <td className="py-3 px-4 text-blue-600 dark:text-blue-400">{row.website}</td>
-                            <td className="py-3 px-4">
-                              <span className={`${row.statusClass} text-sm font-semibold px-3 py-1 rounded-full`}>• {row.status}</span>
-                            </td>
+                        {isLoadingClients ? (
+                          <tr>
+                            <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading clients...</td>
                           </tr>
-                        ))}
+                        ) : clients.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">No clients found. Click "+ Add Client" to add one.</td>
+                          </tr>
+                        ) : (
+                          clients.slice(0, 5).map((row: any, index: number) => {
+                            const statusClass = row.currentStatus === 'active' ? 'bg-green-100 text-green-800' : 
+                                              row.currentStatus === 'frozen' ? 'bg-orange-100 text-orange-800' : 
+                                              'bg-red-100 text-red-800';
+                            return (
+                              <tr key={row.id || index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                                <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{row.clientCode}</td>
+                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.brandName}</td>
+                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.location || 'N/A'}</td>
+                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.spoc || 'N/A'}</td>
+                                <td className="py-3 px-4 text-blue-600 dark:text-blue-400">{row.website || 'N/A'}</td>
+                                <td className="py-3 px-4">
+                                  <span className={`${statusClass} text-sm font-semibold px-3 py-1 rounded-full`}>• {(row.currentStatus || 'active').toUpperCase()}</span>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
                       </tbody>
                     </table>
                   </div>
