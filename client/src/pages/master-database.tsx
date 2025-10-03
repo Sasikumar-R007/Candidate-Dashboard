@@ -124,7 +124,7 @@ export default function MasterDatabase() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button
-              onClick={() => setLocation('/recruiter-dashboard-2')}
+              onClick={() => window.history.back()}
               variant="outline"
               size="sm"
               className="flex items-center gap-2"
