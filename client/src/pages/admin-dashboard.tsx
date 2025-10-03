@@ -23,7 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users } from "lucide-react";
+import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useLocation } from "wouter";
@@ -282,10 +282,13 @@ const dailyMetricsData = {
 };
 
 const initialMessagesData = [
-  { name: "Arun", message: "Discuss ...", date: "12-June", status: "active" },
-  { name: "Anusha", message: "Discuss ...", date: "12-June", status: "active" },
-  { name: "Umar", message: "Discuss ...", date: "10-Aug", status: "pending" },
-  { name: "Siva", message: "Discuss ...", date: "22-Sep", status: "pending" }
+  { name: "Arun", message: "Discuss ...", date: "12-June", status: "active", timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) },
+  { name: "Anusha", message: "Discuss ...", date: "12-June", status: "active", timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) },
+  { name: "Umar", message: "Discuss ...", date: "10-Aug", status: "pending", timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
+  { name: "Siva", message: "Discuss ...", date: "22-Sep", status: "pending", timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
+  { name: "Priya", message: "Follow up on requirements", date: "01-Oct", status: "active", timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
+  { name: "Rajesh", message: "Candidate shortlist review", date: "30-Sep", status: "active", timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) },
+  { name: "Meera", message: "Interview scheduling", date: "29-Sep", status: "pending", timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000) }
 ];
 
 const deliveredData = [
@@ -377,6 +380,7 @@ export default function AdminDashboard() {
   const [ceoMeetingsData, setCeoMeetingsData] = useState(initialCeoMeetingsData);
   const [tlMeetingsCount, setTlMeetingsCount] = useState(3);
   const [ceoMeetingsCount, setCeoMeetingsCount] = useState(1);
+  const [isAllMessagesModalOpen, setIsAllMessagesModalOpen] = useState(false);
 
   // Requirements API queries
   const { data: requirements = [], isLoading: isLoadingRequirements } = useQuery({
@@ -491,7 +495,8 @@ export default function AdminDashboard() {
       name: recipientName,
       message: messageContent.substring(0, 20) + (messageContent.length > 20 ? '...' : ''),
       date: dateStr,
-      status: 'active'
+      status: 'active',
+      timestamp: today
     };
     setMessagesData(prev => [newMessage, ...prev]);
     
@@ -885,7 +890,18 @@ export default function AdminDashboard() {
         {/* Message Status - 5/10 width */}
         <Card className="bg-gray-50 dark:bg-gray-800 col-span-5">
           <CardHeader className="pb-1 pt-2">
-            <CardTitle className="text-lg text-gray-900 dark:text-white">Message Status</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg text-gray-900 dark:text-white">Message Status</CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={() => setIsAllMessagesModalOpen(true)}
+                data-testid="button-view-all-messages"
+              >
+                <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto admin-scrollbar">
@@ -899,7 +915,7 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {messagesData.map((message, index) => (
+                  {messagesData.slice(0, 4).map((message, index) => (
                     <tr key={index} className="border-b border-gray-100 dark:border-gray-700">
                       <td className="py-2 px-3 text-gray-900 dark:text-white font-medium">{message.name}</td>
                       <td className="py-2 px-3 text-gray-600 dark:text-gray-400">{message.message}</td>
@@ -4186,6 +4202,60 @@ export default function AdminDashboard() {
                 onClick={() => setIsTlMeetingsModalOpen(false)}
                 className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded"
                 data-testid="button-close-tl-meetings-modal"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* All Messages Modal */}
+      <Dialog open={isAllMessagesModalOpen} onOpenChange={setIsAllMessagesModalOpen}>
+        <DialogContent className="max-w-5xl mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+              All Messages (Last 3 Days)
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-4">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
+                <thead>
+                  <tr className="bg-gray-200 dark:bg-gray-700">
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Name</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Message</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Date</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {messagesData
+                    .filter(message => {
+                      const threeDaysAgo = new Date();
+                      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+                      return message.timestamp >= threeDaysAgo;
+                    })
+                    .map((message, index) => (
+                      <tr key={index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
+                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{message.name}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{message.message}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{message.date}</td>
+                        <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
+                          <span className={`w-3 h-3 rounded-full inline-block ${
+                            message.status === 'active' ? 'bg-green-500' : 'bg-red-500'
+                          }`}></span>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <Button 
+                onClick={() => setIsAllMessagesModalOpen(false)}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded"
+                data-testid="button-close-all-messages-modal"
               >
                 Close
               </Button>
