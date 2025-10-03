@@ -24,6 +24,12 @@ import {
   type InsertCandidate,
   type CandidateLoginAttempts,
   type InsertCandidateLoginAttempts,
+  type BulkUploadJob,
+  type InsertBulkUploadJob,
+  type BulkUploadFile,
+  type InsertBulkUploadFile,
+  type Notification,
+  type InsertNotification,
   users,
   profiles,
   jobPreferences,
@@ -35,9 +41,12 @@ import {
   archivedRequirements,
   employees,
   candidates,
-  candidateLoginAttempts
+  candidateLoginAttempts,
+  bulkUploadJobs,
+  bulkUploadFiles,
+  notifications
 } from "@shared/schema";
-// import { db } from "./db"; // Commented out since we're using MemStorage
+import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import type { IStorage } from "./storage";
