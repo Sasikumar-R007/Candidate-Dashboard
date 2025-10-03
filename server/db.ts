@@ -3,16 +3,7 @@ import { drizzle } from 'drizzle-orm/neon-serverless';
 import ws from "ws";
 import * as schema from "@shared/schema";
 
-class CustomWebSocket extends ws {
-  constructor(url: string, protocols?: string | string[]) {
-    super(url, protocols, {
-      rejectUnauthorized: false
-    });
-  }
-}
-
-neonConfig.webSocketConstructor = CustomWebSocket as any;
-neonConfig.useSecureWebSocket = true;
+neonConfig.webSocketConstructor = ws;
 
 if (!process.env.DATABASE_URL) {
   throw new Error(

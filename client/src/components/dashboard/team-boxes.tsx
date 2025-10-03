@@ -22,11 +22,11 @@ const teams = [
 
 export default function TeamBoxes() {
   return (
-    <div className="grid grid-cols-2 gap-3 mb-3">
+    <div className="grid grid-cols-2 gap-6 mb-6">
       {teams.map((team, index) => (
         <Card key={index} className="bg-white border border-gray-200">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between mb-2">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-3">
                 <Shield className="h-4 w-4 text-blue-500" />
                 <h3 className="text-lg font-semibold text-gray-900">
@@ -40,24 +40,24 @@ export default function TeamBoxes() {
               />
             </div>
             
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 gap-4">
               <div className="text-center border-r border-gray-200">
-                <p className="text-xs font-medium text-red-500 mb-0.5">Members</p>
-                <p className="text-lg font-bold text-gray-900">{team.members}</p>
+                <p className="text-xs font-medium text-red-500 mb-1">Members</p>
+                <p className="text-xl font-bold text-gray-900">{team.members}</p>
               </div>
               <div className="text-center border-r border-gray-200">
-                <p className="text-xs font-medium text-blue-500 mb-0.5">Tenure</p>
-                <p className="text-lg font-bold text-gray-900">
-                  {team.tenure} <span className="text-xs text-gray-500">years</span>
+                <p className="text-xs font-medium text-blue-500 mb-1">Tenure</p>
+                <p className="text-xl font-bold text-gray-900">
+                  {team.tenure} <span className="text-sm text-gray-500">years</span>
                 </p>
               </div>
               <div className="text-center border-r border-gray-200">
-                <p className="text-xs font-medium text-green-500 mb-0.5">Qtrs Achieved</p>
-                <p className="text-lg font-bold text-gray-900">{team.qtrsAchieved}</p>
+                <p className="text-xs font-medium text-green-500 mb-1">Qtrs Achieved</p>
+                <p className="text-xl font-bold text-gray-900">{team.qtrsAchieved}</p>
               </div>
               <div className="text-center">
-                <p className="text-xs font-medium text-orange-500 mb-0.5">Next Milestone</p>
-                <p className="text-lg font-bold text-gray-900">{team.nextMilestone}</p>
+                <p className="text-xs font-medium text-orange-500 mb-1">Next Milestone</p>
+                <p className="text-xl font-bold text-gray-900">{team.nextMilestone}</p>
               </div>
             </div>
           </CardContent>

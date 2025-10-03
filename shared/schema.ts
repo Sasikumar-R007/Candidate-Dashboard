@@ -183,9 +183,6 @@ export const employees = pgTable("employees", {
   department: text("department"),
   joiningDate: text("joining_date"),
   reportingTo: text("reporting_to"),
-  totalContribution: text("total_contribution"),
-  bannerImage: text("banner_image"),
-  profilePicture: text("profile_picture"),
   isActive: boolean("is_active").default(true),
   createdAt: text("created_at").notNull(),
 });

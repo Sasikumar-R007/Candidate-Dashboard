@@ -15,7 +15,6 @@ import { CalendarIcon, EditIcon, Building, Tag, BarChart3, Target, FolderOpen, H
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 import JobBoardTab from '@/components/dashboard/tabs/job-board-tab';
-import { useEmployeeAuth } from "@/contexts/auth-context";
 
 interface RecruiterProfile {
   id: string;
@@ -54,7 +53,6 @@ interface Interview {
 }
 
 export default function RecruiterDashboard() {
-  const employee = useEmployeeAuth();
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [activeTab, setActiveTab] = useState('updates');
   const [, setLocation] = useLocation();
@@ -370,13 +368,7 @@ export default function RecruiterDashboard() {
 
   // Use API data for recruiter profile and metrics
   const { data: recruiterProfile } = useQuery<RecruiterProfile>({
-    queryKey: ['/api/recruiter/profile', employee?.email],
-    enabled: !!employee?.email,
-    queryFn: async () => {
-      const response = await fetch(`/api/recruiter/profile?email=${encodeURIComponent(employee!.email)}`);
-      if (!response.ok) throw new Error('Failed to fetch profile');
-      return response.json();
-    }
+    queryKey: ['/api/recruiter/profile'],
   });
 
   const { data: targetMetrics } = useQuery({

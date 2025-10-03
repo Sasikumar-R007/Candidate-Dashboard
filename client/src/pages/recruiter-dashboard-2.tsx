@@ -18,11 +18,9 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
-import { useEmployeeAuth } from "@/contexts/auth-context";
 
 export default function RecruiterDashboard2() {
   const [, navigate] = useLocation();
-  const employee = useEmployeeAuth();
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [activeTab, setActiveTab] = useState('team');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -341,13 +339,7 @@ export default function RecruiterDashboard2() {
 
   // Use API data for recruiter context
   const { data: recruiterProfile } = useQuery({
-    queryKey: ['/api/recruiter/profile', employee?.email],
-    enabled: !!employee?.email,
-    queryFn: async () => {
-      const response = await fetch(`/api/recruiter/profile?email=${encodeURIComponent(employee!.email)}`);
-      if (!response.ok) throw new Error('Failed to fetch profile');
-      return response.json();
-    }
+    queryKey: ['/api/recruiter/profile'],
   }) as { data: any };
 
   const { data: teamMembers } = useQuery({

@@ -1126,6 +1126,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Team Leader Dashboard API routes
+  app.get("/api/team-leader/profile", (req, res) => {
+    res.json(teamLeaderProfile);
+  });
+
   app.get("/api/team-leader/team-members", (req, res) => {
     const teamMembers = [
       { id: "tm-001", name: "Sudharshan", salary: "2,95,000 INR", year: "2024-2025", profilesCount: "10" },
@@ -1247,159 +1251,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Team Leader profile endpoints - using database
-  app.get("/api/team-leader/profile", async (req, res) => {
-    try {
-      const email = req.query.email as string;
-      if (!email) {
-        return res.status(400).json({ message: "Email is required" });
-      }
-      
-      const employee = await storage.getEmployeeByEmail(email);
-      if (!employee || employee.role !== 'team_leader') {
-        return res.status(404).json({ message: "Team leader profile not found" });
-      }
-      
-      // Format response
-      const profile = {
-        id: employee.id,
-        name: employee.name,
-        role: employee.role,
-        employeeId: employee.employeeId,
-        phone: employee.phone || "",
-        email: employee.email,
-        joiningDate: employee.joiningDate || "",
-        department: employee.department || "",
-        reportingTo: employee.reportingTo || "",
-        totalContribution: employee.totalContribution || "0",
-        bannerImage: employee.bannerImage,
-        profilePicture: employee.profilePicture
-      };
-      
-      res.json(profile);
-    } catch (error) {
-      console.error('Team leader profile fetch error:', error);
-      res.status(500).json({ message: "Internal server error" });
-    }
+  // In-memory storage for team leader profile to persist changes
+  let teamLeaderProfile = {
+    id: "tl-001",
+    name: "John Mathew",
+    role: "Team Leader",
+    employeeId: "STL01",
+    phone: "90347 59092",
+    email: "john@scalingtheory.com",
+    joiningDate: "03-March-2021",
+    department: "Talent Advisory",
+    reportingTo: "Yatna Prakash",
+    totalContribution: "2,50,000",
+    bannerImage: null,
+    profilePicture: null
+  };
+
+  // Update the existing GET endpoint to use stored profile
+  app.get("/api/team-leader/profile", (req, res) => {
+    res.json(teamLeaderProfile);
   });
 
   // Team Leader profile update endpoint
-  app.patch("/api/team-leader/profile", async (req, res) => {
-    try {
-      const { email, ...updates } = req.body;
-      if (!email) {
-        return res.status(400).json({ message: "Email is required" });
-      }
-      
-      const employee = await storage.getEmployeeByEmail(email);
-      if (!employee || employee.role !== 'team_leader') {
-        return res.status(404).json({ message: "Team leader profile not found" });
-      }
-      
-      // Update employee profile
-      const updatedEmployee = await storage.updateEmployee(employee.id, updates);
-      if (!updatedEmployee) {
-        return res.status(500).json({ message: "Failed to update profile" });
-      }
-      
-      // Format response
-      const profile = {
-        id: updatedEmployee.id,
-        name: updatedEmployee.name,
-        role: updatedEmployee.role,
-        employeeId: updatedEmployee.employeeId,
-        phone: updatedEmployee.phone || "",
-        email: updatedEmployee.email,
-        joiningDate: updatedEmployee.joiningDate || "",
-        department: updatedEmployee.department || "",
-        reportingTo: updatedEmployee.reportingTo || "",
-        totalContribution: updatedEmployee.totalContribution || "0",
-        bannerImage: updatedEmployee.bannerImage,
-        profilePicture: updatedEmployee.profilePicture
-      };
-      
-      res.json(profile);
-    } catch (error) {
-      console.error('Team leader profile update error:', error);
-      res.status(500).json({ message: "Internal server error" });
-    }
+  app.patch("/api/team-leader/profile", (req, res) => {
+    const updates = req.body;
+    
+    // Merge updates with existing profile to preserve other fields
+    teamLeaderProfile = {
+      ...teamLeaderProfile,
+      ...updates
+    };
+    
+    res.json(teamLeaderProfile);
   });
 
-  // Admin Dashboard API routes and file uploads - using database
-  app.get("/api/admin/profile", async (req, res) => {
-    try {
-      const email = req.query.email as string;
-      if (!email) {
-        return res.status(400).json({ message: "Email is required" });
-      }
-      
-      const employee = await storage.getEmployeeByEmail(email);
-      if (!employee || employee.role !== 'admin') {
-        return res.status(404).json({ message: "Admin profile not found" });
-      }
-      
-      // Format response
-      const profile = {
-        id: employee.id,
-        name: employee.name,
-        role: employee.role,
-        employeeId: employee.employeeId,
-        phone: employee.phone || "",
-        email: employee.email,
-        joiningDate: employee.joiningDate || "",
-        department: employee.department || "",
-        reportingTo: employee.reportingTo || "",
-        totalContribution: employee.totalContribution || "0",
-        bannerImage: employee.bannerImage,
-        profilePicture: employee.profilePicture
-      };
-      
-      res.json(profile);
-    } catch (error) {
-      console.error('Admin profile fetch error:', error);
-      res.status(500).json({ message: "Internal server error" });
-    }
+  // Admin Dashboard API routes and file uploads
+  // In-memory storage for admin profile to persist changes
+  let adminProfile = {
+    id: "admin-001",
+    name: "John Mathew",
+    role: "CEO",
+    employeeId: "ADM01",
+    phone: "90347 59099",
+    email: "john@scalingtheory.com",
+    joiningDate: "01-Jan-2020",
+    department: "Administration",
+    reportingTo: "Board of Directors",
+    totalContribution: "5,00,000",
+    bannerImage: null,
+    profilePicture: null
+  };
+
+  app.get("/api/admin/profile", (req, res) => {
+    res.json(adminProfile);
   });
 
-  app.patch("/api/admin/profile", async (req, res) => {
-    try {
-      const { email, ...updates } = req.body;
-      if (!email) {
-        return res.status(400).json({ message: "Email is required" });
-      }
-      
-      const employee = await storage.getEmployeeByEmail(email);
-      if (!employee || employee.role !== 'admin') {
-        return res.status(404).json({ message: "Admin profile not found" });
-      }
-      
-      // Update employee profile
-      const updatedEmployee = await storage.updateEmployee(employee.id, updates);
-      if (!updatedEmployee) {
-        return res.status(500).json({ message: "Failed to update profile" });
-      }
-      
-      // Format response
-      const profile = {
-        id: updatedEmployee.id,
-        name: updatedEmployee.name,
-        role: updatedEmployee.role,
-        employeeId: updatedEmployee.employeeId,
-        phone: updatedEmployee.phone || "",
-        email: updatedEmployee.email,
-        joiningDate: updatedEmployee.joiningDate || "",
-        department: updatedEmployee.department || "",
-        reportingTo: updatedEmployee.reportingTo || "",
-        totalContribution: updatedEmployee.totalContribution || "0",
-        bannerImage: updatedEmployee.bannerImage,
-        profilePicture: updatedEmployee.profilePicture
-      };
-      
-      res.json(profile);
-    } catch (error) {
-      console.error('Admin profile update error:', error);
-      res.status(500).json({ message: "Internal server error" });
-    }
+  app.patch("/api/admin/profile", (req, res) => {
+    const updates = req.body;
+    
+    // Merge updates with existing profile to preserve other fields
+    adminProfile = {
+      ...adminProfile,
+      ...updates
+    };
+    
+    res.json(adminProfile);
   });
 
   // Admin file upload endpoints
@@ -1439,81 +1355,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Recruiter Dashboard API routes - using database
-  app.get("/api/recruiter/profile", async (req, res) => {
-    try {
-      const email = req.query.email as string;
-      if (!email) {
-        return res.status(400).json({ message: "Email is required" });
-      }
-      
-      const employee = await storage.getEmployeeByEmail(email);
-      if (!employee || employee.role !== 'recruiter') {
-        return res.status(404).json({ message: "Recruiter profile not found" });
-      }
-      
-      // Format response
-      const profile = {
-        id: employee.id,
-        name: employee.name,
-        role: employee.role,
-        employeeId: employee.employeeId,
-        phone: employee.phone || "",
-        email: employee.email,
-        joiningDate: employee.joiningDate || "",
-        department: employee.department || "",
-        reportingTo: employee.reportingTo || "",
-        totalContribution: employee.totalContribution || "0",
-        bannerImage: employee.bannerImage,
-        profilePicture: employee.profilePicture
-      };
-      
-      res.json(profile);
-    } catch (error) {
-      console.error('Recruiter profile fetch error:', error);
-      res.status(500).json({ message: "Internal server error" });
-    }
+  // Recruiter Dashboard API routes
+  // In-memory storage for recruiter profile to persist changes
+  let recruiterProfile = {
+    id: "rec-001",
+    name: "Kumaravel R",
+    role: "Talent Advisor",
+    employeeId: "STTA005",
+    phone: "9998887770",
+    email: "kumaravel@scaling.com",
+    joiningDate: "5/11/2023",
+    department: "Talent Advisory",
+    reportingTo: "Prakash Raj Raja",
+    totalContribution: "0",
+    bannerImage: null,
+    profilePicture: null
+  };
+
+  app.get("/api/recruiter/profile", (req, res) => {
+    res.json(recruiterProfile);
   });
 
-  app.patch("/api/recruiter/profile", async (req, res) => {
-    try {
-      const { email, ...updates } = req.body;
-      if (!email) {
-        return res.status(400).json({ message: "Email is required" });
-      }
-      
-      const employee = await storage.getEmployeeByEmail(email);
-      if (!employee || employee.role !== 'recruiter') {
-        return res.status(404).json({ message: "Recruiter profile not found" });
-      }
-      
-      // Update employee profile
-      const updatedEmployee = await storage.updateEmployee(employee.id, updates);
-      if (!updatedEmployee) {
-        return res.status(500).json({ message: "Failed to update profile" });
-      }
-      
-      // Format response
-      const profile = {
-        id: updatedEmployee.id,
-        name: updatedEmployee.name,
-        role: updatedEmployee.role,
-        employeeId: updatedEmployee.employeeId,
-        phone: updatedEmployee.phone || "",
-        email: updatedEmployee.email,
-        joiningDate: updatedEmployee.joiningDate || "",
-        department: updatedEmployee.department || "",
-        reportingTo: updatedEmployee.reportingTo || "",
-        totalContribution: updatedEmployee.totalContribution || "0",
-        bannerImage: updatedEmployee.bannerImage,
-        profilePicture: updatedEmployee.profilePicture
-      };
-      
-      res.json(profile);
-    } catch (error) {
-      console.error('Recruiter profile update error:', error);
-      res.status(500).json({ message: "Internal server error" });
-    }
+  app.patch("/api/recruiter/profile", (req, res) => {
+    const updates = req.body;
+    
+    // Merge updates with existing profile to preserve other fields
+    recruiterProfile = {
+      ...recruiterProfile,
+      ...updates
+    };
+    
+    res.json(recruiterProfile);
   });
 
   // Recruiter file upload endpoints

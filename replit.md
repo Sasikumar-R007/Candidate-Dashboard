@@ -2,61 +2,16 @@
 
 This is a dual-dashboard job portal web application featuring both candidate and team leader interfaces. The system provides comprehensive dashboards for job seekers to manage their profiles and for team leaders to monitor recruitment metrics, team performance, and targets. The application features a modern, responsive design with consistent styling across both dashboards and a landing page for role selection.
 
-**Latest Setup - Fresh GitHub Import (October 3, 2025 - 2:53 AM)**: Successfully imported and configured fresh GitHub repository clone in Replit environment:
-- ✅ Node.js 20 verified and operational with all npm dependencies installed (543 packages)
-- ✅ PostgreSQL database connected via existing Neon instance (DATABASE_URL: postgresql://postgres:password@helium/heliumdb)
-- ✅ Database schema synchronized and up-to-date (drizzle-kit push verified - no changes detected)
-- ✅ Workflow 'Start application' configured with webview output type on port 5000 for proper Replit preview
-- ✅ Express backend server running on 0.0.0.0:5000 with correct host binding for Replit proxy environment
-- ✅ Vite dev server integrated in middleware mode with allowedHosts: true (configured in server/vite.ts line 27)
-- ✅ Vite HMR disabled (line 25 server/vite.ts) to prevent WebSocket security issues with HTTPS
-- ✅ Frontend successfully loading: StaffOS landing page rendering perfectly with "Candidate" and "Employer Login" navigation
-- ✅ Deployment configured for autoscale deployment with build: ["npm", "run", "build"] and run: ["npm", "run", "start"]
-- ✅ Server responding with 200 status code on port 5000
-- ✅ Data retention cleanup scheduler active (runs daily at 2 AM)
-- ✅ Application fully operational with no critical errors - ready for development and deployment
-- ✅ .replit configuration file properly configured with modules: nodejs-20, web
-
-**Previous Setup Verification (October 2, 2025)**: Successfully verified and configured GitHub import in Replit environment:
-- ✅ Workflow 'Start application' properly configured with webview output type on port 5000
-- ✅ Server running correctly on 0.0.0.0:5000 with Express backend and Vite dev server
-- ✅ PostgreSQL database connected (DATABASE_URL configured to helium database)
-- ✅ Database schema synchronized and up to date (drizzle-kit push completed)
-- ✅ All pages loading correctly: Homepage, Candidate dashboard, Employee login
-- ✅ Vite HMR disabled (as configured for Replit HTTPS environment)
-- ✅ Deployment configuration set for autoscale with proper build/start commands
-- ✅ Application fully functional in preview with no critical errors
-
-**Latest Database Migration (October 2, 2025)**: Successfully migrated from in-memory storage to PostgreSQL with full persistence:
-- ✅ PostgreSQL database provisioned via Neon with DATABASE_URL configured
-- ✅ Migrated from MemStorage to DatabaseStorage with full IStorage interface implementation
-- ✅ Implemented comprehensive RBAC (Role-Based Access Control) middleware with four role levels:
-  - Admin: Full system access including user management, financial data, and all operations
-  - Team Leader: Team data access, metrics, pipeline, and performance tracking
-  - Recruiter: Candidate management, requirements, and own activity data
-  - Client: Own requirements and candidate lists only
-- ✅ Created automated data retention policies running daily at 2 AM:
-  - Login attempts: 30-day retention for security auditing
-  - Activities: 90-day retention with text-date parsing support
-  - Meetings: Placeholder for future implementation when schema includes date fields
-  - Archived requirements: 5+ year retention for compliance
-- ✅ All CRUD operations now persist to PostgreSQL database
-- ✅ Application running successfully with database persistence and scheduled cleanup
-
-**Previous Import Status (October 2, 2025 - Fresh Import)**: Successfully imported fresh GitHub repository clone to Replit environment. Complete setup includes:
-- ✅ Verified Node.js 20 installation and all npm dependencies installed correctly
-- ✅ Confirmed Vite dev server configuration with allowedHosts: true for Replit proxy compatibility
-- ✅ Configured workflow 'Start application' running `npm run dev` on port 5000 with webview output type
-- ✅ Verified Express backend server running on 0.0.0.0:5000 for proper host binding
-- ✅ Confirmed full-stack application: Express backend + Vite dev server + React frontend
-- ✅ Updated .gitignore to exclude uploaded files (.jpg, .png, .pdf, .webp, .docx, .avif) and environment files
-- ✅ Database schema defined using Drizzle ORM (PostgreSQL support ready but not active)
-- ✅ Configured autoscale deployment with proper build and start commands for production
-- ✅ All systems operational: StaffOS landing page loading correctly, authentication system working
-- ✅ File upload system configured with multer (5MB limit, supports images/PDFs/DOCX)
-- ✅ Application features: Candidate portal, Employee portal (recruiter/team leader/admin roles)
-- ✅ Bulk resume upload and parsing functionality with OTP verification system
-- ✅ No critical errors in console, proper Vite HMR connection established
+**Latest Import Status (October 2, 2025)**: Successfully imported GitHub repository to Replit environment. Complete setup includes:
+- Verified Node.js 20 and all dependencies are properly installed
+- Confirmed frontend configuration with allowedHosts: true for proper Replit proxy compatibility
+- Set up workflow 'Start application' on port 5000 with webview output type for frontend display
+- Verified full-stack application functionality with Express backend and React frontend
+- Configured deployment settings for autoscale deployment target with proper build and start commands
+- All systems operational: backend API endpoints responding correctly, frontend React application serving, file uploads working, and dashboard interfaces accessible
+- Confirmed job portal application with candidate/employer authentication system
+- Application successfully running on http://0.0.0.0:5000 with proper host configuration for Replit environment
+- StaffOS landing page loads correctly with no errors in browser console
 
 **Previous Migration Status**: Successfully migrated from Replit Agent to standard Replit environment on August 21, 2025. All functionality preserved with enhanced UI design for team leader dashboard components. Migration completed with working Admin dashboard implementation. All image upload features fully functional across all dashboards. Added admin-specific sidebar with "Report" option and replaced shield icons with crown icons for CEO role display.
 
@@ -103,21 +58,15 @@ Preferred communication style: Simple, everyday language.
 - **Error Handling**: Centralized error middleware with structured error responses
 
 ## Data Storage Solutions
-- **Database**: PostgreSQL with Drizzle ORM for type-safe database operations (ACTIVE)
+- **Database**: PostgreSQL with Drizzle ORM for type-safe database operations
 - **Connection**: Neon Database serverless PostgreSQL for cloud-hosted database
 - **Schema Management**: Drizzle Kit for database migrations and schema synchronization
-- **Storage Implementation**: DatabaseStorage class implementing IStorage interface for all CRUD operations
-- **Data Retention**: Automated cleanup scheduler running daily at 2 AM for compliance and performance
+- **Development Storage**: In-memory storage implementation for rapid development and testing
 
 ## Authentication and Authorization
 - **Session Management**: Express sessions with PostgreSQL session store (connect-pg-simple)
 - **User System**: Username-based authentication with demo user support
-- **RBAC System**: Role-based access control with four permission levels:
-  - Admin: Full system access (user management, financial data, all operations)
-  - Team Leader: Team oversight (metrics, pipeline, performance tracking)
-  - Recruiter: Candidate management (requirements, candidates, own activities)
-  - Client: Limited access (own requirements and candidate lists)
-- **Middleware**: Permission guards on all API endpoints ensuring role-appropriate access
+- **Authorization**: Profile-based access control where users can only access their own data
 
 ## Component Organization
 - **Dashboard Layout**: Sidebar navigation with main content area and tabbed interface (shared across both dashboards)

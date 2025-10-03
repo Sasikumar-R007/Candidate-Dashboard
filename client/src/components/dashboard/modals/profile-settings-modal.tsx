@@ -73,21 +73,21 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
       let profileData = {};
       
       // Load role-specific profile data from API
-      if (employee?.role && employee?.email) {
+      if (employee?.role) {
         try {
           let endpoint = '';
           switch (employee.role) {
             case 'recruiter':
-              endpoint = `/api/recruiter/profile?email=${encodeURIComponent(employee.email)}`;
+              endpoint = '/api/recruiter/profile';
               break;
             case 'team_leader':
-              endpoint = `/api/team-leader/profile?email=${encodeURIComponent(employee.email)}`;
+              endpoint = '/api/team-leader/profile';
               break;
             case 'admin':
-              endpoint = `/api/admin/profile?email=${encodeURIComponent(employee.email)}`;
+              endpoint = '/api/admin/profile';
               break;
             case 'client':
-              endpoint = `/api/client/profile?email=${encodeURIComponent(employee.email)}`;
+              endpoint = '/api/client/profile';
               break;
           }
           
