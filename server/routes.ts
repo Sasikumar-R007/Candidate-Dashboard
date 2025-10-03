@@ -1750,6 +1750,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create employee
+  app.post("/api/admin/employees", async (req, res) => {
+    try {
+      const employeeData = insertEmployeeSchema.parse({
+        ...req.body,
+        createdAt: new Date().toISOString(),
+      });
+      
+      // Hash password before storing
+      const hashedPassword = await bcrypt.hash(employeeData.password, 10);
+      const employee = await storage.createEmployee({
+        ...employeeData,
+        password: hashedPassword,
+      });
+      
+      res.status(201).json({ message: "Employee created successfully", employee });
+    } catch (error: any) {
+      console.error('Create employee error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid employee data", errors: error.errors });
+      }
+      if (error.message?.includes('duplicate') || error.message?.includes('unique')) {
+        return res.status(409).json({ message: "Employee with this email or ID already exists" });
+      }
+      res.status(500).json({ message: "Failed to create employee" });
+    }
+  });
+
+  // Create client
+  app.post("/api/admin/clients", async (req, res) => {
+    try {
+      const clientSchema = z.object({
+        clientCode: z.string().min(1),
+        brandName: z.string().min(1),
+        incorporatedName: z.string().optional(),
+        gstin: z.string().optional(),
+        address: z.string().optional(),
+        location: z.string().optional(),
+        spoc: z.string().optional(),
+        email: z.string().email().optional().or(z.literal('')),
+        website: z.string().optional(),
+        linkedin: z.string().optional(),
+        agreement: z.string().optional(),
+        percentage: z.string().optional(),
+        category: z.string().optional(),
+        paymentTerms: z.string().optional(),
+        source: z.string().optional(),
+        startDate: z.string().optional(),
+        referral: z.string().optional(),
+        currentStatus: z.string().optional(),
+        createdAt: z.string(),
+      });
+
+      const clientData = clientSchema.parse({
+        ...req.body,
+        createdAt: new Date().toISOString(),
+      });
+      
+      const client = await storage.createClient(clientData);
+      
+      res.status(201).json({ message: "Client created successfully", client });
+    } catch (error: any) {
+      console.error('Create client error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid client data", errors: error.errors });
+      }
+      if (error.message?.includes('duplicate') || error.message?.includes('unique')) {
+        return res.status(409).json({ message: "Client with this code already exists" });
+      }
+      res.status(500).json({ message: "Failed to create client" });
+    }
+  });
+
+  // Get all employees
+  app.get("/api/admin/employees", async (req, res) => {
+    try {
+      const employees = await storage.getAllEmployees();
+      res.json(employees);
+    } catch (error) {
+      console.error('Get employees error:', error);
+      res.status(500).json({ message: "Failed to get employees" });
+    }
+  });
+
+  // Get all clients
+  app.get("/api/admin/clients", async (req, res) => {
+    try {
+      const clients = await storage.getAllClients();
+      res.json(clients);
+    } catch (error) {
+      console.error('Get clients error:', error);
+      res.status(500).json({ message: "Failed to get clients" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

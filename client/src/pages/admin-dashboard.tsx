@@ -404,6 +404,19 @@ export default function AdminDashboard() {
   const [tlMeetingsCount, setTlMeetingsCount] = useState(3);
   const [ceoMeetingsCount, setCeoMeetingsCount] = useState(1);
   const [isAllMessagesModalOpen, setIsAllMessagesModalOpen] = useState(false);
+  const [selectedPerformanceTeam, setSelectedPerformanceTeam] = useState<string>("all");
+  const [isResumeDatabaseModalOpen, setIsResumeDatabaseModalOpen] = useState(false);
+  const [clientForm, setClientForm] = useState({
+    clientCode: '', brandName: '', incorporatedName: '', gstin: '',
+    address: '', location: '', spoc: '', email: '',
+    website: '', linkedin: '', agreement: '', percentage: '',
+    category: '', paymentTerms: '', source: '', startDate: '',
+    referral: '', currentStatus: 'active'
+  });
+  const [employeeForm, setEmployeeForm] = useState({
+    employeeId: '', name: '', email: '', password: '',
+    role: '', phone: '', department: '', joiningDate: '', age: ''
+  });
 
   // Requirements API queries
   const { data: requirements = [], isLoading: isLoadingRequirements } = useQuery({
@@ -468,6 +481,83 @@ export default function AdminDashboard() {
       toast({
         title: "Error",
         description: "Failed to update requirement. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Create client mutation
+  const createClientMutation = useMutation({
+    mutationFn: async (clientData: any) => {
+      const response = await fetch('/api/admin/clients', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(clientData),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create client');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Client created successfully!",
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+      setIsClientModalOpen(false);
+      setClientForm({
+        clientCode: '', brandName: '', incorporatedName: '', gstin: '',
+        address: '', location: '', spoc: '', email: '',
+        website: '', linkedin: '', agreement: '', percentage: '',
+        category: '', paymentTerms: '', source: '', startDate: '',
+        referral: '', currentStatus: 'active'
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create client. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Create employee mutation
+  const createEmployeeMutation = useMutation({
+    mutationFn: async (employeeData: any) => {
+      const response = await fetch('/api/admin/employees', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(employeeData),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create employee');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Employee created successfully!",
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+      setIsEmployeeModalOpen(false);
+      setEmployeeForm({
+        employeeId: '', name: '', email: '', password: '',
+        role: '', phone: '', department: '', joiningDate: '', age: ''
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create employee. Please try again.",
         variant: "destructive",
       });
     }
@@ -1694,14 +1784,13 @@ export default function AdminDashboard() {
               <div className="flex-1">
                 {/* Filter Dropdowns */}
                 <div className="flex gap-4 mb-4">
-                  <Select defaultValue="anusha-arun-all">
+                  <Select value={selectedPerformanceTeam} onValueChange={setSelectedPerformanceTeam} data-testid="select-performance-team">
                     <SelectTrigger className="w-48 bg-cyan-400 text-black">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="anusha-arun-all">Anusha/Arun/All</SelectItem>
-                      <SelectItem value="anusha">Anusha</SelectItem>
                       <SelectItem value="arun">Arun</SelectItem>
+                      <SelectItem value="anusha">Anusha</SelectItem>
                       <SelectItem value="all">All</SelectItem>
                     </SelectContent>
                   </Select>
@@ -1724,22 +1813,40 @@ export default function AdminDashboard() {
                   <div className="flex-1">
                     <ResponsiveContainer width="100%" height={300}>
                       <LineChart data={[
-                        { year: 1960, blue: 600, red: 100 },
-                        { year: 1965, blue: 650, red: 200 },
-                        { year: 1970, blue: 580, red: 220 },
-                        { year: 1975, blue: 520, red: 300 },
-                        { year: 1980, blue: 480, red: 320 },
-                        { year: 1985, blue: 400, red: 300 },
-                        { year: 1990, blue: 360, red: 280 },
-                        { year: 1995, blue: 320, red: 240 },
-                        { year: 2000, blue: 280, red: 200 }
+                        { month: 'Jan', arunTeam: 600, anushaTeam: 500, sudharshan: 150, deepika: 140, dharshan: 120, kavya: 190 },
+                        { month: 'Feb', arunTeam: 650, anushaTeam: 520, sudharshan: 160, deepika: 150, dharshan: 130, kavya: 210 },
+                        { month: 'Mar', arunTeam: 580, anushaTeam: 540, sudharshan: 145, deepika: 135, dharshan: 125, kavya: 175 },
+                        { month: 'Apr', arunTeam: 520, anushaTeam: 580, sudharshan: 130, deepika: 145, dharshan: 115, kavya: 130 },
+                        { month: 'May', arunTeam: 680, anushaTeam: 620, sudharshan: 170, deepika: 165, dharshan: 140, kavya: 205 },
+                        { month: 'Jun', arunTeam: 720, anushaTeam: 660, sudharshan: 180, deepika: 175, dharshan: 155, kavya: 210 }
                       ]}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="year" />
+                        <XAxis dataKey="month" />
                         <YAxis />
                         <Tooltip />
-                        <Line type="monotone" dataKey="blue" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
-                        <Line type="monotone" dataKey="red" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444' }} />
+                        <Legend />
+                        {selectedPerformanceTeam === 'all' && (
+                          <>
+                            <Line type="monotone" dataKey="arunTeam" name="Arun's Team" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
+                            <Line type="monotone" dataKey="anushaTeam" name="Anusha's Team" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444' }} />
+                          </>
+                        )}
+                        {selectedPerformanceTeam === 'arun' && (
+                          <>
+                            <Line type="monotone" dataKey="sudharshan" name="Sudharshan" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
+                            <Line type="monotone" dataKey="deepika" name="Deepika" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981' }} />
+                            <Line type="monotone" dataKey="dharshan" name="Dharshan" stroke="#F59E0B" strokeWidth={2} dot={{ fill: '#F59E0B' }} />
+                            <Line type="monotone" dataKey="kavya" name="Kavya" stroke="#8B5CF6" strokeWidth={2} dot={{ fill: '#8B5CF6' }} />
+                          </>
+                        )}
+                        {selectedPerformanceTeam === 'anusha' && (
+                          <>
+                            <Line type="monotone" dataKey="sudharshan" name="Sudharshan" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
+                            <Line type="monotone" dataKey="deepika" name="Deepika" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981' }} />
+                            <Line type="monotone" dataKey="dharshan" name="Dharshan" stroke="#F59E0B" strokeWidth={2} dot={{ fill: '#F59E0B' }} />
+                            <Line type="monotone" dataKey="kavya" name="Kavya" stroke="#8B5CF6" strokeWidth={2} dot={{ fill: '#8B5CF6' }} />
+                          </>
+                        )}
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -2834,14 +2941,13 @@ export default function AdminDashboard() {
               <div className="flex-1">
                 {/* Filter Dropdowns */}
                 <div className="flex gap-4 mb-4">
-                  <Select defaultValue="anusha-arun-all">
+                  <Select value={selectedPerformanceTeam} onValueChange={setSelectedPerformanceTeam} data-testid="select-performance-team">
                     <SelectTrigger className="w-48 bg-cyan-400 text-black">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="anusha-arun-all">Anusha/Arun/All</SelectItem>
-                      <SelectItem value="anusha">Anusha</SelectItem>
                       <SelectItem value="arun">Arun</SelectItem>
+                      <SelectItem value="anusha">Anusha</SelectItem>
                       <SelectItem value="all">All</SelectItem>
                     </SelectContent>
                   </Select>
@@ -2864,22 +2970,40 @@ export default function AdminDashboard() {
                   <div className="flex-1">
                     <ResponsiveContainer width="100%" height={300}>
                       <LineChart data={[
-                        { year: 1960, blue: 600, red: 100 },
-                        { year: 1965, blue: 650, red: 200 },
-                        { year: 1970, blue: 580, red: 220 },
-                        { year: 1975, blue: 520, red: 300 },
-                        { year: 1980, blue: 480, red: 320 },
-                        { year: 1985, blue: 400, red: 300 },
-                        { year: 1990, blue: 360, red: 280 },
-                        { year: 1995, blue: 320, red: 240 },
-                        { year: 2000, blue: 280, red: 200 }
+                        { month: 'Jan', arunTeam: 600, anushaTeam: 500, sudharshan: 150, deepika: 140, dharshan: 120, kavya: 190 },
+                        { month: 'Feb', arunTeam: 650, anushaTeam: 520, sudharshan: 160, deepika: 150, dharshan: 130, kavya: 210 },
+                        { month: 'Mar', arunTeam: 580, anushaTeam: 540, sudharshan: 145, deepika: 135, dharshan: 125, kavya: 175 },
+                        { month: 'Apr', arunTeam: 520, anushaTeam: 580, sudharshan: 130, deepika: 145, dharshan: 115, kavya: 130 },
+                        { month: 'May', arunTeam: 680, anushaTeam: 620, sudharshan: 170, deepika: 165, dharshan: 140, kavya: 205 },
+                        { month: 'Jun', arunTeam: 720, anushaTeam: 660, sudharshan: 180, deepika: 175, dharshan: 155, kavya: 210 }
                       ]}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="year" />
+                        <XAxis dataKey="month" />
                         <YAxis />
                         <Tooltip />
-                        <Line type="monotone" dataKey="blue" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
-                        <Line type="monotone" dataKey="red" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444' }} />
+                        <Legend />
+                        {selectedPerformanceTeam === 'all' && (
+                          <>
+                            <Line type="monotone" dataKey="arunTeam" name="Arun's Team" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
+                            <Line type="monotone" dataKey="anushaTeam" name="Anusha's Team" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444' }} />
+                          </>
+                        )}
+                        {selectedPerformanceTeam === 'arun' && (
+                          <>
+                            <Line type="monotone" dataKey="sudharshan" name="Sudharshan" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
+                            <Line type="monotone" dataKey="deepika" name="Deepika" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981' }} />
+                            <Line type="monotone" dataKey="dharshan" name="Dharshan" stroke="#F59E0B" strokeWidth={2} dot={{ fill: '#F59E0B' }} />
+                            <Line type="monotone" dataKey="kavya" name="Kavya" stroke="#8B5CF6" strokeWidth={2} dot={{ fill: '#8B5CF6' }} />
+                          </>
+                        )}
+                        {selectedPerformanceTeam === 'anusha' && (
+                          <>
+                            <Line type="monotone" dataKey="sudharshan" name="Sudharshan" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
+                            <Line type="monotone" dataKey="deepika" name="Deepika" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981' }} />
+                            <Line type="monotone" dataKey="dharshan" name="Dharshan" stroke="#F59E0B" strokeWidth={2} dot={{ fill: '#F59E0B' }} />
+                            <Line type="monotone" dataKey="kavya" name="Kavya" stroke="#8B5CF6" strokeWidth={2} dot={{ fill: '#8B5CF6' }} />
+                          </>
+                        )}
                       </LineChart>
                     </ResponsiveContainer>
                   </div>

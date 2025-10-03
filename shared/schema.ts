@@ -287,6 +287,29 @@ export const notifications = pgTable("notifications", {
   readAt: text("read_at"),
 });
 
+export const clients = pgTable("clients", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientCode: text("client_code").notNull().unique(),
+  brandName: text("brand_name").notNull(),
+  incorporatedName: text("incorporated_name"),
+  gstin: text("gstin"),
+  address: text("address"),
+  location: text("location"),
+  spoc: text("spoc"),
+  email: text("email"),
+  website: text("website"),
+  linkedin: text("linkedin"),
+  agreement: text("agreement"),
+  percentage: text("percentage"),
+  category: text("category"),
+  paymentTerms: text("payment_terms"),
+  source: text("source"),
+  startDate: text("start_date"),
+  referral: text("referral"),
+  currentStatus: text("current_status").default("active"), // active, frozen, churned
+  createdAt: text("created_at").notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
 });
@@ -379,6 +402,10 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
   id: true,
 });
 
+export const insertClientSchema = createInsertSchema(clients).omit({
+  id: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
@@ -425,3 +452,5 @@ export type InsertBulkUploadFile = z.infer<typeof insertBulkUploadFileSchema>;
 export type BulkUploadFile = typeof bulkUploadFiles.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
+export type InsertClient = z.infer<typeof insertClientSchema>;
+export type Client = typeof clients.$inferSelect;

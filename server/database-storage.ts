@@ -30,6 +30,8 @@ import {
   type InsertBulkUploadFile,
   type Notification,
   type InsertNotification,
+  type Client,
+  type InsertClient,
   users,
   profiles,
   jobPreferences,
@@ -44,7 +46,8 @@ import {
   candidateLoginAttempts,
   bulkUploadJobs,
   bulkUploadFiles,
-  notifications
+  notifications,
+  clients
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
@@ -498,6 +501,35 @@ export class DatabaseStorage implements IStorage {
 
   async deleteNotification(id: string): Promise<boolean> {
     const result = await db.delete(notifications).where(eq(notifications.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Client methods
+  async createClient(client: InsertClient): Promise<Client> {
+    const [newClient] = await db.insert(clients).values(client).returning();
+    return newClient;
+  }
+
+  async getAllClients(): Promise<Client[]> {
+    return await db.select().from(clients).orderBy(desc(clients.createdAt));
+  }
+
+  async getClientByClientCode(clientCode: string): Promise<Client | undefined> {
+    const [client] = await db.select().from(clients).where(eq(clients.clientCode, clientCode));
+    return client || undefined;
+  }
+
+  async updateClient(id: string, updates: Partial<Client>): Promise<Client | undefined> {
+    const [client] = await db
+      .update(clients)
+      .set(updates)
+      .where(eq(clients.id, id))
+      .returning();
+    return client || undefined;
+  }
+
+  async deleteClient(id: string): Promise<boolean> {
+    const result = await db.delete(clients).where(eq(clients.id, id));
     return (result.rowCount ?? 0) > 0;
   }
 }

@@ -28,7 +28,9 @@ import {
   type BulkUploadFile,
   type InsertBulkUploadFile,
   type Notification,
-  type InsertNotification
+  type InsertNotification,
+  type Client,
+  type InsertClient
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
@@ -112,6 +114,13 @@ export interface IStorage {
   getNotificationsByUserId(userId: string): Promise<Notification[]>;
   markNotificationAsRead(id: string): Promise<Notification | undefined>;
   deleteNotification(id: string): Promise<boolean>;
+  
+  // Client methods
+  createClient(client: InsertClient): Promise<Client>;
+  getAllClients(): Promise<Client[]>;
+  getClientByClientCode(clientCode: string): Promise<Client | undefined>;
+  updateClient(id: string, updates: Partial<Client>): Promise<Client | undefined>;
+  deleteClient(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
