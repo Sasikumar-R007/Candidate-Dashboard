@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { BrainCircuit } from "lucide-react";
+import { useAuth } from "@/contexts/auth-context";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +33,7 @@ export default function EmployerLogin() {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { setUser } = useAuth();
   
   const {
     register,
@@ -79,7 +81,13 @@ export default function EmployerLogin() {
           description: `Welcome back, ${result.employee.name}!`,
         });
 
-        // Store employee data in sessionStorage for the session
+        // Store employee data in auth context (which auto-syncs to localStorage)
+        setUser({
+          type: 'employee',
+          data: result.employee
+        });
+
+        // Store employee data in sessionStorage for backward compatibility
         sessionStorage.setItem('employee', JSON.stringify(result.employee));
 
         // Navigate based on employee role
