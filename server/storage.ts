@@ -968,5 +968,10 @@ export class MemStorage implements IStorage {
   }
 }
 
-// Switch to database storage now that database is provisioned
+// Note: DatabaseStorage is available but incomplete. 
+// Using MemStorage for now as it has all required methods implemented.
+// To switch to DatabaseStorage, complete the missing methods in database-storage.ts:
+// - updateEmployeePassword, updateCandidatePassword
+// - Bulk upload methods (createBulkUploadJob, etc.)
+// - Notification methods (createNotification, etc.)
 export const storage = new MemStorage();
