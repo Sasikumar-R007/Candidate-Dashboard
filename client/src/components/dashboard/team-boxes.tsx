@@ -55,6 +55,13 @@ export default function TeamBoxes() {
     setIsModalOpen(true);
   };
 
+  const handleModalClose = (open: boolean) => {
+    setIsModalOpen(open);
+    if (!open) {
+      setSelectedMember(null);
+    }
+  };
+
   return (
     <>
       <div className="grid grid-cols-2 gap-6 mb-6">
@@ -69,7 +76,7 @@ export default function TeamBoxes() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <Shield className="h-4 w-4 text-blue-500" />
-                  <h3 className="text-lg font-semibold text-gray-900">
+                  <h3 className="text-lg font-semibold text-gray-900" data-testid={`text-team-name-${index}`}>
                     {team.name}
                   </h3>
                 </div>
@@ -77,6 +84,7 @@ export default function TeamBoxes() {
                   src={team.image} 
                   alt={team.name}
                   className="w-12 h-12 object-cover"
+                  data-testid={`img-team-avatar-${index}`}
                 />
               </div>
               
@@ -108,7 +116,7 @@ export default function TeamBoxes() {
       {selectedMember && (
         <TeamMemberProfileModal
           open={isModalOpen}
-          onOpenChange={setIsModalOpen}
+          onOpenChange={handleModalClose}
           member={{
             name: selectedMember.name,
             role: selectedMember.role,
