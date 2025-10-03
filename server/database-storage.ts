@@ -415,4 +415,89 @@ export class DatabaseStorage implements IStorage {
     
     return false;
   }
+
+  async updateEmployeePassword(email: string, newPasswordHash: string): Promise<boolean> {
+    const result = await db
+      .update(employees)
+      .set({ password: newPasswordHash })
+      .where(eq(employees.email, email));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async updateCandidatePassword(email: string, newPasswordHash: string): Promise<boolean> {
+    const result = await db
+      .update(candidates)
+      .set({ password: newPasswordHash })
+      .where(eq(candidates.email, email));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async createBulkUploadJob(job: InsertBulkUploadJob): Promise<BulkUploadJob> {
+    const [bulkJob] = await db.insert(bulkUploadJobs).values(job).returning();
+    return bulkJob;
+  }
+
+  async getBulkUploadJob(jobId: string): Promise<BulkUploadJob | undefined> {
+    const [job] = await db.select().from(bulkUploadJobs).where(eq(bulkUploadJobs.jobId, jobId));
+    return job || undefined;
+  }
+
+  async updateBulkUploadJob(jobId: string, updates: Partial<BulkUploadJob>): Promise<BulkUploadJob | undefined> {
+    const [job] = await db
+      .update(bulkUploadJobs)
+      .set(updates)
+      .where(eq(bulkUploadJobs.jobId, jobId))
+      .returning();
+    return job || undefined;
+  }
+
+  async getAllBulkUploadJobs(): Promise<BulkUploadJob[]> {
+    return await db.select().from(bulkUploadJobs).orderBy(desc(bulkUploadJobs.createdAt));
+  }
+
+  async createBulkUploadFile(file: InsertBulkUploadFile): Promise<BulkUploadFile> {
+    const [uploadFile] = await db.insert(bulkUploadFiles).values(file).returning();
+    return uploadFile;
+  }
+
+  async getBulkUploadFile(id: string): Promise<BulkUploadFile | undefined> {
+    const [file] = await db.select().from(bulkUploadFiles).where(eq(bulkUploadFiles.id, id));
+    return file || undefined;
+  }
+
+  async getBulkUploadFilesByJobId(jobId: string): Promise<BulkUploadFile[]> {
+    return await db.select().from(bulkUploadFiles).where(eq(bulkUploadFiles.jobId, jobId));
+  }
+
+  async updateBulkUploadFile(id: string, updates: Partial<BulkUploadFile>): Promise<BulkUploadFile | undefined> {
+    const [file] = await db
+      .update(bulkUploadFiles)
+      .set(updates)
+      .where(eq(bulkUploadFiles.id, id))
+      .returning();
+    return file || undefined;
+  }
+
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [newNotification] = await db.insert(notifications).values(notification).returning();
+    return newNotification;
+  }
+
+  async getNotificationsByUserId(userId: string): Promise<Notification[]> {
+    return await db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt));
+  }
+
+  async markNotificationAsRead(id: string): Promise<Notification | undefined> {
+    const [notification] = await db
+      .update(notifications)
+      .set({ status: "read", readAt: new Date().toISOString() })
+      .where(eq(notifications.id, id))
+      .returning();
+    return notification || undefined;
+  }
+
+  async deleteNotification(id: string): Promise<boolean> {
+    const result = await db.delete(notifications).where(eq(notifications.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
 }

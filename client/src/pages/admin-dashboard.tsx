@@ -2728,7 +2728,7 @@ export default function AdminDashboard() {
                   <div className="flex gap-2">
                     <Button 
                       className="btn-rounded bg-purple-600 hover:bg-purple-700 text-white text-sm px-4"
-                      onClick={() => setIsDatabaseModalOpen(true)}
+                      onClick={() => navigate('/master-database')}
                     >
                       View Full Database
                     </Button>
