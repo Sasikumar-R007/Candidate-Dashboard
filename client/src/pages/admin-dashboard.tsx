@@ -5144,23 +5144,47 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee ID</label>
-                  <Input placeholder="Employee ID" className="input-styled rounded" />
+                  <Input 
+                    placeholder="Employee ID" 
+                    className="input-styled rounded" 
+                    value={employeeForm.employeeId}
+                    onChange={(e) => setEmployeeForm({...employeeForm, employeeId: e.target.value})}
+                    data-testid="input-employee-id"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee Name</label>
-                  <Input placeholder="Employee Name" className="input-styled rounded" />
+                  <Input 
+                    placeholder="Employee Name" 
+                    className="input-styled rounded" 
+                    value={employeeForm.name}
+                    onChange={(e) => setEmployeeForm({...employeeForm, name: e.target.value})}
+                    data-testid="input-employee-name"
+                  />
                 </div>
               </div>
 
               {/* Row 2 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>
-                  <Input placeholder="Address" className="input-styled rounded" />
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Department</label>
+                  <Input 
+                    placeholder="Department" 
+                    className="input-styled rounded" 
+                    value={employeeForm.department}
+                    onChange={(e) => setEmployeeForm({...employeeForm, department: e.target.value})}
+                    data-testid="input-department"
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Designation</label>
-                  <Input placeholder="Designation" className="input-styled rounded" />
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role</label>
+                  <Input 
+                    placeholder="Role" 
+                    className="input-styled rounded" 
+                    value={employeeForm.role}
+                    onChange={(e) => setEmployeeForm({...employeeForm, role: e.target.value})}
+                    data-testid="input-role"
+                  />
                 </div>
               </div>
 
@@ -5168,11 +5192,24 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-                  <Input placeholder="Email" type="email" className="input-styled rounded" />
+                  <Input 
+                    placeholder="Email" 
+                    type="email" 
+                    className="input-styled rounded" 
+                    value={employeeForm.email}
+                    onChange={(e) => setEmployeeForm({...employeeForm, email: e.target.value})}
+                    data-testid="input-employee-email"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mobile Number</label>
-                  <Input placeholder="Mobile Number" className="input-styled rounded" />
+                  <Input 
+                    placeholder="Mobile Number" 
+                    className="input-styled rounded" 
+                    value={employeeForm.phone}
+                    onChange={(e) => setEmployeeForm({...employeeForm, phone: e.target.value})}
+                    data-testid="input-phone"
+                  />
                 </div>
               </div>
 
@@ -5180,20 +5217,24 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date of Joining</label>
-                  <Input placeholder="Date of Joining" className="input-styled rounded" />
+                  <Input 
+                    placeholder="Date of Joining" 
+                    className="input-styled rounded" 
+                    value={employeeForm.joiningDate}
+                    onChange={(e) => setEmployeeForm({...employeeForm, joiningDate: e.target.value})}
+                    data-testid="input-joining-date"
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employment Status</label>
-                  <Select>
-                    <SelectTrigger className="input-styled rounded">
-                      <SelectValue placeholder="Select Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="intern">Intern</SelectItem>
-                      <SelectItem value="permanent">Permanent</SelectItem>
-                      <SelectItem value="probation">Probation</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
+                  <Input 
+                    placeholder="Password" 
+                    type="password" 
+                    className="input-styled rounded" 
+                    value={employeeForm.password}
+                    onChange={(e) => setEmployeeForm({...employeeForm, password: e.target.value})}
+                    data-testid="input-password"
+                  />
                 </div>
               </div>
 
@@ -5387,8 +5428,13 @@ export default function AdminDashboard() {
             </div>
 
             <div className="flex justify-center pt-6">
-              <Button className="bg-cyan-400 hover:bg-cyan-500 text-white px-8 py-2 rounded">
-                Submit
+              <Button 
+                className="bg-cyan-400 hover:bg-cyan-500 text-white px-8 py-2 rounded"
+                onClick={() => createEmployeeMutation.mutate(employeeForm)}
+                disabled={createEmployeeMutation.isPending}
+                data-testid="button-submit-employee"
+              >
+                {createEmployeeMutation.isPending ? 'Submitting...' : 'Submit'}
               </Button>
             </div>
           </div>
