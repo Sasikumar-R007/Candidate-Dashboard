@@ -368,6 +368,7 @@ export default function AdminDashboard() {
   const [isRevenueMappingModalOpen, setIsRevenueMappingModalOpen] = useState(false);
   const [isTeamPerformanceModalOpen, setIsTeamPerformanceModalOpen] = useState(false);
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
+  const [isClosureReportsModalOpen, setIsClosureReportsModalOpen] = useState(false);
   const [isAddTeamLeaderModalOpen, setIsAddTeamLeaderModalOpen] = useState(false);
   const [isAddTalentAdvisorModalOpen, setIsAddTalentAdvisorModalOpen] = useState(false);
   const [isAddRecruiterModalOpen, setIsAddRecruiterModalOpen] = useState(false);
@@ -2694,7 +2695,7 @@ export default function AdminDashboard() {
                     <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
                       <div className="flex justify-end">
                         <Button 
-                          onClick={() => setIsClosureModalOpen(true)}
+                          onClick={() => setIsClosureReportsModalOpen(true)}
                           data-testid="button-see-more-closure-admin"
                         >
                           See More
@@ -4478,7 +4479,7 @@ export default function AdminDashboard() {
       </Dialog>
 
       {/* Closure Reports Modal */}
-      <Dialog open={isClosureModalOpen} onOpenChange={setIsClosureModalOpen}>
+      <Dialog open={isClosureReportsModalOpen} onOpenChange={setIsClosureReportsModalOpen}>
         <DialogContent className="max-w-5xl mx-auto max-h-[80vh]">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
