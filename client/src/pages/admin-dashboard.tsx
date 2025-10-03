@@ -21,6 +21,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users, ExternalLink } from "lucide-react";
@@ -418,6 +420,29 @@ export default function AdminDashboard() {
     role: '', phone: '', department: '', joiningDate: '', age: ''
   });
 
+  // Report tab state
+  const [teamsReportType, setTeamsReportType] = useState('');
+  const [teamsPeriod, setTeamsPeriod] = useState('');
+  const [teamsCustomDate, setTeamsCustomDate] = useState<Date | undefined>();
+  const [teamsFileFormat, setTeamsFileFormat] = useState('');
+  
+  const [reportsCheckboxes, setReportsCheckboxes] = useState({
+    requirements: true,
+    pipeline: true,
+    closureReports: true,
+    teamPerformance: true
+  });
+  const [reportsTeam, setReportsTeam] = useState('');
+  const [reportsPriority, setReportsPriority] = useState('');
+  const [reportsType, setReportsType] = useState('');
+  const [reportsFileFormat, setReportsFileFormat] = useState('');
+  
+  const [generalReportType, setGeneralReportType] = useState('');
+  const [generalFileFormat, setGeneralFileFormat] = useState('');
+  
+  const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
+  const [downloadSection, setDownloadSection] = useState<'teams' | 'reports' | 'general'>('teams');
+
   // Requirements API queries
   const { data: requirements = [], isLoading: isLoadingRequirements } = useQuery({
     queryKey: ['admin', 'requirements'],
@@ -751,6 +776,58 @@ export default function AdminDashboard() {
 
   const getMeetingWithOptions = () => {
     return meetingFor === 'TL' ? tlList : meetingFor === 'TA' ? taList : [];
+  };
+
+  // Download report handlers
+  const handleDownloadClick = (section: 'teams' | 'reports' | 'general') => {
+    setDownloadSection(section);
+    setShowDownloadConfirm(true);
+  };
+
+  const handleConfirmDownload = () => {
+    let fileFormat = '';
+    let reportDetails = '';
+
+    if (downloadSection === 'teams') {
+      fileFormat = teamsFileFormat;
+      reportDetails = `Teams Report - ${teamsReportType || 'N/A'} - ${teamsPeriod || 'N/A'}`;
+    } else if (downloadSection === 'reports') {
+      fileFormat = reportsFileFormat;
+      const selectedReports = Object.entries(reportsCheckboxes)
+        .filter(([_, checked]) => checked)
+        .map(([key, _]) => key)
+        .join(', ');
+      reportDetails = `Reports - ${selectedReports} - Team: ${reportsTeam || 'All'} - Priority: ${reportsPriority || 'All'}`;
+    } else {
+      fileFormat = generalFileFormat;
+      reportDetails = `General Report - ${generalReportType || 'N/A'}`;
+    }
+
+    if (!fileFormat) {
+      toast({
+        title: "Error",
+        description: "Please select a file format before downloading.",
+        variant: "destructive",
+      });
+      setShowDownloadConfirm(false);
+      return;
+    }
+
+    // Simulate download
+    toast({
+      title: "Download Started",
+      description: `Downloading ${reportDetails} as ${fileFormat.toUpperCase()}`,
+      className: "bg-green-50 border-green-200 text-green-800",
+    });
+
+    setShowDownloadConfirm(false);
+  };
+
+  const toggleReportCheckbox = (key: keyof typeof reportsCheckboxes) => {
+    setReportsCheckboxes(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
   };
 
   // Fetch admin profile on component mount
@@ -3413,86 +3490,147 @@ export default function AdminDashboard() {
         return (
           <div className="px-6 py-6 space-y-6 overflow-y-auto max-h-full admin-scrollbar">
             {/* Teams Section */}
-            <div className="bg-cyan-50 dark:bg-cyan-900/20 px-6 pb-6 ">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Teams</h3>
+            <div className="bg-cyan-50 dark:bg-cyan-900/20 px-6 pb-6 rounded">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pt-4">Teams</h3>
               
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <Select>
-                    <SelectTrigger className="w-60 input-styled rounded">
-                      <SelectValue placeholder="Target and Incentives" />
+                  <Select value={teamsReportType} onValueChange={setTeamsReportType}>
+                    <SelectTrigger className="w-60 input-styled rounded" data-testid="select-teams-report-type">
+                      <SelectValue placeholder="Select Report Type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="target-incentives">Target and Incentives</SelectItem>
-                      <SelectItem value="performance">Performance</SelectItem>
-                      <SelectItem value="metrics">Metrics</SelectItem>
+                      <SelectItem value="target-incentives">Target & Incentives</SelectItem>
+                      <SelectItem value="productive-metrics">Productive Metrics</SelectItem>
+                      <SelectItem value="cash-outflows">Cash Outflows</SelectItem>
+                      <SelectItem value="key-aspects">Key Aspects</SelectItem>
+                      <SelectItem value="resume-database">Resume Database</SelectItem>
+                      <SelectItem value="key-totals">Key Totals</SelectItem>
+                      <SelectItem value="list-of-users">List of Users</SelectItem>
                     </SelectContent>
                   </Select>
                   
-                  <Select>
-                    <SelectTrigger className="w-32 input-styled rounded">
-                      <SelectValue placeholder="Monthly" />
+                  <Select value={teamsPeriod} onValueChange={setTeamsPeriod}>
+                    <SelectTrigger className="w-40 input-styled rounded" data-testid="select-teams-period">
+                      <SelectValue placeholder="Select Period" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="monthly">Monthly</SelectItem>
+                      <SelectItem value="weekly">Weekly</SelectItem>
                       <SelectItem value="quarterly">Quarterly</SelectItem>
                       <SelectItem value="yearly">Yearly</SelectItem>
+                      <SelectItem value="custom">Custom Date</SelectItem>
                     </SelectContent>
                   </Select>
                   
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="rounded input-styled px-3">
-                        <CalendarIcon className="h-4 w-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar mode="single" />
-                    </PopoverContent>
-                  </Popover>
+                  {teamsPeriod === 'custom' && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="rounded input-styled px-3" data-testid="button-teams-custom-date">
+                          <CalendarIcon className="h-4 w-4 mr-2" />
+                          {teamsCustomDate ? format(teamsCustomDate, 'PPP') : 'Pick date'}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar mode="single" selected={teamsCustomDate} onSelect={setTeamsCustomDate} />
+                      </PopoverContent>
+                    </Popover>
+                  )}
+
+                  <Select value={teamsFileFormat} onValueChange={setTeamsFileFormat}>
+                    <SelectTrigger className="w-36 input-styled rounded" data-testid="select-teams-file-format">
+                      <SelectValue placeholder="File Format" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="excel">Excel</SelectItem>
+                      <SelectItem value="docx">DOCX</SelectItem>
+                      <SelectItem value="pdf">PDF</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 
-                <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-8 py-2 rounded ml-4">
+                <Button 
+                  className="bg-cyan-400 hover:bg-cyan-500 text-black px-8 py-2 rounded ml-4"
+                  onClick={() => handleDownloadClick('teams')}
+                  data-testid="button-download-teams"
+                >
                   Download
                 </Button>
               </div>
+            </div>
+            
+            {/* Reports Section */}
+            <div className="bg-cyan-50 dark:bg-cyan-900/20 px-6 pb-6 rounded">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pt-4">Reports</h3>
               
               {/* Report Type Checkboxes */}
               <div className="grid grid-cols-4 gap-6 mb-4">
-                <label className="flex items-center space-x-2">
-                  <input type="checkbox" className="rounded" defaultChecked />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Requirements</span>
+                <label 
+                  className="flex items-center space-x-2 cursor-pointer" 
+                  data-testid="checkbox-requirements"
+                >
+                  <Checkbox 
+                    checked={reportsCheckboxes.requirements}
+                    onCheckedChange={() => toggleReportCheckbox('requirements')}
+                  />
+                  <span className={`text-sm ${reportsCheckboxes.requirements ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600'}`}>
+                    Requirements
+                  </span>
                 </label>
-                <label className="flex items-center space-x-2">
-                  <input type="checkbox" className="rounded" defaultChecked />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Pipeline</span>
+                <label 
+                  className="flex items-center space-x-2 cursor-pointer"
+                  data-testid="checkbox-pipeline"
+                >
+                  <Checkbox 
+                    checked={reportsCheckboxes.pipeline}
+                    onCheckedChange={() => toggleReportCheckbox('pipeline')}
+                  />
+                  <span className={`text-sm ${reportsCheckboxes.pipeline ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600'}`}>
+                    Pipeline
+                  </span>
                 </label>
-                <label className="flex items-center space-x-2">
-                  <input type="checkbox" className="rounded" defaultChecked />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Closure Reports</span>
+                <label 
+                  className="flex items-center space-x-2 cursor-pointer"
+                  data-testid="checkbox-closure-reports"
+                >
+                  <Checkbox 
+                    checked={reportsCheckboxes.closureReports}
+                    onCheckedChange={() => toggleReportCheckbox('closureReports')}
+                  />
+                  <span className={`text-sm ${reportsCheckboxes.closureReports ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600'}`}>
+                    Closure Reports
+                  </span>
                 </label>
-                <label className="flex items-center space-x-2">
-                  <input type="checkbox" className="rounded" defaultChecked />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Team Performance</span>
+                <label 
+                  className="flex items-center space-x-2 cursor-pointer"
+                  data-testid="checkbox-team-performance"
+                >
+                  <Checkbox 
+                    checked={reportsCheckboxes.teamPerformance}
+                    onCheckedChange={() => toggleReportCheckbox('teamPerformance')}
+                  />
+                  <span className={`text-sm ${reportsCheckboxes.teamPerformance ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600'}`}>
+                    Team Performance
+                  </span>
                 </label>
               </div>
               
-              {/* Second Row of Controls */}
+              {/* Filter Controls */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <Select>
-                    <SelectTrigger className="w-32 input-styled rounded">
+                  <Select value={reportsTeam} onValueChange={setReportsTeam}>
+                    <SelectTrigger className="w-40 input-styled rounded" data-testid="select-reports-team">
                       <SelectValue placeholder="Team" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="arun">Arun's Team</SelectItem>
-                      <SelectItem value="anusha">Anusha's Team</SelectItem>
-                      <SelectItem value="all">All Teams</SelectItem>
+                      <SelectItem value="arun">Arun</SelectItem>
+                      <SelectItem value="anusha">Anusha</SelectItem>
+                      <SelectItem value="all">All</SelectItem>
                     </SelectContent>
                   </Select>
                   
-                  <Select>
-                    <SelectTrigger className="w-32 input-styled rounded">
+                  <Select value={reportsPriority} onValueChange={setReportsPriority}>
+                    <SelectTrigger className="w-40 input-styled rounded" data-testid="select-reports-priority">
                       <SelectValue placeholder="Priority" />
                     </SelectTrigger>
                     <SelectContent>
@@ -3503,87 +3641,73 @@ export default function AdminDashboard() {
                     </SelectContent>
                   </Select>
                   
-                  <Select>
-                    <SelectTrigger className="w-32 input-styled rounded">
+                  <Select value={reportsType} onValueChange={setReportsType}>
+                    <SelectTrigger className="w-40 input-styled rounded" data-testid="select-reports-type">
                       <SelectValue placeholder="Type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="technical">Technical</SelectItem>
-                      <SelectItem value="non-technical">Non-Technical</SelectItem>
-                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="opened">Opened</SelectItem>
+                      <SelectItem value="closed">Closed</SelectItem>
+                      <SelectItem value="archived">Archived</SelectItem>
+                      <SelectItem value="all">All</SelectItem>
                     </SelectContent>
                   </Select>
-                  
-                  <Select>
-                    <SelectTrigger className="w-32 input-styled rounded">
-                      <SelectValue placeholder="Monthly" />
+
+                  <Select value={reportsFileFormat} onValueChange={setReportsFileFormat}>
+                    <SelectTrigger className="w-36 input-styled rounded" data-testid="select-reports-file-format">
+                      <SelectValue placeholder="File Format" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                      <SelectItem value="quarterly">Quarterly</SelectItem>
-                      <SelectItem value="yearly">Yearly</SelectItem>
+                      <SelectItem value="excel">Excel</SelectItem>
+                      <SelectItem value="docx">DOCX</SelectItem>
+                      <SelectItem value="pdf">PDF</SelectItem>
                     </SelectContent>
                   </Select>
-                  
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="rounded input-styled px-3">
-                        <CalendarIcon className="h-4 w-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar mode="single" />
-                    </PopoverContent>
-                  </Popover>
                 </div>
                 
-                <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-8 py-2 rounded ml-4">
+                <Button 
+                  className="bg-cyan-400 hover:bg-cyan-500 text-black px-8 py-2 rounded ml-4"
+                  onClick={() => handleDownloadClick('reports')}
+                  data-testid="button-download-reports"
+                >
                   Download
                 </Button>
               </div>
             </div>
             
             {/* General Section */}
-            <div className="bg-cyan-50 dark:bg-cyan-900/20 px-6 pb-6 ">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">General</h3>
+            <div className="bg-cyan-50 dark:bg-cyan-900/20 px-6 pb-6 rounded">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 pt-4">General</h3>
               
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <Select>
-                    <SelectTrigger className="w-60 input-styled rounded">
-                      <SelectValue placeholder="Employee Master" />
+                  <Select value={generalReportType} onValueChange={setGeneralReportType}>
+                    <SelectTrigger className="w-60 input-styled rounded" data-testid="select-general-report-type">
+                      <SelectValue placeholder="Select Report Type" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="employee-master">Employee Master</SelectItem>
                       <SelectItem value="client-master">Client Master</SelectItem>
-                      <SelectItem value="resume-database">Resume Database</SelectItem>
                     </SelectContent>
                   </Select>
-                  
-                  <Select>
-                    <SelectTrigger className="w-32 input-styled rounded">
-                      <SelectValue placeholder="Monthly" />
+
+                  <Select value={generalFileFormat} onValueChange={setGeneralFileFormat}>
+                    <SelectTrigger className="w-36 input-styled rounded" data-testid="select-general-file-format">
+                      <SelectValue placeholder="File Format" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                      <SelectItem value="quarterly">Quarterly</SelectItem>
-                      <SelectItem value="yearly">Yearly</SelectItem>
+                      <SelectItem value="excel">Excel</SelectItem>
+                      <SelectItem value="docx">DOCX</SelectItem>
+                      <SelectItem value="pdf">PDF</SelectItem>
                     </SelectContent>
                   </Select>
-                  
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="rounded input-styled px-3">
-                        <CalendarIcon className="h-4 w-4" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar mode="single" />
-                    </PopoverContent>
-                  </Popover>
                 </div>
                 
-                <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-8 py-2 rounded ml-4">
+                <Button 
+                  className="bg-cyan-400 hover:bg-cyan-500 text-black px-8 py-2 rounded ml-4"
+                  onClick={() => handleDownloadClick('general')}
+                  data-testid="button-download-general"
+                >
                   Download
                 </Button>
               </div>
@@ -5586,6 +5710,28 @@ export default function AdminDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Download Confirmation Dialog */}
+      <AlertDialog open={showDownloadConfirm} onOpenChange={setShowDownloadConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Download</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to download this report? The file will be generated based on your selected filters and format.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-download">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDownload}
+              className="bg-cyan-400 hover:bg-cyan-500 text-black"
+              data-testid="button-confirm-download"
+            >
+              Confirm Download
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Success Alert */}
       {showAlert && (
