@@ -5060,7 +5060,7 @@ export default function AdminDashboard() {
             {/* Row 1 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Code</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Code <span className="text-red-500">*</span></label>
                 <Input 
                   placeholder="Client Code" 
                   className="input-styled rounded" 
@@ -5070,7 +5070,7 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Brand Name</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Brand Name <span className="text-red-500">*</span></label>
                 <Input 
                   placeholder="Brand Name" 
                   className="input-styled rounded" 
@@ -5283,7 +5283,17 @@ export default function AdminDashboard() {
             <div className="flex justify-center pt-6">
               <Button 
                 className="bg-cyan-400 hover:bg-cyan-500 text-white px-8 py-2 rounded"
-                onClick={() => createClientMutation.mutate(clientForm)}
+                onClick={() => {
+                  if (!clientForm.clientCode || !clientForm.brandName) {
+                    toast({
+                      title: "Validation Error",
+                      description: "Please fill in all required fields (Client Code and Brand Name)",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  createClientMutation.mutate(clientForm);
+                }}
                 disabled={createClientMutation.isPending}
                 data-testid="button-submit-client"
               >
@@ -5306,7 +5316,7 @@ export default function AdminDashboard() {
               {/* Row 1 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee ID</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee ID <span className="text-red-500">*</span></label>
                   <Input 
                     placeholder="Employee ID" 
                     className="input-styled rounded" 
@@ -5316,7 +5326,7 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee Name</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee Name <span className="text-red-500">*</span></label>
                   <Input 
                     placeholder="Employee Name" 
                     className="input-styled rounded" 
@@ -5340,7 +5350,7 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role <span className="text-red-500">*</span></label>
                   <Input 
                     placeholder="Role" 
                     className="input-styled rounded" 
@@ -5354,7 +5364,7 @@ export default function AdminDashboard() {
               {/* Row 3 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email <span className="text-red-500">*</span></label>
                   <Input 
                     placeholder="Email" 
                     type="email" 
@@ -5389,7 +5399,7 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password <span className="text-red-500">*</span></label>
                   <Input 
                     placeholder="Password" 
                     type="password" 
@@ -5593,7 +5603,17 @@ export default function AdminDashboard() {
             <div className="flex justify-center pt-6">
               <Button 
                 className="bg-cyan-400 hover:bg-cyan-500 text-white px-8 py-2 rounded"
-                onClick={() => createEmployeeMutation.mutate(employeeForm)}
+                onClick={() => {
+                  if (!employeeForm.employeeId || !employeeForm.name || !employeeForm.email || !employeeForm.password || !employeeForm.role) {
+                    toast({
+                      title: "Validation Error",
+                      description: "Please fill in all required fields (Employee ID, Name, Email, Password, Role)",
+                      variant: "destructive",
+                    });
+                    return;
+                  }
+                  createEmployeeMutation.mutate(employeeForm);
+                }}
                 disabled={createEmployeeMutation.isPending}
                 data-testid="button-submit-employee"
               >
