@@ -716,12 +716,22 @@ export default function AdminDashboard() {
 
   // User management functions
   const handleAddUser = (userData: any) => {
+    // Convert modal data to employee form format
+    const employeeData = {
+      employeeId: userData.id || `STU${Date.now()}`,
+      name: userData.name,
+      email: userData.email,
+      password: userData.password,
+      role: userData.role === 'Team Leader' ? 'team_leader' : 'recruiter',
+      phone: userData.phoneNumber || '',
+      department: '',
+      joiningDate: userData.joiningDate || '',
+      age: ''
+    };
+    
+    // Save to database using the employee mutation
+    createEmployeeMutation.mutate(employeeData);
     setUserList(prev => [...prev, userData]);
-    toast({
-      title: "Success",
-      description: `${userData.role} added successfully!`,
-      className: "bg-green-50 border-green-200 text-green-800",
-    });
   };
 
   const handleEditUser = (user: any) => {
