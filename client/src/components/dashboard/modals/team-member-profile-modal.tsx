@@ -26,7 +26,7 @@ interface TeamMemberProfileModalProps {
 export default function TeamMemberProfileModal({ open, onOpenChange, member }: TeamMemberProfileModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="dialog-team-member-profile">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto scrollbar-hide" data-testid="dialog-team-member-profile">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">Team Member Profile</DialogTitle>
         </DialogHeader>
