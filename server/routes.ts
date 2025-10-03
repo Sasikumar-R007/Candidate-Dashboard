@@ -1845,6 +1845,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update employee
+  app.put("/api/admin/employees/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Validate update data with partial schema
+      const updateSchema = insertEmployeeSchema.partial();
+      const validatedData = updateSchema.parse(req.body);
+      
+      // Hash password if it's being updated
+      if (validatedData.password) {
+        validatedData.password = await bcrypt.hash(validatedData.password, 10);
+      }
+      
+      const updatedEmployee = await storage.updateEmployee(id, validatedData);
+      
+      if (!updatedEmployee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      
+      res.json({ message: "Employee updated successfully", employee: updatedEmployee });
+    } catch (error: any) {
+      console.error('Update employee error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid employee data", errors: error.errors });
+      }
+      if (error.message?.includes('duplicate') || error.message?.includes('unique')) {
+        return res.status(409).json({ message: "Employee with this email or ID already exists" });
+      }
+      res.status(500).json({ message: "Failed to update employee" });
+    }
+  });
+
+  // Delete employee
+  app.delete("/api/admin/employees/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteEmployee(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      
+      res.json({ message: "Employee deleted successfully" });
+    } catch (error) {
+      console.error('Delete employee error:', error);
+      res.status(500).json({ message: "Failed to delete employee" });
+    }
+  });
+
+  // Update client
+  app.put("/api/admin/clients/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Validate update data with partial schema
+      const updateSchema = z.object({
+        clientCode: z.string().min(1).optional(),
+        brandName: z.string().min(1).optional(),
+        incorporatedName: z.string().optional(),
+        gstin: z.string().optional(),
+        address: z.string().optional(),
+        location: z.string().optional(),
+        spoc: z.string().optional(),
+        email: z.string().email().optional().or(z.literal('')),
+        website: z.string().optional(),
+        linkedin: z.string().optional(),
+        agreement: z.string().optional(),
+        percentage: z.string().optional(),
+        category: z.string().optional(),
+        paymentTerms: z.string().optional(),
+        source: z.string().optional(),
+        startDate: z.string().optional(),
+        referral: z.string().optional(),
+        currentStatus: z.string().optional(),
+      });
+      
+      const validatedData = updateSchema.parse(req.body);
+      
+      const updatedClient = await storage.updateClient(id, validatedData);
+      
+      if (!updatedClient) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      
+      res.json({ message: "Client updated successfully", client: updatedClient });
+    } catch (error: any) {
+      console.error('Update client error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid client data", errors: error.errors });
+      }
+      if (error.message?.includes('duplicate') || error.message?.includes('unique')) {
+        return res.status(409).json({ message: "Client with this code already exists" });
+      }
+      res.status(500).json({ message: "Failed to update client" });
+    }
+  });
+
+  // Delete client
+  app.delete("/api/admin/clients/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteClient(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      
+      res.json({ message: "Client deleted successfully" });
+    } catch (error) {
+      console.error('Delete client error:', error);
+      res.status(500).json({ message: "Failed to delete client" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

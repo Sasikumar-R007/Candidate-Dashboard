@@ -610,6 +610,64 @@ export default function AdminDashboard() {
     }
   });
 
+  // Delete employee mutation
+  const deleteEmployeeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/admin/employees/${id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete employee');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'employees'] });
+      toast({
+        title: "Success",
+        description: "Employee deleted successfully!",
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete employee.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Delete client mutation
+  const deleteClientMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/admin/clients/${id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to delete client');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'clients'] });
+      toast({
+        title: "Success",
+        description: "Client deleted successfully!",
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete client.",
+        variant: "destructive",
+      });
+    }
+  });
+
   const handleMemberClick = (member: any) => {
     setSelectedMember(member);
     setIsModalOpen(true);
@@ -5651,16 +5709,17 @@ export default function AdminDashboard() {
                     <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">SPOC</th>
                     <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Website</th>
                     <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Current Status</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoadingClients ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading clients...</td>
+                      <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading clients...</td>
                     </tr>
                   ) : clients.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">No clients found. Click "+ Add Client" to add one.</td>
+                      <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">No clients found. Click "+ Add Client" to add one.</td>
                     </tr>
                   ) : (
                     clients.map((row: any, index: number) => {
@@ -5676,6 +5735,21 @@ export default function AdminDashboard() {
                           <td className="py-3 px-3 text-blue-600 dark:text-blue-400">{row.website || 'N/A'}</td>
                           <td className="py-3 px-3">
                             <span className={`${statusClass} text-sm font-semibold px-3 py-1 rounded-full`}>• {(row.currentStatus || 'active').toUpperCase()}</span>
+                          </td>
+                          <td className="py-3 px-3">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => {
+                                if (confirm(`Are you sure you want to delete client "${row.brandName}"?`)) {
+                                  deleteClientMutation.mutate(row.id);
+                                }
+                              }}
+                              disabled={deleteClientMutation.isPending}
+                              data-testid={`button-delete-client-${row.id}`}
+                            >
+                              Delete
+                            </Button>
                           </td>
                         </tr>
                       );
@@ -5705,16 +5779,17 @@ export default function AdminDashboard() {
                     <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Employee Status</th>
                     <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Date of Joining</th>
                     <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Current CTC</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoadingEmployees ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading employees...</td>
+                      <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading employees...</td>
                     </tr>
                   ) : employees.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">No employees found. Click "+ Add Employee" to add one.</td>
+                      <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">No employees found. Click "+ Add Employee" to add one.</td>
                     </tr>
                   ) : (
                     employees.map((row: any, index: number) => (
@@ -5725,6 +5800,21 @@ export default function AdminDashboard() {
                         <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.role || 'N/A'}</td>
                         <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.joiningDate || 'N/A'}</td>
                         <td className="py-3 px-3 text-gray-600 dark:text-gray-400">-</td>
+                        <td className="py-3 px-3">
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => {
+                              if (confirm(`Are you sure you want to delete employee "${row.name}"?`)) {
+                                deleteEmployeeMutation.mutate(row.id);
+                              }
+                            }}
+                            disabled={deleteEmployeeMutation.isPending}
+                            data-testid={`button-delete-employee-${row.id}`}
+                          >
+                            Delete
+                          </Button>
+                        </td>
                       </tr>
                     ))
                   )}
