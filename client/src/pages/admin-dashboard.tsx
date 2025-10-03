@@ -281,7 +281,7 @@ const dailyMetricsData = {
   dailyDeliveryDefaulted: 1
 };
 
-const messagesData = [
+const initialMessagesData = [
   { name: "Arun", message: "Discuss ...", date: "12-June", status: "active" },
   { name: "Anusha", message: "Discuss ...", date: "12-June", status: "active" },
   { name: "Umar", message: "Discuss ...", date: "10-Aug", status: "pending" },
@@ -298,13 +298,13 @@ const defaultedData = [
   { requirement: "Frontend Developer", candidate: "Alex Brown", client: "Microsoft", expectedDate: "28-Aug-2025", status: "Defaulted" }
 ];
 
-const tlMeetingsData = [
+const initialTlMeetingsData = [
   { meetingType: "Performance Review", date: "05-Sep-2025", time: "10:00 AM", person: "Arun KS", agenda: "Quarterly performance discussion", status: "Scheduled" },
   { meetingType: "Team Planning", date: "06-Sep-2025", time: "02:30 PM", person: "Anusha", agenda: "Q4 strategy and targets", status: "Scheduled" },
   { meetingType: "One-on-One", date: "07-Sep-2025", time: "11:15 AM", person: "Umar", agenda: "Career development discussion", status: "Pending" }
 ];
 
-const ceoMeetingsData = [
+const initialCeoMeetingsData = [
   { meetingType: "Board Review", date: "10-Sep-2025", time: "09:00 AM", person: "John Mathew", agenda: "Company strategy and vision", status: "Scheduled" }
 ];
 
@@ -372,6 +372,11 @@ export default function AdminDashboard() {
   const [userList, setUserList] = useState<any[]>([]);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [editingUser, setEditingUser] = useState<any>(null);
+  const [messagesData, setMessagesData] = useState(initialMessagesData);
+  const [tlMeetingsData, setTlMeetingsData] = useState(initialTlMeetingsData);
+  const [ceoMeetingsData, setCeoMeetingsData] = useState(initialCeoMeetingsData);
+  const [tlMeetingsCount, setTlMeetingsCount] = useState(3);
+  const [ceoMeetingsCount, setCeoMeetingsCount] = useState(1);
 
   // Requirements API queries
   const { data: requirements = [], isLoading: isLoadingRequirements } = useQuery({
@@ -478,6 +483,18 @@ export default function AdminDashboard() {
       return;
     }
     const recipientName = allEmployees.find(emp => emp.id === selectedRecipient)?.name || selectedRecipient;
+    
+    // Add new message to Message Status table
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+    const newMessage = {
+      name: recipientName,
+      message: messageContent.substring(0, 20) + (messageContent.length > 20 ? '...' : ''),
+      date: dateStr,
+      status: 'active'
+    };
+    setMessagesData(prev => [newMessage, ...prev]);
+    
     showSuccessAlert(`Message sent to ${recipientName} successfully`);
     resetForm();
     setIsCreateModalOpen(false);
@@ -488,6 +505,27 @@ export default function AdminDashboard() {
       return;
     }
     const personName = (meetingFor === 'TL' ? tlList : taList).find(emp => emp.id === meetingWith)?.name || meetingWith;
+    
+    // Create new meeting object
+    const newMeeting = {
+      meetingType: meetingType,
+      date: meetingDate,
+      time: meetingTime,
+      person: personName,
+      agenda: "Meeting agenda",
+      status: "Pending"
+    };
+    
+    // Add to appropriate meeting list and increment count
+    if (meetingFor === 'TL') {
+      setTlMeetingsData(prev => [...prev, newMeeting]);
+      setTlMeetingsCount(prev => prev + 1);
+    } else {
+      // TA meetings go to CEO's meetings
+      setCeoMeetingsData(prev => [...prev, newMeeting]);
+      setCeoMeetingsCount(prev => prev + 1);
+    }
+    
     showSuccessAlert(`Meeting set with ${personName} successfully`);
     resetForm();
     setIsCreateModalOpen(false);
@@ -772,25 +810,26 @@ export default function AdminDashboard() {
                 </div>
                 <div className="flex justify-start space-x-2 mb-2">
                   <div className="flex items-center space-x-1">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Something</span>
+                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Arun's Team</span>
                   </div>
                   <div className="flex items-center space-x-1">
                     <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Romania</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Anusha's Team</span>
                   </div>
                 </div>
                 <div className="h-16 mt-2">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={[
-                      { month: 'Jan', performance: 65 },
-                      { month: 'Feb', performance: 78 },
-                      { month: 'Mar', performance: 85 },
-                      { month: 'Apr', performance: 72 },
-                      { month: 'May', performance: 90 },
-                      { month: 'Jun', performance: 88 }
+                      { month: 'Jan', arunTeam: 65, anushaTeam: 60 },
+                      { month: 'Feb', arunTeam: 78, anushaTeam: 72 },
+                      { month: 'Mar', arunTeam: 85, anushaTeam: 80 },
+                      { month: 'Apr', arunTeam: 72, anushaTeam: 75 },
+                      { month: 'May', arunTeam: 90, anushaTeam: 85 },
+                      { month: 'Jun', arunTeam: 88, anushaTeam: 92 }
                     ]}>
-                      <Line type="monotone" dataKey="performance" stroke="#8884d8" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="arunTeam" stroke="#3b82f6" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="anushaTeam" stroke="#ec4899" strokeWidth={2} dot={false} />
                       <XAxis dataKey="month" hide />
                       <YAxis hide />
                     </LineChart>
@@ -814,7 +853,7 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center">
                   <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">TL's Meeting</h3>
-                  <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">3</div>
+                  <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">{tlMeetingsCount}</div>
                   <Button 
                     size="sm" 
                     className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-sm rounded"
@@ -828,7 +867,7 @@ export default function AdminDashboard() {
                 <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-300 dark:bg-gray-600 transform -translate-x-0.5"></div>
                 <div className="text-center">
                   <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">CEO's Meeting</h3>
-                  <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">1</div>
+                  <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">{ceoMeetingsCount}</div>
                   <Button 
                     size="sm" 
                     className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-sm rounded"
