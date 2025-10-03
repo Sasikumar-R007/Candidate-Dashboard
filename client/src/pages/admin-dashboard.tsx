@@ -1600,7 +1600,13 @@ export default function AdminDashboard() {
                 </div>
                 
                 <div className="flex justify-end mt-4">
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2">View More</Button>
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2" 
+                    onClick={() => setIsResumeDatabaseModalOpen(true)}
+                    data-testid="button-view-more-resume"
+                  >
+                    View More
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -4892,11 +4898,23 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Code</label>
-                <Input placeholder="Client Code" className="input-styled rounded" />
+                <Input 
+                  placeholder="Client Code" 
+                  className="input-styled rounded" 
+                  value={clientForm.clientCode}
+                  onChange={(e) => setClientForm({...clientForm, clientCode: e.target.value})}
+                  data-testid="input-client-code"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Brand Name</label>
-                <Input placeholder="Brand Name" className="input-styled rounded" />
+                <Input 
+                  placeholder="Brand Name" 
+                  className="input-styled rounded" 
+                  value={clientForm.brandName}
+                  onChange={(e) => setClientForm({...clientForm, brandName: e.target.value})}
+                  data-testid="input-brand-name"
+                />
               </div>
             </div>
 
@@ -4904,11 +4922,23 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Incorporated Name</label>
-                <Input placeholder="Incorporated Name" className="input-styled rounded" />
+                <Input 
+                  placeholder="Incorporated Name" 
+                  className="input-styled rounded" 
+                  value={clientForm.incorporatedName}
+                  onChange={(e) => setClientForm({...clientForm, incorporatedName: e.target.value})}
+                  data-testid="input-incorporated-name"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">GSTIN</label>
-                <Input placeholder="GSTIN" className="input-styled rounded" />
+                <Input 
+                  placeholder="GSTIN" 
+                  className="input-styled rounded" 
+                  value={clientForm.gstin}
+                  onChange={(e) => setClientForm({...clientForm, gstin: e.target.value})}
+                  data-testid="input-gstin"
+                />
               </div>
             </div>
 
@@ -4916,11 +4946,23 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>
-                <Input placeholder="Address" className="input-styled rounded" />
+                <Input 
+                  placeholder="Address" 
+                  className="input-styled rounded" 
+                  value={clientForm.address}
+                  onChange={(e) => setClientForm({...clientForm, address: e.target.value})}
+                  data-testid="input-address"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Location</label>
-                <Input placeholder="Location" className="input-styled rounded" />
+                <Input 
+                  placeholder="Location" 
+                  className="input-styled rounded" 
+                  value={clientForm.location}
+                  onChange={(e) => setClientForm({...clientForm, location: e.target.value})}
+                  data-testid="input-location"
+                />
               </div>
             </div>
 
@@ -4928,11 +4970,24 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SPOC</label>
-                <Input placeholder="SPOC" className="input-styled rounded" />
+                <Input 
+                  placeholder="SPOC" 
+                  className="input-styled rounded" 
+                  value={clientForm.spoc}
+                  onChange={(e) => setClientForm({...clientForm, spoc: e.target.value})}
+                  data-testid="input-spoc"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-                <Input placeholder="Email" type="email" className="input-styled rounded" />
+                <Input 
+                  placeholder="Email" 
+                  type="email" 
+                  className="input-styled rounded" 
+                  value={clientForm.email}
+                  onChange={(e) => setClientForm({...clientForm, email: e.target.value})}
+                  data-testid="input-email"
+                />
               </div>
             </div>
 
@@ -4940,11 +4995,23 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Website</label>
-                <Input placeholder="Website" className="input-styled rounded" />
+                <Input 
+                  placeholder="Website" 
+                  className="input-styled rounded" 
+                  value={clientForm.website}
+                  onChange={(e) => setClientForm({...clientForm, website: e.target.value})}
+                  data-testid="input-website"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">LinkedIn</label>
-                <Input placeholder="LinkedIn" className="input-styled rounded" />
+                <Input 
+                  placeholder="LinkedIn" 
+                  className="input-styled rounded" 
+                  value={clientForm.linkedin}
+                  onChange={(e) => setClientForm({...clientForm, linkedin: e.target.value})}
+                  data-testid="input-linkedin"
+                />
               </div>
             </div>
 
@@ -4952,11 +5019,23 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Agreement</label>
-                <Input placeholder="Agreement" className="input-styled rounded" />
+                <Input 
+                  placeholder="Agreement" 
+                  className="input-styled rounded" 
+                  value={clientForm.agreement}
+                  onChange={(e) => setClientForm({...clientForm, agreement: e.target.value})}
+                  data-testid="input-agreement"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Percentage</label>
-                <Input placeholder="Percentage" className="input-styled rounded" />
+                <Input 
+                  placeholder="Percentage" 
+                  className="input-styled rounded" 
+                  value={clientForm.percentage}
+                  onChange={(e) => setClientForm({...clientForm, percentage: e.target.value})}
+                  data-testid="input-percentage"
+                />
               </div>
             </div>
 
@@ -4964,11 +5043,23 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
-                <Input placeholder="Category" className="input-styled rounded" />
+                <Input 
+                  placeholder="Category" 
+                  className="input-styled rounded" 
+                  value={clientForm.category}
+                  onChange={(e) => setClientForm({...clientForm, category: e.target.value})}
+                  data-testid="input-category"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment terms</label>
-                <Input placeholder="Payment terms" className="input-styled rounded" />
+                <Input 
+                  placeholder="Payment terms" 
+                  className="input-styled rounded" 
+                  value={clientForm.paymentTerms}
+                  onChange={(e) => setClientForm({...clientForm, paymentTerms: e.target.value})}
+                  data-testid="input-payment-terms"
+                />
               </div>
             </div>
 
@@ -4976,11 +5067,23 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Source</label>
-                <Input placeholder="Source" className="input-styled rounded" />
+                <Input 
+                  placeholder="Source" 
+                  className="input-styled rounded" 
+                  value={clientForm.source}
+                  onChange={(e) => setClientForm({...clientForm, source: e.target.value})}
+                  data-testid="input-source"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
-                <Input placeholder="Start Date" className="input-styled rounded" />
+                <Input 
+                  placeholder="Start Date" 
+                  className="input-styled rounded" 
+                  value={clientForm.startDate}
+                  onChange={(e) => setClientForm({...clientForm, startDate: e.target.value})}
+                  data-testid="input-start-date"
+                />
               </div>
             </div>
 
@@ -4988,12 +5091,21 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Referral</label>
-                <Input placeholder="Referral" className="input-styled rounded" />
+                <Input 
+                  placeholder="Referral" 
+                  className="input-styled rounded" 
+                  value={clientForm.referral}
+                  onChange={(e) => setClientForm({...clientForm, referral: e.target.value})}
+                  data-testid="input-referral"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Status</label>
-                <Select>
-                  <SelectTrigger className="input-styled rounded">
+                <Select 
+                  value={clientForm.currentStatus}
+                  onValueChange={(value) => setClientForm({...clientForm, currentStatus: value})}
+                >
+                  <SelectTrigger className="input-styled rounded" data-testid="select-current-status">
                     <SelectValue placeholder="Select Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -5006,8 +5118,13 @@ export default function AdminDashboard() {
             </div>
 
             <div className="flex justify-center pt-6">
-              <Button className="bg-cyan-400 hover:bg-cyan-500 text-white px-8 py-2 rounded">
-                Submit
+              <Button 
+                className="bg-cyan-400 hover:bg-cyan-500 text-white px-8 py-2 rounded"
+                onClick={() => createClientMutation.mutate(clientForm)}
+                disabled={createClientMutation.isPending}
+                data-testid="button-submit-client"
+              >
+                {createClientMutation.isPending ? 'Submitting...' : 'Submit'}
               </Button>
             </div>
           </div>
@@ -5367,6 +5484,54 @@ export default function AdminDashboard() {
                       <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.status}</td>
                       <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.joining}</td>
                       <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.ctc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Resume Database View More Modal */}
+      <Dialog open={isResumeDatabaseModalOpen} onOpenChange={setIsResumeDatabaseModalOpen}>
+        <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Resume Database - Full Table</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto pr-2">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Employee ID</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Name</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Total Applicants</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Uploads</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Email</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Department</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    { id: "STTA001", name: "Sundhar Raj", applicants: 500, uploads: 1000, email: "sundhar@staffos.com", dept: "IT Recruitment" },
+                    { id: "STTA002", name: "Kavitha", applicants: 220, uploads: 850, email: "kavitha@staffos.com", dept: "Non-IT Recruitment" },
+                    { id: "STTA003", name: "Vignesh", applicants: 600, uploads: 1200, email: "vignesh@staffos.com", dept: "IT Recruitment" },
+                    { id: "STTA004", name: "Saran", applicants: 780, uploads: 1000, email: "saran@staffos.com", dept: "Sales Recruitment" },
+                    { id: "STTL005", name: "Helen", applicants: 50, uploads: 800, email: "helen@staffos.com", dept: "HR Recruitment" },
+                    { id: "STTA006", name: "Priya", applicants: 450, uploads: 950, email: "priya@staffos.com", dept: "IT Recruitment" },
+                    { id: "STTA007", name: "Rajesh", applicants: 680, uploads: 1100, email: "rajesh@staffos.com", dept: "Finance Recruitment" },
+                    { id: "STTA008", name: "Sneha", applicants: 320, uploads: 890, email: "sneha@staffos.com", dept: "Marketing Recruitment" },
+                    { id: "STTA009", name: "Arjun", applicants: 540, uploads: 1050, email: "arjun@staffos.com", dept: "IT Recruitment" },
+                    { id: "STTA010", name: "Lakshmi", applicants: 410, uploads: 920, email: "lakshmi@staffos.com", dept: "Non-IT Recruitment" }
+                  ].map((row, index) => (
+                    <tr key={index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
+                      <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.id}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.name}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.applicants}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.uploads}</td>
+                      <td className="py-3 px-3 text-blue-600 dark:text-blue-400">{row.email}</td>
+                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.dept}</td>
                     </tr>
                   ))}
                 </tbody>
