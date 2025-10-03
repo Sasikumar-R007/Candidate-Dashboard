@@ -236,6 +236,27 @@ const teamsData = [
   }
 ];
 
+// Pipeline candidate data for teams
+const pipelineDataArun = [
+  { name: "Keerthana", level1: true, level2: true, level3: true, finalRound: true, hrRound: true, offerStage: true, closure: true },
+  { name: "Vishnu Purana", level1: true, level2: true, level3: true, finalRound: true, hrRound: true, offerStage: true, closure: true },
+  { name: "Chanakya", level1: true, level2: true, level3: true, finalRound: true, hrRound: true, offerStage: false, closure: false },
+  { name: "Adhya", level1: true, level2: true, level3: true, finalRound: true, hrRound: false, offerStage: false, closure: false },
+  { name: "Vanshika", level1: true, level2: true, level3: true, finalRound: false, hrRound: false, offerStage: false, closure: false },
+  { name: "Reyansh", level1: true, level2: false, level3: false, finalRound: false, hrRound: false, offerStage: false, closure: false },
+  { name: "Shaurya", level1: true, level2: false, level3: false, finalRound: false, hrRound: false, offerStage: false, closure: false }
+];
+
+const pipelineDataAnusha = [
+  { name: "Aarav", level1: true, level2: true, level3: true, finalRound: true, hrRound: true, offerStage: true, closure: true },
+  { name: "Diya", level1: true, level2: true, level3: true, finalRound: true, hrRound: true, offerStage: true, closure: true },
+  { name: "Vihaan", level1: true, level2: true, level3: true, finalRound: true, hrRound: true, offerStage: false, closure: false },
+  { name: "Ananya", level1: true, level2: true, level3: true, finalRound: true, hrRound: false, offerStage: false, closure: false },
+  { name: "Arjun", level1: true, level2: true, level3: true, finalRound: false, hrRound: false, offerStage: false, closure: false },
+  { name: "Saanvi", level1: true, level2: false, level3: false, finalRound: false, hrRound: false, offerStage: false, closure: false },
+  { name: "Ishaan", level1: true, level2: false, level3: false, finalRound: false, hrRound: false, offerStage: false, closure: false }
+];
+
 const targetsData = [
   { resource: "Arun KS", role: "TL", quarter: "ASO 2025", minimumTarget: "15,00,000", targetAchieved: "13,00,000", closures: 6, incentives: "15,000" },
   { resource: "Anusha", role: "TL", quarter: "ASO 2025", minimumTarget: "12,00,000", targetAchieved: "8,00,000", closures: 3, incentives: "35,000" }
@@ -345,6 +366,7 @@ export default function AdminDashboard() {
   const [, navigate] = useLocation();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedMember, setSelectedMember] = useState<any>(null);
+  const [selectedPipelineTeam, setSelectedPipelineTeam] = useState<string>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [isDeliveredModalOpen, setIsDeliveredModalOpen] = useState(false);
@@ -1121,7 +1143,7 @@ export default function AdminDashboard() {
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Pipeline</h2>
               <div className="flex items-center gap-4">
-                <Select>
+                <Select value={selectedPipelineTeam} onValueChange={setSelectedPipelineTeam}>
                   <SelectTrigger className="w-48 input-styled btn-rounded">
                     <SelectValue placeholder="Arun/Anusha /All" />
                   </SelectTrigger>
@@ -1158,209 +1180,59 @@ export default function AdminDashboard() {
                           </tr>
                         </thead>
                         <tbody>
-                          {/* Row 1 */}
-                          <tr className="border-b border-gray-100 dark:border-gray-800">
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#E6F4EA'}}>
-                                Keerthana
-                              </span>
-                            </td>
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#D9F0E1'}}>
-                                Keerthana
-                              </span>
-                            </td>
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#C2EED0'}}>
-                                Keerthana
-                              </span>
-                            </td>
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#B5E1C1'}}>
-                                Keerthana
-                              </span>
-                            </td>
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#99D9AE'}}>
-                                Keerthana
-                              </span>
-                            </td>
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#7CCBA0'}}>
-                                Keerthana
-                              </span>
-                            </td>
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#2F6F52'}}>
-                                Keerthana
-                              </span>
-                            </td>
-                          </tr>
-                          
-                          {/* Row 2 */}
-                          <tr className="border-b border-gray-100 dark:border-gray-800">
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#E6F4EA'}}>
-                                Vishnu Purana
-                              </span>
-                            </td>
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#D9F0E1'}}>
-                                Vishnu Purana
-                              </span>
-                            </td>
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#C2EED0'}}>
-                                Vishnu Purana
-                              </span>
-                            </td>
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#B5E1C1'}}>
-                                Vishnu Purana
-                              </span>
-                            </td>
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#99D9AE'}}>
-                                Vishnu Purana
-                              </span>
-                            </td>
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#7CCBA0'}}>
-                                Vishnu Purana
-                              </span>
-                            </td>
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#2F6F52'}}>
-                                Vishnu Purana
-                              </span>
-                            </td>
-                          </tr>
-                          
-                          {/* Row 3 */}
-                          <tr className="border-b border-gray-100 dark:border-gray-800">
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#E6F4EA'}}>
-                                Chanakya
-                              </span>
-                            </td>
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#D9F0E1'}}>
-                                Chanakya
-                              </span>
-                            </td>
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#C2EED0'}}>
-                                Chanakya
-                              </span>
-                            </td>
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#B5E1C1'}}>
-                                Chanakya
-                              </span>
-                            </td>
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#99D9AE'}}>
-                                Chanakya
-                              </span>
-                            </td>
-                            <td className="p-3 w-32"></td>
-                            <td className="p-3 w-32"></td>
-                          </tr>
-                          
-                          {/* Row 4 */}
-                          <tr className="border-b border-gray-100 dark:border-gray-800">
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#E6F4EA'}}>
-                                Adhya
-                              </span>
-                            </td>
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#D9F0E1'}}>
-                                Adhya
-                              </span>
-                            </td>
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#C2EED0'}}>
-                                Adhya
-                              </span>
-                            </td>
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#B5E1C1'}}>
-                                Adhya
-                              </span>
-                            </td>
-                            <td className="p-3 w-32"></td>
-                            <td className="p-3 w-32"></td>
-                            <td className="p-3 w-32"></td>
-                          </tr>
-                          
-                          {/* Row 5 */}
-                          <tr className="border-b border-gray-100 dark:border-gray-800">
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#E6F4EA'}}>
-                                Vanshika
-                              </span>
-                            </td>
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#D9F0E1'}}>
-                                Vanshika
-                              </span>
-                            </td>
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#C2EED0'}}>
-                                Vanshika
-                              </span>
-                            </td>
-                            <td className="p-3 w-32"></td>
-                            <td className="p-3 w-32"></td>
-                            <td className="p-3 w-32"></td>
-                            <td className="p-3 w-32"></td>
-                          </tr>
-                          
-                          {/* Row 6 */}
-                          <tr className="border-b border-gray-100 dark:border-gray-800">
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#E6F4EA'}}>
-                                Reyansh
-                              </span>
-                            </td>
-                            <td className="p-3 w-32"></td>
-                            <td className="p-3 w-32"></td>
-                            <td className="p-3 w-32"></td>
-                            <td className="p-3 w-32"></td>
-                            <td className="p-3 w-32"></td>
-                            <td className="p-3 w-32"></td>
-                          </tr>
-                          
-                          {/* Row 7 */}
-                          <tr className="border-b border-gray-100 dark:border-gray-800">
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#E6F4EA'}}>
-                                Shaurya
-                              </span>
-                            </td>
-                            <td className="p-3 w-32"></td>
-                            <td className="p-3 w-32"></td>
-                            <td className="p-3 w-32"></td>
-                            <td className="p-3 w-32"></td>
-                            <td className="p-3 w-32"></td>
-                            <td className="p-3 w-32"></td>
-                          </tr>
-                          
-                          {/* Row 8 */}
-                          <tr className="border-b border-gray-100 dark:border-gray-800">
-                            <td className="p-3 w-32">
-                              <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#E6F4EA'}}>
-                                Vihana
-                              </span>
-                            </td>
-                            <td className="p-3 w-32"></td>
-                            <td className="p-3 w-32"></td>
-                            <td className="p-3 w-32"></td>
-                            <td className="p-3 w-32"></td>
-                            <td className="p-3 w-32"></td>
-                            <td className="p-3 w-32"></td>
-                          </tr>
+                          {(selectedPipelineTeam === 'arun' ? pipelineDataArun : selectedPipelineTeam === 'anusha' ? pipelineDataAnusha : [...pipelineDataArun, ...pipelineDataAnusha]).map((candidate, index) => (
+                            <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
+                              <td className="p-3 w-32">
+                                {candidate.level1 && (
+                                  <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#E6F4EA'}}>
+                                    {candidate.name}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-3 w-32">
+                                {candidate.level2 && (
+                                  <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#D9F0E1'}}>
+                                    {candidate.name}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-3 w-32">
+                                {candidate.level3 && (
+                                  <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#C2EED0'}}>
+                                    {candidate.name}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-3 w-32">
+                                {candidate.finalRound && (
+                                  <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#B5E1C1'}}>
+                                    {candidate.name}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-3 w-32">
+                                {candidate.hrRound && (
+                                  <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#99D9AE'}}>
+                                    {candidate.name}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-3 w-32">
+                                {candidate.offerStage && (
+                                  <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#7CCBA0'}}>
+                                    {candidate.name}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-3 w-32">
+                                {candidate.closure && (
+                                  <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#2F6F52'}}>
+                                    {candidate.name}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>
@@ -2455,7 +2327,7 @@ export default function AdminDashboard() {
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Pipeline</h2>
                   <div className="flex items-center gap-4">
-                    <Select>
+                    <Select value={selectedPipelineTeam} onValueChange={setSelectedPipelineTeam}>
                       <SelectTrigger className="w-48 input-styled btn-rounded">
                         <SelectValue placeholder="Arun/Anusha/All" />
                       </SelectTrigger>
@@ -2501,123 +2373,76 @@ export default function AdminDashboard() {
                           </tr>
                         </thead>
                         <tbody>
-                          <tr>
-                            <td className="p-3 align-top">
-                              <div className="flex flex-col gap-2">
-                                <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                                  Keerthana
-                                </div>
-                                <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                                  Vishnu Purana
-                                </div>
-                                <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                                  Chanakya
-                                </div>
-                                <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                                  Adhya
-                                </div>
-                                <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                                  Vanshika
-                                </div>
-                                <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                                  Reyansh
-                                </div>
-                                <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                                  Shaurya
-                                </div>
-                                <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                                  Vihana
-                                </div>
-                              </div>
-                            </td>
-                            <td className="p-3 align-top">
-                              <div className="flex flex-col gap-2">
-                                <div className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                                  Keerthana
-                                </div>
-                                <div className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                                  Vishnu Purana
-                                </div>
-                                <div className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                                  Chanakya
-                                </div>
-                                <div className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                                  Adhya
-                                </div>
-                                <div className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                                  Vanshika
-                                </div>
-                              </div>
-                            </td>
-                            <td className="p-3 align-top">
-                              <div className="flex flex-col gap-2">
-                                <div className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                                  Keerthana
-                                </div>
-                                <div className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                                  Vishnu Purana
-                                </div>
-                                <div className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                                  Chanakya
-                                </div>
-                                <div className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                                  Adhya
-                                </div>
-                                <div className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                                  Vanshika
-                                </div>
-                              </div>
-                            </td>
-                            <td className="p-3 align-top">
-                              <div className="flex flex-col gap-2">
-                                <div className="px-3 py-2 bg-green-500 dark:bg-green-600 rounded text-center text-sm font-medium text-white">
-                                  Keerthana
-                                </div>
-                                <div className="px-3 py-2 bg-green-500 dark:bg-green-600 rounded text-center text-sm font-medium text-white">
-                                  Vishnu Purana
-                                </div>
-                                <div className="px-3 py-2 bg-green-500 dark:bg-green-600 rounded text-center text-sm font-medium text-white">
-                                  Chanakya
-                                </div>
-                                <div className="px-3 py-2 bg-green-500 dark:bg-green-600 rounded text-center text-sm font-medium text-white">
-                                  Adhya
-                                </div>
-                              </div>
-                            </td>
-                            <td className="p-3 align-top">
-                              <div className="flex flex-col gap-2">
-                                <div className="px-3 py-2 bg-green-600 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
-                                  Keerthana
-                                </div>
-                                <div className="px-3 py-2 bg-green-600 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
-                                  Vishnu Purana
-                                </div>
-                                <div className="px-3 py-2 bg-green-600 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
-                                  Chanakya
-                                </div>
-                              </div>
-                            </td>
-                            <td className="p-3 align-top">
-                              <div className="flex flex-col gap-2">
-                                <div className="px-3 py-2 bg-green-700 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
-                                  Keerthana
-                                </div>
-                                <div className="px-3 py-2 bg-green-700 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
-                                  Vishnu Purana
-                                </div>
-                              </div>
-                            </td>
-                            <td className="p-3 align-top">
-                              <div className="flex flex-col gap-2">
-                                <div className="px-3 py-2 bg-green-800 dark:bg-green-400 rounded text-center text-sm font-medium text-white">
-                                  Keerthana
-                                </div>
-                                <div className="px-3 py-2 bg-green-800 dark:bg-green-400 rounded text-center text-sm font-medium text-white">
-                                  Vishnu Purana
-                                </div>
-                              </div>
-                            </td>
-                          </tr>
+                          {(() => {
+                            const pipelineData = selectedPipelineTeam === 'arun' ? pipelineDataArun : selectedPipelineTeam === 'anusha' ? pipelineDataAnusha : [...pipelineDataArun, ...pipelineDataAnusha];
+                            return (
+                              <tr>
+                                <td className="p-3 align-top">
+                                  <div className="flex flex-col gap-2">
+                                    {pipelineData.filter(c => c.level1).map((candidate, idx) => (
+                                      <div key={idx} className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                                        {candidate.name}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td className="p-3 align-top">
+                                  <div className="flex flex-col gap-2">
+                                    {pipelineData.filter(c => c.level2).map((candidate, idx) => (
+                                      <div key={idx} className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                                        {candidate.name}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td className="p-3 align-top">
+                                  <div className="flex flex-col gap-2">
+                                    {pipelineData.filter(c => c.level3).map((candidate, idx) => (
+                                      <div key={idx} className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                                        {candidate.name}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td className="p-3 align-top">
+                                  <div className="flex flex-col gap-2">
+                                    {pipelineData.filter(c => c.finalRound).map((candidate, idx) => (
+                                      <div key={idx} className="px-3 py-2 bg-green-500 dark:bg-green-600 rounded text-center text-sm font-medium text-white">
+                                        {candidate.name}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td className="p-3 align-top">
+                                  <div className="flex flex-col gap-2">
+                                    {pipelineData.filter(c => c.hrRound).map((candidate, idx) => (
+                                      <div key={idx} className="px-3 py-2 bg-green-600 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
+                                        {candidate.name}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td className="p-3 align-top">
+                                  <div className="flex flex-col gap-2">
+                                    {pipelineData.filter(c => c.offerStage).map((candidate, idx) => (
+                                      <div key={idx} className="px-3 py-2 bg-green-700 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
+                                        {candidate.name}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </td>
+                                <td className="p-3 align-top">
+                                  <div className="flex flex-col gap-2">
+                                    {pipelineData.filter(c => c.closure).map((candidate, idx) => (
+                                      <div key={idx} className="px-3 py-2 bg-green-800 dark:bg-green-400 rounded text-center text-sm font-medium text-white">
+                                        {candidate.name}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })()}
                         </tbody>
                       </table>
                     </div>
