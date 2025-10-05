@@ -374,12 +374,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Find employee by email
       const employee = await storage.getEmployeeByEmail(email);
+      console.log('[DEBUG] Employee found:', employee ? `Yes (${employee.email})` : 'No');
       if (!employee) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
       
       // Check password using bcrypt
       const isPasswordValid = await bcrypt.compare(password, employee.password);
+      console.log('[DEBUG] Password valid:', isPasswordValid);
       if (!isPasswordValid) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
@@ -1960,6 +1962,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Delete client error:', error);
       res.status(500).json({ message: "Failed to delete client" });
+    }
+  });
+
+  // Seed database endpoint - call once to populate initial data
+  app.post("/api/admin/seed-database", async (req, res) => {
+    try {
+      // Check if employees already exist
+      const existingEmployees = await storage.getAllEmployees();
+      if (existingEmployees.length > 0) {
+        return res.status(400).json({ message: "Database already seeded. Employees exist." });
+      }
+
+      // Sample employee data
+      const sampleEmployees = [
+        {
+          employeeId: "STTA001",
+          name: "Ram Kumar",
+          email: "ram@gmail.com",
+          password: "ram123",
+          role: "recruiter",
+          age: "28",
+          phone: "9876543210",
+          department: "Talent Acquisition",
+          joiningDate: "2024-01-15",
+          reportingTo: "Team Lead"
+        },
+        {
+          employeeId: "STTL001",
+          name: "Priya Sharma",
+          email: "priya@gmail.com",
+          password: "priya123",
+          role: "team_leader",
+          age: "32",
+          phone: "9876543211",
+          department: "Talent Acquisition",
+          joiningDate: "2023-06-10",
+          reportingTo: "Admin"
+        },
+        {
+          employeeId: "STCL001",
+          name: "Arjun Patel",
+          email: "arjun@gmail.com",
+          password: "arjun123",
+          role: "client",
+          age: "35",
+          phone: "9876543212",
+          department: "Client Relations",
+          joiningDate: "2023-03-20",
+          reportingTo: "Admin"
+        },
+        {
+          employeeId: "ADMIN",
+          name: "Admin User",
+          email: "admin@gmail.com",
+          password: "admin123",
+          role: "admin",
+          age: "40",
+          phone: "9876543213",
+          department: "Administration",
+          joiningDate: "2022-01-01",
+          reportingTo: "CEO"
+        }
+      ];
+
+      // Hash passwords and create employees
+      const saltRounds = 10;
+      const createdEmployees = [];
+      for (const emp of sampleEmployees) {
+        const hashedPassword = await bcrypt.hash(emp.password, saltRounds);
+        const employee = await storage.createEmployee({
+          employeeId: emp.employeeId,
+          name: emp.name,
+          email: emp.email,
+          password: hashedPassword,
+          role: emp.role,
+          age: emp.age,
+          phone: emp.phone,
+          department: emp.department,
+          joiningDate: emp.joiningDate,
+          reportingTo: emp.reportingTo,
+          isActive: true,
+          createdAt: new Date().toISOString()
+        });
+        createdEmployees.push(employee);
+      }
+
+      res.json({
+        success: true,
+        message: `Database seeded successfully. Created ${createdEmployees.length} employees.`,
+        employees: createdEmployees.map(e => ({ email: e.email, role: e.role }))
+      });
+    } catch (error) {
+      console.error('Seed database error:', error);
+      res.status(500).json({ message: "Failed to seed database" });
     }
   });
 
