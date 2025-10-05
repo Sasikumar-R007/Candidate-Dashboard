@@ -493,46 +493,86 @@ export default function TeamLeaderDashboard() {
                       </div>
                     </div>
 
-                    {/* Right section - Overall Performance */}
+                    {/* Right section - Team Performance Graph */}
                     <div className="bg-white border border-gray-200 rounded-lg p-6">
                       <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-sm font-medium text-gray-700">Overall Performance</h4>
+                        <h4 className="text-sm font-medium text-gray-700">Team Performance</h4>
                         <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
                           <span className="text-white text-xl font-bold">G</span>
                         </div>
                       </div>
-                      <div className="h-24 relative">
-                        <svg viewBox="0 0 300 100" className="w-full h-full">
+                      <div className="h-32 relative">
+                        <svg viewBox="0 0 300 120" className="w-full h-full">
                           {/* Grid lines */}
                           <defs>
                             <pattern id="grid" width="30" height="20" patternUnits="userSpaceOnUse">
                               <path d="M 30 0 L 0 0 0 20" fill="none" stroke="#e5e7eb" strokeWidth="1"/>
                             </pattern>
                           </defs>
-                          <rect width="100%" height="100%" fill="url(#grid)" />
+                          <rect width="100%" height="110" fill="url(#grid)" />
                           
-                          {/* Performance line */}
+                          {/* Performance line 1 - Sudharshanan (Blue) */}
+                          <polyline
+                            fill="none"
+                            stroke="#3b82f6"
+                            strokeWidth="2"
+                            points="30,75 60,65 90,55 120,50 150,45 180,42 210,38 240,35 270,32"
+                          />
+                          
+                          {/* Performance line 2 - Muthu (Green) */}
+                          <polyline
+                            fill="none"
+                            stroke="#22c55e"
+                            strokeWidth="2"
+                            points="30,80 60,72 90,65 120,58 150,53 180,50 210,46 240,43 270,40"
+                          />
+                          
+                          {/* Performance line 3 - Parthiban (Orange) */}
                           <polyline
                             fill="none"
                             stroke="#f59e0b"
                             strokeWidth="2"
-                            points="30,80 60,70 90,60 120,50 150,45 180,40 210,35 240,30 270,25"
+                            points="30,85 60,78 90,72 120,67 150,63 180,60 210,57 240,54 270,52"
                           />
                           
-                          {/* Data points */}
-                          <circle cx="30" cy="80" r="3" fill="#f59e0b"/>
-                          <circle cx="60" cy="70" r="3" fill="#f59e0b"/>
-                          <circle cx="90" cy="60" r="3" fill="#f59e0b"/>
-                          <circle cx="120" cy="50" r="3" fill="#f59e0b"/>
-                          <circle cx="150" cy="45" r="3" fill="#f59e0b"/>
-                          <circle cx="180" cy="40" r="3" fill="#f59e0b"/>
-                          <circle cx="210" cy="35" r="3" fill="#f59e0b"/>
-                          <circle cx="240" cy="30" r="3" fill="#f59e0b"/>
-                          <circle cx="270" cy="25" r="3" fill="#f59e0b"/>
+                          {/* Performance line 4 - Manikandan (Purple) */}
+                          <polyline
+                            fill="none"
+                            stroke="#a855f7"
+                            strokeWidth="2"
+                            points="30,90 60,85 90,82 120,78 150,75 180,73 210,70 240,68 270,66"
+                          />
+                          
+                          {/* Data points for Sudharshanan (Blue) */}
+                          <circle cx="270" cy="32" r="3" fill="#3b82f6"/>
+                          
+                          {/* Data points for Muthu (Green) */}
+                          <circle cx="270" cy="40" r="3" fill="#22c55e"/>
+                          
+                          {/* Data points for Parthiban (Orange) */}
+                          <circle cx="270" cy="52" r="3" fill="#f59e0b"/>
+                          
+                          {/* Data points for Manikandan (Purple) */}
+                          <circle cx="270" cy="66" r="3" fill="#a855f7"/>
                         </svg>
                       </div>
-                      <div className="text-right mt-2">
-                        <Button variant="link" className="text-xs text-blue-600 p-0">View More</Button>
+                      <div className="flex items-center justify-between mt-3 text-xs">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                          <span className="text-gray-600">Sudharshanan</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                          <span className="text-gray-600">Muthu</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                          <span className="text-gray-600">Parthiban</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                          <span className="text-gray-600">Manikandan</span>
+                        </div>
                       </div>
                     </div>
                   </div>
