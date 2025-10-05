@@ -78,6 +78,7 @@ export interface IStorage {
   updateEmployee(id: string, updates: Partial<Employee>): Promise<Employee | undefined>;
   deleteEmployee(id: string): Promise<boolean>;
   updateEmployeePassword(email: string, newPasswordHash: string): Promise<boolean>;
+  generateNextEmployeeId(role: string): Promise<string>;
   
   // Candidate methods
   getCandidateByEmail(email: string): Promise<Candidate | undefined>;

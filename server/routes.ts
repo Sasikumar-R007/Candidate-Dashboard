@@ -1753,17 +1753,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create employee
   app.post("/api/admin/employees", async (req, res) => {
     try {
+      // Generate employee ID if not provided or invalid
+      let employeeId = req.body.employeeId;
+      if (!employeeId || employeeId.startsWith('STU')) {
+        employeeId = await storage.generateNextEmployeeId(req.body.role);
+      }
+      
       const employeeData = insertEmployeeSchema.parse({
         ...req.body,
+        employeeId,
         createdAt: new Date().toISOString(),
       });
       
-      // Hash password before storing
-      const hashedPassword = await bcrypt.hash(employeeData.password, 10);
-      const employee = await storage.createEmployee({
-        ...employeeData,
-        password: hashedPassword,
-      });
+      // Password will be hashed by storage layer
+      const employee = await storage.createEmployee(employeeData);
       
       res.status(201).json({ message: "Employee created successfully", employee });
     } catch (error: any) {

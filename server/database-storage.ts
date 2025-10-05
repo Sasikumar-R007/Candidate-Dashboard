@@ -285,6 +285,27 @@ export class DatabaseStorage implements IStorage {
     return (result.rowCount ?? 0) > 0;
   }
 
+  async generateNextEmployeeId(role: string): Promise<string> {
+    // Determine prefix based on role
+    let prefix = 'STTA'; // Default to recruiter
+    if (role === 'team_leader') {
+      prefix = 'STTL';
+    } else if (role === 'client') {
+      prefix = 'STCL';
+    }
+
+    // Get all employees with this prefix
+    const allEmployees = await db.select().from(employees);
+    const maxNumber = allEmployees
+      .filter(e => e.employeeId.startsWith(prefix))
+      .map(e => parseInt(e.employeeId.replace(prefix, '')))
+      .filter(n => !isNaN(n))
+      .reduce((max, current) => Math.max(max, current), 0);
+    
+    const nextNumber = maxNumber + 1;
+    return `${prefix}${nextNumber.toString().padStart(3, '0')}`;
+  }
+
   // Candidate methods
   async getCandidateByEmail(email: string): Promise<Candidate | undefined> {
     const [candidate] = await db.select().from(candidates).where(eq(candidates.email, email));
