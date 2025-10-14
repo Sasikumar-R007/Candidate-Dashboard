@@ -1,4 +1,4 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import { createServer, type Server } from "http";
 import fs from "fs";
 import { storage } from "./storage";
@@ -7,6 +7,7 @@ import { z } from "zod";
 import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
+import "./types"; // Import session types
 // import pdfParse from "pdf-parse"; // Use dynamic import to avoid initialization issues
 import mammoth from "mammoth";
 
@@ -217,6 +218,14 @@ async function parseResumeFile(filePath: string, fileType: string): Promise<{
     // Return empty data instead of throwing - let the email validation handle the failure
     return { text: '', name: null, email: null, phone: null };
   }
+}
+
+// Authentication middleware for candidate routes
+function requireCandidateAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.candidateId) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+  next();
 }
 
 async function processBulkUpload(jobId: string): Promise<void> {
@@ -556,6 +565,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Reset login attempts on successful login
       await storage.resetLoginAttempts(email);
 
+      // Store candidate ID in session
+      req.session.candidateId = candidate.id;
+      req.session.userType = 'candidate';
+
       // Return candidate data (excluding password) for frontend routing
       const { password: _, ...candidateData } = candidate;
       res.json({
@@ -596,6 +609,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Reset login attempts
         await storage.resetLoginAttempts(email);
+
+        // Store candidate ID in session
+        req.session.candidateId = candidate.id;
+        req.session.userType = 'candidate';
 
         const { password: _, ...candidateData } = candidate;
         res.json({
@@ -810,8 +827,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // NOTE: Admin endpoints disabled for security - require proper authentication before enabling
 
-  // Get current user profile (demo user)
-  app.get("/api/profile", async (req, res) => {
+  // Get current candidate profile
+  app.get("/api/profile", requireCandidateAuth, async (req, res) => {
+    try {
+      const candidateId = req.session.candidateId!;
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
+      
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+      
+      // For now, return candidate data as profile
+      // Transform candidate data to match profile structure expected by frontend
+      const profile = {
+        id: candidate.id,
+        userId: candidate.id,
+        firstName: candidate.fullName.split(' ')[0] || '',
+        lastName: candidate.fullName.split(' ').slice(1).join(' ') || '',
+        email: candidate.email,
+        phone: candidate.phone || '',
+        title: candidate.designation || '',
+        location: candidate.location || '',
+        profilePicture: '',
+        bannerImage: '',
+        resumeFile: '',
+        skills: candidate.skills || '',
+        experience: candidate.experience || '',
+        currentCompany: candidate.company || '',
+      };
+      
+      res.json(profile);
+    } catch (error) {
+      console.error('Get profile error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Legacy profile route for demo user (keeping for other parts of the app)
+  app.get("/api/profile/demo", async (req, res) => {
     try {
       const users = await storage.getUserByUsername("mathew.anderson");
       if (!users) {
@@ -848,8 +901,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get job preferences
-  app.get("/api/job-preferences", async (req, res) => {
+  // Get job preferences for candidate
+  app.get("/api/job-preferences", requireCandidateAuth, async (req, res) => {
+    try {
+      const candidateId = req.session.candidateId!;
+      
+      // Return mock job preferences for now
+      const jobPreferences = {
+        id: 'pref-1',
+        profileId: candidateId,
+        jobTitles: 'Software Engineer, Full Stack Developer',
+        workMode: 'Remote',
+        employmentType: 'Full-time',
+        locations: 'Bangalore, Mumbai, Remote',
+        startDate: 'Immediate',
+        instructions: ''
+      };
+      
+      res.json(jobPreferences);
+    } catch (error) {
+      console.error('Get job preferences error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Legacy job preferences route
+  app.get("/api/job-preferences/demo", async (req, res) => {
     try {
       const users = await storage.getUserByUsername("mathew.anderson");
       if (!users) {
@@ -888,8 +965,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get skills
-  app.get("/api/skills", async (req, res) => {
+  // Get skills for candidate
+  app.get("/api/skills", requireCandidateAuth, async (req, res) => {
+    try {
+      const candidateId = req.session.candidateId!;
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
+      
+      if (!candidate || !candidate.skills) {
+        return res.json([]);
+      }
+      
+      // Parse skills string into array of skill objects
+      const skillsArray = candidate.skills.split(',').map((skill, index) => ({
+        id: `skill-${index}`,
+        profileId: candidateId,
+        name: skill.trim(),
+        category: 'primary'
+      }));
+      
+      res.json(skillsArray);
+    } catch (error) {
+      console.error('Get skills error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Legacy skills route
+  app.get("/api/skills/demo", async (req, res) => {
     try {
       const users = await storage.getUserByUsername("mathew.anderson");
       if (!users) {
@@ -954,8 +1056,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get job applications
-  app.get("/api/job-applications", async (req, res) => {
+  // Get job applications for candidate
+  app.get("/api/job-applications", requireCandidateAuth, async (req, res) => {
+    try {
+      const candidateId = req.session.candidateId!;
+      
+      // Return mock job applications for now
+      const jobApplications = [
+        {
+          id: '1',
+          profileId: candidateId,
+          jobTitle: 'Frontend Developer',
+          company: 'TechCorp',
+          jobType: 'Full-Time',
+          appliedDate: '06-06-2025',
+          daysAgo: '40 days'
+        },
+        {
+          id: '2',
+          profileId: candidateId,
+          jobTitle: 'UI/UX Designer',
+          company: 'Designify',
+          jobType: 'Internship',
+          appliedDate: '08-06-2025',
+          daysAgo: '37 days'
+        },
+        {
+          id: '3',
+          profileId: candidateId,
+          jobTitle: 'Backend Developer',
+          company: 'CodeLabs',
+          jobType: 'Full-Time',
+          appliedDate: '20-06-2025',
+          daysAgo: '22 days'
+        },
+        {
+          id: '4',
+          profileId: candidateId,
+          jobTitle: 'QA Tester',
+          company: 'AppLogic',
+          jobType: 'Internship',
+          appliedDate: '01-07-2025',
+          daysAgo: '22 days'
+        },
+        {
+          id: '5',
+          profileId: candidateId,
+          jobTitle: 'Bug Catchers',
+          company: 'Mobile App Developer',
+          jobType: 'Full-Time',
+          appliedDate: '23-07-2025',
+          daysAgo: '2 days'
+        }
+      ];
+      
+      res.json(jobApplications);
+    } catch (error) {
+      console.error('Get job applications error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Legacy job applications route
+  app.get("/api/job-applications/demo", async (req, res) => {
     try {
       const users = await storage.getUserByUsername("mathew.anderson");
       if (!users) {
@@ -1055,8 +1218,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve uploaded files
   app.use('/uploads', express.static('uploads'));
 
-  // Get saved jobs
-  app.get("/api/saved-jobs", async (req, res) => {
+  // Get saved jobs for candidate
+  app.get("/api/saved-jobs", requireCandidateAuth, async (req, res) => {
+    try {
+      const candidateId = req.session.candidateId!;
+      
+      // Return empty saved jobs for now
+      res.json([]);
+    } catch (error) {
+      console.error('Get saved jobs error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Legacy saved jobs route
+  app.get("/api/saved-jobs/demo", async (req, res) => {
     try {
       const users = await storage.getUserByUsername("mathew.anderson");
       if (!users) {
