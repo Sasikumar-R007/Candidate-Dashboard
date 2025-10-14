@@ -39,16 +39,22 @@ export default function Dashboard() {
   const renderSidebarContent = () => {
     switch (sidebarTab) {
       case 'dashboard':
-        // Render dashboard with tab navigation and metrics sidebar
+        // Render dashboard with metrics sidebar - both scrollable separately
         return (
-          <div className="flex flex-1">
-            <div className="flex-1 flex flex-col">
+          <div className="flex flex-1 h-full overflow-hidden">
+            {/* Main content area - scrollable */}
+            <div className="flex-1 flex flex-col overflow-hidden">
               <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
               <div className="flex-1 overflow-y-auto">
                 {renderDashboardTabContent()}
               </div>
             </div>
-            {activeTab === 'my-jobs' && <CandidateMetricsSidebar />}
+            {/* Metrics sidebar - scrollable separately */}
+            {activeTab === 'my-jobs' && (
+              <div className="w-80 flex-shrink-0 overflow-hidden">
+                <CandidateMetricsSidebar />
+              </div>
+            )}
           </div>
         );
       case 'profile':
@@ -67,14 +73,18 @@ export default function Dashboard() {
 
       default:
         return (
-          <div className="flex flex-1">
-            <div className="flex-1 flex flex-col">
+          <div className="flex flex-1 h-full overflow-hidden">
+            <div className="flex-1 flex flex-col overflow-hidden">
               <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
               <div className="flex-1 overflow-y-auto">
                 {renderDashboardTabContent()}
               </div>
             </div>
-            {activeTab === 'my-jobs' && <CandidateMetricsSidebar />}
+            {activeTab === 'my-jobs' && (
+              <div className="w-80 flex-shrink-0 overflow-hidden">
+                <CandidateMetricsSidebar />
+              </div>
+            )}
           </div>
         );
     }
@@ -99,7 +109,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-inter">
-      <div className="flex min-h-screen">
+      <div className="flex h-screen overflow-hidden">
         <Sidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
         <div className="flex-1 flex flex-col overflow-hidden ml-16">
           {renderSidebarContent()}

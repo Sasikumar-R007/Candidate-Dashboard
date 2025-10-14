@@ -69,7 +69,7 @@ export default function CandidateMetricsSidebar() {
   ];
 
   return (
-    <div className="w-80 bg-white border-l border-gray-200 h-screen overflow-y-auto">
+    <div className="w-full bg-white border-l border-gray-200 h-full overflow-y-auto">
       <div className="p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-6">
           Candidate Metrics
