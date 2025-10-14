@@ -391,6 +391,28 @@ export class MemStorage implements IStorage {
       };
       this.employees.set(employee.id, employee);
     }
+
+    // Create test candidate
+    const testCandidateId = randomUUID();
+    const candidatePassword = await bcrypt.hash("test123", saltRounds);
+    const testCandidate: Candidate = {
+      id: testCandidateId,
+      candidateId: "STCA001",
+      fullName: "John Doe",
+      email: "john@example.com",
+      password: candidatePassword,
+      phone: "9876543210",
+      company: "Tech Solutions Inc",
+      designation: "Software Engineer",
+      age: "28",
+      location: "Bangalore",
+      experience: "5 years",
+      skills: "JavaScript, React, Node.js, TypeScript, AWS",
+      isActive: true,
+      isVerified: true,
+      createdAt: new Date().toISOString()
+    };
+    this.candidates.set(testCandidate.id, testCandidate);
   }
 
   async getUser(id: string): Promise<User | undefined> {

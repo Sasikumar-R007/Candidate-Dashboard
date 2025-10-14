@@ -831,7 +831,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/profile", requireCandidateAuth, async (req, res) => {
     try {
       const candidateId = req.session.candidateId!;
-      const candidate = await storage.getCandidateByCandidateId(candidateId);
+      // candidateId in session is the database ID
+      const allCandidates = await storage.getAllCandidates();
+      const candidate = allCandidates.find(c => c.id === candidateId);
       
       if (!candidate) {
         return res.status(404).json({ message: "Candidate not found" });
@@ -969,7 +971,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/skills", requireCandidateAuth, async (req, res) => {
     try {
       const candidateId = req.session.candidateId!;
-      const candidate = await storage.getCandidateByCandidateId(candidateId);
+      const allCandidates = await storage.getAllCandidates();
+      const candidate = allCandidates.find(c => c.id === candidateId);
       
       if (!candidate || !candidate.skills) {
         return res.json([]);
