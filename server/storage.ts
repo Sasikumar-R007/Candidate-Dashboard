@@ -413,6 +413,61 @@ export class MemStorage implements IStorage {
       createdAt: new Date().toISOString()
     };
     this.candidates.set(testCandidate.id, testCandidate);
+
+    // Create test candidate profile
+    const testProfileId = randomUUID();
+    const testProfile: Profile = {
+      id: testProfileId,
+      userId: null,
+      candidateId: "STCA001",
+      firstName: "John",
+      lastName: "Doe",
+      experience: "5 years",
+      designation: "Software Engineer",
+      currentLocation: "Bangalore",
+      preferredLocation: "Bangalore, Hyderabad",
+      skills: "JavaScript, React, Node.js, TypeScript, AWS",
+      education: "B.Tech Computer Science",
+      portfolio: null,
+      mobile: "9876543210",
+      whatsapp: "9876543210",
+      primaryEmail: "john@example.com",
+      secondaryEmail: null,
+      dateOfBirth: "1996-01-15",
+      portfolioUrl: null,
+      websiteUrl: null,
+      linkedinUrl: "https://linkedin.com/in/johndoe",
+      profilePicture: null,
+      bannerImage: null,
+      appliedJobsCount: "5",
+      githubUrl: null,
+      resumeUrl: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    this.profiles.set(testProfile.id, testProfile);
+
+    // Create test job applications for the candidate
+    const testApplications = [
+      { jobTitle: "Frontend Developer", company: "Tech Corp", jobType: "Full-Time", daysAgo: "3 days" },
+      { jobTitle: "React Developer", company: "Innovate Labs", jobType: "Full-Time", daysAgo: "7 days" },
+      { jobTitle: "Full Stack Developer", company: "StartupXYZ", jobType: "Full-Time", daysAgo: "12 days" },
+      { jobTitle: "Node.js Developer", company: "CloudTech", jobType: "Full-Time", daysAgo: "18 days" },
+      { jobTitle: "Senior Developer", company: "Enterprise Inc", jobType: "Full-Time", daysAgo: "25 days" }
+    ];
+
+    testApplications.forEach(app => {
+      const application: JobApplication = {
+        id: randomUUID(),
+        profileId: testProfileId,
+        jobTitle: app.jobTitle,
+        company: app.company,
+        jobType: app.jobType,
+        appliedDate: new Date().toISOString().split('T')[0],
+        daysAgo: app.daysAgo
+      };
+      this.jobApplications.set(application.id, application);
+    });
   }
 
   async getUser(id: string): Promise<User | undefined> {

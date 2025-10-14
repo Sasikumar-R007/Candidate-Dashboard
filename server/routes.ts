@@ -565,8 +565,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Reset login attempts on successful login
       await storage.resetLoginAttempts(email);
 
-      // Store candidate ID in session
-      req.session.candidateId = candidate.id;
+      // Store candidate ID (human-readable) in session for downstream lookups
+      req.session.candidateId = candidate.candidateId;
       req.session.userType = 'candidate';
 
       // Return candidate data (excluding password) for frontend routing
@@ -610,8 +610,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Reset login attempts
         await storage.resetLoginAttempts(email);
 
-        // Store candidate ID in session
-        req.session.candidateId = candidate.id;
+        // Store candidate ID (human-readable) in session for downstream lookups
+        req.session.candidateId = candidate.candidateId;
         req.session.userType = 'candidate';
 
         const { password: _, ...candidateData } = candidate;
@@ -831,9 +831,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/profile", requireCandidateAuth, async (req, res) => {
     try {
       const candidateId = req.session.candidateId!;
-      // candidateId in session is the database ID
-      const allCandidates = await storage.getAllCandidates();
-      const candidate = allCandidates.find(c => c.id === candidateId);
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
       
       if (!candidate) {
         return res.status(404).json({ message: "Candidate not found" });
@@ -971,8 +969,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/skills", requireCandidateAuth, async (req, res) => {
     try {
       const candidateId = req.session.candidateId!;
-      const allCandidates = await storage.getAllCandidates();
-      const candidate = allCandidates.find(c => c.id === candidateId);
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
       
       if (!candidate || !candidate.skills) {
         return res.json([]);

@@ -41,17 +41,17 @@ export default function Dashboard() {
       case 'dashboard':
         // Render dashboard with metrics sidebar - both scrollable separately
         return (
-          <div className="flex flex-1 h-full overflow-hidden">
-            {/* Main content area - scrollable */}
-            <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex flex-1 h-full">
+            {/* Main content area - independently scrollable */}
+            <div className="flex-1 flex flex-col min-w-0">
               <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
               <div className="flex-1 overflow-y-auto">
                 {renderDashboardTabContent()}
               </div>
             </div>
-            {/* Metrics sidebar - scrollable separately */}
+            {/* Metrics sidebar - independently scrollable */}
             {activeTab === 'my-jobs' && (
-              <div className="w-80 flex-shrink-0 overflow-hidden">
+              <div className="w-80 flex-shrink-0">
                 <CandidateMetricsSidebar />
               </div>
             )}
@@ -73,15 +73,15 @@ export default function Dashboard() {
 
       default:
         return (
-          <div className="flex flex-1 h-full overflow-hidden">
-            <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex flex-1 h-full">
+            <div className="flex-1 flex flex-col min-w-0">
               <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
               <div className="flex-1 overflow-y-auto">
                 {renderDashboardTabContent()}
               </div>
             </div>
             {activeTab === 'my-jobs' && (
-              <div className="w-80 flex-shrink-0 overflow-hidden">
+              <div className="w-80 flex-shrink-0">
                 <CandidateMetricsSidebar />
               </div>
             )}
