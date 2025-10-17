@@ -8,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { BrainCircuit } from "lucide-react";
-import candidateImageUrl from "@assets/cand f_1758168663913.png";
 
 interface LoginForm {
   email: string;
@@ -54,7 +53,6 @@ export default function CandidateLogin() {
   const [currentEmail, setCurrentEmail] = useState("");
   const [candidateId, setCandidateId] = useState("");
 
-  // Login mutation
   const loginMutation = useMutation({
     mutationFn: async (data: LoginForm) => {
       const res = await apiRequest('POST', '/api/auth/candidate-login', data);
@@ -64,7 +62,6 @@ export default function CandidateLogin() {
       if (response.requiresVerification) {
         setCurrentEmail(response.email);
         setShowOTP(true);
-        // For demo purposes, show OTP in alert as requested
         if (response.otp) {
           alert(`Demo OTP: ${response.otp}`);
         }
@@ -89,7 +86,6 @@ export default function CandidateLogin() {
     }
   });
 
-  // Register mutation
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterForm) => {
       const res = await apiRequest('POST', '/api/auth/candidate-register', data);
@@ -99,7 +95,6 @@ export default function CandidateLogin() {
       setCurrentEmail(response.email);
       setCandidateId(response.candidateId);
       setShowOTP(true);
-      // For demo purposes, show OTP in alert as requested
       if (response.otp) {
         alert(`Demo OTP: ${response.otp}`);
       }
@@ -117,7 +112,6 @@ export default function CandidateLogin() {
     }
   });
 
-  // OTP verification mutation
   const verifyOTPMutation = useMutation({
     mutationFn: async (data: OTPForm) => {
       const res = await apiRequest('POST', '/api/auth/candidate-verify-otp', { email: currentEmail, otp: data.otp });
@@ -164,11 +158,11 @@ export default function CandidateLogin() {
 
   if (showOTP) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="w-full max-w-md bg-white p-8 rounded-lg shadow-sm">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="w-full max-w-md bg-white dark:bg-gray-800 p-8 rounded-lg shadow-sm">
           <div className="text-center space-y-6">
             <div>
-              <h2 className="text-lg font-medium text-gray-900">Enter 2FA OTP sent to your Mobile</h2>
+              <h2 className="text-lg font-medium text-gray-900 dark:text-white">Enter 2FA OTP sent to your Mobile</h2>
             </div>
 
             <form onSubmit={handleSubmitOTP(onVerifyOTP)} className="space-y-4" data-testid="form-otp-verification">
@@ -176,7 +170,7 @@ export default function CandidateLogin() {
                 <Input
                   type="text"
                   placeholder="6-digit OTP"
-                  className="w-full h-12 text-center text-lg border border-gray-300 rounded focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  className="w-full h-12 text-center text-lg border border-gray-300 dark:border-gray-600 rounded focus:border-blue-600 focus:ring-2 focus:ring-blue-100 dark:bg-gray-700 dark:text-white"
                   data-testid="input-otp"
                   maxLength={6}
                   {...registerOTP("otp", {
@@ -188,14 +182,14 @@ export default function CandidateLogin() {
                   })}
                 />
                 {otpErrors.otp && (
-                  <p className="mt-1 text-sm text-red-600">{otpErrors.otp.message}</p>
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{otpErrors.otp.message}</p>
                 )}
               </div>
 
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-slate-800 hover:bg-slate-700 text-white py-3 text-base font-medium rounded"
+                className="w-full bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white py-3 text-base font-medium rounded"
                 data-testid="button-verify-otp"
               >
                 {isLoading ? "Verifying..." : "Verify OTP"}
@@ -205,14 +199,14 @@ export default function CandidateLogin() {
                 <button
                   type="button"
                   onClick={() => setShowOTP(false)}
-                  className="text-gray-600 hover:text-gray-800"
+                  className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
                   data-testid="button-back-to-login"
                 >
                   Back To Login
                 </button>
                 <button
                   type="button"
-                  className="text-blue-600 hover:text-blue-500"
+                  className="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
                   data-testid="button-resend-otp"
                 >
                   Resend OTP
@@ -226,57 +220,113 @@ export default function CandidateLogin() {
   }
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Side - Exact Design from Image */}
-      <div className="hidden lg:flex lg:w-1/2 items-end relative overflow-hidden">
-        <img
-          src={candidateImageUrl} 
-          alt="Your Next Opportunity Awaits - Access your opportunities and manage your applications" 
-          className="w-full h-full object-cover"
-        />
+    <div className="min-h-screen flex flex-col lg:flex-row">
+      {/* Left Side - Dark Blue Background with Content */}
+      <div className="hidden lg:flex lg:w-1/2 bg-[#2B4156] dark:bg-[#1a2633] relative overflow-hidden">
+        <div className="w-full h-full flex flex-col justify-between p-12 relative z-10">
+          {/* Logo */}
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-white dark:bg-gray-200 rounded-lg flex items-center justify-center">
+              <BrainCircuit className="w-5 h-5 text-[#2B4156] dark:text-[#1a2633]" />
+            </div>
+            <span className="text-2xl font-bold text-white dark:text-gray-100">StaffOS</span>
+          </div>
+
+          {/* Content */}
+          <div className="space-y-6 mb-20">
+            <h1 className="text-4xl lg:text-5xl font-bold text-white dark:text-gray-100 leading-tight">
+              Your Next<br />
+              Opportunity Awaits
+            </h1>
+            <p className="text-gray-200 dark:text-gray-300 text-lg max-w-md">
+              Access your opportunities and manage your applications
+            </p>
+
+            {/* Illustration */}
+            <div className="relative mt-12">
+              <svg className="w-full max-w-md" viewBox="0 0 400 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* Network connections */}
+                <line x1="80" y1="80" x2="150" y2="120" stroke="#5B8DB8" strokeWidth="2" opacity="0.6"/>
+                <line x1="150" y1="120" x2="200" y2="80" stroke="#5B8DB8" strokeWidth="2" opacity="0.6"/>
+                <line x1="200" y1="80" x2="270" y2="100" stroke="#5B8DB8" strokeWidth="2" opacity="0.6"/>
+                <line x1="150" y1="120" x2="180" y2="180" stroke="#5B8DB8" strokeWidth="2" opacity="0.6"/>
+                <line x1="180" y1="180" x2="250" y2="170" stroke="#5B8DB8" strokeWidth="2" opacity="0.6"/>
+                
+                {/* Person 1 - Left */}
+                <circle cx="80" cy="80" r="20" fill="#5B8DB8"/>
+                <circle cx="80" cy="80" r="12" fill="white" opacity="0.9"/>
+                <rect x="60" y="105" width="40" height="50" rx="5" fill="#4A6FA5"/>
+                
+                {/* Person 2 - Center */}
+                <circle cx="150" cy="120" r="20" fill="#5B8DB8"/>
+                <circle cx="150" cy="120" r="12" fill="white" opacity="0.9"/>
+                <rect x="130" y="145" width="40" height="50" rx="5" fill="#4A6FA5"/>
+                
+                {/* Person 3 - Right Upper */}
+                <circle cx="200" cy="80" r="20" fill="#5B8DB8"/>
+                <circle cx="200" cy="80" r="12" fill="white" opacity="0.9"/>
+                <rect x="180" y="105" width="40" height="50" rx="5" fill="#5DADE2"/>
+                
+                {/* Person 4 - Far Right */}
+                <circle cx="270" cy="100" r="20" fill="#5B8DB8"/>
+                <circle cx="270" cy="100" r="12" fill="white" opacity="0.9"/>
+                <rect x="250" y="125" width="40" height="50" rx="5" fill="#4A6FA5"/>
+                
+                {/* Person 5 - Bottom */}
+                <circle cx="180" cy="180" r="20" fill="#F39C12"/>
+                <circle cx="180" cy="180" r="12" fill="white" opacity="0.9"/>
+                <rect x="160" y="205" width="40" height="50" rx="5" fill="#E67E22"/>
+                
+                {/* Person 6 - Bottom Right */}
+                <circle cx="250" cy="170" r="20" fill="#5B8DB8"/>
+                <circle cx="250" cy="170" r="12" fill="white" opacity="0.9"/>
+                <rect x="230" y="195" width="40" height="50" rx="5" fill="#16A085"/>
+              </svg>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Right Side - Login/Register Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-gray-50">
-        <div className="w-full max-w-md space-y-8">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 bg-white dark:bg-gray-900">
+        <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center space-x-3 mb-8">
-            <div className="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center">
-              <BrainCircuit className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 bg-[#2B4156] dark:bg-[#1a2633] rounded-lg flex items-center justify-center">
+              <BrainCircuit className="w-5 h-5 text-white dark:text-gray-100" />
             </div>
-            <span className="text-2xl font-bold text-slate-800">StaffOS</span>
+            <span className="text-2xl font-bold text-gray-900 dark:text-white">StaffOS</span>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-lg p-8">
+          {/* Form Container */}
+          <div className="space-y-8">
             {/* Welcome Section */}
-            <div className="text-center space-y-4 mb-6">
-              <div className="flex justify-center">
-                <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
-                  <BrainCircuit className="w-6 h-6 text-slate-600" />
+            <div className="text-center space-y-2">
+              <div className="flex justify-center mb-4">
+                <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
+                  <BrainCircuit className="w-6 h-6 text-gray-600 dark:text-gray-400" />
                 </div>
               </div>
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {isLogin ? "Hello Again!" : "Create Account"}
-                </h2>
-                <p className="text-gray-600 mt-2">
-                  {isLogin ? "Login to Your Account" : "Sign up to get started"}
-                </p>
-              </div>
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+                {isLogin ? "Hello Again!" : "Create Account"}
+              </h2>
+              <p className="text-gray-500 dark:text-gray-400">
+                {isLogin ? "Login to Your Account" : "Sign up to get started"}
+              </p>
             </div>
 
             {isLogin ? (
               /* Login Form */
-              <form onSubmit={handleSubmitLogin(onLogin)} className="space-y-4" data-testid="form-candidate-login">
-                <div>
-                  <Label htmlFor="email" className="text-gray-700 font-medium text-sm mb-1 block">
+              <form onSubmit={handleSubmitLogin(onLogin)} className="space-y-5" data-testid="form-candidate-login">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Email
                   </Label>
                   <Input
                     id="email"
                     type="email"
                     placeholder=""
-                    className="w-full h-11 border border-gray-300 rounded-lg px-3 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-gray-700"
+                    className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-lg px-4 focus:border-[#2B4156] dark:focus:border-blue-500 focus:ring-0 text-gray-900 dark:text-white dark:bg-gray-800 placeholder:text-gray-400"
                     data-testid="input-login-email"
                     {...registerLogin("email", {
                       required: "Email is required",
@@ -287,19 +337,19 @@ export default function CandidateLogin() {
                     })}
                   />
                   {loginErrors.email && (
-                    <p className="mt-1 text-sm text-red-600">{loginErrors.email.message}</p>
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{loginErrors.email.message}</p>
                   )}
                 </div>
 
-                <div>
-                  <Label htmlFor="password" className="text-gray-700 font-medium text-sm mb-1 block">
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Password
                   </Label>
                   <Input
                     id="password"
                     type="password"
                     placeholder=""
-                    className="w-full h-11 border border-gray-300 rounded-lg px-3 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-gray-700"
+                    className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-lg px-4 focus:border-[#2B4156] dark:focus:border-blue-500 focus:ring-0 text-gray-900 dark:text-white dark:bg-gray-800 placeholder:text-gray-400"
                     data-testid="input-login-password"
                     {...registerLogin("password", {
                       required: "Password is required",
@@ -310,54 +360,62 @@ export default function CandidateLogin() {
                     })}
                   />
                   {loginErrors.password && (
-                    <p className="mt-1 text-sm text-red-600">{loginErrors.password.message}</p>
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{loginErrors.password.message}</p>
                   )}
-                </div>
-
-                <div className="text-left">
-                  <button
-                    type="button"
-                    className="text-sm text-blue-600 hover:text-blue-500"
-                    data-testid="button-forgot-password"
-                  >
-                    Forgot Password?
-                  </button>
+                  <div className="text-right">
+                    <button
+                      type="button"
+                      className="text-sm text-[#17A2B8] dark:text-blue-400 hover:text-[#138496] dark:hover:text-blue-300 font-medium"
+                      data-testid="button-forgot-password"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
                 </div>
 
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-blue-900 hover:bg-blue-800 text-white py-3 text-base font-medium rounded-lg"
+                  className="w-full h-12 bg-[#2B4156] hover:bg-[#1f2f3e] dark:bg-[#1a2633] dark:hover:bg-[#0f1823] text-white text-base font-semibold rounded-lg"
                   data-testid="button-login"
                 >
                   {isLoading ? "Logging in..." : "Login"}
                 </Button>
 
-                <div className="text-center mt-4">
-                  <span className="text-gray-600">Or</span>
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-4 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400">Or</span>
+                  </div>
+                </div>
+
+                <div className="text-center text-sm text-gray-600 dark:text-gray-400">
+                  Continue with
                 </div>
 
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full border border-gray-300 hover:bg-gray-50 text-gray-700 py-3 text-base font-medium rounded-lg flex items-center justify-center space-x-2"
+                  className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 text-base font-medium rounded-lg flex items-center justify-center"
                   data-testid="button-google-login"
                 >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                  <svg className="w-6 h-6 mr-3" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
                   </svg>
-                  <span>Continue with Google</span>
+                  <span>Google</span>
                 </Button>
 
-                <div className="text-center">
-                  <span className="text-gray-600">Don't have an Account? </span>
+                <div className="text-center text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">Don't have an Account? </span>
                   <button
                     type="button"
                     onClick={() => setIsLogin(false)}
-                    className="text-blue-600 hover:text-blue-500 font-medium"
+                    className="text-[#17A2B8] dark:text-blue-400 hover:text-[#138496] dark:hover:text-blue-300 font-semibold"
                     data-testid="button-switch-to-register"
                   >
                     Register Now
@@ -366,35 +424,35 @@ export default function CandidateLogin() {
               </form>
             ) : (
               /* Register Form */
-              <form onSubmit={handleSubmitSignup(onRegister)} className="space-y-4" data-testid="form-candidate-register">
-                <div>
-                  <Label htmlFor="fullName" className="text-gray-700 font-medium text-sm mb-1 block">
+              <form onSubmit={handleSubmitSignup(onRegister)} className="space-y-5" data-testid="form-candidate-register">
+                <div className="space-y-2">
+                  <Label htmlFor="fullName" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Full Name
                   </Label>
                   <Input
                     id="fullName"
                     type="text"
                     placeholder=""
-                    className="w-full h-11 border border-gray-300 rounded-lg px-3 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-gray-700"
+                    className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-lg px-4 focus:border-[#2B4156] dark:focus:border-blue-500 focus:ring-0 text-gray-900 dark:text-white dark:bg-gray-800 placeholder:text-gray-400"
                     data-testid="input-register-fullname"
                     {...registerSignup("fullName", {
                       required: "Full name is required",
                     })}
                   />
                   {signupErrors.fullName && (
-                    <p className="mt-1 text-sm text-red-600">{signupErrors.fullName.message}</p>
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{signupErrors.fullName.message}</p>
                   )}
                 </div>
 
-                <div>
-                  <Label htmlFor="registerEmail" className="text-gray-700 font-medium text-sm mb-1 block">
+                <div className="space-y-2">
+                  <Label htmlFor="registerEmail" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Email
                   </Label>
                   <Input
                     id="registerEmail"
                     type="email"
                     placeholder=""
-                    className="w-full h-11 border border-gray-300 rounded-lg px-3 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-gray-700"
+                    className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-lg px-4 focus:border-[#2B4156] dark:focus:border-blue-500 focus:ring-0 text-gray-900 dark:text-white dark:bg-gray-800 placeholder:text-gray-400"
                     data-testid="input-register-email"
                     {...registerSignup("email", {
                       required: "Email is required",
@@ -405,19 +463,19 @@ export default function CandidateLogin() {
                     })}
                   />
                   {signupErrors.email && (
-                    <p className="mt-1 text-sm text-red-600">{signupErrors.email.message}</p>
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{signupErrors.email.message}</p>
                   )}
                 </div>
 
-                <div>
-                  <Label htmlFor="registerPassword" className="text-gray-700 font-medium text-sm mb-1 block">
+                <div className="space-y-2">
+                  <Label htmlFor="registerPassword" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Password
                   </Label>
                   <Input
                     id="registerPassword"
                     type="password"
                     placeholder=""
-                    className="w-full h-11 border border-gray-300 rounded-lg px-3 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-gray-700"
+                    className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-lg px-4 focus:border-[#2B4156] dark:focus:border-blue-500 focus:ring-0 text-gray-900 dark:text-white dark:bg-gray-800 placeholder:text-gray-400"
                     data-testid="input-register-password"
                     {...registerSignup("password", {
                       required: "Password is required",
@@ -428,19 +486,19 @@ export default function CandidateLogin() {
                     })}
                   />
                   {signupErrors.password && (
-                    <p className="mt-1 text-sm text-red-600">{signupErrors.password.message}</p>
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{signupErrors.password.message}</p>
                   )}
                 </div>
 
-                <div>
-                  <Label htmlFor="confirmPassword" className="text-gray-700 font-medium text-sm mb-1 block">
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Confirm Password
                   </Label>
                   <Input
                     id="confirmPassword"
                     type="password"
                     placeholder=""
-                    className="w-full h-11 border border-gray-300 rounded-lg px-3 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 text-gray-700"
+                    className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-lg px-4 focus:border-[#2B4156] dark:focus:border-blue-500 focus:ring-0 text-gray-900 dark:text-white dark:bg-gray-800 placeholder:text-gray-400"
                     data-testid="input-register-confirm-password"
                     {...registerSignup("confirmPassword", {
                       required: "Please confirm your password",
@@ -451,25 +509,25 @@ export default function CandidateLogin() {
                     })}
                   />
                   {signupErrors.confirmPassword && (
-                    <p className="mt-1 text-sm text-red-600">{signupErrors.confirmPassword.message}</p>
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{signupErrors.confirmPassword.message}</p>
                   )}
                 </div>
 
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-blue-900 hover:bg-blue-800 text-white py-3 text-base font-medium rounded-lg"
+                  className="w-full h-12 bg-[#2B4156] hover:bg-[#1f2f3e] dark:bg-[#1a2633] dark:hover:bg-[#0f1823] text-white text-base font-semibold rounded-lg"
                   data-testid="button-register"
                 >
                   {isLoading ? "Creating Account..." : "Create Account"}
                 </Button>
 
-                <div className="text-center">
-                  <span className="text-gray-600">Already have an Account? </span>
+                <div className="text-center text-sm">
+                  <span className="text-gray-600 dark:text-gray-400">Already have an Account? </span>
                   <button
                     type="button"
                     onClick={() => setIsLogin(true)}
-                    className="text-blue-600 hover:text-blue-500 font-medium"
+                    className="text-[#17A2B8] dark:text-blue-400 hover:text-[#138496] dark:hover:text-blue-300 font-semibold"
                     data-testid="button-switch-to-login"
                   >
                     Login
