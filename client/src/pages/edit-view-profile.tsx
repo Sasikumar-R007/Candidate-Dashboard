@@ -1,9 +1,16 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { MapPin, Phone, Mail, MessageCircle, Edit, Upload, FileText, Link as LinkIcon } from 'lucide-react';
-import { useProfile } from '@/hooks/use-profile';
+import { useProfile, useUpdateProfile } from '@/hooks/use-profile';
+import { useToast } from '@/hooks/use-toast';
 import type { Profile } from '@shared/schema';
+import EditBasicInfoModal from '@/components/dashboard/modals/edit-basic-info-modal';
+import EditEducationModal from '@/components/dashboard/modals/edit-education-modal';
+import EditJobDetailsModal from '@/components/dashboard/modals/edit-job-details-modal';
 
 interface EditViewProfileProps {
   profile: Profile;
@@ -11,6 +18,10 @@ interface EditViewProfileProps {
 
 export default function EditViewProfile({ profile }: EditViewProfileProps) {
   const [activeSection, setActiveSection] = useState('about-you');
+  const [showBasicInfoModal, setShowBasicInfoModal] = useState(false);
+  const [showOnlinePresenceModal, setShowOnlinePresenceModal] = useState(false);
+  const [showJourneyModal, setShowJourneyModal] = useState(false);
+  const [showStrengthsModal, setShowStrengthsModal] = useState(false);
 
   const menuItems = [
     { id: 'about-you', label: 'About you' },
@@ -30,6 +41,7 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
           size="sm" 
           className="bg-[#1e3a5f] text-white hover:bg-[#2d4a6f]"
           data-testid="button-edit-about-you"
+          onClick={() => setShowBasicInfoModal(true)}
         >
           <Edit className="w-4 h-4 mr-1" />
           Edit
@@ -103,6 +115,7 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
           size="sm" 
           className="bg-[#1e3a5f] text-white hover:bg-[#2d4a6f]"
           data-testid="button-edit-online-presence"
+          onClick={() => setShowOnlinePresenceModal(true)}
         >
           <Edit className="w-4 h-4 mr-1" />
           Edit
@@ -140,6 +153,7 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
           size="sm" 
           className="bg-[#1e3a5f] text-white hover:bg-[#2d4a6f]"
           data-testid="button-edit-journey"
+          onClick={() => setShowJourneyModal(true)}
         >
           <Edit className="w-4 h-4 mr-1" />
           Edit
@@ -201,6 +215,7 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
           size="sm" 
           className="bg-[#1e3a5f] text-white hover:bg-[#2d4a6f]"
           data-testid="button-edit-strengths"
+          onClick={() => setShowStrengthsModal(true)}
         >
           <Edit className="w-4 h-4 mr-1" />
           Edit
@@ -487,6 +502,127 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
           </div>
         </div>
       </div>
+
+      {/* Edit Modals */}
+      {showBasicInfoModal && (
+        <EditBasicInfoModal 
+          open={showBasicInfoModal} 
+          onOpenChange={setShowBasicInfoModal} 
+          profile={profile} 
+        />
+      )}
+      
+      {showJourneyModal && (
+        <EditJobDetailsModal 
+          open={showJourneyModal} 
+          onOpenChange={setShowJourneyModal} 
+          profile={profile} 
+        />
+      )}
+      
+      {showStrengthsModal && (
+        <EditEducationModal 
+          open={showStrengthsModal} 
+          onOpenChange={setShowStrengthsModal} 
+          profile={profile} 
+        />
+      )}
+      
+      {showOnlinePresenceModal && (
+        <EditOnlinePresenceModal 
+          open={showOnlinePresenceModal} 
+          onOpenChange={setShowOnlinePresenceModal} 
+          profile={profile} 
+        />
+      )}
     </div>
+  );
+}
+
+function EditOnlinePresenceModal({ open, onOpenChange, profile }: { open: boolean; onOpenChange: (open: boolean) => void; profile: Profile }) {
+  const [formData, setFormData] = useState({
+    portfolioUrl: profile.portfolioUrl || profile.portfolio || '',
+    linkedinUrl: profile.linkedinUrl || '',
+    websiteUrl: profile.websiteUrl || '',
+  });
+
+  const { mutateAsync: updateProfile, isPending } = useUpdateProfile();
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await updateProfile(formData);
+      toast({
+        title: "Online Presence Updated",
+        description: "Your online presence has been updated successfully.",
+      });
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Failed to update online presence:', error);
+      toast({
+        title: "Update Failed",
+        description: "Failed to update online presence. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Online Presence</DialogTitle>
+        </DialogHeader>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="portfolioUrl">Portfolio URL</Label>
+            <Input
+              id="portfolioUrl"
+              type="url"
+              value={formData.portfolioUrl}
+              onChange={(e) => setFormData({ ...formData, portfolioUrl: e.target.value })}
+              placeholder="https://yourportfolio.com"
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="linkedinUrl">LinkedIn URL</Label>
+            <Input
+              id="linkedinUrl"
+              type="url"
+              value={formData.linkedinUrl}
+              onChange={(e) => setFormData({ ...formData, linkedinUrl: e.target.value })}
+              placeholder="https://linkedin.com/in/yourprofile"
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="websiteUrl">Website URL</Label>
+            <Input
+              id="websiteUrl"
+              type="url"
+              value={formData.websiteUrl}
+              onChange={(e) => setFormData({ ...formData, websiteUrl: e.target.value })}
+              placeholder="https://yourwebsite.com"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded">
+              Cancel
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isPending}
+              className="bg-blue-600 text-white hover:bg-blue-700 rounded"
+            >
+              {isPending ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

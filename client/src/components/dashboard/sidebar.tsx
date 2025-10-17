@@ -22,9 +22,9 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
 
   const menuItems = [
     { id: 'my-jobs', label: 'My Jobs', icon: Briefcase },
-    { id: 'job-preferences', label: 'Job Preferences', icon: Settings },
     { id: 'edit-view', label: 'Edit & View', icon: User },
     { id: 'job-board', label: 'Job Board', icon: Briefcase },
+    { id: 'job-preferences', label: 'Job Preferences', icon: Settings },
   ];
 
   // Logout mutation for candidates

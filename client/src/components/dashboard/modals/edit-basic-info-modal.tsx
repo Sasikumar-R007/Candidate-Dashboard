@@ -137,12 +137,14 @@ export default function EditBasicInfoModal({ open, onOpenChange, profile }: Edit
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="primaryEmail">Primary Email</Label>
+              <Label htmlFor="primaryEmail">Primary Email (Read Only)</Label>
               <Input
                 id="primaryEmail"
                 type="email"
                 value={formData.primaryEmail}
-                onChange={(e) => setFormData({ ...formData, primaryEmail: e.target.value })}
+                readOnly
+                disabled
+                className="bg-gray-100 dark:bg-gray-700 cursor-not-allowed"
               />
             </div>
             <div>

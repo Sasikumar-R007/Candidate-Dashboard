@@ -158,19 +158,78 @@ export default function CandidateLogin() {
 
   if (showOTP) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="w-full max-w-md bg-white dark:bg-gray-800 p-8 rounded-lg shadow-sm">
-          <div className="text-center space-y-6">
-            <div>
-              <h2 className="text-lg font-medium text-gray-900 dark:text-white">Enter 2FA OTP sent to your Mobile</h2>
+      <div className="min-h-screen flex">
+        {/* Left Side - Dark Blue Background with 2FA Illustration */}
+        <div className="hidden lg:flex lg:w-1/2 bg-[#1e3a5f] relative overflow-hidden items-center justify-center p-12">
+          <div className="max-w-md space-y-8">
+            {/* Logo */}
+            <div className="flex items-center space-x-3 mb-12">
+              <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+                <BrainCircuit className="w-5 h-5 text-[#1e3a5f]" />
+              </div>
+              <span className="text-xl font-bold text-white">StaffOS</span>
             </div>
 
-            <form onSubmit={handleSubmitOTP(onVerifyOTP)} className="space-y-4" data-testid="form-otp-verification">
+            {/* 2FA Title */}
+            <div className="text-white space-y-4">
+              <h1 className="text-3xl font-bold">2-Factor<br />Authentication</h1>
+              <p className="text-gray-300 text-sm">2-step verification: extra security beyond your<br />password.</p>
+            </div>
+
+            {/* 2FA Illustration */}
+            <div className="relative mt-12 flex justify-center">
+              <svg width="300" height="250" viewBox="0 0 300 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+                {/* Main user circle with blue background */}
+                <circle cx="150" cy="100" r="60" fill="#5B8DB8"/>
+                <circle cx="150" cy="80" r="25" fill="white"/>
+                <path d="M 110 120 Q 150 140, 190 120" stroke="white" strokeWidth="15" fill="none" strokeLinecap="round"/>
+                
+                {/* Video call icon */}
+                <circle cx="90" cy="170" r="22" fill="#E74C3C"/>
+                <rect x="80" y="162" width="12" height="8" fill="white" rx="1"/>
+                <path d="M 92 166 L 100 162 L 100 170 L 92 166 Z" fill="white"/>
+                
+                {/* Location pin */}
+                <g transform="translate(180, 145)">
+                  <path d="M 0 0 C -8 -8, -8 -20, 0 -28 C 8 -20, 8 -8, 0 0 Z" fill="#E67E22"/>
+                  <circle cx="0" cy="-18" r="5" fill="white"/>
+                </g>
+                
+                {/* Chat bubble */}
+                <g transform="translate(210, 85)">
+                  <rect x="0" y="0" width="35" height="25" rx="8" fill="#F39C12"/>
+                  <path d="M 8 25 L 12 32 L 16 25" fill="#F39C12"/>
+                  <line x1="8" y1="10" x2="27" y2="10" stroke="white" strokeWidth="2"/>
+                  <line x1="8" y1="17" x2="20" y2="17" stroke="white" strokeWidth="2"/>
+                </g>
+                
+                {/* Bottom decorative map/location elements */}
+                <rect x="50" y="210" width="200" height="2" fill="#5B8DB8" opacity="0.3"/>
+                <circle cx="80" cy="220" r="3" fill="#5DADE2"/>
+                <circle cx="150" cy="225" r="3" fill="#5DADE2"/>
+                <circle cx="220" cy="218" r="3" fill="#5DADE2"/>
+                
+                {/* Connecting lines */}
+                <line x1="90" y1="170" x2="120" y2="140" stroke="#5B8DB8" strokeWidth="2" opacity="0.5"/>
+                <line x1="210" y1="170" x2="180" y2="140" stroke="#5B8DB8" strokeWidth="2" opacity="0.5"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Side - OTP Form */}
+        <div className="w-full lg:w-1/2 flex items-center justify-center bg-white dark:bg-gray-900 p-8">
+          <div className="w-full max-w-md space-y-8">
+            <div className="space-y-2">
+              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Enter 2FA OTP sent to your Mobile</h2>
+            </div>
+
+            <form onSubmit={handleSubmitOTP(onVerifyOTP)} className="space-y-6" data-testid="form-otp-verification">
               <div>
                 <Input
                   type="text"
                   placeholder="6-digit OTP"
-                  className="w-full h-12 text-center text-lg border border-gray-300 dark:border-gray-600 rounded focus:border-blue-600 focus:ring-2 focus:ring-blue-100 dark:bg-gray-700 dark:text-white"
+                  className="w-full h-14 text-center text-lg border-2 border-gray-300 dark:border-gray-600 rounded-lg focus:border-blue-600 focus:ring-2 focus:ring-blue-100 dark:bg-gray-800 dark:text-white"
                   data-testid="input-otp"
                   maxLength={6}
                   {...registerOTP("otp", {
@@ -182,31 +241,31 @@ export default function CandidateLogin() {
                   })}
                 />
                 {otpErrors.otp && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{otpErrors.otp.message}</p>
+                  <p className="mt-2 text-sm text-red-600 dark:text-red-400">{otpErrors.otp.message}</p>
                 )}
               </div>
 
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-slate-800 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white py-3 text-base font-medium rounded"
+                className="w-full h-14 bg-[#1e3a5f] hover:bg-[#2d4a6f] text-white text-base font-semibold rounded-lg"
                 data-testid="button-verify-otp"
               >
                 {isLoading ? "Verifying..." : "Verify OTP"}
               </Button>
 
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between items-center text-sm pt-2">
                 <button
                   type="button"
                   onClick={() => setShowOTP(false)}
-                  className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                  className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 font-medium"
                   data-testid="button-back-to-login"
                 >
                   Back To Login
                 </button>
                 <button
                   type="button"
-                  className="text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
+                  className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
                   data-testid="button-resend-otp"
                 >
                   Resend OTP
