@@ -460,20 +460,18 @@ export default function MasterDatabase() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>First Name *</Label>
                     <Input
                       value={resumeFormData.firstName}
                       onChange={(e) => setResumeFormData({...resumeFormData, firstName: e.target.value})}
-                      placeholder="First Name"
+                      placeholder="First Name *"
                       data-testid="input-first-name"
                     />
                   </div>
                   <div>
-                    <Label>Last Name *</Label>
                     <Input
                       value={resumeFormData.lastName}
                       onChange={(e) => setResumeFormData({...resumeFormData, lastName: e.target.value})}
-                      placeholder="Last Name"
+                      placeholder="Last Name *"
                       data-testid="input-last-name"
                     />
                   </div>
@@ -481,16 +479,14 @@ export default function MasterDatabase() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Mobile Number *</Label>
                     <Input
                       value={resumeFormData.mobileNumber}
                       onChange={(e) => setResumeFormData({...resumeFormData, mobileNumber: e.target.value})}
-                      placeholder="Mobile Number"
+                      placeholder="Mobile Number *"
                       data-testid="input-mobile-number"
                     />
                   </div>
                   <div>
-                    <Label>WhatsApp Number</Label>
                     <Input
                       value={resumeFormData.whatsappNumber}
                       onChange={(e) => setResumeFormData({...resumeFormData, whatsappNumber: e.target.value})}
@@ -502,17 +498,15 @@ export default function MasterDatabase() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Primary Email *</Label>
                     <Input
                       type="email"
                       value={resumeFormData.primaryEmail}
                       onChange={(e) => setResumeFormData({...resumeFormData, primaryEmail: e.target.value})}
-                      placeholder="Primary Email"
+                      placeholder="Primary Email *"
                       data-testid="input-primary-email"
                     />
                   </div>
                   <div>
-                    <Label>Secondary Email</Label>
                     <Input
                       type="email"
                       value={resumeFormData.secondaryEmail}
@@ -525,13 +519,12 @@ export default function MasterDatabase() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Highest Qualification *</Label>
                     <Select
                       value={resumeFormData.highestQualification}
                       onValueChange={(value) => setResumeFormData({...resumeFormData, highestQualification: value})}
                     >
                       <SelectTrigger data-testid="select-highest-qualification">
-                        <SelectValue placeholder="Select Qualification" />
+                        <SelectValue placeholder="Highest Qualification *" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Bachelor's Degree">Bachelor's Degree</SelectItem>
@@ -542,11 +535,10 @@ export default function MasterDatabase() {
                     </Select>
                   </div>
                   <div>
-                    <Label>College Name *</Label>
                     <Input
                       value={resumeFormData.collegeName}
                       onChange={(e) => setResumeFormData({...resumeFormData, collegeName: e.target.value})}
-                      placeholder="College Name"
+                      placeholder="College Name *"
                       data-testid="input-college-name"
                     />
                   </div>
@@ -554,7 +546,6 @@ export default function MasterDatabase() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>LinkedIn Profile</Label>
                     <Input
                       value={resumeFormData.linkedin}
                       onChange={(e) => setResumeFormData({...resumeFormData, linkedin: e.target.value})}
@@ -563,13 +554,12 @@ export default function MasterDatabase() {
                     />
                   </div>
                   <div>
-                    <Label>Pedigree Level *</Label>
                     <Select
                       value={resumeFormData.pedigreeLevel}
                       onValueChange={(value) => setResumeFormData({...resumeFormData, pedigreeLevel: value})}
                     >
                       <SelectTrigger data-testid="select-pedigree-level">
-                        <SelectValue placeholder="Select Level" />
+                        <SelectValue placeholder="Pedigree Level *" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Tier 1">Tier 1</SelectItem>
@@ -582,13 +572,12 @@ export default function MasterDatabase() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Current Location *</Label>
                     <Select
                       value={resumeFormData.currentLocation}
                       onValueChange={(value) => setResumeFormData({...resumeFormData, currentLocation: value})}
                     >
                       <SelectTrigger data-testid="select-current-location">
-                        <SelectValue placeholder="Select Location" />
+                        <SelectValue placeholder="Current Location *" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Mumbai">Mumbai</SelectItem>
@@ -600,13 +589,12 @@ export default function MasterDatabase() {
                     </Select>
                   </div>
                   <div>
-                    <Label>Notice Period</Label>
                     <Select
                       value={resumeFormData.noticePeriod}
                       onValueChange={(value) => setResumeFormData({...resumeFormData, noticePeriod: value})}
                     >
                       <SelectTrigger data-testid="select-notice-period">
-                        <SelectValue placeholder="Select Notice Period" />
+                        <SelectValue placeholder="Notice Period" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Immediate">Immediate</SelectItem>
@@ -621,7 +609,6 @@ export default function MasterDatabase() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Website URL</Label>
                     <Input
                       value={resumeFormData.website}
                       onChange={(e) => setResumeFormData({...resumeFormData, website: e.target.value})}
@@ -630,7 +617,6 @@ export default function MasterDatabase() {
                     />
                   </div>
                   <div>
-                    <Label>Portfolio 1 URL</Label>
                     <Input
                       value={resumeFormData.portfolio1}
                       onChange={(e) => setResumeFormData({...resumeFormData, portfolio1: e.target.value})}
@@ -642,16 +628,14 @@ export default function MasterDatabase() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Current Company *</Label>
                     <Input
                       value={resumeFormData.currentCompany}
                       onChange={(e) => setResumeFormData({...resumeFormData, currentCompany: e.target.value})}
-                      placeholder="Current Company"
+                      placeholder="Current Company *"
                       data-testid="input-current-company"
                     />
                   </div>
                   <div>
-                    <Label>Portfolio 2 URL</Label>
                     <Input
                       value={resumeFormData.portfolio2}
                       onChange={(e) => setResumeFormData({...resumeFormData, portfolio2: e.target.value})}
@@ -663,16 +647,14 @@ export default function MasterDatabase() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Current Role *</Label>
                     <Input
                       value={resumeFormData.currentRole}
                       onChange={(e) => setResumeFormData({...resumeFormData, currentRole: e.target.value})}
-                      placeholder="Current Role"
+                      placeholder="Current Role *"
                       data-testid="input-current-role"
                     />
                   </div>
                   <div>
-                    <Label>Portfolio 3 URL</Label>
                     <Input
                       value={resumeFormData.portfolio3}
                       onChange={(e) => setResumeFormData({...resumeFormData, portfolio3: e.target.value})}
@@ -684,13 +666,12 @@ export default function MasterDatabase() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Company Domain *</Label>
                     <Select
                       value={resumeFormData.companyDomain}
                       onValueChange={(value) => setResumeFormData({...resumeFormData, companyDomain: value})}
                     >
                       <SelectTrigger data-testid="select-company-domain">
-                        <SelectValue placeholder="Select Domain" />
+                        <SelectValue placeholder="Company Domain *" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="IT">IT</SelectItem>
@@ -701,13 +682,12 @@ export default function MasterDatabase() {
                     </Select>
                   </div>
                   <div>
-                    <Label>Company Level *</Label>
                     <Select
                       value={resumeFormData.companyLevel}
                       onValueChange={(value) => setResumeFormData({...resumeFormData, companyLevel: value})}
                     >
                       <SelectTrigger data-testid="select-company-level">
-                        <SelectValue placeholder="Select Level" />
+                        <SelectValue placeholder="Company Level *" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Startup">Startup</SelectItem>
@@ -719,8 +699,7 @@ export default function MasterDatabase() {
                 </div>
 
                 <div>
-                  <Label>Skills *</Label>
-                  <div className="text-sm text-gray-500 mb-2">Add up to 15 skills</div>
+                  <div className="text-sm text-gray-500 mb-2">Skills * (Add up to 15 skills)</div>
                   <div className="grid grid-cols-2 gap-2">
                     {resumeFormData.skills.slice(0, 15).map((skill, index) => (
                       <Input
@@ -739,7 +718,6 @@ export default function MasterDatabase() {
                 </div>
 
                 <div>
-                  <Label>Upload Resume (Optional)</Label>
                   <Input
                     type="file"
                     accept=".pdf,.doc,.docx"
@@ -749,6 +727,7 @@ export default function MasterDatabase() {
                     }}
                     data-testid="input-resume-file"
                   />
+                  <div className="text-sm text-gray-500 mt-1">Upload Resume (Optional)</div>
                 </div>
 
                 <div className="flex justify-end gap-2">
