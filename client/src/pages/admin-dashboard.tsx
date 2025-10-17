@@ -5128,9 +5128,8 @@ export default function AdminDashboard() {
             {/* Row 1 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Client Code <span className="text-red-500">*</span></label>
                 <Input 
-                  placeholder="Client Code" 
+                  placeholder="Client Code *" 
                   className="input-styled rounded" 
                   value={clientForm.clientCode}
                   onChange={(e) => setClientForm({...clientForm, clientCode: e.target.value})}
@@ -5138,9 +5137,8 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Brand Name <span className="text-red-500">*</span></label>
                 <Input 
-                  placeholder="Brand Name" 
+                  placeholder="Brand Name *" 
                   className="input-styled rounded" 
                   value={clientForm.brandName}
                   onChange={(e) => setClientForm({...clientForm, brandName: e.target.value})}
@@ -5152,7 +5150,6 @@ export default function AdminDashboard() {
             {/* Row 2 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Incorporated Name</label>
                 <Input 
                   placeholder="Incorporated Name" 
                   className="input-styled rounded" 
@@ -5162,7 +5159,6 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">GSTIN</label>
                 <Input 
                   placeholder="GSTIN" 
                   className="input-styled rounded" 
@@ -5176,7 +5172,6 @@ export default function AdminDashboard() {
             {/* Row 3 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Address</label>
                 <Input 
                   placeholder="Address" 
                   className="input-styled rounded" 
@@ -5186,7 +5181,6 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Location</label>
                 <Input 
                   placeholder="Location" 
                   className="input-styled rounded" 
@@ -5200,7 +5194,6 @@ export default function AdminDashboard() {
             {/* Row 4 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SPOC</label>
                 <Input 
                   placeholder="SPOC" 
                   className="input-styled rounded" 
@@ -5210,7 +5203,6 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
                 <Input 
                   placeholder="Email" 
                   type="email" 
@@ -5225,7 +5217,6 @@ export default function AdminDashboard() {
             {/* Row 5 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Website</label>
                 <Input 
                   placeholder="Website" 
                   className="input-styled rounded" 
@@ -5235,7 +5226,6 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">LinkedIn</label>
                 <Input 
                   placeholder="LinkedIn" 
                   className="input-styled rounded" 
@@ -5249,7 +5239,6 @@ export default function AdminDashboard() {
             {/* Row 6 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Agreement</label>
                 <Input 
                   placeholder="Agreement" 
                   className="input-styled rounded" 
@@ -5259,7 +5248,6 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Percentage</label>
                 <Input 
                   placeholder="Percentage" 
                   className="input-styled rounded" 
@@ -5273,7 +5261,6 @@ export default function AdminDashboard() {
             {/* Row 7 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
                 <Input 
                   placeholder="Category" 
                   className="input-styled rounded" 
@@ -5283,7 +5270,6 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Payment terms</label>
                 <Input 
                   placeholder="Payment terms" 
                   className="input-styled rounded" 
@@ -5297,7 +5283,6 @@ export default function AdminDashboard() {
             {/* Row 8 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Source</label>
                 <Input 
                   placeholder="Source" 
                   className="input-styled rounded" 
@@ -5307,7 +5292,6 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
                 <Input 
                   placeholder="Start Date" 
                   className="input-styled rounded" 
@@ -5321,7 +5305,6 @@ export default function AdminDashboard() {
             {/* Row 9 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Referral</label>
                 <Input 
                   placeholder="Referral" 
                   className="input-styled rounded" 
@@ -5331,13 +5314,12 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Status</label>
                 <Select 
                   value={clientForm.currentStatus}
                   onValueChange={(value) => setClientForm({...clientForm, currentStatus: value})}
                 >
                   <SelectTrigger className="input-styled rounded" data-testid="select-current-status">
-                    <SelectValue placeholder="Select Status" />
+                    <SelectValue placeholder="Current Status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="active">Active</SelectItem>
@@ -5384,9 +5366,8 @@ export default function AdminDashboard() {
               {/* Row 1 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee ID <span className="text-red-500">*</span></label>
                   <Input 
-                    placeholder="Employee ID" 
+                    placeholder="Employee ID *" 
                     className="input-styled rounded" 
                     value={employeeForm.employeeId}
                     onChange={(e) => setEmployeeForm({...employeeForm, employeeId: e.target.value})}
@@ -5394,9 +5375,8 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Employee Name <span className="text-red-500">*</span></label>
                   <Input 
-                    placeholder="Employee Name" 
+                    placeholder="Employee Name *" 
                     className="input-styled rounded" 
                     value={employeeForm.name}
                     onChange={(e) => setEmployeeForm({...employeeForm, name: e.target.value})}
@@ -5408,7 +5388,6 @@ export default function AdminDashboard() {
               {/* Row 2 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Department</label>
                   <Input 
                     placeholder="Department" 
                     className="input-styled rounded" 
@@ -5418,9 +5397,8 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Role <span className="text-red-500">*</span></label>
                   <Input 
-                    placeholder="Role" 
+                    placeholder="Role *" 
                     className="input-styled rounded" 
                     value={employeeForm.role}
                     onChange={(e) => setEmployeeForm({...employeeForm, role: e.target.value})}
@@ -5432,9 +5410,8 @@ export default function AdminDashboard() {
               {/* Row 3 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email <span className="text-red-500">*</span></label>
                   <Input 
-                    placeholder="Email" 
+                    placeholder="Email *" 
                     type="email" 
                     className="input-styled rounded" 
                     value={employeeForm.email}
@@ -5443,7 +5420,6 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mobile Number</label>
                   <Input 
                     placeholder="Mobile Number" 
                     className="input-styled rounded" 
@@ -5457,7 +5433,6 @@ export default function AdminDashboard() {
               {/* Row 4 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date of Joining</label>
                   <Input 
                     placeholder="Date of Joining" 
                     className="input-styled rounded" 
@@ -5467,9 +5442,8 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Password <span className="text-red-500">*</span></label>
                   <Input 
-                    placeholder="Password" 
+                    placeholder="Password *" 
                     type="password" 
                     className="input-styled rounded" 
                     value={employeeForm.password}
@@ -5482,7 +5456,6 @@ export default function AdminDashboard() {
               {/* Row 5 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bank</label>
                   <Select>
                     <SelectTrigger className="input-styled rounded">
                       <SelectValue placeholder="Select Bank" />
@@ -5495,7 +5468,6 @@ export default function AdminDashboard() {
                   </Select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">EPFO</label>
                   <Input placeholder="EPFO" className="input-styled rounded" />
                 </div>
               </div>
@@ -5503,11 +5475,9 @@ export default function AdminDashboard() {
               {/* Row 6 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">PF ACC No</label>
                   <Input placeholder="PF ACC No" className="input-styled rounded" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">EPFUAN</label>
                   <Input placeholder="EPFUAN" className="input-styled rounded" />
                 </div>
               </div>
@@ -5515,11 +5485,9 @@ export default function AdminDashboard() {
               {/* Row 7 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Father Name</label>
                   <Input placeholder="Father Name" className="input-styled rounded" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mother Name</label>
                   <Input placeholder="Mother Name" className="input-styled rounded" />
                 </div>
               </div>
@@ -5527,11 +5495,9 @@ export default function AdminDashboard() {
               {/* Row 8 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Father's Number</label>
                   <Input placeholder="Father's Number" className="input-styled rounded" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Mother's Number</label>
                   <Input placeholder="Mother's Number" className="input-styled rounded" />
                 </div>
               </div>
@@ -5539,14 +5505,12 @@ export default function AdminDashboard() {
               {/* Row 9 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Official CTC</label>
                   <Input placeholder="Official CTC" className="input-styled rounded" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Salary</label>
                   <Select>
                     <SelectTrigger className="input-styled rounded">
-                      <SelectValue placeholder="Select Salary" />
+                      <SelectValue placeholder="Current Salary" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="10000">10,000</SelectItem>
@@ -5560,10 +5524,9 @@ export default function AdminDashboard() {
               {/* Row 10 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Recruitment Count</label>
                   <Select>
                     <SelectTrigger className="input-styled rounded">
-                      <SelectValue placeholder="Select Count" />
+                      <SelectValue placeholder="Recruitment Count" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="1">1</SelectItem>
@@ -5573,10 +5536,9 @@ export default function AdminDashboard() {
                   </Select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Appraisal Remarks</label>
                   <Select>
                     <SelectTrigger className="input-styled rounded">
-                      <SelectValue placeholder="Select Remarks" />
+                      <SelectValue placeholder="Appraisal Remarks" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="excellent">Excellent</SelectItem>
@@ -5590,11 +5552,9 @@ export default function AdminDashboard() {
               {/* Row 11 */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Appraisal Amount</label>
                   <Input placeholder="Appraisal Amount" className="input-styled rounded" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Yearly CTC</label>
                   <Input placeholder="Yearly CTC" className="input-styled rounded" />
                 </div>
               </div>
