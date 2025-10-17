@@ -1222,9 +1222,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/saved-jobs", requireCandidateAuth, async (req, res) => {
     try {
       const candidateId = req.session.candidateId!;
+      const profile = await storage.getProfile(candidateId);
       
-      // Return empty saved jobs for now
-      res.json([]);
+      if (!profile) {
+        return res.status(404).json({ message: "Profile not found" });
+      }
+      
+      const savedJobs = await storage.getSavedJobsByProfile(profile.id);
+      res.json(savedJobs);
     } catch (error) {
       console.error('Get saved jobs error:', error);
       res.status(500).json({ message: "Internal server error" });

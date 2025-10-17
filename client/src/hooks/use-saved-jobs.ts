@@ -11,16 +11,7 @@ export function useSavedJobs() {
 export function useSaveJob() {
   return useMutation({
     mutationFn: async (jobData: Omit<InsertSavedJob, "profileId" | "savedDate">) => {
-      const response = await fetch("/api/saved-jobs", {
-        method: "POST",
-        body: JSON.stringify(jobData),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      if (!response.ok) {
-        throw new Error("Failed to save job");
-      }
+      const response = await apiRequest("POST", "/api/saved-jobs", jobData);
       return response.json();
     },
     onSuccess: () => {
@@ -32,16 +23,7 @@ export function useSaveJob() {
 export function useRemoveSavedJob() {
   return useMutation({
     mutationFn: async ({ jobTitle, company }: { jobTitle: string; company: string }) => {
-      const response = await fetch("/api/saved-jobs", {
-        method: "DELETE",
-        body: JSON.stringify({ jobTitle, company }),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      if (!response.ok) {
-        throw new Error("Failed to remove saved job");
-      }
+      const response = await apiRequest("DELETE", "/api/saved-jobs", { jobTitle, company });
       return response.json();
     },
     onSuccess: () => {
