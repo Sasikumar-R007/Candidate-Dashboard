@@ -43,7 +43,7 @@ export default function MasterDatabase() {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
 
   // Sample data for different database sections
-  const resumeDatabase = [
+  const resumeDatabaseAll = [
     { id: 1, candidateName: "Aarav Sharma", position: "Frontend Developer", experience: "3 years", skills: "React, JavaScript, CSS", status: "Active", uploadDate: "2025-08-15" },
     { id: 2, candidateName: "Arjun Patel", position: "UI/UX Designer", experience: "2 years", skills: "Figma, Sketch, Adobe XD", status: "Screening", uploadDate: "2025-08-14" },
     { id: 3, candidateName: "Shaurya Kumar", position: "Backend Developer", experience: "4 years", skills: "Node.js, Python, MongoDB", status: "Interview", uploadDate: "2025-08-13" },
@@ -51,7 +51,7 @@ export default function MasterDatabase() {
     { id: 5, candidateName: "Aditya Verma", position: "Mobile Developer", experience: "3 years", skills: "React Native, Flutter", status: "Rejected", uploadDate: "2025-08-11" },
   ];
 
-  const candidateDetails = [
+  const candidateDetailsAll = [
     { id: 1, name: "Aarav Sharma", email: "aarav@example.com", phone: "+91 9876543210", location: "Mumbai", currentStatus: "In-Process", appliedOn: "06-06-2025", company: "TechCorp" },
     { id: 2, name: "Arjun Patel", email: "arjun@example.com", phone: "+91 9876543211", location: "Delhi", currentStatus: "Shortlisted", appliedOn: "08-06-2025", company: "Designify" },
     { id: 3, name: "Shaurya Kumar", email: "shaurya@example.com", phone: "+91 9876543212", location: "Bangalore", currentStatus: "Interview", appliedOn: "20-06-2025", company: "CodeLabs" },
@@ -59,7 +59,7 @@ export default function MasterDatabase() {
     { id: 5, name: "Aditya Verma", email: "aditya@example.com", phone: "+91 9876543214", location: "Hyderabad", currentStatus: "Rejected", appliedOn: "23-07-2025", company: "Bug Catchers" },
   ];
 
-  const employeesDatabase = [
+  const employeesDatabaseAll = [
     { id: 1, employeeId: "STTA001", name: "Priya Sharma", role: "Talent Advisor", department: "Recruitment", joiningDate: "01-04-2023", status: "Active", email: "priya@company.com" },
     { id: 2, employeeId: "STTA002", name: "Amit Kumar", role: "Talent Advisor", department: "Recruitment", joiningDate: "15-03-2023", status: "Active", email: "amit@company.com" },
     { id: 3, employeeId: "STTL001", name: "Kumaravel R", role: "Team Leader", department: "Recruitment", joiningDate: "10-02-2023", status: "Active", email: "kumaravel@company.com" },
@@ -67,7 +67,7 @@ export default function MasterDatabase() {
     { id: 5, employeeId: "STTA003", name: "Sowmiya Ravi", role: "Talent Advisor", department: "Recruitment", joiningDate: "05-05-2023", status: "On Leave", email: "sowmiya@company.com" },
   ];
 
-  const requirementsDatabase = [
+  const requirementsDatabaseAll = [
     { id: 1, position: "Frontend Developer", criticality: "HIGH", company: "TechCorp", spoc: "David Wilson", talentAdvisor: "Priya Sharma", status: "Active", createdAt: "2025-08-01" },
     { id: 2, position: "UI/UX Designer", criticality: "MEDIUM", company: "Designify", spoc: "Tom Anderson", talentAdvisor: "Amit Kumar", status: "Interview", createdAt: "2025-08-02" },
     { id: 3, position: "Backend Developer", criticality: "LOW", company: "CodeLabs", spoc: "Robert Kim", talentAdvisor: "Sowmiya Ravi", status: "Screening", createdAt: "2025-08-03" },
@@ -75,13 +75,35 @@ export default function MasterDatabase() {
     { id: 5, position: "Mobile Developer", criticality: "HIGH", company: "Bug Catchers", spoc: "Mel Gibson", talentAdvisor: "Amit Kumar", status: "Active", createdAt: "2025-08-05" },
   ];
 
-  const interviewsDatabase = [
+  const interviewsDatabaseAll = [
     { id: 1, candidateName: "Aarav Sharma", position: "Frontend Developer", client: "TechCorp", interviewDate: "2025-08-20", interviewTime: "10:00 AM", type: "Video Call", round: "L1", status: "Scheduled" },
     { id: 2, candidateName: "Arjun Patel", position: "UI/UX Designer", client: "Designify", interviewDate: "2025-08-21", interviewTime: "2:00 PM", type: "Phone Call", round: "HR", status: "Completed" },
     { id: 3, candidateName: "Shaurya Kumar", position: "Backend Developer", client: "CodeLabs", interviewDate: "2025-08-22", interviewTime: "11:00 AM", type: "In Person", round: "L2", status: "Scheduled" },
     { id: 4, candidateName: "Vihaan Singh", position: "QA Tester", client: "AppLogic", interviewDate: "2025-08-19", interviewTime: "3:00 PM", type: "Video Call", round: "Final", status: "Completed" },
     { id: 5, candidateName: "Aditya Verma", position: "Mobile Developer", client: "Bug Catchers", interviewDate: "2025-08-23", interviewTime: "9:00 AM", type: "Phone Call", round: "L1", status: "Cancelled" },
   ];
+
+  // Filter function
+  const filterData = <T extends Record<string, any>>(data: T[], query: string, statusFilter: string): T[] => {
+    return data.filter(item => {
+      const searchMatch = query === "" || Object.values(item).some(value => 
+        String(value).toLowerCase().includes(query.toLowerCase())
+      );
+      
+      const statusMatch = statusFilter === "all" || 
+        (item.status && item.status.toLowerCase() === statusFilter.toLowerCase()) ||
+        (item.currentStatus && item.currentStatus.toLowerCase() === statusFilter.toLowerCase());
+      
+      return searchMatch && statusMatch;
+    });
+  };
+
+  // Apply filters
+  const resumeDatabase = filterData(resumeDatabaseAll, searchQuery, filterStatus);
+  const candidateDetails = filterData(candidateDetailsAll, searchQuery, filterStatus);
+  const employeesDatabase = filterData(employeesDatabaseAll, searchQuery, filterStatus);
+  const requirementsDatabase = filterData(requirementsDatabaseAll, searchQuery, filterStatus);
+  const interviewsDatabase = filterData(interviewsDatabaseAll, searchQuery, filterStatus);
 
   const getCriticalityBadge = (criticality: string) => {
     switch (criticality) {
