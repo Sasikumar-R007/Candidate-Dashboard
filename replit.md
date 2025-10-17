@@ -4,6 +4,18 @@ This is a dual-dashboard job portal web application featuring both candidate and
 
 **Latest Updates (October 17, 2025)**: 
 
+*Client Dashboard Redesign with Chat Integration*:
+- Replaced right sidebar (CandidateMetricsSidebar) with ProfileMenu component in header matching admin dashboard design
+- Created shared ProfileMenu component for reuse across admin and client dashboards
+- Implemented profile dropdown with user avatar, name, role, and settings access
+- Added floating chat button (bottom-right) that opens functional chat interface
+- Created ChatDock component with message sending/receiving capability
+- Added "Start Chat" button in ProfileSettingsModal for direct messaging (visible for candidates and client employees)
+- All chat entry points (floating button, profile dropdown, profile modal) properly wired to ChatDock
+- Maintained consistent design patterns with admin dashboard header layout
+- Full-width content area with sticky header for better space utilization
+- Help button and profile controls positioned in top-right corner
+
 *Profile Edit Functionality Enhancement*:
 - Implemented fully functional edit modals for all profile sections (About You, Online Presence, Your Journey, Your Strengths)
 - Added form validation and error handling for all edit modals with proper toast notifications
