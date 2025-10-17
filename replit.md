@@ -2,6 +2,19 @@
 
 This is a dual-dashboard job portal web application featuring both candidate and team leader interfaces. The system provides comprehensive dashboards for job seekers to manage their profiles and for team leaders to monitor recruitment metrics, team performance, and targets. The application features a modern, responsive design with consistent styling across both dashboards and a landing page for role selection.
 
+**Latest Updates (October 17, 2025)**: Redesigned candidate profile page with comprehensive Edit & View interface:
+- Removed old profile page and replaced with new Edit & View page accessible via User icon in sidebar
+- Implemented comprehensive profile header with avatar, name, job title, and contact information
+- Created left sidebar navigation for easy section switching (About you, Online Presence, Your Journey, Your Strengths, Resume, Job Preferences)
+- Designed About you section displaying personal details (name, contact, location, DOB)
+- Built Online Presence section with portfolio, LinkedIn, and website links
+- Implemented Your Journey section showing current company, role, and product details
+- Added Your Strengths section with education info and three skill categories (Primary Skills in green, Secondary Skills in cyan, Knowledge Only in orange)
+- Created Upload Resume section with drag & drop interface and paste option
+- Built View Job Preferences section displaying job search criteria and instructions
+- All sections include Edit buttons for future functionality and proper data-testid attributes for testing
+- Component properly handles missing profile data with fallback values
+
 **Latest Import Status (October 3, 2025 - Fresh GitHub Import Complete)**: Successfully imported fresh GitHub clone and configured for Replit environment. Complete setup includes:
 - ✅ Node.js 20 environment already installed with all npm dependencies in place
 - ✅ PostgreSQL database connected via existing DATABASE_URL environment variable
