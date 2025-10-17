@@ -127,11 +127,10 @@ export default function MasterDatabase() {
               onClick={() => window.history.back()}
               variant="outline"
               size="sm"
-              className="flex items-center gap-2"
+              className="flex items-center"
               data-testid="button-back-to-dashboard"
             >
               <ArrowLeft size={16} />
-              Back to Dashboard
             </Button>
             <h1 className="text-2xl font-bold text-gray-900">Master Database</h1>
           </div>
