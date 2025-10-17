@@ -19,6 +19,8 @@ export default function ActivityTab() {
 
   return (
     <div className="px-6 py-6">
+      <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Activity</h2>
+      
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent Activities */}
         <div className="bg-gray-100 rounded-xl p-6">
@@ -45,17 +47,49 @@ export default function ActivityTab() {
         <div className="bg-primary-blue rounded-xl p-6 text-white">
           <h3 className="text-xl font-semibold mb-6">Archives</h3>
           <div className="space-y-3">
-            {jobApplications.map((application: any) => (
-              <div key={application.id} className="bg-white/10 rounded-lg p-4 flex justify-between items-center">
-                <div>
-                  <p className="font-medium">
-                    {application.jobTitle} <span className="text-sm text-gray-300">({application.jobType})</span>
-                  </p>
-                  <p className="text-sm text-gray-300">{application.company}</p>
+            {jobApplications.length > 0 ? (
+              jobApplications.map((application: any) => (
+                <div key={application.id} className="bg-white/10 rounded-lg p-4 flex justify-between items-center">
+                  <div>
+                    <p className="font-medium">
+                      {application.jobTitle} <span className="text-sm text-gray-300">({application.jobType})</span>
+                    </p>
+                    <p className="text-sm text-gray-300">{application.company}</p>
+                  </div>
+                  <span className="text-sm">{application.daysAgo}</span>
                 </div>
-                <span className="text-sm">{application.daysAgo}</span>
-              </div>
-            ))}
+              ))
+            ) : (
+              <>
+                <div className="bg-white/10 rounded-lg p-4 flex justify-between items-center">
+                  <div>
+                    <p className="font-medium">
+                      UX Designer <span className="text-sm text-gray-300">(Internship)</span>
+                    </p>
+                    <p className="text-sm text-gray-300">Micro soft</p>
+                  </div>
+                  <span className="text-sm">2 days</span>
+                </div>
+                <div className="bg-white/10 rounded-lg p-4 flex justify-between items-center">
+                  <div>
+                    <p className="font-medium">
+                      Software Designer <span className="text-sm text-gray-300">(Part-Time)</span>
+                    </p>
+                    <p className="text-sm text-gray-300">Zoho</p>
+                  </div>
+                  <span className="text-sm">31 days</span>
+                </div>
+                <div className="bg-white/10 rounded-lg p-4 flex justify-between items-center">
+                  <div>
+                    <p className="font-medium">
+                      UX testing <span className="text-sm text-gray-300">(Part-Time)</span>
+                    </p>
+                    <p className="text-sm text-gray-300">Google</p>
+                  </div>
+                  <span className="text-sm">33 days</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

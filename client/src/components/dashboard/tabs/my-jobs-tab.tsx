@@ -132,6 +132,55 @@ const jobSuggestions: JobSuggestion[] = [
   }
 ];
 
+// Mock applied jobs data with status
+const mockAppliedJobs: any[] = [
+  {
+    id: '1',
+    jobTitle: 'Frontend Developer',
+    company: 'TechCorp',
+    jobType: 'Full-Time',
+    status: 'In Process',
+    appliedDate: '06-06-2025',
+    daysAgo: '40 days'
+  },
+  {
+    id: '2',
+    jobTitle: 'UI/UX Designer',
+    company: 'Designify',
+    jobType: 'Internship',
+    status: 'Rejected',
+    appliedDate: '08-06-2025',
+    daysAgo: '37 days'
+  },
+  {
+    id: '3',
+    jobTitle: 'Backend Developer',
+    company: 'CodeLabs',
+    jobType: 'Full-Time',
+    status: 'Rejected',
+    appliedDate: '20-06-2025',
+    daysAgo: '22 days'
+  },
+  {
+    id: '4',
+    jobTitle: 'QA Tester',
+    company: 'AppLogic',
+    jobType: 'Internship',
+    status: 'In Process',
+    appliedDate: '01-07-2025',
+    daysAgo: '22 days'
+  },
+  {
+    id: '5',
+    jobTitle: 'Bug Catchers',
+    company: 'Mobile App Developer',
+    jobType: 'Full-Time',
+    status: 'In Process',
+    appliedDate: '23-07-2025',
+    daysAgo: '2 days'
+  }
+];
+
 export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTabProps) {
   const [showAllJobs, setShowAllJobs] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -141,7 +190,7 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
   const [showApplyConfirmation, setShowApplyConfirmation] = useState(false);
   const [pendingApplyJob, setPendingApplyJob] = useState<JobSuggestion | null>(null);
   const jobsPerPage = 3;
-  const { data: jobApplications = [], isLoading } = useQuery({
+  const { data: jobApplications = mockAppliedJobs, isLoading } = useQuery({
     queryKey: ['/api/job-applications'],
   });
   
@@ -269,16 +318,16 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
               </tr>
             </thead>
             <tbody>
-              {(jobApplications as JobApplication[])
+              {(jobApplications as any[])
                 .slice(0, showAllJobs ? undefined : 5)
-                .map((job: JobApplication) => (
+                .map((job: any) => (
                 <tr key={job.id} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="py-4 px-4 font-medium text-gray-900">{job.jobTitle}</td>
                   <td className="py-4 px-4 text-gray-700">{job.company}</td>
                   <td className="py-4 px-4 text-gray-700">{job.jobType}</td>
                   <td className="py-4 px-4">
-                    <Badge className={`${getStatusBadge('In Process')} border`}>
-                      ● In Process
+                    <Badge className={`${getStatusBadge(job.status || 'In Process')} border`}>
+                      ● {job.status || 'In Process'}
                     </Badge>
                   </td>
                   <td className="py-4 px-4 text-gray-700">{job.appliedDate}</td>
@@ -308,14 +357,14 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
           </table>
         </div>
 
-        {(jobApplications as JobApplication[]).length === 0 && (
+        {(jobApplications as any[]).length === 0 && (
           <div className="text-center py-12 text-gray-500">
             No job applications found. Start applying to jobs to see them here.
           </div>
         )}
 
         {/* See all button for Applied Jobs - moved below the table */}
-        {(jobApplications as JobApplication[]).length > 5 && !showAllJobs && (
+        {(jobApplications as any[]).length > 5 && !showAllJobs && (
           <div className="mt-6 pt-4 border-t border-gray-200 text-center">
             <Button 
               variant="link" 

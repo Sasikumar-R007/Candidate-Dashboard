@@ -6,7 +6,6 @@ interface TabNavigationProps {
 export default function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {
   const tabs = [
     { id: 'my-jobs', label: 'My Jobs' },
-    { id: 'my-profile', label: 'My Profile' },
     { id: 'resume', label: 'Resume' },
     { id: 'job-preferences', label: 'Job Preferences' },
     { id: 'activity', label: 'Activity' },

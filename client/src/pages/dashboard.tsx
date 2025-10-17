@@ -2,7 +2,6 @@ import { useState } from 'react';
 import Sidebar from '@/components/dashboard/sidebar';
 import SimpleClientHeader from '@/components/dashboard/simple-client-header';
 import TabNavigation from '@/components/dashboard/tab-navigation';
-import MyProfileTab from '@/components/dashboard/tabs/my-profile-tab';
 import ResumeTab from '@/components/dashboard/tabs/resume-tab';
 import JobPreferencesTab from '@/components/dashboard/tabs/job-preferences-tab';
 import ActivityTab from '@/components/dashboard/tabs/activity-tab';
@@ -94,8 +93,6 @@ export default function Dashboard() {
     switch (activeTab) {
       case 'my-jobs':
         return <MyJobsTab onNavigateToJobBoard={() => setSidebarTab('job-board')} />;
-      case 'my-profile':
-        return <MyProfileTab profile={profile} />;
       case 'resume':
         return <ResumeTab />;
       case 'job-preferences':
