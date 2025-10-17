@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { useLocation } from "wouter";
 import { ArrowLeft, Download, Filter, Search, Upload } from "lucide-react";
 import BulkResumeUpload from "@/components/dashboard/bulk-resume-upload";
@@ -16,6 +15,14 @@ export default function MasterDatabase() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importTab, setImportTab] = useState("profile");
+  const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
+  const [advancedFilters, setAdvancedFilters] = useState({
+    dateFrom: "",
+    dateTo: "",
+    location: "",
+    experience: "",
+    qualification: ""
+  });
   
   const [resumeFormData, setResumeFormData] = useState({
     firstName: '',
@@ -94,7 +101,56 @@ export default function MasterDatabase() {
         (item.status && item.status.toLowerCase() === statusFilter.toLowerCase()) ||
         (item.currentStatus && item.currentStatus.toLowerCase() === statusFilter.toLowerCase());
       
-      return searchMatch && statusMatch;
+      // Advanced filter matching
+      const locationMatch = !advancedFilters.location || 
+        (item.location && item.location.toLowerCase().includes(advancedFilters.location.toLowerCase())) ||
+        (item.currentLocation && item.currentLocation.toLowerCase().includes(advancedFilters.location.toLowerCase()));
+      
+      const experienceMatch = !advancedFilters.experience || 
+        (item.experience && item.experience.toLowerCase().includes(advancedFilters.experience.toLowerCase()));
+      
+      const qualificationMatch = !advancedFilters.qualification || 
+        (item.highestQualification && item.highestQualification.toLowerCase().includes(advancedFilters.qualification.toLowerCase()));
+      
+      // Date range filtering
+      let dateMatch = true;
+      if (advancedFilters.dateFrom || advancedFilters.dateTo) {
+        const itemDate = item.uploadDate || item.appliedOn || item.createdAt || item.interviewDate || item.joiningDate;
+        if (itemDate) {
+          // Convert date string to Date object for comparison
+          const parseDate = (dateStr: string) => {
+            // Handle various date formats (DD-MM-YYYY, YYYY-MM-DD, etc.)
+            if (dateStr.includes('-')) {
+              const parts = dateStr.split('-');
+              if (parts[0].length === 4) {
+                // YYYY-MM-DD format
+                return new Date(dateStr);
+              } else {
+                // DD-MM-YYYY format
+                return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+              }
+            }
+            return new Date(dateStr);
+          };
+          
+          const itemDateObj = parseDate(itemDate);
+          
+          if (advancedFilters.dateFrom) {
+            const fromDate = new Date(advancedFilters.dateFrom);
+            dateMatch = dateMatch && itemDateObj >= fromDate;
+          }
+          
+          if (advancedFilters.dateTo) {
+            const toDate = new Date(advancedFilters.dateTo);
+            dateMatch = dateMatch && itemDateObj <= toDate;
+          }
+        } else {
+          // If date filters are set but item has no date, exclude it
+          dateMatch = false;
+        }
+      }
+      
+      return searchMatch && statusMatch && locationMatch && experienceMatch && qualificationMatch && dateMatch;
     });
   };
 
@@ -199,7 +255,13 @@ export default function MasterDatabase() {
               <SelectItem value="completed">Completed</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm" className="flex items-center gap-2" data-testid="button-advanced-filter">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-2" 
+            onClick={() => setIsAdvancedFilterOpen(true)}
+            data-testid="button-advanced-filter"
+          >
             <Filter size={16} />
             Advanced Filter
           </Button>
@@ -770,6 +832,88 @@ export default function MasterDatabase() {
               </div>
             </TabsContent>
           </Tabs>
+        </DialogContent>
+      </Dialog>
+
+      {/* Advanced Filter Dialog */}
+      <Dialog open={isAdvancedFilterOpen} onOpenChange={setIsAdvancedFilterOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Advanced Filter</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Input
+                  placeholder="Location"
+                  value={advancedFilters.location}
+                  onChange={(e) => setAdvancedFilters({...advancedFilters, location: e.target.value})}
+                  data-testid="input-filter-location"
+                />
+              </div>
+              <div>
+                <Input
+                  placeholder="Experience (e.g., '3 years')"
+                  value={advancedFilters.experience}
+                  onChange={(e) => setAdvancedFilters({...advancedFilters, experience: e.target.value})}
+                  data-testid="input-filter-experience"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Input
+                  placeholder="Qualification"
+                  value={advancedFilters.qualification}
+                  onChange={(e) => setAdvancedFilters({...advancedFilters, qualification: e.target.value})}
+                  data-testid="input-filter-qualification"
+                />
+              </div>
+              <div>
+                <Input
+                  type="date"
+                  placeholder="Date From"
+                  value={advancedFilters.dateFrom}
+                  onChange={(e) => setAdvancedFilters({...advancedFilters, dateFrom: e.target.value})}
+                  data-testid="input-filter-date-from"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Input
+                  type="date"
+                  placeholder="Date To"
+                  value={advancedFilters.dateTo}
+                  onChange={(e) => setAdvancedFilters({...advancedFilters, dateTo: e.target.value})}
+                  data-testid="input-filter-date-to"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setAdvancedFilters({
+                    dateFrom: "",
+                    dateTo: "",
+                    location: "",
+                    experience: "",
+                    qualification: ""
+                  });
+                }}
+                data-testid="button-clear-filters"
+              >
+                Clear Filters
+              </Button>
+              <Button
+                onClick={() => setIsAdvancedFilterOpen(false)}
+                data-testid="button-apply-filters"
+              >
+                Apply Filters
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
