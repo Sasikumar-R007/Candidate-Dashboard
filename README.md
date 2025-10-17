@@ -208,6 +208,17 @@ Create `.vscode/launch.json` for debugging:
 
 ## 🛠️ Troubleshooting
 
+### Windows: NODE_ENV Error
+
+If you get `'NODE_ENV' is not recognized as an internal or external command` on Windows:
+
+✅ **Already Fixed!** The package.json has been updated to use `cross-env` which works on all platforms (Windows, Mac, Linux).
+
+Just run:
+```bash
+npm run dev
+```
+
 ### Port Already in Use
 
 If port 5000 is busy:
