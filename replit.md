@@ -2,7 +2,16 @@
 
 This is a dual-dashboard job portal web application featuring both candidate and team leader interfaces. The system provides comprehensive dashboards for job seekers to manage their profiles and for team leaders to monitor recruitment metrics, team performance, and targets. The application features a modern, responsive design with consistent styling across both dashboards and a landing page for role selection.
 
-**Latest Updates (October 17, 2025)**: Redesigned candidate profile page with comprehensive Edit & View interface:
+**Latest Updates (October 17, 2025)**: 
+
+*Save Jobs Feature Fix*:
+- Fixed GET /api/saved-jobs endpoint to return actual saved jobs from database instead of empty array
+- Updated endpoint to properly authenticate candidates and fetch their saved jobs via storage.getSavedJobsByProfile()
+- Enhanced useSaveJob and useRemoveSavedJob hooks to use apiRequest helper for consistent error handling
+- Save jobs functionality now fully operational with proper data persistence and retrieval
+- Bookmark buttons in job board now correctly save and unsave jobs for authenticated candidates
+
+*Profile Page Redesign*:
 - Removed old profile page and replaced with new Edit & View page accessible via User icon in sidebar
 - Implemented comprehensive profile header with avatar, name, job title, and contact information
 - Created left sidebar navigation for easy section switching (About you, Online Presence, Your Journey, Your Strengths, Resume, Job Preferences)
