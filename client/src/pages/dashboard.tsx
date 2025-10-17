@@ -12,7 +12,7 @@ import ProfilePage from '@/pages/profile';
 import { useProfile } from '@/hooks/use-profile';
 
 export default function Dashboard() {
-  const [sidebarTab, setSidebarTab] = useState('dashboard');
+  const [sidebarTab, setSidebarTab] = useState('my-jobs');
   const [activeTab, setActiveTab] = useState('my-jobs');
   const { data: profile, isLoading } = useProfile();
 
@@ -37,53 +37,47 @@ export default function Dashboard() {
 
   const renderSidebarContent = () => {
     switch (sidebarTab) {
-      case 'dashboard':
-        // Render dashboard with metrics sidebar - both scrollable separately
+      case 'my-jobs':
         return (
           <div className="flex flex-1 h-full">
             {/* Main content area - independently scrollable */}
             <div className="flex-1 flex flex-col min-w-0">
-              <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
               <div className="flex-1 overflow-y-auto">
-                {renderDashboardTabContent()}
+                <MyJobsTab onNavigateToJobBoard={() => setSidebarTab('job-board')} />
               </div>
             </div>
             {/* Metrics sidebar - independently scrollable */}
-            {activeTab === 'my-jobs' && (
-              <div className="w-80 flex-shrink-0">
-                <CandidateMetricsSidebar />
+            <div className="w-80 flex-shrink-0">
+              <CandidateMetricsSidebar />
+            </div>
+          </div>
+        );
+      case 'job-preferences':
+        return (
+          <div className="flex flex-1 h-full">
+            <div className="flex-1 flex flex-col min-w-0">
+              <div className="flex-1 overflow-y-auto">
+                <JobPreferencesTab />
               </div>
-            )}
+            </div>
           </div>
         );
       case 'profile':
         return <ProfilePage profile={profile!} />;
       case 'job-board':
         return <JobBoardTab />;
-      case 'settings':
-        return (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Settings</h2>
-              <p className="text-gray-600">Access your settings and preferences</p>
-            </div>
-          </div>
-        );
-
       default:
+        // Default to My Jobs
         return (
           <div className="flex flex-1 h-full">
             <div className="flex-1 flex flex-col min-w-0">
-              <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
               <div className="flex-1 overflow-y-auto">
-                {renderDashboardTabContent()}
+                <MyJobsTab onNavigateToJobBoard={() => setSidebarTab('job-board')} />
               </div>
             </div>
-            {activeTab === 'my-jobs' && (
-              <div className="w-80 flex-shrink-0">
-                <CandidateMetricsSidebar />
-              </div>
-            )}
+            <div className="w-80 flex-shrink-0">
+              <CandidateMetricsSidebar />
+            </div>
           </div>
         );
     }
@@ -93,12 +87,8 @@ export default function Dashboard() {
     switch (activeTab) {
       case 'my-jobs':
         return <MyJobsTab onNavigateToJobBoard={() => setSidebarTab('job-board')} />;
-      case 'resume':
-        return <ResumeTab />;
       case 'job-preferences':
         return <JobPreferencesTab />;
-      case 'activity':
-        return <ActivityTab />;
       default:
         return <MyJobsTab onNavigateToJobBoard={() => setSidebarTab('job-board')} />;
     }

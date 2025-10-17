@@ -1252,14 +1252,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Save a job
-  app.post("/api/saved-jobs", async (req, res) => {
+  app.post("/api/saved-jobs", requireCandidateAuth, async (req, res) => {
     try {
-      const users = await storage.getUserByUsername("mathew.anderson");
-      if (!users) {
-        return res.status(404).json({ message: "User not found" });
-      }
+      const candidateId = req.session.candidateId!;
+      const profile = await storage.getProfile(candidateId);
       
-      const profile = await storage.getProfile(users.id);
       if (!profile) {
         return res.status(404).json({ message: "Profile not found" });
       }
@@ -1273,21 +1270,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const savedJob = await storage.createSavedJob(validatedData);
       res.json(savedJob);
     } catch (error) {
+      console.error('Save job error:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
 
   // Remove saved job
-  app.delete("/api/saved-jobs", async (req, res) => {
+  app.delete("/api/saved-jobs", requireCandidateAuth, async (req, res) => {
     try {
       const { jobTitle, company } = req.body;
+      const candidateId = req.session.candidateId!;
       
-      const users = await storage.getUserByUsername("mathew.anderson");
-      if (!users) {
-        return res.status(404).json({ message: "User not found" });
-      }
-      
-      const profile = await storage.getProfile(users.id);
+      const profile = await storage.getProfile(candidateId);
       if (!profile) {
         return res.status(404).json({ message: "Profile not found" });
       }
@@ -1299,6 +1293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(404).json({ message: "Saved job not found" });
       }
     } catch (error) {
+      console.error('Remove saved job error:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
