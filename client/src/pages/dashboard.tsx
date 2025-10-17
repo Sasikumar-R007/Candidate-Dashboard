@@ -8,7 +8,7 @@ import ActivityTab from '@/components/dashboard/tabs/activity-tab';
 import JobBoardTab from '@/components/dashboard/tabs/job-board-tab';
 import MyJobsTab from '@/components/dashboard/tabs/my-jobs-tab';
 import CandidateMetricsSidebar from '@/components/dashboard/candidate-metrics-sidebar';
-import ProfilePage from '@/pages/profile';
+import EditViewProfile from '@/pages/edit-view-profile';
 import { useProfile } from '@/hooks/use-profile';
 
 export default function Dashboard() {
@@ -62,8 +62,8 @@ export default function Dashboard() {
             </div>
           </div>
         );
-      case 'profile':
-        return <ProfilePage profile={profile!} />;
+      case 'edit-view':
+        return <EditViewProfile profile={profile!} />;
       case 'job-board':
         return <JobBoardTab />;
       default:
