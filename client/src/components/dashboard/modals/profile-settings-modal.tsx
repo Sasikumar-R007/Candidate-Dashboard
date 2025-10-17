@@ -13,16 +13,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, Upload, User, Contact, Briefcase, Award, Shield, X, Lock, Eye, EyeOff } from "lucide-react";
+import { Camera, Upload, User, Contact, Briefcase, Award, Shield, X, Lock, Eye, EyeOff, MessageCircle } from "lucide-react";
 import { useAuth, useEmployeeAuth, useCandidateAuth } from "@/contexts/auth-context";
 import type { Employee, Candidate } from '@shared/schema';
 
 interface ProfileSettingsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onChatClick?: () => void;
 }
 
-export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModalProps) {
+export function ProfileSettingsModal({ open, onOpenChange, onChatClick }: ProfileSettingsModalProps) {
   const { user, setUser } = useAuth();
   const employee = useEmployeeAuth();
   const candidate = useCandidateAuth();
@@ -368,10 +369,27 @@ export function ProfileSettingsModal({ open, onOpenChange }: ProfileSettingsModa
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-2xl">
-            <User className="h-6 w-6" />
-            Profile Settings
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2 text-2xl">
+              <User className="h-6 w-6" />
+              Profile Settings
+            </DialogTitle>
+            {onChatClick && (user?.type === 'candidate' || (user?.type === 'employee' && employee?.role === 'client')) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  onChatClick();
+                  onOpenChange(false);
+                }}
+                className="flex items-center gap-2"
+                data-testid="button-profile-chat"
+              >
+                <MessageCircle className="h-4 w-4" />
+                Start Chat
+              </Button>
+            )}
+          </div>
           <DialogDescription>
             Manage your profile information, photos, and account details.
           </DialogDescription>
