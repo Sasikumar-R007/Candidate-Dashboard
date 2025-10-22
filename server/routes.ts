@@ -837,7 +837,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Candidate not found" });
       }
       
-      // For now, return candidate data as profile
       // Transform candidate data to match profile structure expected by frontend
       const profile = {
         id: candidate.id,
@@ -848,12 +847,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         phone: candidate.phone || '',
         title: candidate.designation || '',
         location: candidate.location || '',
-        profilePicture: '',
-        bannerImage: '',
-        resumeFile: '',
+        profilePicture: candidate.profilePicture || '',
+        bannerImage: candidate.bannerImage || '',
+        resumeFile: candidate.resumeFile || '',
         skills: candidate.skills || '',
         experience: candidate.experience || '',
         currentCompany: candidate.company || '',
+        currentRole: candidate.currentRole || '',
+        education: candidate.education || '',
+        portfolioUrl: candidate.portfolioUrl || '',
+        websiteUrl: candidate.websiteUrl || '',
+        linkedinUrl: candidate.linkedinUrl || '',
       };
       
       res.json(profile);
@@ -883,20 +887,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update profile
-  app.patch("/api/profile", async (req, res) => {
+  app.patch("/api/profile", requireCandidateAuth, async (req, res) => {
     try {
-      const users = await storage.getUserByUsername("mathew.anderson");
-      if (!users) {
-        return res.status(404).json({ message: "User not found" });
+      const candidateId = req.session.candidateId!;
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
+      
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
       }
       
-      const updatedProfile = await storage.updateProfile(users.id, req.body);
-      if (!updatedProfile) {
-        return res.status(404).json({ message: "Profile not found" });
+      // Transform profile data to candidate fields
+      const updates: any = {};
+      
+      // Map profile fields to candidate fields
+      if (req.body.firstName || req.body.lastName) {
+        const firstName = req.body.firstName || candidate.fullName.split(' ')[0];
+        const lastName = req.body.lastName || candidate.fullName.split(' ').slice(1).join(' ');
+        updates.fullName = `${firstName} ${lastName}`.trim();
       }
       
-      res.json(updatedProfile);
+      if (req.body.phone !== undefined) updates.phone = req.body.phone;
+      if (req.body.title !== undefined) updates.designation = req.body.title;
+      if (req.body.location !== undefined) updates.location = req.body.location;
+      if (req.body.skills !== undefined) updates.skills = req.body.skills;
+      if (req.body.currentCompany !== undefined) updates.company = req.body.currentCompany;
+      if (req.body.currentRole !== undefined) updates.currentRole = req.body.currentRole;
+      if (req.body.education !== undefined) updates.education = req.body.education;
+      if (req.body.profilePicture !== undefined) updates.profilePicture = req.body.profilePicture;
+      if (req.body.bannerImage !== undefined) updates.bannerImage = req.body.bannerImage;
+      if (req.body.resumeFile !== undefined) updates.resumeFile = req.body.resumeFile;
+      if (req.body.portfolioUrl !== undefined) updates.portfolioUrl = req.body.portfolioUrl;
+      if (req.body.websiteUrl !== undefined) updates.websiteUrl = req.body.websiteUrl;
+      if (req.body.linkedinUrl !== undefined) updates.linkedinUrl = req.body.linkedinUrl;
+      
+      // Update candidate in storage
+      const updatedCandidate = await storage.updateCandidate(candidate.id, updates);
+      
+      if (!updatedCandidate) {
+        return res.status(404).json({ message: "Failed to update candidate" });
+      }
+      
+      // Return data in profile format expected by frontend
+      const profile = {
+        id: updatedCandidate.id,
+        userId: updatedCandidate.id,
+        firstName: updatedCandidate.fullName.split(' ')[0] || '',
+        lastName: updatedCandidate.fullName.split(' ').slice(1).join(' ') || '',
+        email: updatedCandidate.email,
+        phone: updatedCandidate.phone || '',
+        title: updatedCandidate.designation || '',
+        location: updatedCandidate.location || '',
+        profilePicture: updatedCandidate.profilePicture || '',
+        bannerImage: updatedCandidate.bannerImage || '',
+        resumeFile: updatedCandidate.resumeFile || '',
+        skills: updatedCandidate.skills || '',
+        experience: updatedCandidate.experience || '',
+        currentCompany: updatedCandidate.company || '',
+        currentRole: updatedCandidate.currentRole || '',
+        education: updatedCandidate.education || '',
+        portfolioUrl: updatedCandidate.portfolioUrl || '',
+        websiteUrl: updatedCandidate.websiteUrl || '',
+        linkedinUrl: updatedCandidate.linkedinUrl || '',
+      };
+      
+      res.json(profile);
     } catch (error) {
+      console.error('Update profile error:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -1138,10 +1194,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // File upload endpoints
-  app.post("/api/upload/banner", upload.single('banner'), async (req, res) => {
+  app.post("/api/upload/banner", requireCandidateAuth, upload.single('banner'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      const candidateId = req.session.candidateId!;
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
+      
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
       }
       
       // In production, consider using cloud storage like AWS S3, Cloudinary, etc.
@@ -1151,6 +1214,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : `http://${req.get('host')}`;
       
       const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
+      
+      // Save banner URL to candidate profile
+      await storage.updateCandidate(candidate.id, { bannerImage: fileUrl });
+      
       res.json({ url: fileUrl });
     } catch (error) {
       console.error('Upload error:', error);
@@ -1158,10 +1225,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/upload/profile", upload.single('profile'), async (req, res) => {
+  app.post("/api/upload/profile", requireCandidateAuth, upload.single('profile'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      const candidateId = req.session.candidateId!;
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
+      
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
       }
       
       const baseUrl = process.env.NODE_ENV === 'production' 
@@ -1169,6 +1243,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : `http://${req.get('host')}`;
       
       const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
+      
+      // Save profile picture URL to candidate profile
+      await storage.updateCandidate(candidate.id, { profilePicture: fileUrl });
+      
       res.json({ url: fileUrl });
     } catch (error) {
       console.error('Upload error:', error);
@@ -1176,10 +1254,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/upload/resume", upload.single('resume'), async (req, res) => {
+  app.post("/api/upload/resume", requireCandidateAuth, upload.single('resume'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      const candidateId = req.session.candidateId!;
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
+      
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
       }
       
       const baseUrl = process.env.NODE_ENV === 'production' 
@@ -1187,6 +1272,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : `http://${req.get('host')}`;
       
       const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
+      
+      // Save resume URL to candidate profile
+      await storage.updateCandidate(candidate.id, { resumeFile: fileUrl });
+      
       res.json({ url: fileUrl });
     } catch (error) {
       console.error('Upload error:', error);
