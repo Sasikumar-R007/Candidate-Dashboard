@@ -201,6 +201,16 @@ export const candidates = pgTable("candidates", {
   location: text("location"),
   experience: text("experience"),
   skills: text("skills"),
+  // Profile media
+  profilePicture: text("profile_picture"),
+  bannerImage: text("banner_image"),
+  resumeFile: text("resume_file"),
+  // Additional profile fields
+  education: text("education"),
+  currentRole: text("current_role"),
+  portfolioUrl: text("portfolio_url"),
+  websiteUrl: text("website_url"),
+  linkedinUrl: text("linkedin_url"),
   isActive: boolean("is_active").default(true),
   isVerified: boolean("is_verified").default(false),
   createdAt: text("created_at").notNull(),
