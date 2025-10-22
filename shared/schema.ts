@@ -198,6 +198,7 @@ export const candidates = pgTable("candidates", {
   company: text("company"),
   designation: text("designation"),
   age: text("age"),
+  gender: text("gender"),
   location: text("location"),
   experience: text("experience"),
   skills: text("skills"),
@@ -205,6 +206,7 @@ export const candidates = pgTable("candidates", {
   profilePicture: text("profile_picture"),
   bannerImage: text("banner_image"),
   resumeFile: text("resume_file"),
+  resumeText: text("resume_text"),
   // Additional profile fields
   education: text("education"),
   currentRole: text("current_role"),

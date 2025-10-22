@@ -1,19 +1,29 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MapPin, Phone, Mail, MessageCircle, Edit, Upload, FileText, Link as LinkIcon } from 'lucide-react';
-import { useProfile, useUpdateProfile } from '@/hooks/use-profile';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { MapPin, Phone, Mail, MessageCircle, Edit, Upload, FileText, Link as LinkIcon, Camera, X, File } from 'lucide-react';
+import { useProfile, useUpdateProfile, useUploadProfile, useUploadResume } from '@/hooks/use-profile';
+import { useJobPreferences, useUpdateJobPreferences } from '@/hooks/use-profile';
 import { useToast } from '@/hooks/use-toast';
 import type { Profile } from '@shared/schema';
 import EditBasicInfoModal from '@/components/dashboard/modals/edit-basic-info-modal';
 import EditEducationModal from '@/components/dashboard/modals/edit-education-modal';
 import EditJobDetailsModal from '@/components/dashboard/modals/edit-job-details-modal';
 
+// Extended profile type with candidate-specific fields
+interface ExtendedProfile extends Profile {
+  gender?: string | null;
+  resumeFile?: string | null;
+  resumeText?: string | null;
+}
+
 interface EditViewProfileProps {
-  profile: Profile;
+  profile: ExtendedProfile;
 }
 
 export default function EditViewProfile({ profile }: EditViewProfileProps) {
@@ -22,6 +32,11 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
   const [showOnlinePresenceModal, setShowOnlinePresenceModal] = useState(false);
   const [showJourneyModal, setShowJourneyModal] = useState(false);
   const [showStrengthsModal, setShowStrengthsModal] = useState(false);
+  const [showProfilePictureModal, setShowProfilePictureModal] = useState(false);
+  const [showGenderModal, setShowGenderModal] = useState(false);
+  const [showJobPreferencesModal, setShowJobPreferencesModal] = useState(false);
+  const [showResumeUploadModal, setShowResumeUploadModal] = useState(false);
+  const [showResumeTextModal, setShowResumeTextModal] = useState(false);
 
   const menuItems = [
     { id: 'about-you', label: 'About you' },
@@ -125,7 +140,7 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
         <div>
           <label className="text-sm text-gray-600 dark:text-gray-400">Portfolio</label>
           <p className="text-base text-blue-600 dark:text-blue-400 mt-1" data-testid="text-portfolio">
-            {profile.portfolio || 'https://www.yourwork.com'}
+            {profile.portfolio || profile.portfolioUrl || 'https://www.yourwork.com'}
           </p>
         </div>
         <div>
@@ -292,37 +307,70 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
   const renderResume = () => (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mt-6">
       <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Upload Resume</h2>
+      
+      {profile.resumeFile && (
+        <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-3">
+            <File className="w-10 h-10 text-cyan-500" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-900 dark:text-white">Current Resume</p>
+              <p className="text-xs text-gray-500">Click to view</p>
+            </div>
+            <a 
+              href={profile.resumeFile} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-sm text-cyan-600 hover:underline"
+            >
+              View
+            </a>
+          </div>
+        </div>
+      )}
+      
       <div className="grid grid-cols-2 gap-4">
-        <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 flex flex-col items-center justify-center" data-testid="container-resume-upload">
+        <button
+          onClick={() => setShowResumeUploadModal(true)}
+          className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 flex flex-col items-center justify-center hover:border-cyan-500 dark:hover:border-cyan-500 transition-colors cursor-pointer"
+          data-testid="container-resume-upload"
+        >
           <Upload className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-2" />
           <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
             Drag & Drop A file here or Click to Browse
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Supported PDF,Docx</p>
+          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Supported PDF, Images</p>
           <p className="text-xs text-gray-500 dark:text-gray-500">Max File Size 5MB</p>
-        </div>
+        </button>
         
-        <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 flex flex-col items-center justify-center" data-testid="container-resume-paste">
+        <button
+          onClick={() => setShowResumeTextModal(true)}
+          className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 flex flex-col items-center justify-center hover:border-cyan-500 dark:hover:border-cyan-500 transition-colors cursor-pointer"
+          data-testid="container-resume-paste"
+        >
           <FileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mb-2" />
           <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
             Copy & Paste Or Write Your Own Resume
           </p>
-        </div>
-      </div>
-      <div className="flex justify-end mt-4">
-        <Button 
-          className="bg-[#1e3a5f] text-white hover:bg-[#2d4a6f]"
-          data-testid="button-save-resume"
-        >
-          Save
-        </Button>
+        </button>
       </div>
     </div>
   );
 
   const renderJobPreferences = () => (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mt-6">
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">View Job Preferences</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">View Job Preferences</h2>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="bg-[#1e3a5f] text-white hover:bg-[#2d4a6f]"
+          data-testid="button-edit-job-preferences"
+          onClick={() => setShowJobPreferencesModal(true)}
+        >
+          <Edit className="w-4 h-4 mr-1" />
+          Edit
+        </Button>
+      </div>
       <div className="space-y-4">
         <div>
           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Job title</label>
@@ -374,14 +422,6 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
           </div>
         </div>
       </div>
-      <div className="flex justify-end mt-4">
-        <Button 
-          className="bg-[#1e3a5f] text-white hover:bg-[#2d4a6f]"
-          data-testid="button-save-job-preferences"
-        >
-          Save
-        </Button>
-      </div>
     </div>
   );
 
@@ -415,26 +455,35 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
           <div className="flex items-start gap-6">
-            <Avatar className="w-32 h-32 border-4 border-cyan-400">
-              <AvatarImage src={profile.profilePicture || undefined} />
-              <AvatarFallback className="bg-gradient-to-br from-cyan-400 to-blue-500 text-white text-2xl">
-                {profile.firstName?.[0]}{profile.lastName?.[0]}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative group">
+              <Avatar className="w-32 h-32 border-4 border-cyan-400 cursor-pointer" onClick={() => setShowProfilePictureModal(true)}>
+                <AvatarImage src={profile.profilePicture || undefined} />
+                <AvatarFallback className="bg-gradient-to-br from-cyan-400 to-blue-500 text-white text-2xl">
+                  {profile.firstName?.[0]}{profile.lastName?.[0]}
+                </AvatarFallback>
+              </Avatar>
+              <button
+                onClick={() => setShowProfilePictureModal(true)}
+                className="absolute bottom-0 right-0 bg-cyan-500 hover:bg-cyan-600 text-white rounded-full p-2 shadow-lg transition-colors"
+                data-testid="button-change-profile-picture"
+              >
+                <Camera className="w-5 h-5" />
+              </button>
+            </div>
             
             <div className="flex-1">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1" data-testid="text-profile-name">
-                {profile.firstName && profile.lastName ? `${profile.firstName} ${profile.lastName}` : 'S. Brunce Mars'}
+                {profile.firstName && profile.lastName ? `${profile.firstName} ${profile.lastName}` : 'Candidate'}
               </h1>
               <p className="text-lg text-gray-600 dark:text-gray-400 mb-4" data-testid="text-profile-title">
-                {profile.currentRole || 'Cloud Engineer'}
+                {profile.currentRole || profile.title || 'Cloud Engineer'}
               </p>
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                   <MapPin className="w-4 h-4 text-cyan-500" />
                   <span className="text-sm" data-testid="text-header-location">
-                    {profile.currentLocation || 'Chennai.'}
+                    {profile.currentLocation || profile.location || 'Chennai.'}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
@@ -452,18 +501,26 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
                 <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                   <Mail className="w-4 h-4 text-cyan-500" />
                   <span className="text-sm" data-testid="text-header-email">
-                    {profile.email || 'mathew.and@gmail.com'}
+                    {profile.email || 'candidate@example.com'}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="text-sm text-cyan-600 dark:text-cyan-400 hover:underline" data-testid="button-add-gender">
-                    Add Gender
-                  </button>
+                  {profile.gender ? (
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{profile.gender}</span>
+                  ) : (
+                    <button 
+                      onClick={() => setShowGenderModal(true)}
+                      className="text-sm text-cyan-600 dark:text-cyan-400 hover:underline" 
+                      data-testid="button-add-gender"
+                    >
+                      Add Gender
+                    </button>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
                   <MessageCircle className="w-4 h-4 text-cyan-500" />
                   <span className="text-sm" data-testid="text-header-whatsapp">
-                    {profile.whatsapp || '90347 59099'}
+                    {profile.whatsapp || profile.phone || '90347 59099'}
                   </span>
                 </div>
               </div>
@@ -535,11 +592,507 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
           profile={profile} 
         />
       )}
+
+      {showProfilePictureModal && (
+        <ProfilePictureModal
+          open={showProfilePictureModal}
+          onOpenChange={setShowProfilePictureModal}
+          profile={profile}
+        />
+      )}
+
+      {showGenderModal && (
+        <GenderModal
+          open={showGenderModal}
+          onOpenChange={setShowGenderModal}
+          profile={profile}
+        />
+      )}
+
+      {showJobPreferencesModal && (
+        <JobPreferencesModal
+          open={showJobPreferencesModal}
+          onOpenChange={setShowJobPreferencesModal}
+        />
+      )}
+
+      {showResumeUploadModal && (
+        <ResumeUploadModal
+          open={showResumeUploadModal}
+          onOpenChange={setShowResumeUploadModal}
+          profile={profile}
+        />
+      )}
+
+      {showResumeTextModal && (
+        <ResumeTextModal
+          open={showResumeTextModal}
+          onOpenChange={setShowResumeTextModal}
+          profile={profile}
+        />
+      )}
     </div>
   );
 }
 
-function EditOnlinePresenceModal({ open, onOpenChange, profile }: { open: boolean; onOpenChange: (open: boolean) => void; profile: Profile }) {
+// Profile Picture Modal Component
+function ProfilePictureModal({ open, onOpenChange, profile }: { open: boolean; onOpenChange: (open: boolean) => void; profile: ExtendedProfile }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadProfile = useUploadProfile();
+  const updateProfile = useUpdateProfile();
+  const { toast } = useToast();
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid File",
+        description: "Please select an image file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await uploadProfile.mutateAsync(file);
+      toast({
+        title: "Profile Picture Updated",
+        description: "Your profile picture has been updated successfully.",
+      });
+      onOpenChange(false);
+    } catch (error) {
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload profile picture. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRemove = async () => {
+    try {
+      await updateProfile.mutateAsync({ profilePicture: '' });
+      toast({
+        title: "Profile Picture Removed",
+        description: "Your profile picture has been removed.",
+      });
+      onOpenChange(false);
+    } catch (error) {
+      toast({
+        title: "Remove Failed",
+        description: "Failed to remove profile picture. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Profile Picture</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {profile.profilePicture && (
+            <div className="flex justify-center">
+              <Avatar className="w-32 h-32 border-4 border-cyan-400">
+                <AvatarImage src={profile.profilePicture} />
+                <AvatarFallback className="bg-gradient-to-br from-cyan-400 to-blue-500 text-white text-2xl">
+                  {profile.firstName?.[0]}{profile.lastName?.[0]}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+          )}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+
+          <div className="flex flex-col gap-2">
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadProfile.isPending}
+              className="bg-cyan-500 text-white hover:bg-cyan-600"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              {profile.profilePicture ? 'Change Picture' : 'Upload Picture'}
+            </Button>
+
+            {profile.profilePicture && (
+              <Button
+                onClick={handleRemove}
+                disabled={updateProfile.isPending}
+                variant="outline"
+                className="text-red-600 hover:bg-red-50"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Remove Picture
+              </Button>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Gender Modal Component  
+function GenderModal({ open, onOpenChange, profile }: { open: boolean; onOpenChange: (open: boolean) => void; profile: ExtendedProfile }) {
+  const [gender, setGender] = useState(profile.gender || '');
+  const { mutateAsync: updateProfile, isPending } = useUpdateProfile();
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await updateProfile({ gender });
+      toast({
+        title: "Gender Updated",
+        description: "Your gender has been updated successfully.",
+      });
+      onOpenChange(false);
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: "Failed to update gender. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add Gender</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="gender">Gender</Label>
+            <Select value={gender} onValueChange={setGender}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select gender" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Male">Male</SelectItem>
+                <SelectItem value="Female">Female</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+                <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending || !gender} className="bg-cyan-500 text-white hover:bg-cyan-600">
+              {isPending ? 'Saving...' : 'Save'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Resume Upload Modal Component
+function ResumeUploadModal({ open, onOpenChange, profile }: { open: boolean; onOpenChange: (open: boolean) => void; profile: ExtendedProfile }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadResume = useUploadResume();
+  const { toast } = useToast();
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    if (!validTypes.includes(file.type)) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please select a PDF or image file.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File Too Large",
+        description: "File size should be less than 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await uploadResume.mutateAsync(file);
+      toast({
+        title: "Resume Uploaded",
+        description: "Your resume has been uploaded successfully.",
+      });
+      onOpenChange(false);
+    } catch (error) {
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload resume. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Upload Resume</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-12 flex flex-col items-center justify-center hover:border-cyan-500 dark:hover:border-cyan-500 transition-colors cursor-pointer"
+          >
+            <Upload className="w-16 h-16 text-gray-400 dark:text-gray-500 mb-4" />
+            <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-2">
+              Drag & Drop your resume here or Click to Browse
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-500">Supported: PDF, JPG, PNG</p>
+            <p className="text-xs text-gray-500 dark:text-gray-500">Max File Size: 5MB</p>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,image/*"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Resume Text Modal Component
+function ResumeTextModal({ open, onOpenChange, profile }: { open: boolean; onOpenChange: (open: boolean) => void; profile: ExtendedProfile }) {
+  const [resumeText, setResumeText] = useState(profile.resumeText || '');
+  const { mutateAsync: updateProfile, isPending } = useUpdateProfile();
+  const { toast } = useToast();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await updateProfile({ resumeText });
+      toast({
+        title: "Resume Saved",
+        description: "Your resume text has been saved successfully.",
+      });
+      onOpenChange(false);
+    } catch (error) {
+      toast({
+        title: "Save Failed",
+        description: "Failed to save resume. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleGenerateResume = () => {
+    const generatedText = `${profile.firstName} ${profile.lastName}
+${profile.email} | ${profile.phone}
+${profile.location || ''}
+
+PROFESSIONAL SUMMARY
+${profile.currentRole || 'Professional'} with experience in ${profile.currentCompany || 'various industries'}.
+
+EDUCATION
+${profile.education || profile.highestQualification || 'N/A'}
+${profile.collegeName || ''}
+
+SKILLS
+${profile.skills || 'N/A'}
+
+WORK EXPERIENCE
+${profile.currentRole || 'Current Position'} at ${profile.currentCompany || 'Company'}`;
+
+    setResumeText(generatedText);
+    toast({
+      title: "Resume Generated",
+      description: "Resume generated from your profile details. You can edit it now.",
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[80vh]">
+        <DialogHeader>
+          <DialogTitle>Write or Paste Resume</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <Label htmlFor="resumeText">Resume Content</Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateResume}
+                className="text-cyan-600"
+              >
+                Generate from Profile
+              </Button>
+            </div>
+            <Textarea
+              id="resumeText"
+              value={resumeText}
+              onChange={(e) => setResumeText(e.target.value)}
+              placeholder="Paste or write your resume here..."
+              className="min-h-[400px] font-mono text-sm"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending || !resumeText} className="bg-cyan-500 text-white hover:bg-cyan-600">
+              {isPending ? 'Saving...' : 'Save Resume'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Job Preferences Modal Component
+function JobPreferencesModal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const { data: jobPreferences } = useJobPreferences();
+  const { mutateAsync: updateJobPreferences, isPending } = useUpdateJobPreferences();
+  const { toast } = useToast();
+
+  const [formData, setFormData] = useState({
+    jobTitles: jobPreferences?.jobTitles || '',
+    workMode: jobPreferences?.workMode || '',
+    employmentType: jobPreferences?.employmentType || '',
+    locations: jobPreferences?.locations || '',
+    startDate: jobPreferences?.startDate || '',
+    instructions: jobPreferences?.instructions || '',
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await updateJobPreferences(formData);
+      toast({
+        title: "Job Preferences Updated",
+        description: "Your job preferences have been updated successfully.",
+      });
+      onOpenChange(false);
+    } catch (error) {
+      toast({
+        title: "Update Failed",
+        description: "Failed to update job preferences. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit Job Preferences</DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="jobTitles">Job Titles</Label>
+            <Input
+              id="jobTitles"
+              value={formData.jobTitles}
+              onChange={(e) => setFormData({ ...formData, jobTitles: e.target.value })}
+              placeholder="e.g. Software Engineer, Full Stack Developer"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="workMode">Work Mode</Label>
+            <Input
+              id="workMode"
+              value={formData.workMode}
+              onChange={(e) => setFormData({ ...formData, workMode: e.target.value })}
+              placeholder="e.g. Remote, Hybrid, On-site"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="employmentType">Employment Type</Label>
+            <Input
+              id="employmentType"
+              value={formData.employmentType}
+              onChange={(e) => setFormData({ ...formData, employmentType: e.target.value })}
+              placeholder="e.g. Full-time, Part-time, Contract"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="locations">Preferred Locations</Label>
+            <Input
+              id="locations"
+              value={formData.locations}
+              onChange={(e) => setFormData({ ...formData, locations: e.target.value })}
+              placeholder="e.g. Bangalore, Mumbai, Remote"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="startDate">Start Date</Label>
+            <Input
+              id="startDate"
+              value={formData.startDate}
+              onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+              placeholder="e.g. Immediate, 1 month notice"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="instructions">Instructions to Recruiter</Label>
+            <Textarea
+              id="instructions"
+              value={formData.instructions}
+              onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
+              placeholder="Any special instructions for recruiters..."
+              rows={4}
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending} className="bg-cyan-500 text-white hover:bg-cyan-600">
+              {isPending ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Online Presence Modal Component
+function EditOnlinePresenceModal({ open, onOpenChange, profile }: { open: boolean; onOpenChange: (open: boolean) => void; profile: ExtendedProfile }) {
   const [formData, setFormData] = useState({
     portfolioUrl: profile.portfolioUrl || profile.portfolio || '',
     linkedinUrl: profile.linkedinUrl || '',

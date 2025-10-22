@@ -847,9 +847,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         phone: candidate.phone || '',
         title: candidate.designation || '',
         location: candidate.location || '',
+        gender: candidate.gender || '',
         profilePicture: candidate.profilePicture || '',
         bannerImage: candidate.bannerImage || '',
         resumeFile: candidate.resumeFile || '',
+        resumeText: candidate.resumeText || '',
         skills: candidate.skills || '',
         experience: candidate.experience || '',
         currentCompany: candidate.company || '',
@@ -909,6 +911,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.body.phone !== undefined) updates.phone = req.body.phone;
       if (req.body.title !== undefined) updates.designation = req.body.title;
       if (req.body.location !== undefined) updates.location = req.body.location;
+      if (req.body.gender !== undefined) updates.gender = req.body.gender;
       if (req.body.skills !== undefined) updates.skills = req.body.skills;
       if (req.body.currentCompany !== undefined) updates.company = req.body.currentCompany;
       if (req.body.currentRole !== undefined) updates.currentRole = req.body.currentRole;
@@ -916,6 +919,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.body.profilePicture !== undefined) updates.profilePicture = req.body.profilePicture;
       if (req.body.bannerImage !== undefined) updates.bannerImage = req.body.bannerImage;
       if (req.body.resumeFile !== undefined) updates.resumeFile = req.body.resumeFile;
+      if (req.body.resumeText !== undefined) updates.resumeText = req.body.resumeText;
       if (req.body.portfolioUrl !== undefined) updates.portfolioUrl = req.body.portfolioUrl;
       if (req.body.websiteUrl !== undefined) updates.websiteUrl = req.body.websiteUrl;
       if (req.body.linkedinUrl !== undefined) updates.linkedinUrl = req.body.linkedinUrl;
@@ -937,9 +941,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         phone: updatedCandidate.phone || '',
         title: updatedCandidate.designation || '',
         location: updatedCandidate.location || '',
+        gender: updatedCandidate.gender || '',
         profilePicture: updatedCandidate.profilePicture || '',
         bannerImage: updatedCandidate.bannerImage || '',
         resumeFile: updatedCandidate.resumeFile || '',
+        resumeText: updatedCandidate.resumeText || '',
         skills: updatedCandidate.skills || '',
         experience: updatedCandidate.experience || '',
         currentCompany: updatedCandidate.company || '',
