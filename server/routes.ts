@@ -31,17 +31,15 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024, // 5MB limit
   },
   fileFilter: (req, file, cb) => {
-    // Allow image files, PDFs, and documents (including modern formats)
-    const allowedExtensions = /\.(jpeg|jpg|png|gif|webp|avif|pdf|doc|docx)$/i;
+    // Allow image files and PDFs only
+    const allowedExtensions = /\.(jpeg|jpg|png|gif|webp|avif|pdf)$/i;
     const extname = allowedExtensions.test(file.originalname.toLowerCase());
     
-    // Check MIME types including modern image formats and Office documents
+    // Check MIME types including modern image formats and PDF
     const allowedMimeTypes = [
       'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
       'image/webp', 'image/avif', // Modern image formats
-      'application/pdf',
-      'application/msword', // .doc
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document' // .docx
+      'application/pdf'
     ];
     const mimetype = allowedMimeTypes.includes(file.mimetype);
     

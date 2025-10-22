@@ -15,15 +15,8 @@ import EditBasicInfoModal from '@/components/dashboard/modals/edit-basic-info-mo
 import EditEducationModal from '@/components/dashboard/modals/edit-education-modal';
 import EditJobDetailsModal from '@/components/dashboard/modals/edit-job-details-modal';
 
-// Extended profile type with candidate-specific fields
-interface ExtendedProfile extends Profile {
-  gender?: string | null;
-  resumeFile?: string | null;
-  resumeText?: string | null;
-}
-
 interface EditViewProfileProps {
-  profile: ExtendedProfile;
+  profile: Profile;
 }
 
 export default function EditViewProfile({ profile }: EditViewProfileProps) {
@@ -636,7 +629,7 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
 }
 
 // Profile Picture Modal Component
-function ProfilePictureModal({ open, onOpenChange, profile }: { open: boolean; onOpenChange: (open: boolean) => void; profile: ExtendedProfile }) {
+function ProfilePictureModal({ open, onOpenChange, profile }: { open: boolean; onOpenChange: (open: boolean) => void; profile: Profile }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadProfile = useUploadProfile();
   const updateProfile = useUpdateProfile();
@@ -744,7 +737,7 @@ function ProfilePictureModal({ open, onOpenChange, profile }: { open: boolean; o
 }
 
 // Gender Modal Component  
-function GenderModal({ open, onOpenChange, profile }: { open: boolean; onOpenChange: (open: boolean) => void; profile: ExtendedProfile }) {
+function GenderModal({ open, onOpenChange, profile }: { open: boolean; onOpenChange: (open: boolean) => void; profile: Profile }) {
   const [gender, setGender] = useState(profile.gender || '');
   const { mutateAsync: updateProfile, isPending } = useUpdateProfile();
   const { toast } = useToast();
@@ -805,7 +798,7 @@ function GenderModal({ open, onOpenChange, profile }: { open: boolean; onOpenCha
 }
 
 // Resume Upload Modal Component
-function ResumeUploadModal({ open, onOpenChange, profile }: { open: boolean; onOpenChange: (open: boolean) => void; profile: ExtendedProfile }) {
+function ResumeUploadModal({ open, onOpenChange, profile }: { open: boolean; onOpenChange: (open: boolean) => void; profile: Profile }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadResume = useUploadResume();
   const { toast } = useToast();
@@ -883,7 +876,7 @@ function ResumeUploadModal({ open, onOpenChange, profile }: { open: boolean; onO
 }
 
 // Resume Text Modal Component
-function ResumeTextModal({ open, onOpenChange, profile }: { open: boolean; onOpenChange: (open: boolean) => void; profile: ExtendedProfile }) {
+function ResumeTextModal({ open, onOpenChange, profile }: { open: boolean; onOpenChange: (open: boolean) => void; profile: Profile }) {
   const [resumeText, setResumeText] = useState(profile.resumeText || '');
   const { mutateAsync: updateProfile, isPending } = useUpdateProfile();
   const { toast } = useToast();
@@ -1092,7 +1085,7 @@ function JobPreferencesModal({ open, onOpenChange }: { open: boolean; onOpenChan
 }
 
 // Online Presence Modal Component
-function EditOnlinePresenceModal({ open, onOpenChange, profile }: { open: boolean; onOpenChange: (open: boolean) => void; profile: ExtendedProfile }) {
+function EditOnlinePresenceModal({ open, onOpenChange, profile }: { open: boolean; onOpenChange: (open: boolean) => void; profile: Profile }) {
   const [formData, setFormData] = useState({
     portfolioUrl: profile.portfolioUrl || profile.portfolio || '',
     linkedinUrl: profile.linkedinUrl || '',
