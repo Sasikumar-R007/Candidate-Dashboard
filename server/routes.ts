@@ -1222,13 +1222,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/saved-jobs", requireCandidateAuth, async (req, res) => {
     try {
       const candidateId = req.session.candidateId!;
-      const profile = await storage.getProfile(candidateId);
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
       
-      if (!profile) {
-        return res.status(404).json({ message: "Profile not found" });
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
       }
       
-      const savedJobs = await storage.getSavedJobsByProfile(profile.id);
+      // Use candidate's UUID as profileId for saved jobs
+      const savedJobs = await storage.getSavedJobsByProfile(candidate.id);
       res.json(savedJobs);
     } catch (error) {
       console.error('Get saved jobs error:', error);
@@ -1260,15 +1261,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/saved-jobs", requireCandidateAuth, async (req, res) => {
     try {
       const candidateId = req.session.candidateId!;
-      const profile = await storage.getProfile(candidateId);
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
       
-      if (!profile) {
-        return res.status(404).json({ message: "Profile not found" });
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
       }
 
       const validatedData = insertSavedJobSchema.parse({
         ...req.body,
-        profileId: profile.id,
+        profileId: candidate.id,
         savedDate: new Date().toISOString()
       });
       
@@ -1286,12 +1287,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { jobTitle, company } = req.body;
       const candidateId = req.session.candidateId!;
       
-      const profile = await storage.getProfile(candidateId);
-      if (!profile) {
-        return res.status(404).json({ message: "Profile not found" });
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
       }
       
-      const removed = await storage.removeSavedJob(profile.id, jobTitle, company);
+      const removed = await storage.removeSavedJob(candidate.id, jobTitle, company);
       if (removed) {
         res.json({ message: "Job removed from saved jobs" });
       } else {
