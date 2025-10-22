@@ -226,6 +226,14 @@ function requireCandidateAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+// Authentication middleware for employee routes
+function requireEmployeeAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.employeeId) {
+    return res.status(401).json({ message: "Employee authentication required" });
+  }
+  next();
+}
+
 async function processBulkUpload(jobId: string): Promise<void> {
   try {
     const job = await storage.getBulkUploadJob(jobId);
@@ -398,12 +406,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Account is inactive" });
       }
       
-      // Return employee data (excluding password) for frontend routing
-      const { password: _, ...employeeData } = employee;
-      res.json({
-        success: true,
-        employee: employeeData,
-        message: "Login successful"
+      // Regenerate session to prevent session fixation attacks
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error('Session regeneration error:', err);
+          return res.status(500).json({ message: "Internal server error" });
+        }
+        
+        // Set session after regeneration
+        req.session.employeeId = employee.id;
+        req.session.employeeRole = employee.role;
+        req.session.userType = 'employee';
+        
+        // Save session before responding
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error('Session save error:', saveErr);
+            return res.status(500).json({ message: "Internal server error" });
+          }
+          
+          // Return employee data (excluding password) for frontend routing
+          const { password: _, ...employeeData } = employee;
+          res.json({
+            success: true,
+            employee: employeeData,
+            message: "Login successful"
+          });
+        });
       });
     } catch (error) {
       console.error('Employee login error:', error);
@@ -731,9 +760,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/auth/employee-logout", async (req, res) => {
     try {
-      res.json({
-        success: true,
-        message: "Logged out successfully"
+      req.session.destroy((err) => {
+        if (err) {
+          console.error('Session destruction error:', err);
+          return res.status(500).json({ message: "Logout failed" });
+        }
+        res.json({
+          success: true,
+          message: "Logged out successfully"
+        });
       });
     } catch (error) {
       console.error('Employee logout error:', error);
