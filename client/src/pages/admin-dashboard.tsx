@@ -2040,12 +2040,12 @@ export default function AdminDashboard() {
                           padding: 0.005,
                           cornerRadius: 1,
                           subArcs: [
-                            { limit: 20, color: '#EF4444', showTick: true, tooltip: { text: 'STRONG BEAR' } },
-                            { limit: 40, color: '#F87171', showTick: true, tooltip: { text: 'BEAR' } },
-                            { limit: 50, color: '#EAB308', showTick: true, tooltip: { text: 'BEARISH' } },
-                            { limit: 60, color: '#FDE047', showTick: true, tooltip: { text: 'BULLISH' } },
-                            { limit: 80, color: '#86EFAC', showTick: true, tooltip: { text: 'BULL' } },
-                            { limit: 100, color: '#22C55E', showTick: true, tooltip: { text: 'STRONG BULL' } }
+                            { limit: 20, color: '#EF4444', showTick: true, tooltip: { text: 'Critical' } },
+                            { limit: 40, color: '#F87171', showTick: true, tooltip: { text: 'Poor' } },
+                            { limit: 50, color: '#EAB308', showTick: true, tooltip: { text: 'Below Average' } },
+                            { limit: 60, color: '#FDE047', showTick: true, tooltip: { text: 'Average' } },
+                            { limit: 80, color: '#86EFAC', showTick: true, tooltip: { text: 'Good' } },
+                            { limit: 100, color: '#22C55E', showTick: true, tooltip: { text: 'Excellent' } }
                           ]
                         }}
                         pointer={{
@@ -3207,12 +3207,12 @@ export default function AdminDashboard() {
                           padding: 0.005,
                           cornerRadius: 1,
                           subArcs: [
-                            { limit: 20, color: '#EF4444', showTick: true, tooltip: { text: 'STRONG BEAR' } },
-                            { limit: 40, color: '#F87171', showTick: true, tooltip: { text: 'BEAR' } },
-                            { limit: 50, color: '#EAB308', showTick: true, tooltip: { text: 'BEARISH' } },
-                            { limit: 60, color: '#FDE047', showTick: true, tooltip: { text: 'BULLISH' } },
-                            { limit: 80, color: '#86EFAC', showTick: true, tooltip: { text: 'BULL' } },
-                            { limit: 100, color: '#22C55E', showTick: true, tooltip: { text: 'STRONG BULL' } }
+                            { limit: 20, color: '#EF4444', showTick: true, tooltip: { text: 'Critical' } },
+                            { limit: 40, color: '#F87171', showTick: true, tooltip: { text: 'Poor' } },
+                            { limit: 50, color: '#EAB308', showTick: true, tooltip: { text: 'Below Average' } },
+                            { limit: 60, color: '#FDE047', showTick: true, tooltip: { text: 'Average' } },
+                            { limit: 80, color: '#86EFAC', showTick: true, tooltip: { text: 'Good' } },
+                            { limit: 100, color: '#22C55E', showTick: true, tooltip: { text: 'Excellent' } }
                           ]
                         }}
                         pointer={{
