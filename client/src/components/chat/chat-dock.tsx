@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Send, MessageCircle, Paperclip, Smile, MoreVertical, Phone, Video, Image as ImageIcon } from 'lucide-react';
+import { X, Send, MessageCircle, Paperclip, Smile, MoreVertical, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -112,18 +112,6 @@ export function ChatDock({ open, onClose, userName = "Support Team" }: ChatDockP
           </div>
           
           <div className="flex items-center gap-2">
-            <button
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-              title="Voice Call"
-            >
-              <Phone className="h-5 w-5 text-white" />
-            </button>
-            <button
-              className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-              title="Video Call"
-            >
-              <Video className="h-5 w-5 text-white" />
-            </button>
             <button
               className="p-2 hover:bg-white/10 rounded-lg transition-colors"
               title="More Options"
