@@ -31,6 +31,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
+import GaugeComponent from 'react-gauge-component';
 // TypeScript interfaces
 interface Requirement {
   id: number;
@@ -408,6 +409,7 @@ export default function AdminDashboard() {
   const [isAllMessagesModalOpen, setIsAllMessagesModalOpen] = useState(false);
   const [selectedPerformanceTeam, setSelectedPerformanceTeam] = useState<string>("all");
   const [isResumeDatabaseModalOpen, setIsResumeDatabaseModalOpen] = useState(false);
+  const [isPerformanceDataModalOpen, setIsPerformanceDataModalOpen] = useState(false);
   const [clientForm, setClientForm] = useState({
     clientCode: '', brandName: '', incorporatedName: '', gstin: '',
     address: '', location: '', spoc: '', email: '',
@@ -2026,60 +2028,53 @@ export default function AdminDashboard() {
 
                   {/* Performance Gauge */}
                   <div className="flex flex-col items-center justify-center w-80">
-                    <div className="relative w-64 h-64">
-                      {/* Gauge Background */}
-                      <svg viewBox="0 0 200 200" className="w-full h-full">
-                        {/* Background Arc */}
-                        <path
-                          d="M 30 170 A 70 70 0 1 1 170 170"
-                          fill="none"
-                          stroke="#E5E7EB"
-                          strokeWidth="20"
-                        />
-                        {/* Red Section (BEARISH) */}
-                        <path
-                          d="M 30 170 A 70 70 0 0 1 85 45"
-                          fill="none"
-                          stroke="#EF4444"
-                          strokeWidth="20"
-                        />
-                        {/* Yellow Section */}
-                        <path
-                          d="M 85 45 A 70 70 0 0 1 115 45"
-                          fill="none"
-                          stroke="#EAB308"
-                          strokeWidth="20"
-                        />
-                        {/* Green Section (BULLISH) */}
-                        <path
-                          d="M 115 45 A 70 70 0 0 1 170 170"
-                          fill="none"
-                          stroke="#22C55E"
-                          strokeWidth="20"
-                        />
-                        {/* Needle */}
-                        <line
-                          x1="100"
-                          y1="100"
-                          x2="60"
-                          y2="140"
-                          stroke="#1F2937"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                        />
-                        <circle cx="100" cy="100" r="8" fill="#1F2937" />
-                      </svg>
-                      
-                      {/* Labels */}
-                      <div className="absolute bottom-8 left-4 text-sm text-gray-600">BEARISH</div>
-                      <div className="absolute bottom-8 right-4 text-sm text-gray-600">BULLISH</div>
-                      <div className="absolute bottom-16 left-8 text-sm text-gray-600">BEAR</div>
-                      <div className="absolute bottom-16 right-8 text-sm text-gray-600">BULL</div>
-                      <div className="absolute top-20 left-2 text-sm text-gray-600">STRONG<br/>BEAR</div>
-                      <div className="absolute top-20 right-2 text-sm text-gray-600">STRONG<br/>BULL</div>
+                    <div className="w-full h-64">
+                      <GaugeComponent
+                        id="performance-gauge-1"
+                        value={77.78}
+                        type="semicircle"
+                        minValue={0}
+                        maxValue={100}
+                        arc={{
+                          width: 0.2,
+                          padding: 0.005,
+                          cornerRadius: 1,
+                          subArcs: [
+                            { limit: 20, color: '#EF4444', showTick: true, tooltip: { text: 'STRONG BEAR' } },
+                            { limit: 40, color: '#F87171', showTick: true, tooltip: { text: 'BEAR' } },
+                            { limit: 50, color: '#EAB308', showTick: true, tooltip: { text: 'BEARISH' } },
+                            { limit: 60, color: '#FDE047', showTick: true, tooltip: { text: 'BULLISH' } },
+                            { limit: 80, color: '#86EFAC', showTick: true, tooltip: { text: 'BULL' } },
+                            { limit: 100, color: '#22C55E', showTick: true, tooltip: { text: 'STRONG BULL' } }
+                          ]
+                        }}
+                        pointer={{
+                          type: 'needle',
+                          elastic: true,
+                          animationDelay: 200,
+                          animationDuration: 1500,
+                          color: '#1F2937',
+                          length: 0.7,
+                          width: 15
+                        }}
+                        labels={{
+                          valueLabel: {
+                            formatTextValue: (value) => `${value.toFixed(1)}%`,
+                            style: { fontSize: '24px', fill: '#1F2937', fontWeight: 'bold' }
+                          },
+                          tickLabels: {
+                            type: 'outer',
+                            hideMinMax: true
+                          }
+                        }}
+                      />
                     </div>
                     
-                    <Button className="bg-cyan-400 hover:bg-cyan-500 text-black mt-4 px-6 py-2 rounded">
+                    <Button 
+                      className="bg-cyan-400 hover:bg-cyan-500 text-black mt-4 px-6 py-2 rounded"
+                      onClick={() => setIsPerformanceDataModalOpen(true)}
+                      data-testid="button-show-performance-data"
+                    >
                       Show Data
                     </Button>
                   </div>
@@ -3200,60 +3195,53 @@ export default function AdminDashboard() {
 
                   {/* Performance Gauge */}
                   <div className="flex flex-col items-center justify-center w-80">
-                    <div className="relative w-64 h-64">
-                      {/* Gauge Background */}
-                      <svg viewBox="0 0 200 200" className="w-full h-full">
-                        {/* Background Arc */}
-                        <path
-                          d="M 30 170 A 70 70 0 1 1 170 170"
-                          fill="none"
-                          stroke="#E5E7EB"
-                          strokeWidth="20"
-                        />
-                        {/* Red Section (BEARISH) */}
-                        <path
-                          d="M 30 170 A 70 70 0 0 1 85 45"
-                          fill="none"
-                          stroke="#EF4444"
-                          strokeWidth="20"
-                        />
-                        {/* Yellow Section */}
-                        <path
-                          d="M 85 45 A 70 70 0 0 1 115 45"
-                          fill="none"
-                          stroke="#EAB308"
-                          strokeWidth="20"
-                        />
-                        {/* Green Section (BULLISH) */}
-                        <path
-                          d="M 115 45 A 70 70 0 0 1 170 170"
-                          fill="none"
-                          stroke="#22C55E"
-                          strokeWidth="20"
-                        />
-                        {/* Needle */}
-                        <line
-                          x1="100"
-                          y1="100"
-                          x2="60"
-                          y2="140"
-                          stroke="#1F2937"
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                        />
-                        <circle cx="100" cy="100" r="8" fill="#1F2937" />
-                      </svg>
-                      
-                      {/* Labels */}
-                      <div className="absolute bottom-8 left-4 text-sm text-gray-600">BEARISH</div>
-                      <div className="absolute bottom-8 right-4 text-sm text-gray-600">BULLISH</div>
-                      <div className="absolute bottom-16 left-8 text-sm text-gray-600">BEAR</div>
-                      <div className="absolute bottom-16 right-8 text-sm text-gray-600">BULL</div>
-                      <div className="absolute top-20 left-2 text-sm text-gray-600">STRONG<br/>BEAR</div>
-                      <div className="absolute top-20 right-2 text-sm text-gray-600">STRONG<br/>BULL</div>
+                    <div className="w-full h-64">
+                      <GaugeComponent
+                        id="performance-gauge-2"
+                        value={77.78}
+                        type="semicircle"
+                        minValue={0}
+                        maxValue={100}
+                        arc={{
+                          width: 0.2,
+                          padding: 0.005,
+                          cornerRadius: 1,
+                          subArcs: [
+                            { limit: 20, color: '#EF4444', showTick: true, tooltip: { text: 'STRONG BEAR' } },
+                            { limit: 40, color: '#F87171', showTick: true, tooltip: { text: 'BEAR' } },
+                            { limit: 50, color: '#EAB308', showTick: true, tooltip: { text: 'BEARISH' } },
+                            { limit: 60, color: '#FDE047', showTick: true, tooltip: { text: 'BULLISH' } },
+                            { limit: 80, color: '#86EFAC', showTick: true, tooltip: { text: 'BULL' } },
+                            { limit: 100, color: '#22C55E', showTick: true, tooltip: { text: 'STRONG BULL' } }
+                          ]
+                        }}
+                        pointer={{
+                          type: 'needle',
+                          elastic: true,
+                          animationDelay: 200,
+                          animationDuration: 1500,
+                          color: '#1F2937',
+                          length: 0.7,
+                          width: 15
+                        }}
+                        labels={{
+                          valueLabel: {
+                            formatTextValue: (value) => `${value.toFixed(1)}%`,
+                            style: { fontSize: '24px', fill: '#1F2937', fontWeight: 'bold' }
+                          },
+                          tickLabels: {
+                            type: 'outer',
+                            hideMinMax: true
+                          }
+                        }}
+                      />
                     </div>
                     
-                    <Button className="bg-cyan-400 hover:bg-cyan-500 text-black mt-4 px-6 py-2 rounded">
+                    <Button 
+                      className="bg-cyan-400 hover:bg-cyan-500 text-black mt-4 px-6 py-2 rounded"
+                      onClick={() => setIsPerformanceDataModalOpen(true)}
+                      data-testid="button-show-performance-data"
+                    >
                       Show Data
                     </Button>
                   </div>
@@ -5825,6 +5813,86 @@ export default function AdminDashboard() {
                       </tr>
                     ))
                   )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Performance Data Modal */}
+      <Dialog open={isPerformanceDataModalOpen} onOpenChange={setIsPerformanceDataModalOpen}>
+        <DialogContent className="max-w-4xl w-[90vw] max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">Performance Data - Quarter ASO-2025</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto pr-2">
+            {/* Performance Summary Cards */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <Card className="bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 border-cyan-200 dark:border-cyan-800">
+                <CardContent className="p-4">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Minimum Target</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">₹27,00,000</div>
+                </CardContent>
+              </Card>
+              <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800">
+                <CardContent className="p-4">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Target Achieved</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">₹21,00,000</div>
+                  <div className="text-sm text-green-600 dark:text-green-400 font-medium">77.78% Performance</div>
+                </CardContent>
+              </Card>
+              <Card className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-200 dark:border-purple-800">
+                <CardContent className="p-4">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Total Closures</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">8</div>
+                </CardContent>
+              </Card>
+              <Card className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border-amber-200 dark:border-amber-800">
+                <CardContent className="p-4">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Total Incentives</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">₹65,000</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Team Performance Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+                <thead>
+                  <tr className="bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Resource</th>
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Role</th>
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Quarter</th>
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Minimum Target</th>
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Target Achieved</th>
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Performance %</th>
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Closures</th>
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Incentives</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {allTargetsData.slice(0, 10).map((row, index) => {
+                    const targetValue = parseInt(row.minimumTarget.replace(/,/g, ''), 10);
+                    const achievedValue = parseInt(row.targetAchieved.replace(/,/g, ''), 10);
+                    const performancePercent = ((achievedValue / targetValue) * 100).toFixed(2);
+                    const performanceColor = parseFloat(performancePercent) >= 80 ? 'text-green-600 dark:text-green-400' : 
+                                            parseFloat(performancePercent) >= 60 ? 'text-yellow-600 dark:text-yellow-400' : 
+                                            'text-red-600 dark:text-red-400';
+                    
+                    return (
+                      <tr key={index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-900/50' : ''}`}>
+                        <td className="py-3 px-3 text-gray-900 dark:text-white font-medium" data-testid={`text-resource-${index}`}>{row.resource}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.role}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.quarter}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.minimumTarget}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.targetAchieved}</td>
+                        <td className={`py-3 px-3 font-semibold ${performanceColor}`}>{performancePercent}%</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.closures}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.incentives}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
