@@ -169,45 +169,45 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
         </Button>
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="text-sm text-gray-600 dark:text-gray-400">Current Company</label>
-          <p className="text-base text-gray-900 dark:text-white mt-1" data-testid="text-current-company">
+        <div className="flex items-center">
+          <label className="text-sm text-gray-600 dark:text-gray-400 w-48">Current Company</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-current-company">
             {profile.currentCompany || 'abc company'}
           </p>
         </div>
-        <div>
-          <label className="text-sm text-gray-600 dark:text-gray-400">Company Sector</label>
-          <p className="text-base text-gray-900 dark:text-white mt-1" data-testid="text-company-sector">
+        <div className="flex items-center">
+          <label className="text-sm text-gray-600 dark:text-gray-400 w-48">Company Sector</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-company-sector">
             Technology
           </p>
         </div>
-        <div>
-          <label className="text-sm text-gray-600 dark:text-gray-400">Current Role</label>
-          <p className="text-base text-gray-900 dark:text-white mt-1" data-testid="text-current-role">
+        <div className="flex items-center">
+          <label className="text-sm text-gray-600 dark:text-gray-400 w-48">Current Role</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-current-role">
             {profile.currentRole || 'Cloud Engineer'}
           </p>
         </div>
-        <div>
-          <label className="text-sm text-gray-600 dark:text-gray-400">Product / Service</label>
-          <p className="text-base text-gray-900 dark:text-white mt-1" data-testid="text-product-service">
+        <div className="flex items-center">
+          <label className="text-sm text-gray-600 dark:text-gray-400 w-48">Product / Service</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-product-service">
             {profile.productService || 'Product'}
           </p>
         </div>
-        <div>
-          <label className="text-sm text-gray-600 dark:text-gray-400">Company Level</label>
-          <p className="text-base text-gray-900 dark:text-white mt-1" data-testid="text-company-level">
+        <div className="flex items-center">
+          <label className="text-sm text-gray-600 dark:text-gray-400 w-48">Company Level</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-company-level">
             {profile.companyLevel || 'B2B'}
           </p>
         </div>
-        <div>
-          <label className="text-sm text-gray-600 dark:text-gray-400">Product Category</label>
-          <p className="text-base text-gray-900 dark:text-white mt-1" data-testid="text-product-category">
+        <div className="flex items-center">
+          <label className="text-sm text-gray-600 dark:text-gray-400 w-48">Product Category</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-product-category">
             Software
           </p>
         </div>
-        <div className="col-span-2">
-          <label className="text-sm text-gray-600 dark:text-gray-400">Product Domain</label>
-          <p className="text-base text-gray-900 dark:text-white mt-1" data-testid="text-product-domain">
+        <div className="col-span-2 flex items-center">
+          <label className="text-sm text-gray-600 dark:text-gray-400 w-48">Product Domain</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-product-domain">
             {profile.currentDomain || 'www.yourcompanyname.com'}
           </p>
         </div>
@@ -231,27 +231,27 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
         </Button>
       </div>
       <div className="grid grid-cols-2 gap-4 mb-6">
-        <div>
-          <label className="text-sm text-gray-600 dark:text-gray-400">University or Collage</label>
-          <p className="text-base text-gray-900 dark:text-white mt-1" data-testid="text-university">
+        <div className="flex items-center">
+          <label className="text-sm text-gray-600 dark:text-gray-400 w-48">University or Collage</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-university">
             {profile.collegeName || 'abc Collage, XYZ University'}
           </p>
         </div>
-        <div>
-          <label className="text-sm text-gray-600 dark:text-gray-400">Pedigree Level</label>
-          <p className="text-base text-gray-900 dark:text-white mt-1" data-testid="text-pedigree">
+        <div className="flex items-center">
+          <label className="text-sm text-gray-600 dark:text-gray-400 w-48">Pedigree Level</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-pedigree">
             {profile.pedigreeLevel || 'Tier 2'}
           </p>
         </div>
-        <div>
-          <label className="text-sm text-gray-600 dark:text-gray-400">Education Domain</label>
-          <p className="text-base text-gray-900 dark:text-white mt-1" data-testid="text-education-domain">
+        <div className="flex items-center">
+          <label className="text-sm text-gray-600 dark:text-gray-400 w-48">Education Domain</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-education-domain">
             {profile.highestQualification || 'Bsc'}
           </p>
         </div>
-        <div>
-          <label className="text-sm text-gray-600 dark:text-gray-400">Preferred Role</label>
-          <p className="text-base text-gray-900 dark:text-white mt-1" data-testid="text-preferred-role">
+        <div className="flex items-center">
+          <label className="text-sm text-gray-600 dark:text-gray-400 w-48">Preferred Role</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-preferred-role">
             Digital Marketing
           </p>
         </div>
