@@ -261,12 +261,22 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
           description: `${job.title} at ${job.company} saved successfully.`,
         });
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save/remove job. Please try again.",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      const errorMessage = error?.message || "Failed to save/remove job";
+      
+      if (errorMessage.includes("Authentication required")) {
+        toast({
+          title: "Login Required",
+          description: "Please log in to save jobs. You can access the login page from the main menu.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -514,7 +524,7 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
 
       {/* Job Details Modal - Exact copy of JobBoardTab modal */}
       {showJobModal && selectedJob && (
-        <div className="fixed top-0 left-64 right-0 bottom-0 z-50 flex items-center justify-center bg-black/30">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
           <div className="bg-blue-50 dark:bg-blue-900/30 rounded-2xl shadow-2xl max-w-2xl w-full mx-8 max-h-[85vh] flex flex-col">
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto p-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}>

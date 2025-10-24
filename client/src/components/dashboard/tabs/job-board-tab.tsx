@@ -259,12 +259,22 @@ export default function JobBoardTab() {
           description: `${job.title} at ${job.company} saved successfully.`,
         });
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save/remove job. Please try again.",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      const errorMessage = error?.message || "Failed to save/remove job";
+      
+      if (errorMessage.includes("Authentication required")) {
+        toast({
+          title: "Login Required",
+          description: "Please log in to save jobs. You can access the login page from the main menu.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -874,6 +884,7 @@ export default function JobBoardTab() {
       {/* Job Details Modal */}
       <Dialog open={showJobModal} onOpenChange={setShowJobModal}>
         <DialogPortal>
+          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
           <DialogPrimitive.Content
             className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-2xl translate-x-[-50%] translate-y-[-50%] gap-4 border bg-white dark:bg-gray-800 p-6 shadow-lg rounded-lg max-h-[80vh] overflow-y-auto"
           >
