@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogOverlay, DialogPortal } from '@/components/ui/dialog';
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Search, MapPin, Filter, X, Heart, Clock, Bookmark, ChevronDown } from "lucide-react";
 import { useSavedJobs, useSaveJob, useRemoveSavedJob } from "@/hooks/use-saved-jobs";
 import { useToast } from "@/hooks/use-toast";
@@ -684,12 +685,15 @@ export default function JobBoardTab() {
 
       {/* Job Details Modal */}
       <Dialog open={showJobModal} onOpenChange={setShowJobModal}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">
-              {selectedJob?.title}
-            </DialogTitle>
-          </DialogHeader>
+        <DialogPortal>
+          <DialogPrimitive.Content
+            className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-2xl translate-x-[-50%] translate-y-[-50%] gap-4 border bg-white dark:bg-gray-800 p-6 shadow-lg rounded-lg max-h-[80vh] overflow-y-auto"
+          >
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold">
+                {selectedJob?.title}
+              </DialogTitle>
+            </DialogHeader>
           {selectedJob && (
             <div className="space-y-4">
               <div className="flex items-center gap-4">
@@ -765,8 +769,13 @@ export default function JobBoardTab() {
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+          <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </DialogPrimitive.Close>
+        </DialogPrimitive.Content>
+      </DialogPortal>
+    </Dialog>
 
       {/* Apply Confirmation Dialog */}
       <Dialog open={showApplyConfirmation} onOpenChange={setShowApplyConfirmation}>

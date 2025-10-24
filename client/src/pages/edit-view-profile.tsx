@@ -153,7 +153,7 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
   );
 
   const renderYourJourney = () => (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mt-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-800 p-8 mt-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Your Journey</h2>
         <Button 
@@ -215,7 +215,7 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
   );
 
   const renderYourStrengths = () => (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mt-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-800 p-8 mt-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Your Strengths</h2>
         <Button 
@@ -298,7 +298,7 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
   );
 
   const renderResume = () => (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mt-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-800 p-8 mt-6">
       <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Upload Resume</h2>
       
       {profile.resumeFile && (
@@ -350,7 +350,7 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
   );
 
   const renderJobPreferences = () => (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mt-6">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-800 p-8 mt-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-white">View Job Preferences</h2>
         <Button 
@@ -421,12 +421,7 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
   const renderContent = () => {
     switch (activeSection) {
       case 'about-you':
-        return (
-          <>
-            {renderAboutYou()}
-            {renderOnlinePresence()}
-          </>
-        );
+        return renderAboutYou();
       case 'online-presence':
         return renderOnlinePresence();
       case 'your-journey':
