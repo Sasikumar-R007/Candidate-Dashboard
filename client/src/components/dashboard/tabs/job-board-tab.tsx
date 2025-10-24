@@ -1081,29 +1081,6 @@ export default function JobBoardTab({ onNavigateToJobPreferences, onNavigateToPr
           </div>
         </DialogContent>
       </Dialog>
-          </DialogHeader>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Are you sure you want to apply for {pendingApplyJob?.title} at {pendingApplyJob?.company}?
-          </p>
-          <div className="flex gap-2 mt-4">
-            <Button
-              onClick={confirmApplyJob}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-              data-testid="button-confirm-apply"
-            >
-              Yes, Apply
-            </Button>
-            <Button
-              onClick={() => setShowApplyConfirmation(false)}
-              variant="outline"
-              className="flex-1"
-              data-testid="button-cancel-apply"
-            >
-              Cancel
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

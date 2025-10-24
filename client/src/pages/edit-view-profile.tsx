@@ -57,57 +57,57 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
         </Button>
       </div>
       <div className="grid grid-cols-2 gap-x-8 gap-y-6">
-        <div>
-          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">First Name :</label>
-          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-first-name">
+        <div className="flex items-center pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 w-40">First Name :</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-first-name">
             {profile.firstName || 'Mathew'}
           </p>
         </div>
-        <div>
-          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Last Name :</label>
-          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-last-name">
+        <div className="flex items-center pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 w-40">Last Name :</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-last-name">
             {profile.lastName || 'Anderson'}
           </p>
         </div>
-        <div>
-          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Mobile Number :</label>
-          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-mobile">
+        <div className="flex items-center pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 w-40">Mobile Number :</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-mobile">
             {profile.phone || '90347 59099'}
           </p>
         </div>
-        <div>
-          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">WhatsApp No :</label>
-          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-whatsapp">
+        <div className="flex items-center pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 w-40">WhatsApp No :</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-whatsapp">
             {profile.whatsapp || '90347 59099'}
           </p>
         </div>
-        <div>
-          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Primary Email :</label>
-          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-primary-email">
+        <div className="flex items-center pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 w-40">Primary Email :</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-primary-email">
             {profile.email || 'anderson123@gmail.com'}
           </p>
         </div>
-        <div>
-          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Secondary Email :</label>
-          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-secondary-email">
+        <div className="flex items-center pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 w-40">Secondary Email :</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-secondary-email">
             {profile.secondaryEmail || 'matthew.and@gmail.com'}
           </p>
         </div>
-        <div>
-          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Current Location :</label>
-          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-current-location">
+        <div className="flex items-center pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 w-40">Current Location :</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-current-location">
             {profile.currentLocation || 'Chennai.'}
           </p>
         </div>
-        <div>
-          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Preferred Location :</label>
-          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-preferred-location">
+        <div className="flex items-center pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 w-40">Preferred Location :</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-preferred-location">
             {profile.preferredLocation || 'Bengaluru'}
           </p>
         </div>
-        <div className="col-span-2">
-          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Date of Birth :</label>
-          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-dob">
+        <div className="col-span-2 flex items-center pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 w-40">Date of Birth :</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-dob">
             {profile.dateOfBirth || '8-May-2000'}
           </p>
         </div>
@@ -131,21 +131,21 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
         </Button>
       </div>
       <div className="space-y-6">
-        <div>
-          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Portfolio :</label>
-          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-portfolio">
+        <div className="flex items-center pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 w-40">Portfolio :</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-portfolio">
             {profile.portfolio || profile.portfolioUrl || 'https://www.yourwork.com'}
           </p>
         </div>
-        <div>
-          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">LinkedIn :</label>
-          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-linkedin">
+        <div className="flex items-center pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 w-40">LinkedIn :</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-linkedin">
             {profile.linkedinUrl || 'https://www.linkedin.com/in/Mathew Anderson'}
           </p>
         </div>
-        <div>
-          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Website :</label>
-          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-website">
+        <div className="flex items-center pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 w-40">Website :</label>
+          <p className="text-base text-gray-900 dark:text-white flex-1" data-testid="text-website">
             {profile.websiteUrl || 'https://www.mynetwork.com'}
           </p>
         </div>
