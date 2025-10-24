@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import candidateImage from "@assets/image_1761276490828.png";
 import employerImage from "@assets/image_1761276502238.png";
+import logoImage from "@assets/image_1761276742670.png";
 
 export default function Landing() {
   return (
@@ -10,12 +11,12 @@ export default function Landing() {
       <nav className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
         {/* Logo */}
         <div className="flex items-center space-x-2">
-          <div className="w-6 h-6 bg-black dark:bg-white rounded-full flex items-center justify-center">
-            <svg className="w-4 h-4 text-white dark:text-black" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-              <circle cx="12" cy="12" r="10" strokeWidth="2"/>
-              <path d="M12 6v6l4 2" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </div>
+          <img 
+            src={logoImage} 
+            alt="StaffOS Logo" 
+            className="w-6 h-6"
+            data-testid="img-logo"
+          />
           <span className="text-lg font-semibold text-gray-900 dark:text-white">
             staffOS
           </span>
@@ -42,7 +43,7 @@ export default function Landing() {
             <Button 
               variant="ghost" 
               size="sm"
-              className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+              className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white rounded"
               data-testid="button-login"
             >
               Login
@@ -51,7 +52,7 @@ export default function Landing() {
           <Link href="/employer-login" data-testid="link-employer">
             <Button 
               size="sm"
-              className="bg-gray-900 hover:bg-gray-800 text-white px-4"
+              className="bg-gray-900 hover:bg-gray-800 text-white px-4 rounded"
               data-testid="button-employer"
             >
               Employer
@@ -65,7 +66,7 @@ export default function Landing() {
             <Button 
               variant="ghost" 
               size="sm"
-              className="text-gray-700 dark:text-gray-300"
+              className="text-gray-700 dark:text-gray-300 rounded"
               data-testid="button-candidate-login-mobile"
             >
               Login
@@ -74,7 +75,7 @@ export default function Landing() {
           <Link href="/employer-login" data-testid="link-employer-login-mobile">
             <Button 
               size="sm"
-              className="bg-gray-900 hover:bg-gray-800 text-white"
+              className="bg-gray-900 hover:bg-gray-800 text-white rounded"
               data-testid="button-employer-login-mobile"
             >
               Employer
@@ -87,8 +88,8 @@ export default function Landing() {
       <main className="px-6 py-12 max-w-7xl mx-auto">
         {/* Watch Solutions Badge */}
         <div className="flex justify-center mb-8">
-          <span className="inline-flex items-center px-4 py-2 bg-white/30 dark:bg-black/20 rounded-full text-sm font-medium text-purple-800 dark:text-purple-300 backdrop-blur-sm border border-white/40 dark:border-gray-700">
-            <span className="w-2 h-2 bg-purple-600 rounded-full mr-2"></span>
+          <span className="inline-flex items-center px-4 py-2 bg-white/20 dark:bg-black/20 rounded-full text-sm font-medium text-gray-800 dark:text-gray-200 backdrop-blur-sm border border-white/30 dark:border-gray-700">
+            <span className="w-2 h-2 bg-purple-600 rounded-full mr-2 animate-pulse"></span>
             Watch our hiring solutions
             <svg className="ml-2 w-4 h-4" viewBox="0 0 16 16" fill="none">
               <path d="M6 12L10 8L6 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -112,7 +113,7 @@ export default function Landing() {
               <Button 
                 variant="outline"
                 size="lg"
-                className="bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-700 px-8 font-semibold"
+                className="bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 text-blue-600 dark:text-blue-400 border-blue-300 dark:border-blue-700 px-8 font-semibold rounded"
                 data-testid="button-find-jobs"
               >
                 Find jobs
@@ -121,7 +122,7 @@ export default function Landing() {
             <Link href="/employer-login" data-testid="link-post-jobs">
               <Button 
                 size="lg"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 font-semibold"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8 font-semibold rounded"
                 data-testid="button-post-jobs"
               >
                 Post jobs
@@ -132,10 +133,10 @@ export default function Landing() {
 
         {/* Video Preview Section */}
         <div className="max-w-4xl mx-auto mb-16">
-          <div className="relative bg-gray-200 dark:bg-gray-800 rounded-2xl overflow-hidden aspect-video shadow-2xl">
-            <div className="absolute inset-0 flex items-center justify-center">
+          <div className="relative bg-white/10 dark:bg-black/10 backdrop-blur-sm rounded-2xl border border-white/20 dark:border-gray-700 overflow-hidden aspect-video shadow-2xl">
+            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-purple-50/50 via-pink-50/50 to-purple-100/50 dark:from-purple-900/50 dark:via-purple-800/50 dark:to-purple-900/50">
               <button 
-                className="w-16 h-16 bg-black/70 hover:bg-black/80 rounded-full flex items-center justify-center transition-all"
+                className="w-16 h-16 bg-black/70 hover:bg-black/80 rounded-full flex items-center justify-center transition-all shadow-xl"
                 data-testid="button-play-video"
               >
                 <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
@@ -149,14 +150,14 @@ export default function Landing() {
         {/* Features Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto mb-12">
           {/* For Candidate Section */}
-          <div id="candidates" className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-white/60 dark:border-gray-700 shadow-lg">
+          <div id="candidates" className="bg-white/40 dark:bg-gray-800/40 backdrop-blur-md rounded-2xl p-8 border border-white/50 dark:border-gray-700 shadow-xl">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
               For Candidate
             </h2>
             
             {/* Candidate Features with Image */}
             <div className="space-y-6">
-              <div className="bg-white dark:bg-gray-900 rounded-xl p-4 shadow-md">
+              <div className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm rounded-xl p-4 shadow-lg border border-white/60 dark:border-gray-700">
                 <img 
                   src={candidateImage} 
                   alt="Candidate Dashboard Preview" 
@@ -210,14 +211,14 @@ export default function Landing() {
           </div>
 
           {/* For Employer Section */}
-          <div id="employers" className="bg-blue-600/90 dark:bg-blue-800/90 backdrop-blur-sm rounded-2xl p-8 border border-blue-400/60 dark:border-blue-700 shadow-lg text-white">
+          <div id="employers" className="bg-gradient-to-br from-blue-600/90 to-blue-700/90 dark:from-blue-800/90 dark:to-blue-900/90 backdrop-blur-md rounded-2xl p-8 border border-blue-400/50 dark:border-blue-700/50 shadow-xl text-white">
             <h2 className="text-2xl font-bold mb-6">
               For Employer
             </h2>
             
             {/* Employer Features with Image */}
             <div className="space-y-6">
-              <div className="bg-white rounded-xl p-4 shadow-md">
+              <div className="bg-white/95 backdrop-blur-sm rounded-xl p-4 shadow-lg">
                 <img 
                   src={employerImage} 
                   alt="Employer Dashboard Preview" 
@@ -273,15 +274,19 @@ export default function Landing() {
 
         {/* Get Early Access CTA */}
         <div className="text-center py-12">
-          <Link href="/dashboard-selection" data-testid="link-get-early-access">
-            <Button 
-              size="lg" 
-              className="bg-gray-900 hover:bg-gray-800 text-white px-12 py-6 text-lg font-semibold rounded-xl shadow-xl"
-              data-testid="button-get-early-access"
-            >
-              Get Early Access
-            </Button>
-          </Link>
+          <div className="relative inline-block">
+            {/* Floating gradient background elements */}
+            <div className="absolute -inset-4 bg-gradient-to-r from-purple-400 to-pink-400 rounded-2xl opacity-30 blur-2xl"></div>
+            <Link href="/dashboard-selection" data-testid="link-get-early-access">
+              <Button 
+                size="lg" 
+                className="relative bg-gray-900 hover:bg-gray-800 text-white px-12 py-6 text-lg font-semibold rounded shadow-2xl"
+                data-testid="button-get-early-access"
+              >
+                Get Early Access
+              </Button>
+            </Link>
+          </div>
         </div>
       </main>
     </div>
