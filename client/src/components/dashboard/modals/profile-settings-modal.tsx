@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, Upload, User, Contact, Briefcase, Award, Shield, X, Lock, Eye, EyeOff, MessageCircle } from "lucide-react";
+import { Camera, Upload, User, Contact, Briefcase, Award, Shield, X, Lock, Eye, EyeOff, MessageCircle, Bell } from "lucide-react";
 import { useAuth, useEmployeeAuth, useCandidateAuth } from "@/contexts/auth-context";
 import type { Employee, Candidate } from '@shared/schema';
 
@@ -397,22 +397,18 @@ export function ProfileSettingsModal({ open, onOpenChange, onChatClick }: Profil
 
         <div className="mt-6">
           <Tabs defaultValue="basic" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="basic" className="flex items-center gap-2">
                 <User className="h-4 w-4" />
-                Basic Info
+                Profile
               </TabsTrigger>
-              <TabsTrigger value="contact" className="flex items-center gap-2">
-                <Contact className="h-4 w-4" />
-                Contact
+              <TabsTrigger value="notifications" className="flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                Notifications
               </TabsTrigger>
-              <TabsTrigger value="photos" className="flex items-center gap-2">
-                <Camera className="h-4 w-4" />
-                Photos
-              </TabsTrigger>
-              <TabsTrigger value="work" className="flex items-center gap-2">
-                {user?.type === 'employee' ? <Briefcase className="h-4 w-4" /> : <Award className="h-4 w-4" />}
-                {user?.type === 'employee' ? 'Work Details' : 'Experience'}
+              <TabsTrigger value="privacy" className="flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Privacy
               </TabsTrigger>
               <TabsTrigger value="security" className="flex items-center gap-2">
                 <Lock className="h-4 w-4" />
@@ -480,38 +476,51 @@ export function ProfileSettingsModal({ open, onOpenChange, onChatClick }: Profil
               </Card>
             </TabsContent>
 
-            <TabsContent value="contact" className="mt-6">
+            <TabsContent value="notifications" className="mt-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Contact className="h-5 w-5" />
-                    Contact Information
+                    <Bell className="h-5 w-5" />
+                    Notification Preferences
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <Input
-                        id="phone"
-                        value={formData.phone}
-                        onChange={(e) => handleInputChange('phone', e.target.value)}
-                        placeholder="Enter your phone number"
-                        data-testid="input-profile-phone"
-                      />
-                    </div>
-                    {user?.type === 'candidate' && (
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
                       <div>
-                        <Label htmlFor="location">Location</Label>
-                        <Input
-                          id="location"
-                          value={formData.location}
-                          onChange={(e) => handleInputChange('location', e.target.value)}
-                          placeholder="Enter your location"
-                          data-testid="input-profile-location"
-                        />
+                        <p className="font-medium">Job Match Alerts</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Get notified when new jobs match your profile</p>
                       </div>
-                    )}
+                      <input type="checkbox" className="w-5 h-5" defaultChecked />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Application Updates</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Updates about your job applications</p>
+                      </div>
+                      <input type="checkbox" className="w-5 h-5" defaultChecked />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Messages from Recruiters</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Direct messages from hiring managers</p>
+                      </div>
+                      <input type="checkbox" className="w-5 h-5" defaultChecked />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Email Notifications</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Receive email updates for important notifications</p>
+                      </div>
+                      <input type="checkbox" className="w-5 h-5" defaultChecked />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Weekly Job Digest</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Weekly summary of recommended jobs</p>
+                      </div>
+                      <input type="checkbox" className="w-5 h-5" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>

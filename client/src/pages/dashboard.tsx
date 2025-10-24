@@ -52,7 +52,11 @@ export default function Dashboard() {
                 </h1>
               </div>
               <div className="flex items-center gap-4">
-                <button className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                <button 
+                  onClick={() => setShowChat(true)}
+                  className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                  data-testid="button-help"
+                >
                   <HelpCircle size={16} />
                   <span className="text-sm">Help</span>
                 </button>
@@ -61,7 +65,7 @@ export default function Dashboard() {
                   userRole="Candidate"
                   logoutEndpoint="/api/auth/candidate-logout"
                   profilePicture={(candidate as any)?.profilePicture}
-                  showChatInDropdown={true}
+                  showChatInDropdown={false}
                   onChatClick={() => setShowChat(true)}
                 />
               </div>
@@ -82,7 +86,11 @@ export default function Dashboard() {
                 </h1>
               </div>
               <div className="flex items-center gap-4">
-                <button className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                <button 
+                  onClick={() => setShowChat(true)}
+                  className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                  data-testid="button-help"
+                >
                   <HelpCircle size={16} />
                   <span className="text-sm">Help</span>
                 </button>
@@ -91,7 +99,7 @@ export default function Dashboard() {
                   userRole="Candidate"
                   logoutEndpoint="/api/auth/candidate-logout"
                   profilePicture={(candidate as any)?.profilePicture}
-                  showChatInDropdown={true}
+                  showChatInDropdown={false}
                   onChatClick={() => setShowChat(true)}
                 />
               </div>
@@ -111,7 +119,11 @@ export default function Dashboard() {
                 </h1>
               </div>
               <div className="flex items-center gap-4">
-                <button className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                <button 
+                  onClick={() => setShowChat(true)}
+                  className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                  data-testid="button-help"
+                >
                   <HelpCircle size={16} />
                   <span className="text-sm">Help</span>
                 </button>
@@ -120,7 +132,7 @@ export default function Dashboard() {
                   userRole="Candidate"
                   logoutEndpoint="/api/auth/candidate-logout"
                   profilePicture={(candidate as any)?.profilePicture}
-                  showChatInDropdown={true}
+                  showChatInDropdown={false}
                   onChatClick={() => setShowChat(true)}
                 />
               </div>
@@ -140,7 +152,11 @@ export default function Dashboard() {
                 </h1>
               </div>
               <div className="flex items-center gap-4">
-                <button className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                <button 
+                  onClick={() => setShowChat(true)}
+                  className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                  data-testid="button-help"
+                >
                   <HelpCircle size={16} />
                   <span className="text-sm">Help</span>
                 </button>
@@ -149,13 +165,16 @@ export default function Dashboard() {
                   userRole="Candidate"
                   logoutEndpoint="/api/auth/candidate-logout"
                   profilePicture={(candidate as any)?.profilePicture}
-                  showChatInDropdown={true}
+                  showChatInDropdown={false}
                   onChatClick={() => setShowChat(true)}
                 />
               </div>
             </header>
             <div className="flex-1 overflow-y-auto">
-              <JobBoardTab />
+              <JobBoardTab 
+                onNavigateToJobPreferences={() => setSidebarTab('job-preferences')}
+                onNavigateToProfile={() => setSidebarTab('edit-view')}
+              />
             </div>
           </div>
         );
@@ -169,7 +188,11 @@ export default function Dashboard() {
                 </h1>
               </div>
               <div className="flex items-center gap-4">
-                <button className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                <button 
+                  onClick={() => setShowChat(true)}
+                  className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                  data-testid="button-help"
+                >
                   <HelpCircle size={16} />
                   <span className="text-sm">Help</span>
                 </button>
@@ -178,7 +201,7 @@ export default function Dashboard() {
                   userRole="Candidate"
                   logoutEndpoint="/api/auth/candidate-logout"
                   profilePicture={(candidate as any)?.profilePicture}
-                  showChatInDropdown={true}
+                  showChatInDropdown={false}
                   onChatClick={() => setShowChat(true)}
                 />
               </div>
