@@ -190,6 +190,7 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
   const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set());
   const [showApplyConfirmation, setShowApplyConfirmation] = useState(false);
   const [pendingApplyJob, setPendingApplyJob] = useState<JobSuggestion | null>(null);
+  const [applicationList, setApplicationList] = useState<any[]>(mockAppliedJobs);
   const jobsPerPage = 3;
   const { data: jobApplications = mockAppliedJobs, isLoading } = useQuery({
     queryKey: ['/api/job-applications'],
@@ -225,8 +226,11 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
   };
 
   const handleArchiveJob = (job: JobApplication) => {
-    console.log('Archive job:', job);
-    // Archive job logic
+    setApplicationList(prev => prev.filter(j => j.id !== job.id));
+    toast({
+      title: "Job archived",
+      description: `${job.jobTitle} at ${job.company} has been archived.`,
+    });
   };
 
   const handleSeeAllJobs = () => {
@@ -310,9 +314,15 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
   }
 
   return (
-    <div className={`flex gap-6 p-6 ${className}`}>
-      {/* Left Column - Applied Jobs and Job Suggestions */}
-      <div className="flex-1 space-y-8">
+    <div className={`flex h-full ${className}`}>
+      {/* Right Column - Candidate Metrics (Fixed) */}
+      <div className="w-80 flex-shrink-0 p-6 overflow-hidden">
+        <CandidateMetrics />
+      </div>
+
+      {/* Left Column - Applied Jobs and Job Suggestions (Scrollable) */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-6 space-y-8">
         {/* Applied Jobs Section */}
         <div className="bg-white rounded-lg p-6 shadow-sm">
         <h2 className="text-xl font-semibold text-gray-800 mb-6">Applied Jobs</h2>
@@ -331,7 +341,7 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
               </tr>
             </thead>
             <tbody>
-              {(jobApplications as any[])
+              {applicationList
                 .slice(0, showAllJobs ? undefined : 5)
                 .map((job: any) => (
                 <tr key={job.id} className="border-b border-gray-100 hover:bg-gray-50">
@@ -357,10 +367,12 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
                           <Eye className="mr-2 h-4 w-4" />
                           View Job
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleArchiveJob(job)} data-testid={`menu-archive-${job.id}`}>
-                          <Archive className="mr-2 h-4 w-4" />
-                          Archive
-                        </DropdownMenuItem>
+                        {job.status === 'Rejected' && (
+                          <DropdownMenuItem onClick={() => handleArchiveJob(job)} data-testid={`menu-archive-${job.id}`}>
+                            <Archive className="mr-2 h-4 w-4" />
+                            Archive
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </td>
@@ -370,14 +382,14 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
           </table>
         </div>
 
-        {(jobApplications as any[]).length === 0 && (
+        {applicationList.length === 0 && (
           <div className="text-center py-12 text-gray-500">
             No job applications found. Start applying to jobs to see them here.
           </div>
         )}
 
         {/* See all button for Applied Jobs - moved below the table */}
-        {(jobApplications as any[]).length > 5 && !showAllJobs && (
+        {applicationList.length > 5 && !showAllJobs && (
           <div className="mt-6 pt-4 border-t border-gray-200 text-center">
             <Button 
               variant="link" 
@@ -522,12 +534,7 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
           </Button>
         </div>
         </div>
-
       </div>
-
-      {/* Right Column - Candidate Metrics */}
-      <div className="w-80 flex-shrink-0">
-        <CandidateMetrics />
       </div>
 
       {/* Job Details Modal - Exact copy of JobBoardTab modal */}

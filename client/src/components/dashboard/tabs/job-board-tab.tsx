@@ -894,134 +894,141 @@ export default function JobBoardTab({ onNavigateToJobPreferences, onNavigateToPr
         </div>
       </div>
 
-      {/* Job Details Modal - Redesigned to match reference image */}
-      <Dialog open={showJobModal} onOpenChange={setShowJobModal}>
-        <DialogPortal>
-          <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
-          <DialogPrimitive.Content
-            className="fixed left-[50%] top-[50%] z-50 grid w-full max-w-3xl translate-x-[-50%] translate-y-[-50%] border bg-white dark:bg-gray-800 shadow-lg rounded-2xl max-h-[85vh] overflow-hidden"
-          >
-          {selectedJob && (
-            <div className="flex flex-col h-full">
-              {/* Header Section */}
-              <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex gap-4 items-start">
-                  {/* Company Logo */}
-                  <div className={`${selectedJob.background} rounded-3xl p-6 w-32 h-28 flex flex-col items-center justify-center shadow-sm flex-shrink-0`}>
-                    <img
-                      src={selectedJob.logo}
-                      alt={`${selectedJob.company} logo`}
-                      className="w-14 h-14 rounded object-cover mb-2"
-                    />
-                    <div className="text-sm font-bold text-gray-800 dark:text-gray-200 text-center">
-                      {selectedJob.company.split(' ')[0]}
+      {/* Job Details Modal - Matching My Jobs Tab Design */}
+      {showJobModal && selectedJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+          <div className="bg-blue-50 dark:bg-blue-900/30 rounded-2xl shadow-2xl max-w-2xl w-full mx-8 max-h-[85vh] flex flex-col">
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}>
+              {/* Job Card Header */}
+              <div className="bg-white dark:bg-gray-800 p-4 mb-4 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                <div className="flex">
+                  {/* Company Logo Section */}
+                  <div className="w-32 flex items-center justify-center">
+                    <div className={`${selectedJob.background} rounded-xl p-3 flex flex-col items-center justify-center w-full h-full min-h-[100px]`}>
+                      <img
+                        src={selectedJob.logo}
+                        alt={`${selectedJob.company} logo`}
+                        className="w-12 h-12 rounded object-cover mb-1"
+                      />
+                      <div className="text-xs font-bold text-gray-700 dark:text-gray-300">{selectedJob.company.split(' ')[0]}</div>
                     </div>
                   </div>
-                  
-                  {/* Job Header Details */}
-                  <div className="flex-1">
-                    <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
-                      {selectedJob.company}
-                    </h3>
-                    <h4 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
-                      {selectedJob.title}
-                      {selectedJob.isHot && (
-                        <span className="text-red-500">
-                          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clipRule="evenodd" />
-                          </svg>
-                        </span>
-                      )}
-                    </h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{selectedJob.description}</p>
+
+                  {/* Job Details */}
+                  <div className="flex-1 pl-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{selectedJob.company}</h3>
+                        <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                          {selectedJob.title}
+                          {selectedJob.isHot && <i className="fas fa-fire text-red-500 text-sm"></i>}
+                        </h4>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{selectedJob.description}</p>
+                      </div>
+                      <button
+                        onClick={() => setShowJobModal(false)}
+                        className="w-6 h-6 bg-red-500 hover:bg-red-600 rounded flex items-center justify-center ml-2 transition-colors"
+                        data-testid="button-close-modal"
+                      >
+                        <i className="fas fa-times text-white text-xs"></i>
+                      </button>
+                    </div>
                     
-                    {/* Job Info Pills */}
-                    <div className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300 mb-3">
+                    <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400 mb-2">
                       <span className="flex items-center gap-1">
-                        <Briefcase className="w-4 h-4" />
+                        <i className="fas fa-briefcase"></i>
                         {selectedJob.experience}
                       </span>
                       <span className="flex items-center gap-1">
-                        ₹ ₹ {selectedJob.salary}
+                        <span className="font-semibold">₹</span>
+                        {selectedJob.salary}
                       </span>
                       <span className="flex items-center gap-1">
-                        <MapPin className="w-4 h-4" />
+                        <i className="fas fa-map-marker-alt"></i>
                         {selectedJob.location}
                       </span>
-                      <span>{selectedJob.workType}</span>
-                      <span>{selectedJob.type}</span>
+                      <span className="font-medium">{selectedJob.workType}</span>
+                      <span className="font-medium">{selectedJob.type}</span>
                     </div>
 
-                    {/* Tags */}
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="bg-red-50 dark:bg-red-900 text-red-600 dark:text-red-200 px-3 py-1 rounded-md text-xs font-medium border border-red-200 dark:border-red-700">
+                    {/* Job Tags */}
+                    <div className="flex items-center gap-1 mb-2">
+                      <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs">
                         Open Positions ~ 2
                       </span>
-                      <span className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-md text-xs font-medium border border-gray-200 dark:border-gray-600">
+                      <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs">
                         Product
                       </span>
-                      <span className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-md text-xs font-medium border border-gray-200 dark:border-gray-600">
+                      <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs">
                         B2B
                       </span>
-                      <span className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-md text-xs font-medium border border-gray-200 dark:border-gray-600">
+                      <span className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-full text-xs">
                         Full Time
                       </span>
                     </div>
 
                     {/* Skills */}
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                       {selectedJob.skills.map((skill, index) => (
-                        <span key={index} className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 px-3 py-1 rounded-md text-xs font-medium border border-green-200 dark:border-green-700">
+                        <span key={index} className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full text-xs font-medium">
                           {skill}
                         </span>
                       ))}
+                    </div>
+
+                    {/* View Less Button */}
+                    <div className="flex justify-end mt-2">
+                      <Button 
+                        onClick={() => setShowJobModal(false)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded text-xs" 
+                        size="sm"
+                        data-testid="button-view-less"
+                      >
+                        View Less
+                      </Button>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Content Section - Scrollable */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                {/* About Company */}
-                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">About Company</h3>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                    {selectedJob.company}, now a subsidiary of Alphabet Inc., is a multinational technology company 
-                    known for its Internet search engine, online advertising technologies, cloud computing, 
-                    and other software services. Originally founded in 1998 by Larry Page and Sergey Brin, 
-                    initially as a research project at Stanford University. {selectedJob.company}'s core mission is to 
-                    organize the world's information and make it universally accessible and useful.
+              {/* Content Sections - Separate Boxes */}
+              <div className="pb-4 space-y-4">
+                {/* About Company Box */}
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm w-full">
+                  <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">About Company</h5>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                    {selectedJob.company}, now a subsidiary of Alphabet Inc., is a multinational technology company known for 
+                    its Internet search engine, online advertising technologies, cloud computing, and other 
+                    software services. The core mission is to organize the world's information and 
+                    make it universally accessible and useful.
                   </p>
                 </div>
 
-                {/* Role Definition */}
-                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Role Definition</h3>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
+                {/* Role Definition Box */}
+                <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm w-full">
+                  <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Role Definition</h5>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed mb-4">
                     We are looking for a skilled {selectedJob.title} to join our team and help build 
-                    scalable cloud infrastructure. The ideal candidate will have strong experience with cloud platforms, 
-                    automation, and DevOps practices.
+                    scalable cloud infrastructure. The ideal candidate will have strong experience with cloud platforms.
                   </p>
                   <div className="space-y-2">
-                    <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Key Responsibilities:</h4>
-                    <ul className="list-disc list-inside text-sm text-gray-700 dark:text-gray-300 space-y-1 ml-2">
-                      <li>Design and implement cloud-based solutions on major platforms</li>
-                      <li>Automate infrastructure deployment and management</li>
-                      <li>Monitor and optimize cloud resource utilization</li>
-                      <li>Collaborate with development teams on CI/CD pipelines</li>
-                      <li>Ensure security and compliance of cloud infrastructure</li>
+                    <h6 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Key Responsibilities:</h6>
+                    <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1 ml-2">
+                      <li>Design and implement cloud-based solutions</li>
+                      <li>Automate infrastructure deployment</li>
+                      <li>Monitor and optimize cloud resources</li>
+                      <li>Collaborate with development teams</li>
                     </ul>
                   </div>
                 </div>
-              </div>
 
-              {/* Footer with Buttons */}
-              <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/30">
-                <div className="flex gap-3">
+                {/* Apply and Save Buttons */}
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm flex gap-3">
                   <Button
                     onClick={() => toggleSaveJob(selectedJob)}
                     variant="outline"
-                    className="flex items-center gap-2 px-6 border-2 border-orange-500 text-orange-600 hover:bg-orange-50 dark:border-orange-600 dark:text-orange-500 dark:hover:bg-orange-900/20"
+                    className="flex items-center gap-2 px-6 border-2 border-orange-500 text-orange-600 hover:bg-orange-50"
                     data-testid="button-save-job-modal"
                   >
                     <Bookmark className={`w-4 h-4 ${savedJobs.has(`${selectedJob.title}-${selectedJob.company}`) ? 'fill-orange-600' : ''}`} />
@@ -1042,20 +1049,38 @@ export default function JobBoardTab({ onNavigateToJobPreferences, onNavigateToPr
                 </div>
               </div>
             </div>
-          )}
-          <DialogPrimitive.Close className="absolute right-4 top-4 rounded-full p-1.5 bg-red-500 hover:bg-red-600 text-white transition-colors z-10">
-            <X className="h-5 w-5" />
-            <span className="sr-only">Close</span>
-          </DialogPrimitive.Close>
-        </DialogPrimitive.Content>
-      </DialogPortal>
-    </Dialog>
+          </div>
+        </div>
+      )}
 
       {/* Apply Confirmation Dialog */}
       <Dialog open={showApplyConfirmation} onOpenChange={setShowApplyConfirmation}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirm Application</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Are you sure you want to apply for {pendingApplyJob?.title} at {pendingApplyJob?.company}?
+          </p>
+          <div className="flex gap-2 mt-4">
+            <Button
+              onClick={confirmApplyJob}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+              data-testid="button-confirm-apply"
+            >
+              Yes, Apply
+            </Button>
+            <Button
+              onClick={() => setShowApplyConfirmation(false)}
+              variant="outline"
+              className="flex-1"
+              data-testid="button-cancel-apply"
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
           </DialogHeader>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Are you sure you want to apply for {pendingApplyJob?.title} at {pendingApplyJob?.company}?
