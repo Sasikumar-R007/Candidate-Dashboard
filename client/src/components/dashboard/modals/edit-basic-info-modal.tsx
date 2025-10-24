@@ -19,9 +19,9 @@ export default function EditBasicInfoModal({ open, onOpenChange, profile }: Edit
     lastName: profile.lastName || '',
     title: profile.title || '',
     location: profile.location || '',
-    mobile: profile.mobile || '',
+    phone: profile.phone || '',
     whatsapp: profile.whatsapp || '',
-    primaryEmail: profile.primaryEmail || '',
+    email: profile.email || '',
     secondaryEmail: profile.secondaryEmail || '',
     currentLocation: profile.currentLocation || '',
     preferredLocation: profile.preferredLocation || '',
@@ -38,9 +38,9 @@ export default function EditBasicInfoModal({ open, onOpenChange, profile }: Edit
       formData.lastName !== (profile.lastName || '') ||
       formData.title !== (profile.title || '') ||
       formData.location !== (profile.location || '') ||
-      formData.mobile !== (profile.mobile || '') ||
+      formData.phone !== (profile.phone || '') ||
       formData.whatsapp !== (profile.whatsapp || '') ||
-      formData.primaryEmail !== (profile.primaryEmail || '') ||
+      formData.email !== (profile.email || '') ||
       formData.secondaryEmail !== (profile.secondaryEmail || '') ||
       formData.currentLocation !== (profile.currentLocation || '') ||
       formData.preferredLocation !== (profile.preferredLocation || '') ||
@@ -74,116 +74,135 @@ export default function EditBasicInfoModal({ open, onOpenChange, profile }: Edit
           <DialogTitle>Edit Profile Information</DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-2 gap-6">
             <div>
-              <Label htmlFor="firstName">First Name</Label>
+              <Label htmlFor="firstName" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">First Name</Label>
               <Input
                 id="firstName"
                 value={formData.firstName}
                 onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                 required
+                placeholder="Mathew"
+                className="border-0 border-b-2 border-dotted border-blue-300 dark:border-blue-700 rounded-none focus:border-blue-500 bg-transparent px-0 pb-2"
               />
             </div>
             <div>
-              <Label htmlFor="lastName">Last Name</Label>
+              <Label htmlFor="lastName" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Last Name</Label>
               <Input
                 id="lastName"
                 value={formData.lastName}
                 onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                 required
+                placeholder="Anderson"
+                className="border-0 border-b-2 border-dotted border-blue-300 dark:border-blue-700 rounded-none focus:border-blue-500 bg-transparent px-0 pb-2"
               />
             </div>
           </div>
           
           <div>
-            <Label htmlFor="title">Job Title</Label>
+            <Label htmlFor="title" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Job Title</Label>
             <Input
               id="title"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               required
+              placeholder="Cloud Engineer"
+              className="border-0 border-b-2 border-dotted border-blue-300 dark:border-blue-700 rounded-none focus:border-blue-500 bg-transparent px-0 pb-2"
             />
           </div>
           
           <div>
-            <Label htmlFor="location">Location</Label>
+            <Label htmlFor="location" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Location</Label>
             <Input
               id="location"
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               required
+              placeholder="Chennai"
+              className="border-0 border-b-2 border-dotted border-blue-300 dark:border-blue-700 rounded-none focus:border-blue-500 bg-transparent px-0 pb-2"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-6">
             <div>
-              <Label htmlFor="mobile">Mobile Number</Label>
+              <Label htmlFor="phone" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Mobile Number</Label>
               <Input
-                id="mobile"
-                value={formData.mobile}
-                onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
+                id="phone"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="90347 59099"
+                className="border-0 border-b-2 border-dotted border-blue-300 dark:border-blue-700 rounded-none focus:border-blue-500 bg-transparent px-0 pb-2"
               />
             </div>
             <div>
-              <Label htmlFor="whatsapp">WhatsApp No</Label>
+              <Label htmlFor="whatsapp" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">WhatsApp No</Label>
               <Input
                 id="whatsapp"
                 value={formData.whatsapp}
                 onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                placeholder="90347 59099"
+                className="border-0 border-b-2 border-dotted border-blue-300 dark:border-blue-700 rounded-none focus:border-blue-500 bg-transparent px-0 pb-2"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-6">
             <div>
-              <Label htmlFor="primaryEmail">Primary Email (Read Only)</Label>
+              <Label htmlFor="email" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Primary Email (Read Only)</Label>
               <Input
-                id="primaryEmail"
+                id="email"
                 type="email"
-                value={formData.primaryEmail}
+                value={formData.email}
                 readOnly
                 disabled
-                className="bg-gray-100 dark:bg-gray-700 cursor-not-allowed"
+                className="border-0 border-b-2 border-dotted border-blue-300 dark:border-blue-700 rounded-none bg-gray-100 dark:bg-gray-700 cursor-not-allowed px-0 pb-2 opacity-60"
               />
             </div>
             <div>
-              <Label htmlFor="secondaryEmail">Secondary Email</Label>
+              <Label htmlFor="secondaryEmail" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Secondary Email</Label>
               <Input
                 id="secondaryEmail"
                 type="email"
                 value={formData.secondaryEmail}
                 onChange={(e) => setFormData({ ...formData, secondaryEmail: e.target.value })}
+                placeholder="mathew.and@gmail.com"
+                className="border-0 border-b-2 border-dotted border-blue-300 dark:border-blue-700 rounded-none focus:border-blue-500 bg-transparent px-0 pb-2"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-6">
             <div>
-              <Label htmlFor="currentLocation">Current Location</Label>
+              <Label htmlFor="currentLocation" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Current Location</Label>
               <Input
                 id="currentLocation"
                 value={formData.currentLocation}
                 onChange={(e) => setFormData({ ...formData, currentLocation: e.target.value })}
+                placeholder="Chennai."
+                className="border-0 border-b-2 border-dotted border-blue-300 dark:border-blue-700 rounded-none focus:border-blue-500 bg-transparent px-0 pb-2"
               />
             </div>
             <div>
-              <Label htmlFor="preferredLocation">Preferred Location</Label>
+              <Label htmlFor="preferredLocation" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Preferred Location</Label>
               <Input
                 id="preferredLocation"
                 value={formData.preferredLocation}
                 onChange={(e) => setFormData({ ...formData, preferredLocation: e.target.value })}
+                placeholder="Bengaluru"
+                className="border-0 border-b-2 border-dotted border-blue-300 dark:border-blue-700 rounded-none focus:border-blue-500 bg-transparent px-0 pb-2"
               />
             </div>
           </div>
 
           <div>
-            <Label htmlFor="dateOfBirth">Date of Birth</Label>
+            <Label htmlFor="dateOfBirth" className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Date of Birth</Label>
             <Input
               id="dateOfBirth"
               type="date"
               value={formData.dateOfBirth}
               onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+              className="border-0 border-b-2 border-dotted border-blue-300 dark:border-blue-700 rounded-none focus:border-blue-500 bg-transparent px-0 pb-2"
             />
           </div>
 

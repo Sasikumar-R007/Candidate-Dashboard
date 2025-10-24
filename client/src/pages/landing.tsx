@@ -99,7 +99,7 @@ export default function Landing() {
 
         {/* Hero Heading */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-semibold text-gray-900 dark:text-white leading-tight mb-4 max-w-4xl mx-auto">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white leading-tight mb-4 max-w-4xl mx-auto" style={{fontFamily: 'Poppins, sans-serif'}}>
             One Platform—Transparent Job Journeys for Candidates, Powerful Hiring Metrics for Employers
           </h1>
           

@@ -41,72 +41,72 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
   ];
 
   const renderAboutYou = () => (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">About you</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-800 p-8">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">About you</h2>
         <Button 
           variant="outline" 
           size="sm" 
-          className="bg-[#1e3a5f] text-white hover:bg-[#2d4a6f]"
+          className="bg-[#1e3a5f] text-white hover:bg-[#2d4a6f] rounded-md"
           data-testid="button-edit-about-you"
           onClick={() => setShowBasicInfoModal(true)}
         >
-          <Edit className="w-4 h-4 mr-1" />
+          <Edit className="w-4 h-4 mr-2" />
           Edit
         </Button>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-x-8 gap-y-6">
         <div>
-          <label className="text-sm text-gray-600 dark:text-gray-400">First Name</label>
-          <p className="text-base text-gray-900 dark:text-white mt-1" data-testid="text-first-name">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">First Name</label>
+          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-first-name">
             {profile.firstName || 'Mathew'}
           </p>
         </div>
         <div>
-          <label className="text-sm text-gray-600 dark:text-gray-400">Last Name</label>
-          <p className="text-base text-gray-900 dark:text-white mt-1" data-testid="text-last-name">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Last Name</label>
+          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-last-name">
             {profile.lastName || 'Anderson'}
           </p>
         </div>
         <div>
-          <label className="text-sm text-gray-600 dark:text-gray-400">Mobile Number</label>
-          <p className="text-base text-gray-900 dark:text-white mt-1" data-testid="text-mobile">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Mobile Number</label>
+          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-mobile">
             {profile.phone || '90347 59099'}
           </p>
         </div>
         <div>
-          <label className="text-sm text-gray-600 dark:text-gray-400">WhatsApp No</label>
-          <p className="text-base text-gray-900 dark:text-white mt-1" data-testid="text-whatsapp">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">WhatsApp No</label>
+          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-whatsapp">
             {profile.whatsapp || '90347 59099'}
           </p>
         </div>
         <div>
-          <label className="text-sm text-gray-600 dark:text-gray-400">Primary Email</label>
-          <p className="text-base text-gray-900 dark:text-white mt-1" data-testid="text-primary-email">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Primary Email</label>
+          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-primary-email">
             {profile.email || 'anderson123@gmail.com'}
           </p>
         </div>
         <div>
-          <label className="text-sm text-gray-600 dark:text-gray-400">Secondary Email</label>
-          <p className="text-base text-gray-900 dark:text-white mt-1" data-testid="text-secondary-email">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Secondary Email</label>
+          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-secondary-email">
             {profile.secondaryEmail || 'matthew.and@gmail.com'}
           </p>
         </div>
         <div>
-          <label className="text-sm text-gray-600 dark:text-gray-400">Current Location</label>
-          <p className="text-base text-gray-900 dark:text-white mt-1" data-testid="text-current-location">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Current Location</label>
+          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-current-location">
             {profile.currentLocation || 'Chennai.'}
           </p>
         </div>
         <div>
-          <label className="text-sm text-gray-600 dark:text-gray-400">Preferred Location</label>
-          <p className="text-base text-gray-900 dark:text-white mt-1" data-testid="text-preferred-location">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Preferred Location</label>
+          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-preferred-location">
             {profile.preferredLocation || 'Bengaluru'}
           </p>
         </div>
         <div className="col-span-2">
-          <label className="text-sm text-gray-600 dark:text-gray-400">Date of Birth</label>
-          <p className="text-base text-gray-900 dark:text-white mt-1" data-testid="text-dob">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Date of Birth</label>
+          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-dob">
             {profile.dateOfBirth || '8-May-2000'}
           </p>
         </div>
@@ -115,36 +115,36 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
   );
 
   const renderOnlinePresence = () => (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 mt-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Online Presence</h2>
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-800 p-8 mt-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Online Presence</h2>
         <Button 
           variant="outline" 
           size="sm" 
-          className="bg-[#1e3a5f] text-white hover:bg-[#2d4a6f]"
+          className="bg-[#1e3a5f] text-white hover:bg-[#2d4a6f] rounded-md"
           data-testid="button-edit-online-presence"
           onClick={() => setShowOnlinePresenceModal(true)}
         >
-          <Edit className="w-4 h-4 mr-1" />
+          <Edit className="w-4 h-4 mr-2" />
           Edit
         </Button>
       </div>
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div>
-          <label className="text-sm text-gray-600 dark:text-gray-400">Portfolio</label>
-          <p className="text-base text-blue-600 dark:text-blue-400 mt-1" data-testid="text-portfolio">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Portfolio</label>
+          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-portfolio">
             {profile.portfolio || profile.portfolioUrl || 'https://www.yourwork.com'}
           </p>
         </div>
         <div>
-          <label className="text-sm text-gray-600 dark:text-gray-400">LinkedIn</label>
-          <p className="text-base text-blue-600 dark:text-blue-400 mt-1" data-testid="text-linkedin">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">LinkedIn</label>
+          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-linkedin">
             {profile.linkedinUrl || 'https://www.linkedin.com/in/Mathew Anderson'}
           </p>
         </div>
         <div>
-          <label className="text-sm text-gray-600 dark:text-gray-400">Website</label>
-          <p className="text-base text-blue-600 dark:text-blue-400 mt-1" data-testid="text-website">
+          <label className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2 block">Website</label>
+          <p className="text-base text-gray-900 dark:text-white pb-2 border-b-2 border-dotted border-blue-300 dark:border-blue-700" data-testid="text-website">
             {profile.websiteUrl || 'https://www.mynetwork.com'}
           </p>
         </div>
@@ -446,18 +446,21 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
     <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
       {/* Profile Header */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6">
-          <div className="flex items-start gap-6">
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-8">
+          <div className="flex items-start gap-8">
             <div className="relative group">
-              <Avatar className="w-32 h-32 border-4 border-cyan-400 cursor-pointer" onClick={() => setShowProfilePictureModal(true)}>
-                <AvatarImage src={profile.profilePicture || undefined} />
-                <AvatarFallback className="bg-gradient-to-br from-cyan-400 to-blue-500 text-white text-2xl">
-                  {profile.firstName?.[0]}{profile.lastName?.[0]}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-cyan-400 to-blue-600 rounded-full"></div>
+                <Avatar className="relative w-36 h-36 border-4 border-white dark:border-gray-800 cursor-pointer m-1" onClick={() => setShowProfilePictureModal(true)}>
+                  <AvatarImage src={profile.profilePicture || undefined} />
+                  <AvatarFallback className="bg-gradient-to-br from-cyan-400 to-blue-500 text-white text-3xl">
+                    {profile.firstName?.[0]}{profile.lastName?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
               <button
                 onClick={() => setShowProfilePictureModal(true)}
-                className="absolute bottom-0 right-0 bg-cyan-500 hover:bg-cyan-600 text-white rounded-full p-2 shadow-lg transition-colors"
+                className="absolute bottom-2 right-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-full p-2 shadow-lg transition-colors"
                 data-testid="button-change-profile-picture"
               >
                 <Camera className="w-5 h-5" />
@@ -465,54 +468,71 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
             </div>
             
             <div className="flex-1">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1" data-testid="text-profile-name">
-                {profile.firstName && profile.lastName ? `${profile.firstName} ${profile.lastName}` : 'Candidate'}
-              </h1>
-              <p className="text-lg text-gray-600 dark:text-gray-400 mb-4" data-testid="text-profile-title">
+              <div className="flex items-center justify-between mb-3">
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-profile-name">
+                  {profile.firstName && profile.lastName ? `${profile.firstName} ${profile.lastName}` : 'S. Brunce Mars'}
+                </h1>
+                <div className="text-right">
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Profile Completion</div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-24 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-500" style={{width: '75%'}}></div>
+                    </div>
+                    <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">75%</span>
+                  </div>
+                </div>
+              </div>
+              <p className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-6" data-testid="text-profile-title">
                 {profile.currentRole || profile.title || 'Cloud Engineer'}
               </p>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                  <MapPin className="w-4 h-4 text-cyan-500" />
-                  <span className="text-sm" data-testid="text-header-location">
+              <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+                <div className="flex items-center gap-3">
+                  <MapPin className="w-5 h-5 text-cyan-500 flex-shrink-0" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300" data-testid="text-header-location">
                     {profile.currentLocation || profile.location || 'Chennai.'}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                  <Phone className="w-4 h-4 text-cyan-500" />
-                  <span className="text-sm" data-testid="text-header-phone">
+                <div className="flex items-center gap-3">
+                  <Phone className="w-5 h-5 text-cyan-500 flex-shrink-0" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300" data-testid="text-header-phone">
                     {profile.phone || '90347 59099'}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                  <LinkIcon className="w-4 h-4 text-cyan-500" />
-                  <span className="text-sm" data-testid="text-header-institute">
+                <div className="flex items-center gap-3">
+                  <LinkIcon className="w-5 h-5 text-cyan-500 flex-shrink-0" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300" data-testid="text-header-institute">
                     {profile.collegeName || 'National Institute of Technology'}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                  <Mail className="w-4 h-4 text-cyan-500" />
-                  <span className="text-sm" data-testid="text-header-email">
-                    {profile.email || 'candidate@example.com'}
+                <div className="flex items-center gap-3">
+                  <Mail className="w-5 h-5 text-cyan-500 flex-shrink-0" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300" data-testid="text-header-email">
+                    {profile.email || 'mathew.and@gmail.com'}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   {profile.gender ? (
-                    <span className="text-sm text-gray-700 dark:text-gray-300">{profile.gender}</span>
+                    <>
+                      <div className="w-5 h-5 flex-shrink-0"></div>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{profile.gender}</span>
+                    </>
                   ) : (
-                    <button 
-                      onClick={() => setShowGenderModal(true)}
-                      className="text-sm text-cyan-600 dark:text-cyan-400 hover:underline" 
-                      data-testid="button-add-gender"
-                    >
-                      Add Gender
-                    </button>
+                    <>
+                      <div className="w-5 h-5 flex-shrink-0"></div>
+                      <button 
+                        onClick={() => setShowGenderModal(true)}
+                        className="text-sm text-cyan-600 dark:text-cyan-400 hover:underline" 
+                        data-testid="button-add-gender"
+                      >
+                        Add Gender
+                      </button>
+                    </>
                   )}
                 </div>
-                <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
-                  <MessageCircle className="w-4 h-4 text-cyan-500" />
-                  <span className="text-sm" data-testid="text-header-whatsapp">
+                <div className="flex items-center gap-3">
+                  <MessageCircle className="w-5 h-5 text-cyan-500 flex-shrink-0" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300" data-testid="text-header-whatsapp">
                     {profile.whatsapp || profile.phone || '90347 59099'}
                   </span>
                 </div>
@@ -524,18 +544,18 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
         {/* Main Content Area */}
         <div className="flex flex-1 overflow-hidden">
           {/* Left Sidebar Navigation */}
-          <div className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
-            <div className="p-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Edit & View</h2>
-              <nav className="space-y-1">
-                {menuItems.map((item) => (
+          <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
+            <div className="p-6">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 pb-3 border-b border-gray-200 dark:border-gray-700">Edit & View</h2>
+              <nav className="space-y-2">
+                {menuItems.map((item, index) => (
                   <button
                     key={item.id}
                     onClick={() => setActiveSection(item.id)}
-                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                    className={`w-full text-left px-4 py-3 transition-all relative ${
                       activeSection === item.id
-                        ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white font-medium'
-                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        ? 'text-blue-600 dark:text-blue-400 font-medium border-l-4 border-blue-600 dark:border-blue-400 bg-blue-50 dark:bg-blue-900/20'
+                        : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 border-l-4 border-transparent'
                     }`}
                     data-testid={`button-section-${item.id}`}
                   >
