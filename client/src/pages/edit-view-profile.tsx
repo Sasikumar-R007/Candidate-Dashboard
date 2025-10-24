@@ -14,6 +14,7 @@ import type { Profile } from '@shared/schema';
 import EditBasicInfoModal from '@/components/dashboard/modals/edit-basic-info-modal';
 import EditEducationModal from '@/components/dashboard/modals/edit-education-modal';
 import EditJobDetailsModal from '@/components/dashboard/modals/edit-job-details-modal';
+import EditStrengthsModal from '@/components/dashboard/modals/edit-strengths-modal';
 
 interface EditViewProfileProps {
   profile: Profile;
@@ -586,7 +587,7 @@ export default function EditViewProfile({ profile }: EditViewProfileProps) {
       )}
       
       {showStrengthsModal && (
-        <EditEducationModal 
+        <EditStrengthsModal 
           open={showStrengthsModal} 
           onOpenChange={setShowStrengthsModal} 
           profile={profile} 
