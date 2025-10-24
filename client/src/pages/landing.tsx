@@ -1,5 +1,6 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { Upload, Target, MessageCircle, Search, Briefcase, Mail, Phone, MapPin } from "lucide-react";
 import candidateImage from "@assets/image_1761276490828.png";
 import employerImage from "@assets/image_1761276502238.png";
 import logoImage from "@assets/image_1761276742670.png";
@@ -106,6 +107,19 @@ export default function Landing() {
           <p className="text-lg md:text-xl text-gray-600 dark:text-gray-300 mb-8">
             Candidates See Progress, Employers See Performance—All on StaffOS
           </p>
+          
+          {/* Get Early Access CTA - Moved to Top */}
+          <div className="mb-8">
+            <Link href="/dashboard-selection" data-testid="link-get-early-access">
+              <Button 
+                size="lg" 
+                className="bg-gray-900 hover:bg-gray-800 text-white px-12 py-6 text-lg font-semibold rounded shadow-2xl"
+                data-testid="button-get-early-access"
+              >
+                Get Early Access
+              </Button>
+            </Link>
+          </div>
           
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
@@ -283,21 +297,308 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* Get Early Access CTA */}
-        <div className="text-center py-12 relative">
-          {/* Floating gradient background elements */}
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full opacity-20 blur-3xl"></div>
-          
-          <Link href="/dashboard-selection" data-testid="link-get-early-access">
-            <Button 
-              size="lg" 
-              className="relative bg-gray-900 hover:bg-gray-800 text-white px-12 py-6 text-lg font-semibold rounded shadow-2xl"
-              data-testid="button-get-early-access"
-            >
-              Get Early Access
-            </Button>
-          </Link>
-        </div>
+        {/* Section 1: Your Job Hunt, Simplified (For Candidates) */}
+        <section className="py-16 max-w-6xl mx-auto" id="job-hunt">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              Your Job Hunt, Simplified.
+            </h2>
+            <p className="text-lg text-gray-600 dark:text-gray-300">
+              From resumes to recruiter chats, StaffOS makes every step smarter, faster, and tailored for you.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Upload Once, Shine Everywhere */}
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-lg" data-testid="card-upload-once">
+              <div className="bg-orange-100 dark:bg-orange-900 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+                <Upload className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                Upload Once, Shine Everywhere
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                One profile syncs into a polished, job-ready profile.
+              </p>
+            </div>
+
+            {/* Your Career HQ */}
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-lg" data-testid="card-career-hq">
+              <div className="bg-red-100 dark:bg-red-900 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+                <Target className="w-6 h-6 text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                Your Career HQ
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                One dashboard to track jobs, feedback, and progress.
+              </p>
+            </div>
+
+            {/* No Waiting, Just Chatting */}
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-lg" data-testid="card-no-waiting">
+              <div className="bg-orange-100 dark:bg-orange-900 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+                <MessageCircle className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                No Waiting, Just Chatting
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Talk to recruiters in real-time and get on-the-spot responses.
+              </p>
+            </div>
+
+            {/* Smarter Job Hunt */}
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-lg" data-testid="card-smarter-hunt">
+              <div className="bg-orange-100 dark:bg-orange-900 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+                <Search className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                Smarter Job Hunt
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                See how your data-driving perform compared to the market.
+              </p>
+            </div>
+
+            {/* Jobs That Choose You */}
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-lg" data-testid="card-jobs-choose-you">
+              <div className="bg-orange-100 dark:bg-orange-900 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+                <Briefcase className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                Jobs That Choose You
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-300">
+                Get matched with roles that fit your skills and career goals.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 2: Your Hiring, Made Transparent (For Employers) */}
+        <section className="py-16 max-w-6xl mx-auto" id="hiring-transparent">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              Your Hiring, Made Transparent.
+            </h2>
+            <p className="text-lg text-gray-600 dark:text-gray-300">
+              With StaffOS, you don't just outsource hiring—you gain real-time visibility & data-driven insights
+            </p>
+          </div>
+
+          <div className="bg-blue-50/80 dark:bg-blue-900/20 backdrop-blur-sm rounded-3xl p-8 md:p-12 border border-blue-200 dark:border-blue-700 shadow-xl">
+            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">
+              Full Visibility,<br />Zero Blind Spots
+            </h3>
+            <p className="text-gray-700 dark:text-gray-300 mb-8">
+              With StaffOS, you don't just outsource hiring—you gain real-time visibility & data-driven insights
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Role Assigned */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md text-center" data-testid="card-role-assigned">
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Roll Assigned</div>
+                <div className="text-4xl font-bold text-blue-600 dark:text-blue-400">15</div>
+              </div>
+
+              {/* Total Positions */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md text-center" data-testid="card-total-positions">
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Total Positions</div>
+                <div className="text-4xl font-bold text-blue-600 dark:text-blue-400">06</div>
+              </div>
+
+              {/* Paused Role */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md text-center" data-testid="card-paused-role">
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Paused Role</div>
+                <div className="text-4xl font-bold text-blue-600 dark:text-blue-400">02</div>
+              </div>
+
+              {/* Active Roles */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md text-center" data-testid="card-active-roles">
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Active Roles</div>
+                <div className="text-4xl font-bold text-blue-600 dark:text-blue-400">05</div>
+              </div>
+
+              {/* Withdrawn Role */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md text-center" data-testid="card-withdrawn-role">
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Withdrawn Role</div>
+                <div className="text-4xl font-bold text-blue-600 dark:text-blue-400">01</div>
+              </div>
+
+              {/* Successful Hires */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md text-center" data-testid="card-successful-hires">
+                <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">Successful Hires</div>
+                <div className="text-4xl font-bold text-blue-600 dark:text-blue-400">03</div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+              {/* Informed Hiring Decisions */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md" data-testid="card-informed-decisions">
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Informed Hiring Decisions</h4>
+                <div className="h-32 bg-gradient-to-t from-blue-200 to-blue-400 dark:from-blue-900 dark:to-blue-700 rounded flex items-end justify-around p-4">
+                  <div className="w-8 h-16 bg-blue-500 dark:bg-blue-600 rounded"></div>
+                  <div className="w-8 h-24 bg-blue-600 dark:bg-blue-500 rounded"></div>
+                  <div className="w-8 h-20 bg-blue-500 dark:bg-blue-600 rounded"></div>
+                </div>
+              </div>
+
+              {/* Fact-based Intelligence */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-md" data-testid="card-fact-based-intelligence">
+                <h4 className="font-semibold text-gray-900 dark:text-white mb-4">Fact-based Intelligence</h4>
+                <div className="h-32 bg-gradient-to-br from-yellow-200 to-yellow-400 dark:from-yellow-900 dark:to-yellow-700 rounded flex items-center justify-center">
+                  <div className="text-4xl">📊</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 3: Why StaffOS */}
+        <section className="py-16 max-w-6xl mx-auto" id="about">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+            {/* Left Column - Text Content */}
+            <div className="space-y-6">
+              <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-400">StaffOS</h2>
+              <h3 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+                StaffOS: The Hiring Operating System from ScalingTheory
+              </h3>
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                At StaffOS, we believe the future of hiring should be transparent, data-driven, and human-centric. Traditional recruitment often leaves candidates in the dark about their applications and forces employers to navigate fragmented tools with little insight. We set out to change that.
+              </p>
+
+              <div className="space-y-4">
+                <h4 className="text-xl font-semibold text-gray-900 dark:text-white">Why StaffOS</h4>
+                
+                <details className="border-b border-gray-200 dark:border-gray-700 pb-4" data-testid="details-transparency">
+                  <summary className="cursor-pointer text-lg font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400">
+                    Transparency
+                  </summary>
+                  <p className="mt-2 text-gray-600 dark:text-gray-400 pl-4">
+                    Complete visibility into the hiring process for both candidates and employers.
+                  </p>
+                </details>
+
+                <details className="border-b border-gray-200 dark:border-gray-700 pb-4" data-testid="details-efficiency">
+                  <summary className="cursor-pointer text-lg font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400">
+                    Efficiency
+                  </summary>
+                  <p className="mt-2 text-gray-600 dark:text-gray-400 pl-4">
+                    Streamlined workflows that save time and reduce hiring cycles.
+                  </p>
+                </details>
+
+                <details className="border-b border-gray-200 dark:border-gray-700 pb-4" data-testid="details-metrics">
+                  <summary className="cursor-pointer text-lg font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400">
+                    Metrics
+                  </summary>
+                  <p className="mt-2 text-gray-600 dark:text-gray-400 pl-4">
+                    Data-driven insights to make informed hiring decisions.
+                  </p>
+                </details>
+
+                <details className="border-b border-gray-200 dark:border-gray-700 pb-4" data-testid="details-insights">
+                  <summary className="cursor-pointer text-lg font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400">
+                    Insights
+                  </summary>
+                  <p className="mt-2 text-gray-600 dark:text-gray-400 pl-4">
+                    AI-powered analytics that help you understand market trends and candidate behavior.
+                  </p>
+                </details>
+              </div>
+            </div>
+
+            {/* Right Column - Image/Visual */}
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-200 dark:border-gray-700 shadow-xl">
+              <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 rounded-xl flex items-center justify-center">
+                <div className="text-center p-8">
+                  <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Platform Overview</h4>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    One unified platform for transparent hiring
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 4: Contact Us */}
+        <section className="py-16 max-w-6xl mx-auto" id="contact">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            {/* Left Column - Contact Info */}
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-xl">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Contact Us</h2>
+              <p className="text-gray-600 dark:text-gray-300 mb-8">
+                We'd love to hear from you! Reach out with any questions, feedback, or support needs.
+              </p>
+
+              <div className="space-y-4">
+                <div className="flex items-center space-x-3" data-testid="contact-phone">
+                  <Phone className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <span className="text-gray-700 dark:text-gray-300">99003 28009</span>
+                </div>
+
+                <div className="flex items-center space-x-3" data-testid="contact-email">
+                  <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <span className="text-gray-700 dark:text-gray-300">Vikna@scalingtheory.com</span>
+                </div>
+
+                <div className="flex items-start space-x-3" data-testid="contact-address">
+                  <MapPin className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-1" />
+                  <span className="text-gray-700 dark:text-gray-300">
+                    Laksnmipuram 2nd cross Rd,<br />
+                    Trichy, Tamil Nadu
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column - Contact Form */}
+            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-8 border border-gray-200 dark:border-gray-700 shadow-xl">
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Connect With Us</h3>
+              
+              <form className="space-y-4" data-testid="form-contact">
+                <div className="grid grid-cols-2 gap-4">
+                  <input 
+                    type="text" 
+                    placeholder="Your Name" 
+                    className="px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    data-testid="input-name"
+                  />
+                  <input 
+                    type="email" 
+                    placeholder="Your Email" 
+                    className="px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    data-testid="input-email"
+                  />
+                </div>
+
+                <input 
+                  type="text" 
+                  placeholder="Subject" 
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  data-testid="input-subject"
+                />
+
+                <textarea 
+                  placeholder="Message" 
+                  rows={4}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  data-testid="textarea-message"
+                ></textarea>
+
+                <Button 
+                  type="submit" 
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold"
+                  data-testid="button-send"
+                >
+                  Send
+                </Button>
+              </form>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
   );
