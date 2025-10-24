@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Users, FileText, GitBranch, BarChart3, Database, Trophy, FileBarChart, Settings, ChevronRight, User, LogOut } from "lucide-react";
+import { Users, FileText, GitBranch, BarChart3, Database, Trophy, FileBarChart, Settings, ChevronRight, User, LogOut, Building2 } from "lucide-react";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -30,6 +30,7 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
     { id: 'master-data', label: 'Master Data', icon: Database },
     { id: 'performance', label: 'Performance', icon: Trophy },
     { id: 'report', label: 'Report', icon: FileBarChart },
+    { id: 'client-settings', label: 'Client Settings', icon: Building2 },
     { id: 'user-management', label: 'User Management', icon: Settings }
   ];
 
