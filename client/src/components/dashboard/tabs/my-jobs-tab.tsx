@@ -14,6 +14,7 @@ import { MoreHorizontal, MapPin, Flame, Eye, Archive } from 'lucide-react';
 import { useSavedJobs, useSaveJob, useRemoveSavedJob } from "@/hooks/use-saved-jobs";
 import { useToast } from "@/hooks/use-toast";
 import type { JobApplication } from '@shared/schema';
+import CandidateMetrics from '@/components/dashboard/candidate-metrics';
 
 interface MyJobsTabProps {
   className?: string;
@@ -309,9 +310,11 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
   }
 
   return (
-    <div className={`space-y-8 ${className}`}>
-      {/* Applied Jobs Section */}
-      <div className="bg-white rounded-lg p-6 m-3 shadow-sm">
+    <div className={`flex gap-6 p-6 ${className}`}>
+      {/* Left Column - Applied Jobs and Job Suggestions */}
+      <div className="flex-1 space-y-8">
+        {/* Applied Jobs Section */}
+        <div className="bg-white rounded-lg p-6 shadow-sm">
         <h2 className="text-xl font-semibold text-gray-800 mb-6">Applied Jobs</h2>
         
         <div className="overflow-x-auto">
@@ -388,8 +391,8 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
         )}
       </div>
 
-      {/* Job Suggestions Section */}
-      <div className="bg-white rounded-lg p-6 m-3 shadow-sm">
+        {/* Job Suggestions Section */}
+        <div className="bg-white rounded-lg p-6 shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-xl font-semibold text-gray-800">Job Suggestions</h2>
         </div>
@@ -518,8 +521,13 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
             See all
           </Button>
         </div>
+        </div>
 
+      </div>
 
+      {/* Right Column - Candidate Metrics */}
+      <div className="w-80 flex-shrink-0">
+        <CandidateMetrics />
       </div>
 
       {/* Job Details Modal - Exact copy of JobBoardTab modal */}

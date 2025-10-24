@@ -145,31 +145,6 @@ export default function Dashboard() {
       case 'job-board':
         return (
           <div className="flex flex-col flex-1 h-full">
-            <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 relative z-30 sticky top-0">
-              <div className="flex items-center pl-4">
-                <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                  Job Board
-                </h1>
-              </div>
-              <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => setShowChat(true)}
-                  className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                  data-testid="button-help"
-                >
-                  <HelpCircle size={16} />
-                  <span className="text-sm">Help</span>
-                </button>
-                <ProfileMenu
-                  userName={candidate?.fullName || "Candidate"}
-                  userRole="Candidate"
-                  logoutEndpoint="/api/auth/candidate-logout"
-                  profilePicture={(candidate as any)?.profilePicture}
-                  showChatInDropdown={false}
-                  onChatClick={() => setShowChat(true)}
-                />
-              </div>
-            </header>
             <div className="flex-1 overflow-y-auto">
               <JobBoardTab 
                 onNavigateToJobPreferences={() => setSidebarTab('job-preferences')}
