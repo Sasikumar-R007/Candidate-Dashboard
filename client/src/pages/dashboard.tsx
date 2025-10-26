@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link, useLocation } from 'wouter';
 import Sidebar from '@/components/dashboard/sidebar';
 import ProfileMenu from '@/components/dashboard/profile-menu';
 import TabNavigation from '@/components/dashboard/tab-navigation';
@@ -11,12 +12,11 @@ import EditViewProfile from '@/pages/edit-view-profile';
 import { useProfile } from '@/hooks/use-profile';
 import { MessageCircle, HelpCircle } from 'lucide-react';
 import { useCandidateAuth } from '@/contexts/auth-context';
-import { ChatDock } from '@/components/chat/chat-dock';
 
 export default function Dashboard() {
   const [sidebarTab, setSidebarTab] = useState('my-jobs');
   const [activeTab, setActiveTab] = useState('my-jobs');
-  const [showChat, setShowChat] = useState(false);
+  const [, setLocation] = useLocation();
   const { data: profile, isLoading } = useProfile();
   const candidate = useCandidateAuth();
 
@@ -52,21 +52,22 @@ export default function Dashboard() {
                 </h1>
               </div>
               <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => setShowChat(true)}
-                  className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                  data-testid="button-help"
-                >
-                  <HelpCircle size={16} />
-                  <span className="text-sm">Help</span>
-                </button>
+                <Link href="/chat">
+                  <button 
+                    className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                    data-testid="button-help"
+                  >
+                    <HelpCircle size={16} />
+                    <span className="text-sm">Help</span>
+                  </button>
+                </Link>
                 <ProfileMenu
                   userName={candidate?.fullName || "Candidate"}
                   userRole="Candidate"
                   logoutEndpoint="/api/auth/candidate-logout"
                   profilePicture={(candidate as any)?.profilePicture}
                   showChatInDropdown={false}
-                  onChatClick={() => setShowChat(true)}
+                  onChatClick={() => setLocation('/chat')}
                 />
               </div>
             </header>
@@ -86,21 +87,22 @@ export default function Dashboard() {
                 </h1>
               </div>
               <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => setShowChat(true)}
-                  className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                  data-testid="button-help"
-                >
-                  <HelpCircle size={16} />
-                  <span className="text-sm">Help</span>
-                </button>
+                <Link href="/chat">
+                  <button 
+                    className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                    data-testid="button-help"
+                  >
+                    <HelpCircle size={16} />
+                    <span className="text-sm">Help</span>
+                  </button>
+                </Link>
                 <ProfileMenu
                   userName={candidate?.fullName || "Candidate"}
                   userRole="Candidate"
                   logoutEndpoint="/api/auth/candidate-logout"
                   profilePicture={(candidate as any)?.profilePicture}
                   showChatInDropdown={false}
-                  onChatClick={() => setShowChat(true)}
+                  onChatClick={() => setLocation('/chat')}
                 />
               </div>
             </header>
@@ -119,21 +121,22 @@ export default function Dashboard() {
                 </h1>
               </div>
               <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => setShowChat(true)}
-                  className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                  data-testid="button-help"
-                >
-                  <HelpCircle size={16} />
-                  <span className="text-sm">Help</span>
-                </button>
+                <Link href="/chat">
+                  <button 
+                    className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                    data-testid="button-help"
+                  >
+                    <HelpCircle size={16} />
+                    <span className="text-sm">Help</span>
+                  </button>
+                </Link>
                 <ProfileMenu
                   userName={candidate?.fullName || "Candidate"}
                   userRole="Candidate"
                   logoutEndpoint="/api/auth/candidate-logout"
                   profilePicture={(candidate as any)?.profilePicture}
                   showChatInDropdown={false}
-                  onChatClick={() => setShowChat(true)}
+                  onChatClick={() => setLocation('/chat')}
                 />
               </div>
             </header>
@@ -163,21 +166,22 @@ export default function Dashboard() {
                 </h1>
               </div>
               <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => setShowChat(true)}
-                  className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                  data-testid="button-help"
-                >
-                  <HelpCircle size={16} />
-                  <span className="text-sm">Help</span>
-                </button>
+                <Link href="/chat">
+                  <button 
+                    className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                    data-testid="button-help"
+                  >
+                    <HelpCircle size={16} />
+                    <span className="text-sm">Help</span>
+                  </button>
+                </Link>
                 <ProfileMenu
                   userName={candidate?.fullName || "Candidate"}
                   userRole="Candidate"
                   logoutEndpoint="/api/auth/candidate-logout"
                   profilePicture={(candidate as any)?.profilePicture}
                   showChatInDropdown={false}
-                  onChatClick={() => setShowChat(true)}
+                  onChatClick={() => setLocation('/chat')}
                 />
               </div>
             </header>
@@ -209,21 +213,15 @@ export default function Dashboard() {
         </div>
         
         {/* Floating Chat Button */}
-        <button
-          onClick={() => setShowChat(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 z-40"
-          data-testid="button-floating-chat"
-          aria-label="Open Chat"
-        >
-          <MessageCircle size={24} />
-        </button>
-
-        {/* Chat Dock */}
-        <ChatDock 
-          open={showChat} 
-          onClose={() => setShowChat(false)}
-          userName="Support Team"
-        />
+        <Link href="/chat">
+          <button
+            className="fixed bottom-6 right-6 w-14 h-14 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 z-40"
+            data-testid="button-floating-chat"
+            aria-label="Open Chat"
+          >
+            <MessageCircle size={24} />
+          </button>
+        </Link>
       </div>
     </div>
   );
