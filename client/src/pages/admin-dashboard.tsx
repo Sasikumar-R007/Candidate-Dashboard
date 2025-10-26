@@ -346,6 +346,22 @@ function ImpactMetricsEditor() {
     queryKey: ['/api/admin/impact-metrics'],
   });
 
+  // Create mutation for initial metrics
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await fetch('/api/admin/impact-metrics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) throw new Error('Failed to create');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/impact-metrics'] });
+    },
+  });
+
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, field, value }: { id: string; field: string; value: number }) => {
@@ -372,13 +388,31 @@ function ImpactMetricsEditor() {
     setEditValue(currentValue.toString());
   };
 
-  const handleSave = (field: string) => {
-    if (!metrics || !metrics[0]) return;
+  const handleSave = async (field: string) => {
     const value = parseFloat(editValue);
     if (isNaN(value)) {
       toast({ title: "Error", description: "Please enter a valid number", variant: "destructive" });
       return;
     }
+
+    // If no metrics exist, create one first
+    if (!metrics || metrics.length === 0) {
+      const defaultMetrics = {
+        speedToHire: 15,
+        revenueImpactOfDelay: 75000,
+        clientNps: 60,
+        candidateNps: 70,
+        feedbackTurnAround: 2,
+        firstYearRetentionRate: 90,
+        fulfillmentRate: 20,
+        revenueRecovered: 1.5,
+        [field]: value, // Set the edited field
+      };
+      await createMutation.mutateAsync(defaultMetrics);
+      setEditingMetric(null);
+      return;
+    }
+
     updateMutation.mutate({ id: metrics[0].id, field, value });
   };
 
