@@ -301,6 +301,29 @@ export const notifications = pgTable("notifications", {
   readAt: text("read_at"),
 });
 
+export const impactMetrics = pgTable("impact_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  clientId: text("client_id"), // Optional - can be null for global metrics
+  speedToHireValue: text("speed_to_hire_value").notNull().default("15"),
+  speedToHireDescription: text("speed_to_hire_description").notNull().default("Days faster*"),
+  revenueImpactOfDelay: text("revenue_impact_of_delay").notNull().default("75,000"),
+  revenueImpactDescription: text("revenue_impact_description").notNull().default("Lost per Role*"),
+  clientNps: text("client_nps").notNull().default("+60"),
+  clientNpsDescription: text("client_nps_description").notNull().default("Net Promoter Score*"),
+  candidateNps: text("candidate_nps").notNull().default("+70"),
+  candidateNpsDescription: text("candidate_nps_description").notNull().default("Net Promoter Score*"),
+  feedbackTurnAround: text("feedback_turn_around").notNull().default("2"),
+  feedbackTurnAroundUnit: text("feedback_turn_around_unit").notNull().default("days"),
+  feedbackTurnAroundNote: text("feedback_turn_around_note").notNull().default("Industry Avg. 5 days*"),
+  firstYearRetentionRate: text("first_year_retention_rate").notNull().default("90"),
+  firstYearRetentionRateUnit: text("first_year_retention_rate_unit").notNull().default("%"),
+  fulfillmentRate: text("fulfillment_rate").notNull().default("20"),
+  fulfillmentRateUnit: text("fulfillment_rate_unit").notNull().default("%"),
+  revenueRecovered: text("revenue_recovered").notNull().default("1.5"),
+  revenueRecoveredUnit: text("revenue_recovered_unit").notNull().default("L"),
+  revenueRecoveredDescription: text("revenue_recovered_description").notNull().default("Gained per hire*"),
+});
+
 export const clients = pgTable("clients", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clientCode: text("client_code").notNull().unique(),
@@ -420,6 +443,10 @@ export const insertClientSchema = createInsertSchema(clients).omit({
   id: true,
 });
 
+export const insertImpactMetricsSchema = createInsertSchema(impactMetrics).omit({
+  id: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
@@ -468,3 +495,5 @@ export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertClient = z.infer<typeof insertClientSchema>;
 export type Client = typeof clients.$inferSelect;
+export type InsertImpactMetrics = z.infer<typeof insertImpactMetricsSchema>;
+export type ImpactMetrics = typeof impactMetrics.$inferSelect;
