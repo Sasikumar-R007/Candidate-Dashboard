@@ -30,7 +30,9 @@ import {
   type Notification,
   type InsertNotification,
   type Client,
-  type InsertClient
+  type InsertClient,
+  type ImpactMetrics,
+  type InsertImpactMetrics
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
@@ -122,6 +124,13 @@ export interface IStorage {
   getClientByClientCode(clientCode: string): Promise<Client | undefined>;
   updateClient(id: string, updates: Partial<Client>): Promise<Client | undefined>;
   deleteClient(id: string): Promise<boolean>;
+  
+  // Impact Metrics methods
+  createImpactMetrics(metrics: InsertImpactMetrics): Promise<ImpactMetrics>;
+  getImpactMetrics(clientId?: string): Promise<ImpactMetrics | undefined>;
+  getAllImpactMetrics(): Promise<ImpactMetrics[]>;
+  updateImpactMetrics(id: string, updates: Partial<ImpactMetrics>): Promise<ImpactMetrics | undefined>;
+  deleteImpactMetrics(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {

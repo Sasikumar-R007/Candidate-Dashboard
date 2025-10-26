@@ -32,6 +32,8 @@ import {
   type InsertNotification,
   type Client,
   type InsertClient,
+  type ImpactMetrics,
+  type InsertImpactMetrics,
   users,
   profiles,
   jobPreferences,
@@ -47,7 +49,8 @@ import {
   bulkUploadJobs,
   bulkUploadFiles,
   notifications,
-  clients
+  clients,
+  impactMetrics
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
@@ -551,6 +554,40 @@ export class DatabaseStorage implements IStorage {
 
   async deleteClient(id: string): Promise<boolean> {
     const result = await db.delete(clients).where(eq(clients.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Impact Metrics methods
+  async createImpactMetrics(metrics: InsertImpactMetrics): Promise<ImpactMetrics> {
+    const [newMetrics] = await db.insert(impactMetrics).values(metrics).returning();
+    return newMetrics;
+  }
+
+  async getImpactMetrics(clientId?: string): Promise<ImpactMetrics | undefined> {
+    if (clientId) {
+      const [metrics] = await db.select().from(impactMetrics).where(eq(impactMetrics.clientId, clientId));
+      return metrics || undefined;
+    } else {
+      const [metrics] = await db.select().from(impactMetrics).limit(1);
+      return metrics || undefined;
+    }
+  }
+
+  async getAllImpactMetrics(): Promise<ImpactMetrics[]> {
+    return await db.select().from(impactMetrics);
+  }
+
+  async updateImpactMetrics(id: string, updates: Partial<ImpactMetrics>): Promise<ImpactMetrics | undefined> {
+    const [metrics] = await db
+      .update(impactMetrics)
+      .set(updates)
+      .where(eq(impactMetrics.id, id))
+      .returning();
+    return metrics || undefined;
+  }
+
+  async deleteImpactMetrics(id: string): Promise<boolean> {
+    const result = await db.delete(impactMetrics).where(eq(impactMetrics.id, id));
     return (result.rowCount ?? 0) > 0;
   }
 }
