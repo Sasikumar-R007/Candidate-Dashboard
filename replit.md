@@ -4,12 +4,22 @@ This is a dual-dashboard job portal web application featuring both candidate and
 
 **Latest Updates (October 26, 2025)**:
 
-*WhatsApp-Style Chat Page Redesign*:
+*WhatsApp-Style Chat Navigation Across All Dashboards*:
+- Updated all dashboards to use unified /chat page navigation instead of inline chat components
+- **Candidate Dashboard**: Replaced ChatDock component with Link navigation to /chat page for Help button, ProfileMenu chat option, and floating chat button
+- **Client Dashboard**: Already configured with Link navigation to /chat page (completed in previous update)
+- **Team Leader Dashboard**: Updated TeamLeaderMainSidebar to navigate to /chat when chat menu item is clicked
+- **Admin Dashboard**: No chat functionality present (no changes needed)
+- **Recruiter Dashboard**: Chat functionality exists in code but no UI trigger found (no changes needed)
+- All chat entry points across dashboards now consistently navigate to the standalone WhatsApp-style /chat page
+- Removed inline ChatDock dependencies from candidate dashboard for cleaner architecture
+- Maintained consistent navigation patterns using wouter's Link component and useLocation hook
+
+*WhatsApp-Style Chat Page (Previous Update)*:
 - Created standalone chat page at /chat with three-column WhatsApp-style layout
 - Left sidebar: User profile header (Erik Ten Hag), tabs (All/Personal/Groups), pinned messages section, and conversation list with online status indicators
 - Center chat area: Group chat interface with message bubbles, timestamps, read receipts, voice message player, media attachments (images), and message input with emoji/attachment buttons
 - Right sidebar: Group details panel with group avatar, description, link, member count (+20), and media gallery with tabs (Media/Link/Docs)
-- Updated client dashboard to navigate to new standalone chat page via Link components
 - All interactive elements include proper data-testid attributes for testing
 - Responsive three-column layout with proper spacing and visual hierarchy matching WhatsApp design patterns
 - Full navigation integration with wouter routing system
