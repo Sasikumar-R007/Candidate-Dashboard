@@ -22,6 +22,7 @@ import RecruiterNewApplications from "@/pages/recruiter-new-applications";
 import NotFound from "@/pages/not-found";
 import Archives from "@/pages/archives";
 import MasterDatabase from "@/pages/master-database";
+import ChatPage from "@/pages/chat-page";
 
 function Router() {
   return (
@@ -37,6 +38,7 @@ function Router() {
       <Route path="/recruiter" component={RecruiterDashboard} />
       <Route path="/recruiter-login-2" component={RecruiterDashboard2} />
       <Route path="/client" component={ClientDashboard} />
+      <Route path="/chat" component={ChatPage} />
       <Route path="/source-resume" component={SourceResume} />
       <Route path="/recruiter-active-jobs" component={RecruiterActiveJobs} />
       <Route path="/recruiter-new-applications" component={RecruiterNewApplications} />
