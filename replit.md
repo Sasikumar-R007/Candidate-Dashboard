@@ -2,7 +2,19 @@
 
 This is a dual-dashboard job portal web application featuring both candidate and team leader interfaces. The system provides comprehensive dashboards for job seekers to manage their profiles and for team leaders to monitor recruitment metrics, team performance, and targets. The application features a modern, responsive design with consistent styling across both dashboards and a landing page for role selection.
 
-**Latest Updates (October 17, 2025)**: 
+**Latest Updates (October 26, 2025)**:
+
+*WhatsApp-Style Chat Page Redesign*:
+- Created standalone chat page at /chat with three-column WhatsApp-style layout
+- Left sidebar: User profile header (Erik Ten Hag), tabs (All/Personal/Groups), pinned messages section, and conversation list with online status indicators
+- Center chat area: Group chat interface with message bubbles, timestamps, read receipts, voice message player, media attachments (images), and message input with emoji/attachment buttons
+- Right sidebar: Group details panel with group avatar, description, link, member count (+20), and media gallery with tabs (Media/Link/Docs)
+- Updated client dashboard to navigate to new standalone chat page via Link components
+- All interactive elements include proper data-testid attributes for testing
+- Responsive three-column layout with proper spacing and visual hierarchy matching WhatsApp design patterns
+- Full navigation integration with wouter routing system
+
+**Previous Updates (October 17, 2025)**: 
 
 *Client Dashboard Redesign with Chat Integration*:
 - Replaced right sidebar (CandidateMetricsSidebar) with ProfileMenu component in header matching admin dashboard design
