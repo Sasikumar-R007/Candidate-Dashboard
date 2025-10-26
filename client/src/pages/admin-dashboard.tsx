@@ -409,21 +409,23 @@ function ImpactMetricsEditor() {
     const isEditing = editingMetric === field;
     
     return (
-      <div className={`${bgColor} rounded-lg p-4 border ${borderColor} cursor-pointer hover:shadow-md transition-shadow`} data-testid={testId}>
+      <div className={`${bgColor} rounded-lg p-4 border ${borderColor} cursor-pointer hover:shadow-md transition-shadow overflow-hidden`} data-testid={testId}>
         <h3 className={`text-sm font-medium ${textColor} mb-2`}>{title}</h3>
         {isEditing ? (
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-col space-y-2">
             <Input
               type="number"
               value={editValue}
               onChange={(e) => setEditValue(e.target.value)}
               onKeyDown={(e) => handleKeyDown(e, field)}
-              className="text-2xl font-bold w-32 h-12"
+              className="text-2xl font-bold w-full h-12"
               autoFocus
               data-testid={`input-${field}`}
             />
-            <Button size="sm" onClick={() => handleSave(field)} data-testid={`button-save-${field}`}>Save</Button>
-            <Button size="sm" variant="outline" onClick={() => setEditingMetric(null)} data-testid={`button-cancel-${field}`}>Cancel</Button>
+            <div className="flex space-x-2">
+              <Button size="sm" onClick={() => handleSave(field)} className="flex-1" data-testid={`button-save-${field}`}>Save</Button>
+              <Button size="sm" variant="outline" onClick={() => setEditingMetric(null)} className="flex-1" data-testid={`button-cancel-${field}`}>Cancel</Button>
+            </div>
           </div>
         ) : (
           <div onClick={() => handleEdit(field, value)} data-testid={`value-${field}`}>
@@ -1326,16 +1328,6 @@ export default function AdminDashboard() {
         </CardContent>
       </Card>
 
-      {/* Impact Metrics Section - Editable */}
-      <Card className="bg-white dark:bg-gray-800">
-        <CardHeader className="pb-2 pt-3">
-          <CardTitle className="text-lg text-gray-900 dark:text-white">Impact Metrics</CardTitle>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Click on any metric value to edit</p>
-        </CardHeader>
-        <CardContent className="p-3">
-          <ImpactMetricsEditor />
-        </CardContent>
-      </Card>
 
       {/* Messages and Meetings Section */}
       <div className="grid grid-cols-10 gap-3 h-fit">
@@ -4306,11 +4298,19 @@ export default function AdminDashboard() {
         );
       case 'client-settings':
         return (
-          <div className="px-6 py-6 flex items-center justify-center h-full">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Client Settings</h2>
-              <p className="text-gray-600 dark:text-gray-400">Client settings configuration will be added here.</p>
-            </div>
+          <div className="px-6 py-6 space-y-4 overflow-auto">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Client Settings</h2>
+            
+            {/* Impact Metrics Section - Editable */}
+            <Card className="bg-white dark:bg-gray-800">
+              <CardHeader className="pb-2 pt-3">
+                <CardTitle className="text-lg text-gray-900 dark:text-white">Impact Metrics</CardTitle>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Click on any metric value to edit</p>
+              </CardHeader>
+              <CardContent className="p-3">
+                <ImpactMetricsEditor />
+              </CardContent>
+            </Card>
           </div>
         );
       default:
