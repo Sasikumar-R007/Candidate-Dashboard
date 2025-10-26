@@ -25,13 +25,14 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users, ExternalLink } from "lucide-react";
+import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users, ExternalLink, HelpCircle } from "lucide-react";
 import { format } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
 import GaugeComponent from 'react-gauge-component';
+import { ChatDock } from '@/components/chat/chat-dock';
 // TypeScript interfaces
 interface Requirement {
   id: number;
@@ -584,6 +585,7 @@ export default function AdminDashboard() {
   const [isDatabaseModalOpen, setIsDatabaseModalOpen] = useState(false);
   const [isClientMasterModalOpen, setIsClientMasterModalOpen] = useState(false);
   const [isEmployeeMasterModalOpen, setIsEmployeeMasterModalOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [cashoutData, setCashoutData] = useState([
     { month: 'Jan', year: '2025', employees: 50, salary: 500000, incentive: 25000, tools: 15000, rent: 50000, others: 10000 },
     { month: 'Feb', year: '2025', employees: 52, salary: 520000, incentive: 28000, tools: 15000, rent: 50000, others: 12000 },
@@ -1339,7 +1341,7 @@ export default function AdminDashboard() {
                     <span className="text-sm text-gray-600 dark:text-gray-400">Anusha's Team</span>
                   </div>
                 </div>
-                <div className="h-16 mt-2">
+                <div className="h-48 mt-2">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={[
                       { month: 'Jan', arunTeam: 65, anushaTeam: 60 },
@@ -1349,10 +1351,43 @@ export default function AdminDashboard() {
                       { month: 'May', arunTeam: 90, anushaTeam: 85 },
                       { month: 'Jun', arunTeam: 88, anushaTeam: 92 }
                     ]}>
-                      <Line type="monotone" dataKey="arunTeam" stroke="#3b82f6" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="anushaTeam" stroke="#ec4899" strokeWidth={2} dot={false} />
-                      <XAxis dataKey="month" hide />
-                      <YAxis hide />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis 
+                        dataKey="month" 
+                        stroke="#6b7280" 
+                        style={{ fontSize: '12px' }}
+                        tick={{ fill: '#6b7280' }}
+                      />
+                      <YAxis 
+                        stroke="#6b7280" 
+                        style={{ fontSize: '12px' }}
+                        tick={{ fill: '#6b7280' }}
+                      />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: '#ffffff', 
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '8px'
+                        }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="arunTeam" 
+                        stroke="#3b82f6" 
+                        strokeWidth={3} 
+                        dot={{ fill: '#3b82f6', r: 4 }}
+                        activeDot={{ r: 6 }}
+                        name="Arun's Team"
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="anushaTeam" 
+                        stroke="#ec4899" 
+                        strokeWidth={3} 
+                        dot={{ fill: '#ec4899', r: 4 }}
+                        activeDot={{ r: 6 }}
+                        name="Anusha's Team"
+                      />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -6074,11 +6109,11 @@ export default function AdminDashboard() {
 
       {/* Performance Data Modal */}
       <Dialog open={isPerformanceDataModalOpen} onOpenChange={setIsPerformanceDataModalOpen}>
-        <DialogContent className="max-w-4xl w-[90vw] max-h-[80vh]">
+        <DialogContent className="max-w-4xl w-[90vw] max-h-[85vh]">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">Performance Data - Quarter ASO-2025</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto pr-2">
+          <div className="overflow-y-auto pr-2 max-h-[calc(85vh-120px)]">
             {/* Performance Summary Cards */}
             <div className="grid grid-cols-2 gap-4 mb-6">
               <Card className="bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 border-cyan-200 dark:border-cyan-800">
@@ -6190,6 +6225,24 @@ export default function AdminDashboard() {
           <div className="h-1 bg-green-500 animate-pulse"></div>
         </div>
       )}
+
+      {/* Floating Help Button */}
+      <button
+        onClick={() => setIsChatOpen(true)}
+        className="fixed bottom-6 right-6 w-14 h-14 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 z-40"
+        data-testid="button-help"
+        aria-label="Help"
+        title="Need help? Chat with us!"
+      >
+        <HelpCircle size={24} />
+      </button>
+
+      {/* Chat Support Modal */}
+      <ChatDock 
+        open={isChatOpen} 
+        onClose={() => setIsChatOpen(false)} 
+        userName="Support Team"
+      />
     </div>
   );
 }
