@@ -2,7 +2,7 @@ import express, { type Express, type Request, type Response, type NextFunction }
 import { createServer, type Server } from "http";
 import fs from "fs";
 import { storage } from "./storage";
-import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertRequirementSchema, insertEmployeeSchema } from "@shared/schema";
+import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import multer from "multer";
@@ -2361,6 +2361,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Seed database error:', error);
       res.status(500).json({ message: "Failed to seed database" });
+    }
+  });
+
+  // Impact Metrics routes
+  // Create impact metrics
+  app.post("/api/admin/impact-metrics", async (req, res) => {
+    try {
+      const validatedData = insertImpactMetricsSchema.parse(req.body);
+      const metrics = await storage.createImpactMetrics(validatedData);
+      res.json({ message: "Impact metrics created successfully", metrics });
+    } catch (error: any) {
+      console.error('Create impact metrics error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid impact metrics data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create impact metrics" });
+    }
+  });
+
+  // Get all impact metrics
+  app.get("/api/admin/impact-metrics", async (req, res) => {
+    try {
+      const { clientId } = req.query;
+      
+      if (clientId && typeof clientId === 'string') {
+        const metrics = await storage.getImpactMetrics(clientId);
+        if (!metrics) {
+          return res.status(404).json({ message: "Impact metrics not found" });
+        }
+        return res.json(metrics);
+      }
+      
+      const allMetrics = await storage.getAllImpactMetrics();
+      res.json(allMetrics);
+    } catch (error) {
+      console.error('Get impact metrics error:', error);
+      res.status(500).json({ message: "Failed to get impact metrics" });
+    }
+  });
+
+  // Update impact metrics
+  app.put("/api/admin/impact-metrics/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const updateSchema = z.object({
+        clientId: z.string().optional(),
+        speedToHire: z.number().optional(),
+        revenueImpactOfDelay: z.number().optional(),
+        clientNps: z.number().optional(),
+        candidateNps: z.number().optional(),
+        feedbackTurnAround: z.number().optional(),
+        firstYearRetentionRate: z.number().optional(),
+        fulfillmentRate: z.number().optional(),
+        revenueRecovered: z.number().optional(),
+      });
+      
+      const validatedData = updateSchema.parse(req.body);
+      const updatedMetrics = await storage.updateImpactMetrics(id, validatedData);
+      
+      if (!updatedMetrics) {
+        return res.status(404).json({ message: "Impact metrics not found" });
+      }
+      
+      res.json({ message: "Impact metrics updated successfully", metrics: updatedMetrics });
+    } catch (error: any) {
+      console.error('Update impact metrics error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid impact metrics data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update impact metrics" });
+    }
+  });
+
+  // Delete impact metrics
+  app.delete("/api/admin/impact-metrics/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteImpactMetrics(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Impact metrics not found" });
+      }
+      
+      res.json({ message: "Impact metrics deleted successfully" });
+    } catch (error) {
+      console.error('Delete impact metrics error:', error);
+      res.status(500).json({ message: "Failed to delete impact metrics" });
     }
   });
 
