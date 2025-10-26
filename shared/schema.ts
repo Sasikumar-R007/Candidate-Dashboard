@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, json, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, json, boolean, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -304,24 +304,14 @@ export const notifications = pgTable("notifications", {
 export const impactMetrics = pgTable("impact_metrics", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   clientId: text("client_id"), // Optional - can be null for global metrics
-  speedToHireValue: text("speed_to_hire_value").notNull().default("15"),
-  speedToHireDescription: text("speed_to_hire_description").notNull().default("Days faster*"),
-  revenueImpactOfDelay: text("revenue_impact_of_delay").notNull().default("75,000"),
-  revenueImpactDescription: text("revenue_impact_description").notNull().default("Lost per Role*"),
-  clientNps: text("client_nps").notNull().default("+60"),
-  clientNpsDescription: text("client_nps_description").notNull().default("Net Promoter Score*"),
-  candidateNps: text("candidate_nps").notNull().default("+70"),
-  candidateNpsDescription: text("candidate_nps_description").notNull().default("Net Promoter Score*"),
-  feedbackTurnAround: text("feedback_turn_around").notNull().default("2"),
-  feedbackTurnAroundUnit: text("feedback_turn_around_unit").notNull().default("days"),
-  feedbackTurnAroundNote: text("feedback_turn_around_note").notNull().default("Industry Avg. 5 days*"),
-  firstYearRetentionRate: text("first_year_retention_rate").notNull().default("90"),
-  firstYearRetentionRateUnit: text("first_year_retention_rate_unit").notNull().default("%"),
-  fulfillmentRate: text("fulfillment_rate").notNull().default("20"),
-  fulfillmentRateUnit: text("fulfillment_rate_unit").notNull().default("%"),
-  revenueRecovered: text("revenue_recovered").notNull().default("1.5"),
-  revenueRecoveredUnit: text("revenue_recovered_unit").notNull().default("L"),
-  revenueRecoveredDescription: text("revenue_recovered_description").notNull().default("Gained per hire*"),
+  speedToHire: real("speed_to_hire").notNull().default(15),
+  revenueImpactOfDelay: real("revenue_impact_of_delay").notNull().default(75000),
+  clientNps: real("client_nps").notNull().default(60),
+  candidateNps: real("candidate_nps").notNull().default(70),
+  feedbackTurnAround: real("feedback_turn_around").notNull().default(2),
+  firstYearRetentionRate: real("first_year_retention_rate").notNull().default(90),
+  fulfillmentRate: real("fulfillment_rate").notNull().default(20),
+  revenueRecovered: real("revenue_recovered").notNull().default(1.5),
 });
 
 export const clients = pgTable("clients", {

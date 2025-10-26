@@ -335,6 +335,204 @@ const initialCeoMeetingsData = [
   { meetingType: "Board Review", date: "10-Sep-2025", time: "09:00 AM", person: "John Mathew", agenda: "Company strategy and vision", status: "Scheduled" }
 ];
 
+// Impact Metrics Editor Component
+function ImpactMetricsEditor() {
+  const queryClient = useQueryClient();
+  const [editingMetric, setEditingMetric] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState<string>("");
+
+  // Fetch impact metrics
+  const { data: metrics, isLoading } = useQuery({
+    queryKey: ['/api/admin/impact-metrics'],
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, field, value }: { id: string; field: string; value: number }) => {
+      const response = await fetch(`/api/admin/impact-metrics/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: value }),
+      });
+      if (!response.ok) throw new Error('Failed to update');
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/impact-metrics'] });
+      toast({ title: "Success", description: "Metric updated successfully" });
+      setEditingMetric(null);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update metric", variant: "destructive" });
+    },
+  });
+
+  const handleEdit = (metricKey: string, currentValue: number) => {
+    setEditingMetric(metricKey);
+    setEditValue(currentValue.toString());
+  };
+
+  const handleSave = (field: string) => {
+    if (!metrics || !metrics[0]) return;
+    const value = parseFloat(editValue);
+    if (isNaN(value)) {
+      toast({ title: "Error", description: "Please enter a valid number", variant: "destructive" });
+      return;
+    }
+    updateMutation.mutate({ id: metrics[0].id, field, value });
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent, field: string) => {
+    if (e.key === 'Enter') {
+      handleSave(field);
+    } else if (e.key === 'Escape') {
+      setEditingMetric(null);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="text-center py-8 text-gray-500">Loading metrics...</div>;
+  }
+
+  const currentMetrics = metrics?.[0] || {
+    speedToHire: 15,
+    revenueImpactOfDelay: 75000,
+    clientNps: 60,
+    candidateNps: 70,
+    feedbackTurnAround: 2,
+    firstYearRetentionRate: 90,
+    fulfillmentRate: 20,
+    revenueRecovered: 1.5,
+  };
+
+  const MetricCard = ({ title, value, unit, subtitle, bgColor, borderColor, textColor, field, testId }: any) => {
+    const isEditing = editingMetric === field;
+    
+    return (
+      <div className={`${bgColor} rounded-lg p-4 border ${borderColor} cursor-pointer hover:shadow-md transition-shadow`} data-testid={testId}>
+        <h3 className={`text-sm font-medium ${textColor} mb-2`}>{title}</h3>
+        {isEditing ? (
+          <div className="flex items-center space-x-2">
+            <Input
+              type="number"
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onKeyDown={(e) => handleKeyDown(e, field)}
+              className="text-2xl font-bold w-32 h-12"
+              autoFocus
+              data-testid={`input-${field}`}
+            />
+            <Button size="sm" onClick={() => handleSave(field)} data-testid={`button-save-${field}`}>Save</Button>
+            <Button size="sm" variant="outline" onClick={() => setEditingMetric(null)} data-testid={`button-cancel-${field}`}>Cancel</Button>
+          </div>
+        ) : (
+          <div onClick={() => handleEdit(field, value)} data-testid={`value-${field}`}>
+            <div className={`text-3xl font-bold ${textColor.replace('700', '600')}`}>{value}{unit}</div>
+            <div className="text-sm text-gray-600 mt-1">{subtitle}</div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <>
+      <div className="grid grid-cols-4 gap-4 mb-4">
+        <MetricCard
+          title="Speed to Hire value"
+          value={currentMetrics.speedToHire}
+          unit=""
+          subtitle="Days faster*"
+          bgColor="bg-red-50"
+          borderColor="border-red-200"
+          textColor="text-red-700"
+          field="speedToHire"
+          testId="card-speedToHire"
+        />
+        <MetricCard
+          title="Revenue Impact Of Delay"
+          value={currentMetrics.revenueImpactOfDelay}
+          unit=""
+          subtitle="Lost per Role*"
+          bgColor="bg-red-50"
+          borderColor="border-red-200"
+          textColor="text-red-700"
+          field="revenueImpactOfDelay"
+          testId="card-revenueImpactOfDelay"
+        />
+        <MetricCard
+          title="Client NPS"
+          value={currentMetrics.clientNps}
+          unit=""
+          subtitle="Net Promoter Score*"
+          bgColor="bg-purple-50"
+          borderColor="border-purple-200"
+          textColor="text-purple-700"
+          field="clientNps"
+          testId="card-clientNps"
+        />
+        <MetricCard
+          title="Candidate NPS"
+          value={currentMetrics.candidateNps}
+          unit=""
+          subtitle="Net Promoter Score*"
+          bgColor="bg-purple-50"
+          borderColor="border-purple-200"
+          textColor="text-purple-700"
+          field="candidateNps"
+          testId="card-candidateNps"
+        />
+      </div>
+      <div className="grid grid-cols-4 gap-4">
+        <MetricCard
+          title="Feedback Turn Around"
+          value={currentMetrics.feedbackTurnAround}
+          unit=""
+          subtitle="days (Avg. 5 days)*"
+          bgColor="bg-yellow-50"
+          borderColor="border-yellow-200"
+          textColor="text-yellow-700"
+          field="feedbackTurnAround"
+          testId="card-feedbackTurnAround"
+        />
+        <MetricCard
+          title="First Year Retention Rate"
+          value={currentMetrics.firstYearRetentionRate}
+          unit="%"
+          subtitle=""
+          bgColor="bg-yellow-50"
+          borderColor="border-yellow-200"
+          textColor="text-yellow-700"
+          field="firstYearRetentionRate"
+          testId="card-firstYearRetentionRate"
+        />
+        <MetricCard
+          title="Fulfillment Rate"
+          value={currentMetrics.fulfillmentRate}
+          unit="%"
+          subtitle=""
+          bgColor="bg-yellow-50"
+          borderColor="border-yellow-200"
+          textColor="text-yellow-700"
+          field="fulfillmentRate"
+          testId="card-fulfillmentRate"
+        />
+        <MetricCard
+          title="Revenue Recovered"
+          value={currentMetrics.revenueRecovered}
+          unit=" L"
+          subtitle="Gained per hire*"
+          bgColor="bg-yellow-50"
+          borderColor="border-yellow-200"
+          textColor="text-yellow-700"
+          field="revenueRecovered"
+          testId="card-revenueRecovered"
+        />
+      </div>
+    </>
+  );
+}
+
 export default function AdminDashboard() {
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [activeTab, setActiveTab] = useState('team');
@@ -1125,6 +1323,17 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Impact Metrics Section - Editable */}
+      <Card className="bg-white dark:bg-gray-800">
+        <CardHeader className="pb-2 pt-3">
+          <CardTitle className="text-lg text-gray-900 dark:text-white">Impact Metrics</CardTitle>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Click on any metric value to edit</p>
+        </CardHeader>
+        <CardContent className="p-3">
+          <ImpactMetricsEditor />
         </CardContent>
       </Card>
 
