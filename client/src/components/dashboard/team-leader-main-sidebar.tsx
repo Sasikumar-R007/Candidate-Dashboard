@@ -58,9 +58,16 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange }: TeamLe
   };
 
   const handleTabClick = (tabId: string) => {
-    onTabChange(tabId);
-    if (isExpanded) {
-      setIsExpanded(false);
+    if (tabId === 'chat') {
+      navigate('/chat');
+      if (isExpanded) {
+        setIsExpanded(false);
+      }
+    } else {
+      onTabChange(tabId);
+      if (isExpanded) {
+        setIsExpanded(false);
+      }
     }
   };
 
