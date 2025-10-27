@@ -11,10 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, EditIcon, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, Upload, X } from "lucide-react";
+import { CalendarIcon, EditIcon, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, Upload, X, HelpCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 import JobBoardTab from '@/components/dashboard/tabs/job-board-tab';
+import { ChatDock } from '@/components/chat/chat-dock';
 
 interface RecruiterProfile {
   id: string;
@@ -299,6 +300,9 @@ export default function RecruiterDashboard() {
     ]
   });
   const [calendarStep, setCalendarStep] = useState<'calendar' | 'input'>('calendar');
+  
+  // Chat open state
+  const [isChatOpen, setIsChatOpen] = useState(false);
   
   // Chat helper functions
   const handleSendMessage = () => {
@@ -1430,7 +1434,7 @@ export default function RecruiterDashboard() {
         onTabChange={setSidebarTab}
       />
       
-      <div className="flex-1 flex flex-col overflow-hidden ml-64">
+      <div className="flex-1 flex flex-col overflow-hidden ml-16">
         {renderSidebarContent()}
       </div>
       
@@ -2424,6 +2428,24 @@ export default function RecruiterDashboard() {
           Job posted successfully!
         </div>
       )}
+
+      {/* Floating Help Button */}
+      <button
+        onClick={() => setIsChatOpen(true)}
+        className="fixed bottom-6 right-6 w-14 h-14 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 z-40"
+        data-testid="button-help"
+        aria-label="Help"
+        title="Need help? Chat with us!"
+      >
+        <HelpCircle size={24} />
+      </button>
+
+      {/* Chat Support Modal */}
+      <ChatDock 
+        open={isChatOpen} 
+        onClose={() => setIsChatOpen(false)} 
+        userName="Support Team"
+      />
     </div>
   );
 }

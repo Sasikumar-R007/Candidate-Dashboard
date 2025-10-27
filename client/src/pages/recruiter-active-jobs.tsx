@@ -208,13 +208,19 @@ export default function RecruiterActiveJobs() {
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center gap-4 mb-4">
           <Button
-            onClick={() => setLocation('/recruiter')}
+            onClick={() => {
+              if (window.history.length > 1) {
+                window.history.back();
+              } else {
+                setLocation('/recruiter');
+              }
+            }}
             variant="outline"
             size="sm"
             className="flex items-center gap-2"
           >
             <ArrowLeft size={16} />
-            Back to Dashboard
+            Back
           </Button>
           <h1 className="text-2xl font-bold text-gray-900">Active Jobs</h1>
           <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">

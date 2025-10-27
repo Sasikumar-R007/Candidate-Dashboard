@@ -770,7 +770,13 @@ const SourceResume = () => {
                 Export
               </button>
               <button
-                onClick={() => setLocation('/recruiter')}
+                onClick={() => {
+                  if (window.history.length > 1) {
+                    window.history.back();
+                  } else {
+                    setLocation('/recruiter');
+                  }
+                }}
                 className="flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50"
               >
                 <ArrowLeft size={16} />
