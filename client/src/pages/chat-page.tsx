@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { X, Search, MoreVertical, Phone, Video, Plus, Send, Smile, Paperclip, Pin, Check, CheckCheck } from 'lucide-react';
+import { X, Search, MoreVertical, Phone, Video, Plus, Send, Smile, Paperclip, Pin, Check, CheckCheck, ArrowLeft } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useLocation } from 'wouter';
 
 interface Conversation {
   id: number;
@@ -35,6 +36,7 @@ interface MediaItem {
 }
 
 export default function ChatPage() {
+  const [, navigate] = useLocation();
   const [activeConversation, setActiveConversation] = useState(2);
   const [showGroupDetails, setShowGroupDetails] = useState(true);
   const [newMessage, setNewMessage] = useState('');
@@ -165,6 +167,20 @@ export default function ChatPage() {
     <div className="flex h-screen bg-gray-100">
       {/* Left Sidebar - Conversations List */}
       <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+        {/* Back Button */}
+        <div className="p-4 border-b border-gray-200 bg-gray-50">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => window.history.back()}
+            className="flex items-center gap-2 hover:bg-gray-100"
+            data-testid="button-back"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back</span>
+          </Button>
+        </div>
+        
         {/* User Profile Header */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between mb-4">

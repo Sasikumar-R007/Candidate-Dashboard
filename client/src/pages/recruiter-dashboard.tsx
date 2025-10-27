@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import { useLocation } from "wouter";
 import JobBoardTab from '@/components/dashboard/tabs/job-board-tab';
 import { ChatDock } from '@/components/chat/chat-dock';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart as RechartsBarChart, Bar } from 'recharts';
 
 interface RecruiterProfile {
   id: string;
@@ -1019,17 +1020,42 @@ export default function RecruiterDashboard() {
 
             {/* Pipeline Grid */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <div className="grid grid-cols-7 gap-4 text-center font-semibold mb-4 text-blue-600 dark:text-blue-400 bg-gray-50 dark:bg-gray-700 p-3 rounded">
-                <div>Level 1</div>
-                <div>Level 2</div>
-                <div>Level 3</div>
-                <div>Final Round</div>
-                <div>HR Round</div>
-                <div>Offer Stage</div>
-                <div>Closure</div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Candidate Pipeline Flow</h3>
+              
+              {/* Pipeline Stage Headers */}
+              <div className="grid grid-cols-7 gap-3 mb-4">
+                <div className="bg-blue-600 text-white p-3 rounded-lg text-center">
+                  <div className="font-semibold text-sm">Level 1</div>
+                  <div className="text-xs mt-1 opacity-90">Initial</div>
+                </div>
+                <div className="bg-blue-500 text-white p-3 rounded-lg text-center">
+                  <div className="font-semibold text-sm">Level 2</div>
+                  <div className="text-xs mt-1 opacity-90">Technical</div>
+                </div>
+                <div className="bg-blue-400 text-white p-3 rounded-lg text-center">
+                  <div className="font-semibold text-sm">Level 3</div>
+                  <div className="text-xs mt-1 opacity-90">Advanced</div>
+                </div>
+                <div className="bg-yellow-500 text-white p-3 rounded-lg text-center">
+                  <div className="font-semibold text-sm">Final Round</div>
+                  <div className="text-xs mt-1 opacity-90">Decision</div>
+                </div>
+                <div className="bg-orange-500 text-white p-3 rounded-lg text-center">
+                  <div className="font-semibold text-sm">HR Round</div>
+                  <div className="text-xs mt-1 opacity-90">Culture</div>
+                </div>
+                <div className="bg-green-500 text-white p-3 rounded-lg text-center">
+                  <div className="font-semibold text-sm">Offer Stage</div>
+                  <div className="text-xs mt-1 opacity-90">Negotiation</div>
+                </div>
+                <div className="bg-green-600 text-white p-3 rounded-lg text-center">
+                  <div className="font-semibold text-sm">Closure</div>
+                  <div className="text-xs mt-1 opacity-90">Joined</div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-7 gap-4 space-y-4">
+              {/* Candidate Flow Grid */}
+              <div className="grid grid-cols-7 gap-3 auto-rows-auto">
                 {/* Keerthana */}
                 <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Keerthana</div>
                 <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Keerthana</div>
@@ -1107,7 +1133,7 @@ export default function RecruiterDashboard() {
         );
       case 'performance':
         return (
-          <div className="p-6">
+          <div className="p-6 pt-8">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Performance</h2>
             
             {/* Summary Cards */}
@@ -1133,6 +1159,37 @@ export default function RecruiterDashboard() {
                 <div className="text-lg font-semibold text-blue-700 dark:text-blue-400 mb-1">Last Closure</div>
                 <div className="text-lg font-bold text-gray-500 dark:text-gray-300 mt-3">1 Month 15 Days</div>
               </div>
+            </div>
+            
+            {/* Performance Chart */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Overall Performance Metrics</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart 
+                  data={[
+                    { quarter: 'Q1', closures: 2, closureValue: 300000, incentives: 6000 },
+                    { quarter: 'Q2', closures: 3, closureValue: 550000, incentives: 9000 },
+                    { quarter: 'Q3', closures: 4, closureValue: 775000, incentives: 12000 },
+                    { quarter: 'Q4', closures: 3, closureValue: 600000, incentives: 9000 },
+                  ]}
+                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" className="dark:stroke-gray-700" />
+                  <XAxis dataKey="quarter" className="text-gray-600 dark:text-gray-300" />
+                  <YAxis className="text-gray-600 dark:text-gray-300" />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '0.5rem'
+                    }}
+                  />
+                  <Legend />
+                  <Line type="monotone" dataKey="closures" stroke="#3b82f6" strokeWidth={2} name="Total Closures" />
+                  <Line type="monotone" dataKey="closureValue" stroke="#10b981" strokeWidth={2} name="Closure Value (₹)" />
+                  <Line type="monotone" dataKey="incentives" stroke="#f59e0b" strokeWidth={2} name="Incentives (₹)" />
+                </LineChart>
+              </ResponsiveContainer>
             </div>
             
             {/* Performance Table */}
