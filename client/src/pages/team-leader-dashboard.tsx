@@ -13,11 +13,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus } from "lucide-react";
+import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, HelpCircle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
+import { ChatDock } from '@/components/chat/chat-dock';
 
 export default function TeamLeaderDashboard() {
   const [, navigate] = useLocation();
@@ -43,6 +44,7 @@ export default function TeamLeaderDashboard() {
   const [newMessage, setNewMessage] = useState("");
   const [chatType, setChatType] = useState<'team' | 'private'>('team');
   const [activeChatUser, setActiveChatUser] = useState<string | null>(null);
+  const [isHelpChatOpen, setIsHelpChatOpen] = useState(false);
   
   // Team members for team chat (5 members)
   const chatTeamMembers = [
@@ -3063,6 +3065,23 @@ export default function TeamLeaderDashboard() {
         </DialogContent>
       </Dialog>
 
+      {/* Floating Help Button */}
+      <button
+        onClick={() => setIsHelpChatOpen(true)}
+        className="fixed bottom-6 right-6 w-14 h-14 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 z-40"
+        data-testid="button-help"
+        aria-label="Help"
+        title="Need help? Chat with us!"
+      >
+        <HelpCircle size={24} />
+      </button>
+
+      {/* Chat Support */}
+      <ChatDock 
+        open={isHelpChatOpen} 
+        onClose={() => setIsHelpChatOpen(false)} 
+        userName="Support Team"
+      />
     </div>
   );
 }

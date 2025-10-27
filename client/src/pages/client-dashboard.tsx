@@ -10,11 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
-import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, MessageSquare, Minus, Users, Play, Trophy, ArrowLeft, Send, Calendar as CalendarIcon, MoreVertical } from "lucide-react";
+import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, MessageSquare, Minus, Users, Play, Trophy, ArrowLeft, Send, Calendar as CalendarIcon, MoreVertical, HelpCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import SimpleClientHeader from '@/components/dashboard/simple-client-header';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import { ChatDock } from '@/components/chat/chat-dock';
 
 interface ChatUser {
   id: number;
@@ -38,6 +39,7 @@ export default function ClientDashboard() {
   const [candidatePopupPosition, setCandidatePopupPosition] = useState<{x: number, y: number} | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
+  const [isHelpChatOpen, setIsHelpChatOpen] = useState(false);
 
   // Sample data for the dashboard
   const dashboardStats = {
@@ -1240,6 +1242,24 @@ export default function ClientDashboard() {
           </div>
         </>
       )}
+
+      {/* Floating Help Button */}
+      <button
+        onClick={() => setIsHelpChatOpen(true)}
+        className="fixed bottom-6 right-6 w-14 h-14 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 z-40"
+        data-testid="button-help"
+        aria-label="Help"
+        title="Need help? Chat with us!"
+      >
+        <HelpCircle size={24} />
+      </button>
+
+      {/* Chat Support */}
+      <ChatDock 
+        open={isHelpChatOpen} 
+        onClose={() => setIsHelpChatOpen(false)} 
+        userName="Support Team"
+      />
     </div>
   );
 }
