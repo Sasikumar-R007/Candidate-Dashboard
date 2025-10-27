@@ -716,8 +716,9 @@ const SourceResume = () => {
             </div>
           </div>
           <button
-            className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold text-lg mt-6 hover:bg-green-700 transition"
+            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold text-lg mt-6 hover:bg-blue-700 transition"
             onClick={() => setStep(2)}
+            data-testid="button-source-resume"
           >
             Source Resume
           </button>
@@ -729,11 +730,6 @@ const SourceResume = () => {
   // Step 2: Results UI - Three section layout
   return (
     <div className="flex flex-col h-screen bg-gray-50">
-      <SimpleClientHeader 
-        companyName="Gumlet Marketing Private Limited"
-        userName="Sasi Kumar"
-        userImage="/api/placeholder/32/32"
-      />
       <div className="flex flex-1 overflow-hidden">
       {/* Left Section - Filters */}
       <aside className="bg-white border-r w-80 flex-shrink-0 flex flex-col p-4">
@@ -747,24 +743,26 @@ const SourceResume = () => {
           </button>
         </div>
         
-        <div className="flex flex-row gap-2 mb-4">
+        <div className="flex items-center justify-center mb-4 bg-gray-100 rounded-lg p-1">
           <button
-            className={`flex-1 text-center px-3 py-2 rounded-lg text-base font-medium ${
+            className={`flex-1 text-center px-3 py-2 rounded-md text-sm font-medium transition-all ${
               sidebarView === "all"
-                ? "bg-purple-50 text-purple-700"
-                : "text-gray-700 hover:bg-gray-100"
+                ? "bg-white text-blue-600 shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
             }`}
             onClick={() => setSidebarView("all")}
+            data-testid="button-all-candidates"
           >
             All Candidates
           </button>
           <button
-            className={`flex-1 text-center px-3 py-2 rounded-lg text-base font-medium ${
+            className={`flex-1 text-center px-3 py-2 rounded-md text-sm font-medium transition-all ${
               sidebarView === "saved"
-                ? "bg-purple-50 text-purple-700"
-                : "text-gray-700 hover:bg-gray-100"
+                ? "bg-white text-blue-600 shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
             }`}
             onClick={() => setSidebarView("saved")}
+            data-testid="button-saved-candidates"
           >
             Saved Candidates
           </button>
@@ -1266,13 +1264,39 @@ const SourceResume = () => {
             </div>
 
             <div className="flex gap-2 mt-4">
-              <button className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
-                <Bookmark size={16} />
+              <button 
+                onClick={() => {
+                  handleSaveCandidate(selectedCandidate.id);
+                }}
+                className={`p-2 border rounded-lg transition-colors ${
+                  selectedCandidate.saved
+                    ? "bg-blue-100 border-blue-300 text-blue-600 hover:bg-blue-200"
+                    : "border-gray-300 text-gray-600 hover:bg-gray-50"
+                }`}
+                data-testid="button-save-candidate"
+              >
+                {selectedCandidate.saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
               </button>
-              <button className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
+              <button 
+                onClick={() => {
+                  if (window.confirm(`Do you want to call ${selectedCandidate.name} at ${selectedCandidate.phone}?`)) {
+                    // Handle phone call action
+                  }
+                }}
+                className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
+                data-testid="button-call-candidate"
+              >
                 <Phone size={16} />
               </button>
-              <button className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50">
+              <button 
+                onClick={() => {
+                  if (window.confirm(`Do you want to send an email to ${selectedCandidate.name} at ${selectedCandidate.email}?`)) {
+                    // Handle email action
+                  }
+                }}
+                className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
+                data-testid="button-email-candidate"
+              >
                 <Mail size={16} />
               </button>
             </div>
