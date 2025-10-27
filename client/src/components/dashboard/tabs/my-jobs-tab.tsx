@@ -530,6 +530,11 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
         </div>
         </div>
       </div>
+
+      {/* Right Column - Candidate Metrics (Fixed) */}
+      <div className="w-80 flex-shrink-0 p-6 overflow-hidden">
+        <CandidateMetrics />
+      </div>
       </div>
 
       {/* Job Details Modal - Exact copy of JobBoardTab modal */}
@@ -797,11 +802,6 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Right Column - Candidate Metrics (Fixed) */}
-      <div className="w-80 flex-shrink-0 p-6 overflow-hidden">
-        <CandidateMetrics />
-      </div>
     </div>
   );
 }
