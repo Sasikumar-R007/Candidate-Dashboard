@@ -315,13 +315,8 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
 
   return (
     <div className={`flex h-full ${className}`}>
-      {/* Left Column - Candidate Metrics (Fixed) */}
-      <div className="w-80 flex-shrink-0 p-6 overflow-hidden">
-        <CandidateMetrics />
-      </div>
-
-      {/* Right Column - Applied Jobs and Job Suggestions (Scrollable) */}
-      <div className="flex-1 overflow-y-auto">
+      {/* Left Column - Applied Jobs and Job Suggestions (Scrollable) */}
+      <div className="flex-1 min-w-0 overflow-y-auto">
         <div className="p-6 space-y-8">
         {/* Applied Jobs Section */}
         <div className="bg-white rounded-lg p-6 shadow-sm">
@@ -534,6 +529,11 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
           </Button>
         </div>
         </div>
+      </div>
+
+      {/* Right Column - Candidate Metrics (Fixed) */}
+      <div className="w-80 flex-shrink-0 p-6 overflow-y-auto bg-gray-50 border-l-4 border-red-500" data-testid="candidate-metrics-column">
+        <CandidateMetrics />
       </div>
       </div>
 
