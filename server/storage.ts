@@ -278,11 +278,76 @@ export class MemStorage implements IStorage {
 
     // Sample job applications
     const applications = [
-      { jobTitle: "UX Designer", company: "Micro soft", jobType: "Internship", daysAgo: "2 days" },
-      { jobTitle: "Software Designer", company: "Zoho", jobType: "Full-Time", daysAgo: "31 days" },
-      { jobTitle: "UX testing", company: "Google", jobType: "Part-Time", daysAgo: "33 days" },
-      { jobTitle: "Software Designer", company: "Unity", jobType: "Full-Time", daysAgo: "40 days" },
-      { jobTitle: "Software Designer", company: "Zoho", jobType: "Internship", daysAgo: "38 days" }
+      { 
+        jobTitle: "UX Designer", 
+        company: "Micro soft", 
+        jobType: "Internship", 
+        status: "In Process",
+        daysAgo: "2 days",
+        description: "Design user experiences for Microsoft products",
+        salary: "₹ 8 LPA",
+        location: "Bengaluru",
+        workMode: "Work from office",
+        experience: "1-2 years",
+        skills: JSON.stringify(["Figma", "UI/UX", "Design"]),
+        logo: null
+      },
+      { 
+        jobTitle: "Software Designer", 
+        company: "Zoho", 
+        jobType: "Full-Time", 
+        status: "In Process",
+        daysAgo: "31 days",
+        description: "Design software solutions for enterprise clients",
+        salary: "₹ 12 LPA",
+        location: "Chennai",
+        workMode: "Work from office",
+        experience: "2-4 years",
+        skills: JSON.stringify(["Java", "Design Patterns", "Architecture"]),
+        logo: null
+      },
+      { 
+        jobTitle: "UX testing", 
+        company: "Google", 
+        jobType: "Part-Time", 
+        status: "Rejected",
+        daysAgo: "33 days",
+        description: "Test and improve UX for Google products",
+        salary: "₹ 10 LPA",
+        location: "Hyderabad",
+        workMode: "Remote",
+        experience: "1-3 years",
+        skills: JSON.stringify(["Testing", "UX", "Analytics"]),
+        logo: null
+      },
+      { 
+        jobTitle: "Software Designer", 
+        company: "Unity", 
+        jobType: "Full-Time", 
+        status: "In Process",
+        daysAgo: "40 days",
+        description: "Design game engines and tools",
+        salary: "₹ 15 LPA",
+        location: "Bengaluru",
+        workMode: "Hybrid",
+        experience: "3-5 years",
+        skills: JSON.stringify(["C++", "Graphics", "Unity"]),
+        logo: null
+      },
+      { 
+        jobTitle: "Software Designer", 
+        company: "Zoho", 
+        jobType: "Internship", 
+        status: "In Process",
+        daysAgo: "38 days",
+        description: "Internship in software design",
+        salary: "₹ 5 LPA",
+        location: "Chennai",
+        workMode: "Work from office",
+        experience: "0-1 years",
+        skills: JSON.stringify(["Java", "OOP", "Design"]),
+        logo: null
+      }
     ];
 
     applications.forEach(app => {
@@ -292,8 +357,16 @@ export class MemStorage implements IStorage {
         jobTitle: app.jobTitle,
         company: app.company,
         jobType: app.jobType,
+        status: app.status,
         appliedDate: "12-03-2025",
-        daysAgo: app.daysAgo
+        daysAgo: app.daysAgo,
+        description: app.description,
+        salary: app.salary,
+        location: app.location,
+        workMode: app.workMode,
+        experience: app.experience,
+        skills: app.skills,
+        logo: app.logo
       };
       this.jobApplications.set(application.id, application);
     });
@@ -458,11 +531,76 @@ export class MemStorage implements IStorage {
 
     // Create test job applications for the candidate
     const testApplications = [
-      { jobTitle: "Frontend Developer", company: "Tech Corp", jobType: "Full-Time", daysAgo: "3 days" },
-      { jobTitle: "React Developer", company: "Innovate Labs", jobType: "Full-Time", daysAgo: "7 days" },
-      { jobTitle: "Full Stack Developer", company: "StartupXYZ", jobType: "Full-Time", daysAgo: "12 days" },
-      { jobTitle: "Node.js Developer", company: "CloudTech", jobType: "Full-Time", daysAgo: "18 days" },
-      { jobTitle: "Senior Developer", company: "Enterprise Inc", jobType: "Full-Time", daysAgo: "25 days" }
+      { 
+        jobTitle: "Frontend Developer", 
+        company: "Tech Corp", 
+        jobType: "Full-Time", 
+        status: "In Process",
+        daysAgo: "3 days",
+        description: "Build amazing user experiences with React",
+        salary: "₹ 15 LPA",
+        location: "Bengaluru",
+        workMode: "Work from office",
+        experience: "3-5 years",
+        skills: JSON.stringify(["React", "TypeScript", "CSS"]),
+        logo: null
+      },
+      { 
+        jobTitle: "React Developer", 
+        company: "Innovate Labs", 
+        jobType: "Full-Time", 
+        status: "In Process",
+        daysAgo: "7 days",
+        description: "Join our innovative team building cutting-edge products",
+        salary: "₹ 12 LPA",
+        location: "Mumbai",
+        workMode: "Hybrid",
+        experience: "2-4 years",
+        skills: JSON.stringify(["React", "Node.js", "MongoDB"]),
+        logo: null
+      },
+      { 
+        jobTitle: "Full Stack Developer", 
+        company: "StartupXYZ", 
+        jobType: "Full-Time", 
+        status: "Rejected",
+        daysAgo: "12 days",
+        description: "Build end-to-end solutions for our platform",
+        salary: "₹ 18 LPA",
+        location: "Delhi",
+        workMode: "Remote",
+        experience: "4-6 years",
+        skills: JSON.stringify(["React", "Node.js", "PostgreSQL"]),
+        logo: null
+      },
+      { 
+        jobTitle: "Node.js Developer", 
+        company: "CloudTech", 
+        jobType: "Full-Time", 
+        status: "In Process",
+        daysAgo: "18 days",
+        description: "Develop scalable backend services",
+        salary: "₹ 14 LPA",
+        location: "Hyderabad",
+        workMode: "Work from office",
+        experience: "3-5 years",
+        skills: JSON.stringify(["Node.js", "Express", "AWS"]),
+        logo: null
+      },
+      { 
+        jobTitle: "Senior Developer", 
+        company: "Enterprise Inc", 
+        jobType: "Full-Time", 
+        status: "In Process",
+        daysAgo: "25 days",
+        description: "Lead development of enterprise applications",
+        salary: "₹ 20 LPA",
+        location: "Pune",
+        workMode: "Hybrid",
+        experience: "5-7 years",
+        skills: JSON.stringify(["Java", "Spring", "Microservices"]),
+        logo: null
+      }
     ];
 
     testApplications.forEach(app => {
@@ -472,8 +610,16 @@ export class MemStorage implements IStorage {
         jobTitle: app.jobTitle,
         company: app.company,
         jobType: app.jobType,
+        status: app.status,
         appliedDate: new Date().toISOString().split('T')[0],
-        daysAgo: app.daysAgo
+        daysAgo: app.daysAgo,
+        description: app.description,
+        salary: app.salary,
+        location: app.location,
+        workMode: app.workMode,
+        experience: app.experience,
+        skills: app.skills,
+        logo: app.logo
       };
       this.jobApplications.set(application.id, application);
     });

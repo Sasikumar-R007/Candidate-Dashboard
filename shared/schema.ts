@@ -82,8 +82,17 @@ export const jobApplications = pgTable("job_applications", {
   jobTitle: text("job_title").notNull(),
   company: text("company").notNull(),
   jobType: text("job_type").notNull(),
+  status: text("status").notNull().default("In Process"), // In Process, Rejected, Applied, etc.
   appliedDate: text("applied_date").notNull(),
   daysAgo: text("days_ago").notNull(),
+  // Additional job details for viewing
+  description: text("description"),
+  salary: text("salary"),
+  location: text("location"),
+  workMode: text("work_mode"),
+  experience: text("experience"),
+  skills: text("skills"), // JSON stringified array
+  logo: text("logo"),
 });
 
 export const savedJobs = pgTable("saved_jobs", {
