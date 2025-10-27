@@ -17,11 +17,14 @@ import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X,
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { ChatDock } from '@/components/chat/chat-dock';
+import { HelpCircle } from 'lucide-react';
 
 export default function RecruiterDashboard2() {
   const [, navigate] = useLocation();
   const [sidebarTab, setSidebarTab] = useState('dashboard');
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('team');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
@@ -395,7 +398,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader userName="Kumaravel R - Recruiter 2" companyName="Gumlat Marketing Private Limited" />
+          <AdminTopHeader userName={`${recruiterProfile?.name || 'Recruiter'} - Recruiter`} companyName="Gumlat Marketing Private Limited" />
           <div className="flex h-screen">
             {/* Main Content - Middle Section (Scrollable) */}
             <div className="px-6 py-6 space-y-6 flex-1 overflow-y-auto h-full">
@@ -652,19 +655,33 @@ export default function RecruiterDashboard2() {
                           View More
                         </Button>
                       </div>
-                      <div className="h-24 flex items-center justify-center">
+                      <div className="h-48 flex items-center justify-center bg-white rounded-lg p-4 border border-gray-200">
                         <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={[
-                            { day: 'Mon', performance: 30 },
-                            { day: 'Tue', performance: 45 },
-                            { day: 'Wed', performance: 60 },
-                            { day: 'Thu', performance: 55 },
-                            { day: 'Fri', performance: 70 },
-                            { day: 'Sat', performance: 40 }
-                          ]}>
-                            <XAxis dataKey="day" hide />
-                            <YAxis hide />
-                            <Line type="monotone" dataKey="performance" stroke="#FB923C" strokeWidth={2} dot={false} />
+                          <LineChart 
+                            data={[
+                              { quarter: 'Q1', closures: 2, closureValue: 300000, incentives: 6000 },
+                              { quarter: 'Q2', closures: 3, closureValue: 550000, incentives: 9000 },
+                              { quarter: 'Q3', closures: 4, closureValue: 775000, incentives: 12000 },
+                              { quarter: 'Q4', closures: 3, closureValue: 600000, incentives: 9000 },
+                            ]}
+                            margin={{ top: 5, right: 40, left: 0, bottom: 5 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                            <XAxis dataKey="quarter" stroke="#6b7280" style={{ fontSize: '10px' }} />
+                            <YAxis yAxisId="left" stroke="#3b82f6" style={{ fontSize: '10px' }} />
+                            <YAxis yAxisId="right" orientation="right" stroke="#10b981" style={{ fontSize: '10px' }} />
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '0.5rem',
+                                fontSize: '11px'
+                              }}
+                            />
+                            <Legend wrapperStyle={{ fontSize: '10px' }} />
+                            <Line yAxisId="left" type="monotone" dataKey="closures" stroke="#3b82f6" strokeWidth={2} name="Closures" dot={{ fill: '#3b82f6', r: 3 }} />
+                            <Line yAxisId="right" type="monotone" dataKey="closureValue" stroke="#10b981" strokeWidth={2} name="Value (₹)" dot={{ fill: '#10b981', r: 3 }} />
+                            <Line yAxisId="right" type="monotone" dataKey="incentives" stroke="#f59e0b" strokeWidth={2} name="Incentives (₹)" dot={{ fill: '#f59e0b', r: 3 }} />
                           </LineChart>
                         </ResponsiveContainer>
                       </div>
@@ -807,7 +824,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader userName="Kumaravel R - Recruiter 2" companyName="Gumlat Marketing Private Limited" />
+          <AdminTopHeader userName={`${recruiterProfile?.name || 'Recruiter'} - Recruiter`} companyName="Gumlat Marketing Private Limited" />
           <div className="flex h-screen">
             {/* Main Content Area */}
             <div className="flex-1 px-6 py-6 overflow-y-auto">
@@ -948,7 +965,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader userName="Kumaravel R - Recruiter 2" companyName="Gumlat Marketing Private Limited" />
+          <AdminTopHeader userName={`${recruiterProfile?.name || 'Recruiter'} - Recruiter`} companyName="Gumlat Marketing Private Limited" />
           <div className="flex h-screen">
             {/* Main Content Area */}
             <div className="flex-1 px-6 py-6 overflow-y-auto">
@@ -1248,7 +1265,7 @@ export default function RecruiterDashboard2() {
 
   const renderPerformanceContent = () => {
     return (
-      <div className="flex flex-1 gap-4 p-6">
+      <div className="flex flex-1 gap-4 p-6 pt-8 ml-16 mt-12">
         {/* Left side - Main Table */}
         <div className="flex-1">
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -1373,7 +1390,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader userName="Kumaravel R - Recruiter 2" companyName="Gumlat Marketing Private Limited" />
+          <AdminTopHeader userName={`${recruiterProfile?.name || 'Recruiter'} - Recruiter`} companyName="Gumlat Marketing Private Limited" />
           <div className="flex flex-col h-full p-6">
             <h2 className="text-2xl font-bold mb-4">Team Chat</h2>
             <div className="flex-1 bg-white rounded-lg border border-gray-200 p-4 mb-4 overflow-y-auto">
@@ -2099,6 +2116,23 @@ export default function RecruiterDashboard2() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Floating Help Button */}
+      <button
+        onClick={() => setIsChatOpen(true)}
+        className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 z-50"
+        data-testid="button-floating-help"
+        aria-label="Open Chat"
+      >
+        <HelpCircle size={24} />
+      </button>
+
+      {/* Chat Support Modal */}
+      <ChatDock 
+        open={isChatOpen} 
+        onClose={() => setIsChatOpen(false)} 
+        userName="Support Team"
+      />
     </div>
   );
 }
