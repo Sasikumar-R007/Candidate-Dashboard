@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogOverlay, Dialog
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Search, MapPin, Filter, X, Heart, Clock, Bookmark, ChevronDown, Bell, Settings, User, Briefcase, DollarSign, MessageCircle } from "lucide-react";
 import { useSavedJobs, useSaveJob, useRemoveSavedJob } from "@/hooks/use-saved-jobs";
+import { useApplyJob, useJobApplications } from "@/hooks/use-job-applications";
 import { useToast } from "@/hooks/use-toast";
 import { useProfile } from "@/hooks/use-profile";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -167,10 +168,13 @@ export default function JobBoardTab({ onNavigateToJobPreferences, onNavigateToPr
   const { data: savedJobsData = [] } = useSavedJobs();
   const saveJobMutation = useSaveJob();
   const removeSavedJobMutation = useRemoveSavedJob();
+  const applyJobMutation = useApplyJob();
+  const { data: jobApplicationsData = [] } = useJobApplications();
   const { toast } = useToast();
   const { data: profile } = useProfile();
 
   const savedJobs = new Set(savedJobsData.map(job => `${job.jobTitle}-${job.company}`));
+  const appliedJobsFromDB = new Set(jobApplicationsData.map(app => `${app.jobTitle}-${app.company}`));
 
   const departments = [
     'Software Development',
@@ -289,17 +293,58 @@ export default function JobBoardTab({ onNavigateToJobPreferences, onNavigateToPr
     setShowApplyConfirmation(true);
   };
 
-  const confirmApplyJob = () => {
+  const confirmApplyJob = async () => {
     if (pendingApplyJob) {
-      const jobKey = `${pendingApplyJob.title}-${pendingApplyJob.company}`;
-      setAppliedJobs(prev => new Set(Array.from(prev).concat(jobKey)));
-      toast({
-        title: "Application submitted",
-        description: "Recruiters will be contacting you shortly regarding your application.",
-      });
-      setShowApplyConfirmation(false);
-      setPendingApplyJob(null);
-      if (selectedJob) setShowJobModal(false);
+      try {
+        await applyJobMutation.mutateAsync({
+          jobTitle: pendingApplyJob.title,
+          company: pendingApplyJob.company,
+          jobType: pendingApplyJob.type,
+          description: pendingApplyJob.description,
+          salary: pendingApplyJob.salary,
+          location: pendingApplyJob.location,
+          workMode: pendingApplyJob.workType,
+          experience: pendingApplyJob.experience,
+          skills: JSON.stringify(pendingApplyJob.skills),
+          logo: pendingApplyJob.logo,
+        });
+        
+        const jobKey = `${pendingApplyJob.title}-${pendingApplyJob.company}`;
+        setAppliedJobs(prev => new Set(Array.from(prev).concat(jobKey)));
+        
+        toast({
+          title: "Application submitted",
+          description: "Recruiters will be contacting you shortly regarding your application.",
+        });
+        
+        setShowApplyConfirmation(false);
+        setPendingApplyJob(null);
+        if (selectedJob) setShowJobModal(false);
+      } catch (error: any) {
+        const errorMessage = error?.message || "Failed to apply for job";
+        
+        if (errorMessage.includes("Authentication required")) {
+          toast({
+            title: "Login Required",
+            description: "Please log in to apply for jobs.",
+            variant: "destructive",
+          });
+        } else if (errorMessage.includes("already applied")) {
+          toast({
+            title: "Already Applied",
+            description: "You have already applied for this job.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: errorMessage,
+            variant: "destructive",
+          });
+        }
+        setShowApplyConfirmation(false);
+        setPendingApplyJob(null);
+      }
     }
   };
 
@@ -1080,15 +1125,15 @@ export default function JobBoardTab({ onNavigateToJobPreferences, onNavigateToPr
                   </Button>
                   <Button
                     onClick={() => handleApplyJob(selectedJob)}
-                    disabled={appliedJobs.has(`${selectedJob.title}-${selectedJob.company}`)}
+                    disabled={appliedJobs.has(`${selectedJob.title}-${selectedJob.company}`) || appliedJobsFromDB.has(`${selectedJob.title}-${selectedJob.company}`) || applyJobMutation.isPending}
                     className={`flex-1 ${
-                      appliedJobs.has(`${selectedJob.title}-${selectedJob.company}`)
+                      appliedJobs.has(`${selectedJob.title}-${selectedJob.company}`) || appliedJobsFromDB.has(`${selectedJob.title}-${selectedJob.company}`)
                         ? 'bg-green-600 hover:bg-green-700'
                         : 'bg-blue-600 hover:bg-blue-700'
                     } text-white`}
                     data-testid="button-apply-job-modal"
                   >
-                    {appliedJobs.has(`${selectedJob.title}-${selectedJob.company}`) ? 'Applied' : 'Apply'}
+                    {appliedJobs.has(`${selectedJob.title}-${selectedJob.company}`) || appliedJobsFromDB.has(`${selectedJob.title}-${selectedJob.company}`) ? 'Applied' : applyJobMutation.isPending ? 'Applying...' : 'Apply'}
                   </Button>
                 </div>
               </div>

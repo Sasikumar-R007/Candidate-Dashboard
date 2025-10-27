@@ -287,7 +287,7 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
           location: pendingApplyJob.location,
           workMode: pendingApplyJob.workMode,
           experience: pendingApplyJob.experience,
-          skills: pendingApplyJob.skills,
+          skills: JSON.stringify(pendingApplyJob.skills),
           logo: pendingApplyJob.logo
         });
         
