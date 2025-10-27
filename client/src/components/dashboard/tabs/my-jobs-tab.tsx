@@ -17,6 +17,35 @@ import { useToast } from "@/hooks/use-toast";
 import type { JobApplication } from '@shared/schema';
 import CandidateMetrics from '@/components/dashboard/candidate-metrics';
 
+// Helper function to calculate days ago from a date
+function calculateDaysAgo(date: Date | string): string {
+  const now = new Date();
+  const appliedDate = new Date(date);
+  const diffTime = Math.abs(now.getTime() - appliedDate.getTime());
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) return '0 days';
+  if (diffDays === 1) return '1 day';
+  return `${diffDays} days`;
+}
+
+// Helper function to format date
+function formatDate(date: Date | string): string {
+  const d = new Date(date);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// Helper function to safely parse skills from JSON string
+function parseSkills(skills: string | null | undefined): string[] {
+  if (!skills) return [];
+  try {
+    const parsed = JSON.parse(skills);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 interface MyJobsTabProps {
   className?: string;
   onNavigateToJobBoard?: () => void;
@@ -131,55 +160,6 @@ const jobSuggestions: JobSuggestion[] = [
     experience: '2-4 years',
     type: 'Full-time',
     background: 'bg-red-50'
-  }
-];
-
-// Mock applied jobs data with status
-const mockAppliedJobs: any[] = [
-  {
-    id: '1',
-    jobTitle: 'Frontend Developer',
-    company: 'TechCorp',
-    jobType: 'Full-Time',
-    status: 'In Process',
-    appliedDate: '06-06-2025',
-    daysAgo: '40 days'
-  },
-  {
-    id: '2',
-    jobTitle: 'UI/UX Designer',
-    company: 'Designify',
-    jobType: 'Internship',
-    status: 'Rejected',
-    appliedDate: '08-06-2025',
-    daysAgo: '37 days'
-  },
-  {
-    id: '3',
-    jobTitle: 'Backend Developer',
-    company: 'CodeLabs',
-    jobType: 'Full-Time',
-    status: 'Rejected',
-    appliedDate: '20-06-2025',
-    daysAgo: '22 days'
-  },
-  {
-    id: '4',
-    jobTitle: 'QA Tester',
-    company: 'AppLogic',
-    jobType: 'Internship',
-    status: 'In Process',
-    appliedDate: '01-07-2025',
-    daysAgo: '22 days'
-  },
-  {
-    id: '5',
-    jobTitle: 'Bug Catchers',
-    company: 'Mobile App Developer',
-    jobType: 'Full-Time',
-    status: 'In Process',
-    appliedDate: '23-07-2025',
-    daysAgo: '2 days'
   }
 ];
 
@@ -372,8 +352,8 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
                       ● {job.status || 'In Process'}
                     </Badge>
                   </td>
-                  <td className="py-4 px-4 text-gray-700">{job.appliedDate}</td>
-                  <td className="py-4 px-4 text-gray-600">{job.daysAgo}</td>
+                  <td className="py-4 px-4 text-gray-700">{formatDate(job.appliedDate)}</td>
+                  <td className="py-4 px-4 text-gray-600">{calculateDaysAgo(job.appliedDate)}</td>
                   <td className="py-4 px-4">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -904,11 +884,11 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
                 </div>
 
                 {/* Skills */}
-                {selectedApplication.skills && (
+                {parseSkills(selectedApplication.skills).length > 0 && (
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Skills Required</h5>
                     <div className="flex flex-wrap gap-2">
-                      {JSON.parse(selectedApplication.skills).map((skill: string, index: number) => (
+                      {parseSkills(selectedApplication.skills).map((skill: string, index: number) => (
                         <Badge key={index} className="bg-green-100 text-green-700 border-green-200 text-xs px-2 py-1">
                           {skill}
                         </Badge>
@@ -922,11 +902,11 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="text-gray-600 dark:text-gray-400">Applied On:</span>
-                      <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{selectedApplication.appliedDate}</span>
+                      <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{formatDate(selectedApplication.appliedDate)}</span>
                     </div>
                     <div>
                       <span className="text-gray-600 dark:text-gray-400">Applied Since:</span>
-                      <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{selectedApplication.daysAgo}</span>
+                      <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{calculateDaysAgo(selectedApplication.appliedDate)}</span>
                     </div>
                   </div>
                 </div>

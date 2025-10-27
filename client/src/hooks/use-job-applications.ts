@@ -1,20 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import type { JobApplication } from "@shared/schema";
-
-interface ApplyJobData {
-  jobTitle: string;
-  company: string;
-  jobType?: string;
-  status?: string;
-  description?: string;
-  salary?: string;
-  location?: string;
-  workMode?: string;
-  experience?: string;
-  skills?: string[];
-  logo?: string;
-}
+import type { JobApplication, InsertJobApplication } from "@shared/schema";
 
 export function useJobApplications() {
   return useQuery<JobApplication[]>({
@@ -24,7 +10,7 @@ export function useJobApplications() {
 
 export function useApplyJob() {
   return useMutation({
-    mutationFn: async (jobData: ApplyJobData) => {
+    mutationFn: async (jobData: InsertJobApplication) => {
       const response = await apiRequest("POST", "/api/job-applications", jobData);
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Failed to apply for job' }));

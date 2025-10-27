@@ -81,10 +81,9 @@ export const jobApplications = pgTable("job_applications", {
   profileId: varchar("profile_id").notNull(),
   jobTitle: text("job_title").notNull(),
   company: text("company").notNull(),
-  jobType: text("job_type").notNull(),
+  jobType: text("job_type"),
   status: text("status").notNull().default("In Process"), // In Process, Rejected, Applied, etc.
-  appliedDate: text("applied_date").notNull(),
-  daysAgo: text("days_ago").notNull(),
+  appliedDate: timestamp("applied_date").notNull().defaultNow(),
   // Additional job details for viewing
   description: text("description"),
   salary: text("salary"),
@@ -368,6 +367,12 @@ export const insertActivitySchema = createInsertSchema(activities).omit({
 
 export const insertJobApplicationSchema = createInsertSchema(jobApplications).omit({
   id: true,
+  profileId: true,
+  appliedDate: true,
+}).extend({
+  skills: z.union([z.string(), z.array(z.string())]).optional().transform(val => 
+    Array.isArray(val) ? JSON.stringify(val) : val
+  ),
 });
 
 export const insertSavedJobSchema = createInsertSchema(savedJobs).omit({

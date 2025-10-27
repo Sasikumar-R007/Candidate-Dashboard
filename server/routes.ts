@@ -1181,26 +1181,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Candidate not found" });
       }
 
-      // Calculate days ago from current date
-      const appliedDate = new Date().toISOString().split('T')[0];
-      const daysAgo = "0 days";
+      // Validate request body using zod
+      const validationResult = insertJobApplicationSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid input", 
+          errors: validationResult.error.errors 
+        });
+      }
 
-      // Create the job application with all provided details
+      // Check for duplicate application
+      const existingApplications = await storage.getJobApplicationsByProfile(candidate.id);
+      const isDuplicate = existingApplications.some(
+        app => app.jobTitle === validationResult.data.jobTitle && app.company === validationResult.data.company
+      );
+      
+      if (isDuplicate) {
+        return res.status(400).json({ message: "You have already applied for this job" });
+      }
+
+      // Create the job application with server-side defaults
       const applicationData = {
+        ...validationResult.data,
         profileId: candidate.id,
-        jobTitle: req.body.jobTitle,
-        company: req.body.company,
-        jobType: req.body.jobType || "Full-Time",
-        status: req.body.status || "In Process",
-        appliedDate,
-        daysAgo,
-        description: req.body.description || null,
-        salary: req.body.salary || null,
-        location: req.body.location || null,
-        workMode: req.body.workMode || null,
-        experience: req.body.experience || null,
-        skills: req.body.skills ? JSON.stringify(req.body.skills) : null,
-        logo: req.body.logo || null
       };
 
       const application = await storage.createJobApplication(applicationData);
