@@ -485,7 +485,7 @@ export default function JobBoardTab({ onNavigateToJobPreferences, onNavigateToPr
                 Last Updated: Yesterday
               </p>
               <Button
-                onClick={() => navigate('/candidate')}
+                onClick={onNavigateToProfile}
                 className="w-full bg-cyan-500 hover:bg-cyan-600 text-white rounded-full"
                 data-testid="button-edit-profile"
               >
