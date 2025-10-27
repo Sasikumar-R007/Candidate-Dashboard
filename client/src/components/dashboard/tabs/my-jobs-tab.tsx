@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { MoreHorizontal, MapPin, Flame, Eye, Archive } from 'lucide-react';
 import { useSavedJobs, useSaveJob, useRemoveSavedJob } from "@/hooks/use-saved-jobs";
+import { useJobApplications, useApplyJob } from "@/hooks/use-job-applications";
 import { useToast } from "@/hooks/use-toast";
 import type { JobApplication } from '@shared/schema';
 import CandidateMetrics from '@/components/dashboard/candidate-metrics';
@@ -186,20 +187,24 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
   const [showAllJobs, setShowAllJobs] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedJob, setSelectedJob] = useState<JobSuggestion | null>(null);
+  const [selectedApplication, setSelectedApplication] = useState<JobApplication | null>(null);
   const [showJobModal, setShowJobModal] = useState(false);
-  const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set());
+  const [showApplicationModal, setShowApplicationModal] = useState(false);
   const [showApplyConfirmation, setShowApplyConfirmation] = useState(false);
   const [pendingApplyJob, setPendingApplyJob] = useState<JobSuggestion | null>(null);
-  const [applicationList, setApplicationList] = useState<any[]>(mockAppliedJobs);
   const jobsPerPage = 3;
-  const { data: jobApplications = mockAppliedJobs, isLoading } = useQuery({
-    queryKey: ['/api/job-applications'],
-  });
   
+  const { data: jobApplications = [], isLoading } = useJobApplications();
+  const applyJobMutation = useApplyJob();
   const { data: savedJobsData } = useSavedJobs();
   const saveJobMutation = useSaveJob();
   const removeSavedJobMutation = useRemoveSavedJob();
   const { toast } = useToast();
+
+  // Create a Set of applied jobs for fast lookup
+  const appliedJobs = new Set(
+    jobApplications.map(app => `${app.jobTitle}-${app.company}`)
+  );
 
   // Create a Set of saved job keys for fast lookup
   const savedJobs = new Set(
@@ -221,12 +226,12 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
   };
 
   const handleViewJob = (job: JobApplication) => {
-    console.log('View job:', job);
-    // Navigate to job details or open in new window
+    setSelectedApplication(job);
+    setShowApplicationModal(true);
   };
 
   const handleArchiveJob = (job: JobApplication) => {
-    setApplicationList(prev => prev.filter(j => j.id !== job.id));
+    // TODO: Implement archive functionality with API
     toast({
       title: "Job archived",
       description: `${job.jobTitle} at ${job.company} has been archived.`,
@@ -290,17 +295,36 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
     setShowApplyConfirmation(true);
   };
 
-  const confirmApplyJob = () => {
+  const confirmApplyJob = async () => {
     if (pendingApplyJob) {
-      const jobKey = `${pendingApplyJob.title}-${pendingApplyJob.company}`;
-      setAppliedJobs(prev => new Set(Array.from(prev).concat(jobKey)));
-      toast({
-        title: "Application submitted",
-        description: "Recruiters will be contacting you shortly regarding your application.",
-      });
-      setShowApplyConfirmation(false);
-      setPendingApplyJob(null);
-      if (selectedJob) setShowJobModal(false);
+      try {
+        await applyJobMutation.mutateAsync({
+          jobTitle: pendingApplyJob.title,
+          company: pendingApplyJob.company,
+          jobType: pendingApplyJob.type,
+          description: pendingApplyJob.description,
+          salary: pendingApplyJob.salary,
+          location: pendingApplyJob.location,
+          workMode: pendingApplyJob.workMode,
+          experience: pendingApplyJob.experience,
+          skills: pendingApplyJob.skills,
+          logo: pendingApplyJob.logo
+        });
+        
+        toast({
+          title: "Application submitted",
+          description: "Recruiters will be contacting you shortly regarding your application.",
+        });
+        setShowApplyConfirmation(false);
+        setPendingApplyJob(null);
+        if (selectedJob) setShowJobModal(false);
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: error?.message || "Failed to submit application",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -336,9 +360,9 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
               </tr>
             </thead>
             <tbody>
-              {applicationList
+              {jobApplications
                 .slice(0, showAllJobs ? undefined : 5)
-                .map((job: any) => (
+                .map((job: JobApplication) => (
                 <tr key={job.id} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="py-4 px-4 font-medium text-gray-900">{job.jobTitle}</td>
                   <td className="py-4 px-4 text-gray-700">{job.company}</td>
@@ -377,14 +401,14 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
           </table>
         </div>
 
-        {applicationList.length === 0 && (
+        {jobApplications.length === 0 && (
           <div className="text-center py-12 text-gray-500">
             No job applications found. Start applying to jobs to see them here.
           </div>
         )}
 
         {/* See all button for Applied Jobs - moved below the table */}
-        {applicationList.length > 5 && !showAllJobs && (
+        {jobApplications.length > 5 && !showAllJobs && (
           <div className="mt-6 pt-4 border-t border-gray-200 text-center">
             <Button 
               variant="link" 
@@ -802,6 +826,126 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* View Applied Job Details Modal */}
+      {showApplicationModal && selectedApplication && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+          <div className="bg-blue-50 dark:bg-blue-900/30 rounded-2xl shadow-2xl max-w-2xl w-full mx-8 max-h-[85vh] flex flex-col">
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-4" style={{ scrollbarWidth: 'thin', scrollbarColor: '#e5e7eb transparent' }}>
+              {/* Job Card Header */}
+              <div className="bg-white dark:bg-gray-800 p-4 mb-4 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                <div className="flex">
+                  {/* Company Logo Section */}
+                  <div className="w-32 flex items-center justify-center">
+                    <div className="bg-gray-100 rounded-xl p-3 flex flex-col items-center justify-center w-full h-full min-h-[100px]">
+                      <div className="text-lg font-bold text-gray-700 dark:text-gray-300">{selectedApplication.company}</div>
+                    </div>
+                  </div>
+
+                  {/* Job Details */}
+                  <div className="flex-1 pl-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{selectedApplication.company}</h3>
+                        <h4 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                          {selectedApplication.jobTitle}
+                        </h4>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">{selectedApplication.description || 'No description available'}</p>
+                      </div>
+                      <button
+                        onClick={() => setShowApplicationModal(false)}
+                        className="w-6 h-6 bg-red-500 hover:bg-red-600 rounded flex items-center justify-center ml-2 transition-colors"
+                        data-testid="button-close-application-modal"
+                      >
+                        <i className="fas fa-times text-white text-xs"></i>
+                      </button>
+                    </div>
+                    
+                    <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400 mb-2">
+                      {selectedApplication.experience && (
+                        <span className="flex items-center gap-1">
+                          <i className="fas fa-briefcase"></i>
+                          {selectedApplication.experience}
+                        </span>
+                      )}
+                      {selectedApplication.salary && (
+                        <span className="flex items-center gap-1">
+                          <i className="fas fa-rupee-sign"></i>
+                          {selectedApplication.salary}
+                        </span>
+                      )}
+                      {selectedApplication.location && (
+                        <span className="flex items-center gap-1">
+                          <i className="fas fa-map-marker-alt"></i>
+                          {selectedApplication.location}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs">
+                      {selectedApplication.jobType && (
+                        <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs px-2 py-1">
+                          {selectedApplication.jobType}
+                        </Badge>
+                      )}
+                      {selectedApplication.workMode && (
+                        <Badge className="bg-green-100 text-green-700 border-green-200 text-xs px-2 py-1">
+                          {selectedApplication.workMode}
+                        </Badge>
+                      )}
+                      {selectedApplication.status && (
+                        <Badge className={`${getStatusBadge(selectedApplication.status)} border text-xs px-2 py-1`}>
+                          ● {selectedApplication.status}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Skills */}
+                {selectedApplication.skills && (
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Skills Required</h5>
+                    <div className="flex flex-wrap gap-2">
+                      {JSON.parse(selectedApplication.skills).map((skill: string, index: number) => (
+                        <Badge key={index} className="bg-green-100 text-green-700 border-green-200 text-xs px-2 py-1">
+                          {skill}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Application Info */}
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600 dark:text-gray-400">Applied On:</span>
+                      <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{selectedApplication.appliedDate}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-600 dark:text-gray-400">Applied Since:</span>
+                      <span className="ml-2 font-medium text-gray-900 dark:text-gray-100">{selectedApplication.daysAgo}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 flex justify-center gap-3 border-t border-gray-200">
+              <Button 
+                onClick={() => setShowApplicationModal(false)}
+                className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded font-medium border-0 text-sm"
+                data-testid="button-close-application"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
