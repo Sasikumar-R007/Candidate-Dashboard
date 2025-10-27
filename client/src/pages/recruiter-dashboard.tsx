@@ -995,138 +995,276 @@ export default function RecruiterDashboard() {
         );
       case 'pipeline':
         return (
-          <div className="p-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Pipeline</h2>
-            
-            {/* Summary Cards */}
-            <div className="grid grid-cols-4 gap-4 mb-8">
-              <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg cursor-pointer">
-                <div className="text-gray-500 dark:text-gray-400 text-sm">Resume processed</div>
-                <div className="text-4xl font-bold text-gray-900 dark:text-white">20</div>
-              </div>
-              <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg cursor-pointer">
-                <div className="text-gray-500 dark:text-gray-400 text-sm">Recruitment worked</div>
-                <div className="text-4xl font-bold text-gray-900 dark:text-white">12</div>
-              </div>
-              <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg cursor-pointer">
-                <div className="text-gray-500 dark:text-gray-400 text-sm">Feedback pending</div>
-                <div className="text-4xl font-bold text-gray-900 dark:text-white">8</div>
-              </div>
-              <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-lg cursor-pointer">
-                <div className="text-gray-500 dark:text-gray-400 text-sm">Assignment cleared</div>
-                <div className="text-4xl font-bold text-gray-900 dark:text-white">10</div>
+          <div className="flex h-full">
+            {/* Middle Pipeline Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto admin-scrollbar">
+              <div className="p-6 space-y-6">
+                {/* Pipeline Header */}
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Pipeline</h2>
+                  <div className="flex items-center gap-4">
+                    {/* Recruiter Name */}
+                    <div className="w-48 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white text-sm">
+                      {recruiterProfile?.name || 'Recruiter'}
+                    </div>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {format(new Date(), "dd-MMM-yyyy")}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={new Date()}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+
+                {/* Pipeline Stages */}
+                <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto admin-scrollbar">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr>
+                            <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Level 1</th>
+                            <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Level 2</th>
+                            <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Level 3</th>
+                            <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Final Round</th>
+                            <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">HR Round</th>
+                            <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Offer Stage</th>
+                            <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Closure</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td className="p-3 align-top">
+                              <div className="flex flex-col gap-2">
+                                <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  Keerthana
+                                </div>
+                                <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  Vishnu Purana
+                                </div>
+                                <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  Chanakya
+                                </div>
+                                <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  Adhya
+                                </div>
+                                <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  Vanshika
+                                </div>
+                                <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  Reyansh
+                                </div>
+                                <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  Shaurya
+                                </div>
+                                <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  Vihana
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-3 align-top">
+                              <div className="flex flex-col gap-2">
+                                <div className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  Keerthana
+                                </div>
+                                <div className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  Vishnu Purana
+                                </div>
+                                <div className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  Chanakya
+                                </div>
+                                <div className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  Adhya
+                                </div>
+                                <div className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  Vanshika
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-3 align-top">
+                              <div className="flex flex-col gap-2">
+                                <div className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  Keerthana
+                                </div>
+                                <div className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  Vishnu Purana
+                                </div>
+                                <div className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  Chanakya
+                                </div>
+                                <div className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  Adhya
+                                </div>
+                                <div className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  Vanshika
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-3 align-top">
+                              <div className="flex flex-col gap-2">
+                                <div className="px-3 py-2 bg-green-500 dark:bg-green-600 rounded text-center text-sm font-medium text-white">
+                                  Keerthana
+                                </div>
+                                <div className="px-3 py-2 bg-green-500 dark:bg-green-600 rounded text-center text-sm font-medium text-white">
+                                  Vishnu Purana
+                                </div>
+                                <div className="px-3 py-2 bg-green-500 dark:bg-green-600 rounded text-center text-sm font-medium text-white">
+                                  Chanakya
+                                </div>
+                                <div className="px-3 py-2 bg-green-500 dark:bg-green-600 rounded text-center text-sm font-medium text-white">
+                                  Adhya
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-3 align-top">
+                              <div className="flex flex-col gap-2">
+                                <div className="px-3 py-2 bg-green-600 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
+                                  Keerthana
+                                </div>
+                                <div className="px-3 py-2 bg-green-600 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
+                                  Vishnu Purana
+                                </div>
+                                <div className="px-3 py-2 bg-green-600 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
+                                  Chanakya
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-3 align-top">
+                              <div className="flex flex-col gap-2">
+                                <div className="px-3 py-2 bg-green-700 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
+                                  Keerthana
+                                </div>
+                                <div className="px-3 py-2 bg-green-700 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
+                                  Vishnu Purana
+                                </div>
+                              </div>
+                            </td>
+                            <td className="p-3 align-top">
+                              <div className="flex flex-col gap-2">
+                                <div className="px-3 py-2 bg-green-800 dark:bg-green-400 rounded text-center text-sm font-medium text-white">
+                                  Keerthana
+                                </div>
+                                <div className="px-3 py-2 bg-green-800 dark:bg-green-400 rounded text-center text-sm font-medium text-white">
+                                  Vishnu Purana
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Closure Reports Table */}
+                <Card className="mt-6">
+                  <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                    <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Closure Reports</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto admin-scrollbar">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Candidate</th>
+                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Position</th>
+                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Client</th>
+                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Quarter</th>
+                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Offered Date</th>
+                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Joined Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {performanceData.map((row, index) => (
+                            <tr key={index} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                              <td className="p-3 text-gray-900 dark:text-white">{row.candidate}</td>
+                              <td className="p-3 text-gray-600 dark:text-gray-400">{row.position}</td>
+                              <td className="p-3 text-gray-600 dark:text-gray-400">{row.client}</td>
+                              <td className="p-3 text-gray-600 dark:text-gray-400">{row.quarter}</td>
+                              <td className="p-3 text-gray-600 dark:text-gray-400">{row.offeredOn}</td>
+                              <td className="p-3 text-gray-600 dark:text-gray-400">{row.joinedOn}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
 
-            {/* Pipeline Grid */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Candidate Pipeline Flow</h3>
-              
-              {/* Pipeline Stage Headers */}
-              <div className="grid grid-cols-7 gap-3 mb-4">
-                <div className="bg-blue-600 text-white p-3 rounded-lg text-center">
-                  <div className="font-semibold text-sm">Level 1</div>
-                  <div className="text-xs mt-1 opacity-90">Initial</div>
+            {/* Right Sidebar with Stats */}
+            <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 h-full overflow-y-auto">
+              <div className="p-4 space-y-1">
+                <div className="w-full flex justify-between items-center py-3 px-4 bg-green-100 dark:bg-green-900 rounded hover:bg-green-200 dark:hover:bg-green-800 transition-colors cursor-pointer"
+                  data-testid="pipeline-sourced">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SOURCED</span>
+                  <span className="text-lg font-bold text-gray-900 dark:text-white">15</span>
                 </div>
-                <div className="bg-blue-500 text-white p-3 rounded-lg text-center">
-                  <div className="font-semibold text-sm">Level 2</div>
-                  <div className="text-xs mt-1 opacity-90">Technical</div>
+                <div className="w-full flex justify-between items-center py-3 px-4 bg-green-200 dark:bg-green-800 rounded hover:bg-green-300 dark:hover:bg-green-700 transition-colors cursor-pointer"
+                  data-testid="pipeline-shortlisted">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SHORTLISTED</span>
+                  <span className="text-lg font-bold text-gray-900 dark:text-white">9</span>
                 </div>
-                <div className="bg-blue-400 text-white p-3 rounded-lg text-center">
-                  <div className="font-semibold text-sm">Level 3</div>
-                  <div className="text-xs mt-1 opacity-90">Advanced</div>
+                <div className="w-full flex justify-between items-center py-3 px-4 bg-green-300 dark:bg-green-700 rounded hover:bg-green-400 dark:hover:bg-green-600 transition-colors cursor-pointer"
+                  data-testid="pipeline-intro-call">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">INTRO CALL</span>
+                  <span className="text-lg font-bold text-gray-900 dark:text-white">7</span>
                 </div>
-                <div className="bg-yellow-500 text-white p-3 rounded-lg text-center">
-                  <div className="font-semibold text-sm">Final Round</div>
-                  <div className="text-xs mt-1 opacity-90">Decision</div>
+                <div className="w-full flex justify-between items-center py-3 px-4 bg-green-400 dark:bg-green-600 rounded hover:bg-green-500 dark:hover:bg-green-500 transition-colors cursor-pointer"
+                  data-testid="pipeline-assignment">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">ASSIGNMENT</span>
+                  <span className="text-lg font-bold text-gray-800 dark:text-white">9</span>
                 </div>
-                <div className="bg-orange-500 text-white p-3 rounded-lg text-center">
-                  <div className="font-semibold text-sm">HR Round</div>
-                  <div className="text-xs mt-1 opacity-90">Culture</div>
+                <div className="w-full flex justify-between items-center py-3 px-4 bg-green-500 dark:bg-green-600 rounded hover:bg-green-600 dark:hover:bg-green-500 transition-colors cursor-pointer"
+                  data-testid="pipeline-l1">
+                  <span className="text-sm font-medium text-white">L1</span>
+                  <span className="text-lg font-bold text-white">15</span>
                 </div>
-                <div className="bg-green-500 text-white p-3 rounded-lg text-center">
-                  <div className="font-semibold text-sm">Offer Stage</div>
-                  <div className="text-xs mt-1 opacity-90">Negotiation</div>
+                <div className="w-full flex justify-between items-center py-3 px-4 bg-green-600 dark:bg-green-500 rounded hover:bg-green-700 dark:hover:bg-green-400 transition-colors cursor-pointer"
+                  data-testid="pipeline-l2">
+                  <span className="text-sm font-medium text-white">L2</span>
+                  <span className="text-lg font-bold text-white">9</span>
                 </div>
-                <div className="bg-green-600 text-white p-3 rounded-lg text-center">
-                  <div className="font-semibold text-sm">Closure</div>
-                  <div className="text-xs mt-1 opacity-90">Joined</div>
+                <div className="w-full flex justify-between items-center py-3 px-4 bg-green-700 dark:bg-green-500 rounded hover:bg-green-800 dark:hover:bg-green-400 transition-colors cursor-pointer"
+                  data-testid="pipeline-l3">
+                  <span className="text-sm font-medium text-white">L3</span>
+                  <span className="text-lg font-bold text-white">3</span>
                 </div>
-              </div>
-
-              {/* Candidate Flow Grid */}
-              <div className="grid grid-cols-7 gap-3 auto-rows-auto">
-                {/* Keerthana */}
-                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Keerthana</div>
-                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Keerthana</div>
-                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Keerthana</div>
-                <div className="p-2 bg-yellow-100 text-yellow-800 rounded shadow-sm text-sm text-center">Keerthana</div>
-                <div className="p-2 bg-yellow-100 text-yellow-800 rounded shadow-sm text-sm text-center">Keerthana</div>
-                <div className="p-2 bg-green-100 text-green-800 rounded shadow-sm text-sm text-center">Keerthana</div>
-                <div className="p-2 bg-green-100 text-green-800 rounded shadow-sm text-sm text-center">Keerthana</div>
-
-                {/* Vishnu */}
-                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Vishnu</div>
-                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Vishnu</div>
-                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Vishnu</div>
-                <div className="p-2 bg-yellow-100 text-yellow-800 rounded shadow-sm text-sm text-center">Vishnu</div>
-                <div className="p-2 bg-yellow-100 text-yellow-800 rounded shadow-sm text-sm text-center">Vishnu</div>
-                <div className="p-2 bg-green-100 text-green-800 rounded shadow-sm text-sm text-center">Vishnu</div>
-                <div className="p-2 bg-green-100 text-green-800 rounded shadow-sm text-sm text-center">Vishnu</div>
-
-                {/* Chanakya */}
-                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Chanakya</div>
-                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Chanakya</div>
-                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Chanakya</div>
-                <div className="p-2 bg-yellow-100 text-yellow-800 rounded shadow-sm text-sm text-center">Chanakya</div>
-                <div className="p-2 bg-yellow-100 text-yellow-800 rounded shadow-sm text-sm text-center">Chanakya</div>
-                <div className="p-2"></div>
-                <div className="p-2"></div>
-
-                {/* Adhya */}
-                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Adhya</div>
-                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Adhya</div>
-                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Adhya</div>
-                <div className="p-2 bg-yellow-100 text-yellow-800 rounded shadow-sm text-sm text-center">Adhya</div>
-                <div className="p-2"></div>
-                <div className="p-2"></div>
-                <div className="p-2"></div>
-
-                {/* Vanshika */}
-                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Vanshika</div>
-                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Vanshika</div>
-                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Vanshika</div>
-                <div className="p-2"></div>
-                <div className="p-2"></div>
-                <div className="p-2"></div>
-                <div className="p-2"></div>
-
-                {/* Reyansh */}
-                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Reyansh</div>
-                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Reyansh</div>
-                <div className="p-2"></div>
-                <div className="p-2"></div>
-                <div className="p-2"></div>
-                <div className="p-2"></div>
-                <div className="p-2"></div>
-
-                {/* Shaurya */}
-                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Shaurya</div>
-                <div className="p-2"></div>
-                <div className="p-2"></div>
-                <div className="p-2"></div>
-                <div className="p-2"></div>
-                <div className="p-2"></div>
-                <div className="p-2"></div>
-
-                {/* Vihana */}
-                <div className="p-2 bg-blue-100 text-blue-800 rounded shadow-sm text-sm text-center">Vihana</div>
-                <div className="p-2"></div>
-                <div className="p-2"></div>
-                <div className="p-2"></div>
-                <div className="p-2"></div>
-                <div className="p-2"></div>
-                <div className="p-2"></div>
+                <div className="w-full flex justify-between items-center py-3 px-4 bg-green-800 dark:bg-green-400 rounded hover:bg-green-900 dark:hover:bg-green-300 transition-colors cursor-pointer"
+                  data-testid="pipeline-final-round">
+                  <span className="text-sm font-medium text-white">FINAL ROUND</span>
+                  <span className="text-lg font-bold text-white">9</span>
+                </div>
+                <div className="w-full flex justify-between items-center py-3 px-4 bg-green-900 dark:bg-green-400 rounded hover:bg-green-950 dark:hover:bg-green-300 transition-colors cursor-pointer"
+                  data-testid="pipeline-hr-round">
+                  <span className="text-sm font-medium text-white">HR ROUND</span>
+                  <span className="text-lg font-bold text-white">9</span>
+                </div>
+                <div className="w-full flex justify-between items-center py-3 px-4 bg-green-900 dark:bg-green-300 rounded hover:bg-green-950 dark:hover:bg-green-200 transition-colors cursor-pointer"
+                  data-testid="pipeline-offer-stage">
+                  <span className="text-sm font-medium text-white">OFFER STAGE</span>
+                  <span className="text-lg font-bold text-white">9</span>
+                </div>
+                <div className="w-full flex justify-between items-center py-3 px-4 bg-green-950 dark:bg-green-300 rounded hover:bg-black dark:hover:bg-green-200 transition-colors cursor-pointer"
+                  data-testid="pipeline-closure">
+                  <span className="text-sm font-medium text-white">CLOSURE</span>
+                  <span className="text-lg font-bold text-white">3</span>
+                </div>
+                <div className="w-full flex justify-between items-center py-3 px-4 bg-amber-500 dark:bg-amber-600 rounded hover:bg-amber-600 dark:hover:bg-amber-500 transition-colors cursor-pointer"
+                  data-testid="pipeline-offer-drop">
+                  <span className="text-sm font-medium text-white">OFFER DROP</span>
+                  <span className="text-lg font-bold text-white">3</span>
+                </div>
               </div>
             </div>
           </div>
