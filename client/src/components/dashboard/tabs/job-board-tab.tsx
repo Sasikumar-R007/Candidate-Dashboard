@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogOverlay, DialogPortal } from '@/components/ui/dialog';
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Search, MapPin, Filter, X, Heart, Clock, Bookmark, ChevronDown, Bell, Settings, User, Briefcase, DollarSign } from "lucide-react";
+import { Search, MapPin, Filter, X, Heart, Clock, Bookmark, ChevronDown, Bell, Settings, User, Briefcase, DollarSign, MessageCircle } from "lucide-react";
 import { useSavedJobs, useSaveJob, useRemoveSavedJob } from "@/hooks/use-saved-jobs";
 import { useToast } from "@/hooks/use-toast";
 import { useProfile } from "@/hooks/use-profile";
@@ -148,6 +148,7 @@ export default function JobBoardTab({ onNavigateToJobPreferences, onNavigateToPr
   const [showApplyConfirmation, setShowApplyConfirmation] = useState(false);
   const [pendingApplyJob, setPendingApplyJob] = useState<JobListing | null>(null);
   const [location, navigate] = useLocation();
+  const [showNotifications, setShowNotifications] = useState(false);
   
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
   const [selectedSalaries, setSelectedSalaries] = useState<string[]>([]);
@@ -402,11 +403,54 @@ export default function JobBoardTab({ onNavigateToJobPreferences, onNavigateToPr
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Bell Icon with Badge */}
-            <button className="relative p-2 text-teal-600 dark:text-teal-400 hover:bg-teal-100 dark:hover:bg-gray-700 rounded-full">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
+            {/* Bell Icon with Badge and Notification Dropdown */}
+            <div className="relative">
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)}
+                onBlur={() => setTimeout(() => setShowNotifications(false), 150)}
+                className="relative p-2 text-teal-600 dark:text-teal-400 hover:bg-teal-100 dark:hover:bg-gray-700 rounded-full"
+                data-testid="button-notifications"
+              >
+                <Bell className="w-5 h-5" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+              </button>
+              {showNotifications && (
+                <div className="absolute right-0 top-full mt-2 w-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-4 z-50">
+                  <div className="px-4 pb-3 border-b border-gray-200 dark:border-gray-600">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                      <Bell size={18} />
+                      Notifications
+                    </h3>
+                  </div>
+                  <div className="max-h-96 overflow-y-auto">
+                    <div className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-full">
+                          <MessageCircle size={16} className="text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">New Messages</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">You have 3 unread messages from recruiters</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">2 hours ago</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-green-100 dark:bg-green-900 rounded-full">
+                          <Briefcase size={16} className="text-green-600 dark:text-green-400" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Job Application Update</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Your application for Senior Developer at TechCorp is under review</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">5 hours ago</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Hot Jobs / All Jobs Toggle */}
             <div className="flex items-center bg-white dark:bg-gray-700 rounded-full overflow-hidden shadow-sm">

@@ -10,7 +10,7 @@ import JobBoardTab from '@/components/dashboard/tabs/job-board-tab';
 import MyJobsTab from '@/components/dashboard/tabs/my-jobs-tab';
 import EditViewProfile from '@/pages/edit-view-profile';
 import { useProfile } from '@/hooks/use-profile';
-import { MessageCircle, HelpCircle, Bell, Briefcase } from 'lucide-react';
+import { MessageCircle, HelpCircle } from 'lucide-react';
 import { useCandidateAuth } from '@/contexts/auth-context';
 import { ChatDock } from '@/components/chat/chat-dock';
 
@@ -21,7 +21,6 @@ export default function Dashboard() {
   const { data: profile, isLoading } = useProfile();
   const candidate = useCandidateAuth();
   const [chatOpen, setChatOpen] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
 
   if (isLoading) {
     return (
@@ -130,53 +129,6 @@ export default function Dashboard() {
                   <HelpCircle size={16} />
                   <span className="text-sm">Help</span>
                 </button>
-                <div className="relative">
-                  <button 
-                    onClick={() => setShowNotifications(!showNotifications)}
-                    onBlur={() => setTimeout(() => setShowNotifications(false), 150)}
-                    className="relative flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-                    data-testid="button-notifications"
-                  >
-                    <Bell size={18} />
-                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                  </button>
-                  {showNotifications && (
-                    <div className="absolute right-0 top-full mt-2 w-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-4 z-50">
-                      <div className="px-4 pb-3 border-b border-gray-200 dark:border-gray-600">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                          <Bell size={18} />
-                          Notifications
-                        </h3>
-                      </div>
-                      <div className="max-h-96 overflow-y-auto">
-                        <div className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700">
-                          <div className="flex items-start gap-3">
-                            <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-full">
-                              <MessageCircle size={16} className="text-blue-600 dark:text-blue-400" />
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">New Messages</p>
-                              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">You have 3 unread messages from recruiters</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">2 hours ago</p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700">
-                          <div className="flex items-start gap-3">
-                            <div className="p-2 bg-green-100 dark:bg-green-900 rounded-full">
-                              <Briefcase size={16} className="text-green-600 dark:text-green-400" />
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Job Application Update</p>
-                              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Your application for Senior Developer at TechCorp is under review</p>
-                              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">5 hours ago</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
                 <ProfileMenu
                   userName={candidate?.fullName || "Candidate"}
                   userRole="Candidate"
