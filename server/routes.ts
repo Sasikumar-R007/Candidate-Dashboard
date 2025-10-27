@@ -1155,59 +1155,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/job-applications", requireCandidateAuth, async (req, res) => {
     try {
       const candidateId = req.session.candidateId!;
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
       
-      // Return mock job applications for now
-      const jobApplications = [
-        {
-          id: '1',
-          profileId: candidateId,
-          jobTitle: 'Frontend Developer',
-          company: 'TechCorp',
-          jobType: 'Full-Time',
-          appliedDate: '06-06-2025',
-          daysAgo: '40 days'
-        },
-        {
-          id: '2',
-          profileId: candidateId,
-          jobTitle: 'UI/UX Designer',
-          company: 'Designify',
-          jobType: 'Internship',
-          appliedDate: '08-06-2025',
-          daysAgo: '37 days'
-        },
-        {
-          id: '3',
-          profileId: candidateId,
-          jobTitle: 'Backend Developer',
-          company: 'CodeLabs',
-          jobType: 'Full-Time',
-          appliedDate: '20-06-2025',
-          daysAgo: '22 days'
-        },
-        {
-          id: '4',
-          profileId: candidateId,
-          jobTitle: 'QA Tester',
-          company: 'AppLogic',
-          jobType: 'Internship',
-          appliedDate: '01-07-2025',
-          daysAgo: '22 days'
-        },
-        {
-          id: '5',
-          profileId: candidateId,
-          jobTitle: 'Bug Catchers',
-          company: 'Mobile App Developer',
-          jobType: 'Full-Time',
-          appliedDate: '23-07-2025',
-          daysAgo: '2 days'
-        }
-      ];
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+      
+      // Get real job applications from database
+      const jobApplications = await storage.getJobApplicationsByProfile(candidate.id);
       
       res.json(jobApplications);
     } catch (error) {
       console.error('Get job applications error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create job application for candidate
+  app.post("/api/job-applications", requireCandidateAuth, async (req, res) => {
+    try {
+      const candidateId = req.session.candidateId!;
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
+      
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+
+      // Calculate days ago from current date
+      const appliedDate = new Date().toISOString().split('T')[0];
+      const daysAgo = "0 days";
+
+      // Create the job application with all provided details
+      const applicationData = {
+        profileId: candidate.id,
+        jobTitle: req.body.jobTitle,
+        company: req.body.company,
+        jobType: req.body.jobType || "Full-Time",
+        status: req.body.status || "In Process",
+        appliedDate,
+        daysAgo,
+        description: req.body.description || null,
+        salary: req.body.salary || null,
+        location: req.body.location || null,
+        workMode: req.body.workMode || null,
+        experience: req.body.experience || null,
+        skills: req.body.skills ? JSON.stringify(req.body.skills) : null,
+        logo: req.body.logo || null
+      };
+
+      const application = await storage.createJobApplication(applicationData);
+      
+      res.status(201).json(application);
+    } catch (error) {
+      console.error('Create job application error:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
