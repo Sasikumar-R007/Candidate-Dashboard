@@ -16,7 +16,6 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { useLocation } from "wouter";
-import SimpleClientHeader from '@/components/dashboard/simple-client-header';
 
 const mockCandidates = [
   {
