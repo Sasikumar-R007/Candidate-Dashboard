@@ -5,6 +5,8 @@ import AdminTopHeader from '@/components/dashboard/admin-top-header';
 import TeamLeaderTeamBoxes from '@/components/dashboard/team-leader-team-boxes';
 import TeamLeaderSidebar from '@/components/dashboard/team-leader-sidebar';
 import AddRequirementModal from '@/components/dashboard/modals/add-requirement-modal';
+import PostJobModal from '@/components/dashboard/modals/PostJobModal';
+import UploadResumeModal from '@/components/dashboard/modals/UploadResumeModal';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -79,7 +81,6 @@ export default function RecruiterDashboard2() {
   
   // New state variables for Post Jobs and Upload Resume functionality
   const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
-  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [isUploadResumeModalOpen, setIsUploadResumeModalOpen] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
   const [formError, setFormError] = useState('');
@@ -1873,301 +1874,34 @@ export default function RecruiterDashboard2() {
       </Dialog>
 
       {/* Post Job Modal */}
-      <Dialog open={isPostJobModalOpen} onOpenChange={setIsPostJobModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden">
-          <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(95vh - 4rem)' }}>
-            <DialogHeader>
-              <DialogTitle>Post Job</DialogTitle>
-            </DialogHeader>
-            
-            <div className="space-y-4 pt-4">
-              {/* Error message */}
-              {formError && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                  {formError}
-                </div>
-              )}
-
-              {/* Company Name */}
-              <div>
-                <Label htmlFor="companyName" className="text-sm font-medium text-gray-700">Company Name *</Label>
-                <Input
-                  id="companyName"
-                  placeholder="Enter company name"
-                  value={jobFormData.companyName}
-                  onChange={(e) => setJobFormData({...jobFormData, companyName: e.target.value})}
-                  className="mt-1"
-                  data-testid="input-company-name"
-                />
-              </div>
-
-              {/* Company Tagline */}
-              <div>
-                <Label htmlFor="companyTagline" className="text-sm font-medium text-gray-700">Company Tagline</Label>
-                <Input
-                  id="companyTagline"
-                  placeholder="Enter company tagline"
-                  value={jobFormData.companyTagline}
-                  onChange={(e) => setJobFormData({...jobFormData, companyTagline: e.target.value})}
-                  className="mt-1"
-                  data-testid="input-company-tagline"
-                />
-              </div>
-
-              {/* Experience */}
-              <div>
-                <Label htmlFor="experience" className="text-sm font-medium text-gray-700">Experience *</Label>
-                <Input
-                  id="experience"
-                  placeholder="e.g., 3-5 years"
-                  value={jobFormData.experience}
-                  onChange={(e) => setJobFormData({...jobFormData, experience: e.target.value})}
-                  className="mt-1"
-                  data-testid="input-experience"
-                />
-              </div>
-
-              {/* Salary Package */}
-              <div>
-                <Label htmlFor="salaryPackage" className="text-sm font-medium text-gray-700">Salary Package *</Label>
-                <Input
-                  id="salaryPackage"
-                  placeholder="e.g., 10-15 LPA"
-                  value={jobFormData.salaryPackage}
-                  onChange={(e) => setJobFormData({...jobFormData, salaryPackage: e.target.value})}
-                  className="mt-1"
-                  data-testid="input-salary-package"
-                />
-              </div>
-
-              {/* About Company */}
-              <div>
-                <Label htmlFor="aboutCompany" className="text-sm font-medium text-gray-700">About Company *</Label>
-                <textarea
-                  id="aboutCompany"
-                  placeholder="Describe the company..."
-                  value={jobFormData.aboutCompany}
-                  onChange={(e) => setJobFormData({...jobFormData, aboutCompany: e.target.value})}
-                  className="mt-1 w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={3}
-                  data-testid="textarea-about-company"
-                />
-              </div>
-
-              {/* Role Definitions */}
-              <div>
-                <Label htmlFor="roleDefinitions" className="text-sm font-medium text-gray-700">Role Definitions *</Label>
-                <textarea
-                  id="roleDefinitions"
-                  placeholder="Define the role responsibilities..."
-                  value={jobFormData.roleDefinitions}
-                  onChange={(e) => setJobFormData({...jobFormData, roleDefinitions: e.target.value})}
-                  className="mt-1 w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={3}
-                  data-testid="textarea-role-definitions"
-                />
-              </div>
-
-              {/* Key Responsibility */}
-              <div>
-                <Label htmlFor="keyResponsibility" className="text-sm font-medium text-gray-700">Key Responsibility *</Label>
-                <textarea
-                  id="keyResponsibility"
-                  placeholder="List key responsibilities..."
-                  value={jobFormData.keyResponsibility}
-                  onChange={(e) => setJobFormData({...jobFormData, keyResponsibility: e.target.value})}
-                  className="mt-1 w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={3}
-                  data-testid="textarea-key-responsibility"
-                />
-              </div>
-
-              {/* Primary Skills */}
-              <div>
-                <Label className="text-sm font-medium text-gray-700">Primary Skills</Label>
-                <div className="space-y-2">
-                  {jobFormData.primarySkills.map((skill, index) => (
-                    <Input
-                      key={index}
-                      placeholder={`Primary skill ${index + 1}`}
-                      value={skill}
-                      onChange={(e) => {
-                        const newSkills = [...jobFormData.primarySkills];
-                        newSkills[index] = e.target.value;
-                        setJobFormData({...jobFormData, primarySkills: newSkills});
-                      }}
-                      className="mt-1"
-                      data-testid={`input-primary-skill-${index}`}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Buttons */}
-              <div className="flex gap-2 pt-4">
-                <Button 
-                  onClick={handlePostJob}
-                  className="bg-blue-600 hover:bg-blue-700"
-                  data-testid="button-submit-job"
-                >
-                  Post Job
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsPostJobModalOpen(false)}
-                  data-testid="button-cancel-job"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <PostJobModal
+        isOpen={isPostJobModalOpen}
+        onClose={() => setIsPostJobModalOpen(false)}
+        onSuccess={() => {
+          setShowSuccessAlert(true);
+          setTimeout(() => setShowSuccessAlert(false), 3000);
+        }}
+        formData={jobFormData}
+        setFormData={setJobFormData}
+        formError={formError}
+        setFormError={setFormError}
+      />
 
       {/* Upload Resume Modal */}
-      <Dialog open={isUploadResumeModalOpen} onOpenChange={setIsUploadResumeModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden">
-          <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(95vh - 4rem)' }}>
-            <DialogHeader>
-              <DialogTitle>Upload Resume</DialogTitle>
-            </DialogHeader>
-            
-            <div className="space-y-4 pt-4">
-              {/* Error message */}
-              {resumeFormError && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-                  {resumeFormError}
-                </div>
-              )}
-
-              {/* Personal Details */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="firstName" className="text-sm font-medium text-gray-700">First Name</Label>
-                  <Input
-                    id="firstName"
-                    placeholder="Enter first name"
-                    value={resumeFormData.firstName}
-                    onChange={(e) => setResumeFormData({...resumeFormData, firstName: e.target.value})}
-                    className="mt-1"
-                    data-testid="input-first-name"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="lastName" className="text-sm font-medium text-gray-700">Last Name</Label>
-                  <Input
-                    id="lastName"
-                    placeholder="Enter last name"
-                    value={resumeFormData.lastName}
-                    onChange={(e) => setResumeFormData({...resumeFormData, lastName: e.target.value})}
-                    className="mt-1"
-                    data-testid="input-last-name"
-                  />
-                </div>
-              </div>
-
-              {/* Contact Details */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="mobileNumber" className="text-sm font-medium text-gray-700">Mobile Number</Label>
-                  <Input
-                    id="mobileNumber"
-                    placeholder="Enter mobile number"
-                    value={resumeFormData.mobileNumber}
-                    onChange={(e) => setResumeFormData({...resumeFormData, mobileNumber: e.target.value})}
-                    className="mt-1"
-                    data-testid="input-mobile-number"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="primaryEmail" className="text-sm font-medium text-gray-700">Primary Email</Label>
-                  <Input
-                    id="primaryEmail"
-                    type="email"
-                    placeholder="Enter primary email"
-                    value={resumeFormData.primaryEmail}
-                    onChange={(e) => setResumeFormData({...resumeFormData, primaryEmail: e.target.value})}
-                    className="mt-1"
-                    data-testid="input-primary-email"
-                  />
-                </div>
-              </div>
-
-              {/* Resume Upload */}
-              <div>
-                <p className="text-sm font-medium text-gray-700 mb-2">Upload Resume (PDF/Image)</p>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                  <div className="flex flex-col items-center">
-                    <Upload className="h-8 w-8 text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-600 mb-2">Choose File Drag File</p>
-                    {resumeFile && (
-                      <p className="text-sm text-green-600">{resumeFile.name}</p>
-                    )}
-                    <input
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
-                      className="hidden"
-                      id="resume-upload"
-                      data-testid="input-resume-file"
-                    />
-                    <label
-                      htmlFor="resume-upload"
-                      className="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-sm cursor-pointer hover:bg-blue-700"
-                    >
-                      Choose File
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              {/* Skills */}
-              <div>
-                <Label className="text-sm font-medium text-gray-700">Skills</Label>
-                <div className="space-y-2">
-                  {resumeFormData.skills.map((skill, index) => (
-                    <Input
-                      key={index}
-                      placeholder={`Skill ${index + 1}`}
-                      value={skill}
-                      onChange={(e) => {
-                        const newSkills = [...resumeFormData.skills];
-                        newSkills[index] = e.target.value;
-                        setResumeFormData({...resumeFormData, skills: newSkills});
-                      }}
-                      className="mt-1"
-                      data-testid={`input-skill-${index}`}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Buttons */}
-              <div className="flex gap-2 pt-4">
-                <Button 
-                  onClick={() => {
-                    setIsUploadResumeModalOpen(false);
-                    setShowSuccessAlert(true);
-                    setTimeout(() => setShowSuccessAlert(false), 3000);
-                  }}
-                  className="bg-blue-600 hover:bg-blue-700"
-                  data-testid="button-submit-resume"
-                >
-                  Upload Resume
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setIsUploadResumeModalOpen(false)}
-                  data-testid="button-cancel-resume"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <UploadResumeModal
+        isOpen={isUploadResumeModalOpen}
+        onClose={() => setIsUploadResumeModalOpen(false)}
+        onSuccess={() => {
+          setShowSuccessAlert(true);
+          setTimeout(() => setShowSuccessAlert(false), 3000);
+        }}
+        formData={resumeFormData}
+        setFormData={setResumeFormData}
+        resumeFile={resumeFile}
+        setResumeFile={setResumeFile}
+        formError={resumeFormError}
+        setFormError={setResumeFormError}
+      />
 
       {/* Floating Help Button */}
       <button
