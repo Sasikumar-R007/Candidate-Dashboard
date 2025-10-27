@@ -39,6 +39,13 @@ const mockCandidates = [
     email: "sarah.johnson@email.com",
     phone: "+91 9876543210",
     saved: false,
+    pedigreeLevel: "Tier 2",
+    companyLevel: "Mid-size",
+    companySector: "Technology",
+    productService: "SaaS",
+    productCategory: "B2B",
+    productDomain: "Web Development",
+    employmentType: "Full-time",
   },
   {
     id: 2,
@@ -60,6 +67,13 @@ const mockCandidates = [
     email: "priya.menon@email.com",
     phone: "+91 9988776655",
     saved: true,
+    pedigreeLevel: "Tier 1",
+    companyLevel: "Enterprise",
+    companySector: "Technology",
+    productService: "Product",
+    productCategory: "B2B",
+    productDomain: "Cloud Computing",
+    employmentType: "Full-time",
   },
   {
     id: 3,
@@ -81,6 +95,13 @@ const mockCandidates = [
     email: "amit.sharma@email.com",
     phone: "+91 9876543211",
     saved: false,
+    pedigreeLevel: "Tier 2",
+    companyLevel: "MNC",
+    companySector: "E-commerce",
+    productService: "Product",
+    productCategory: "B2C",
+    productDomain: "Web Development",
+    employmentType: "Full-time",
   },
   {
     id: 4,
@@ -101,6 +122,13 @@ const mockCandidates = [
     email: "ravi.kumar@email.com",
     phone: "+91 9876543212",
     saved: false,
+    pedigreeLevel: "Tier 1",
+    companyLevel: "MNC",
+    companySector: "E-commerce",
+    productService: "Hybrid",
+    productCategory: "B2C",
+    productDomain: "Cloud Computing",
+    employmentType: "Full-time",
   },
   {
     id: 5,
@@ -121,6 +149,13 @@ const mockCandidates = [
     email: "meena.s@email.com",
     phone: "+91 9876543213",
     saved: true,
+    pedigreeLevel: "Tier 1",
+    companyLevel: "MNC",
+    companySector: "Technology",
+    productService: "SaaS",
+    productCategory: "B2B",
+    productDomain: "AI/ML",
+    employmentType: "Full-time",
   },
   {
     id: 6,
@@ -141,6 +176,13 @@ const mockCandidates = [
     email: "tom.victor@email.com",
     phone: "+91 9876543214",
     saved: false,
+    pedigreeLevel: "Tier 3",
+    companyLevel: "Enterprise",
+    companySector: "Consulting",
+    productService: "Service",
+    productCategory: "B2B2C",
+    productDomain: "Web Development",
+    employmentType: "Contract",
   },
 ];
 
@@ -161,6 +203,13 @@ const allRoles = [
 ];
 const allCompanies = ["Tech Solutions Inc.", "Freshworks", "Google", "Amazon"];
 const allLocations = ["Mumbai, Maharashtra", "Remote", "Bangalore, India"];
+const allPedigreeLevels = ["Tier 1", "Tier 2", "Tier 3", "Others"];
+const allCompanyLevels = ["Startup", "Mid-size", "Enterprise", "MNC"];
+const allCompanySectors = ["Technology", "Finance", "Healthcare", "E-commerce", "Consulting"];
+const allProductServices = ["SaaS", "Product", "Service", "Hybrid"];
+const allProductCategories = ["B2B", "B2C", "B2B2C"];
+const allProductDomains = ["Web Development", "Mobile Apps", "Cloud Computing", "AI/ML", "Data Analytics"];
+const allEmploymentTypes = ["Full-time", "Part-time", "Contract", "Freelance", "Internship"];
 
 const initialFilters = {
   location: "",
@@ -168,6 +217,13 @@ const initialFilters = {
   skills: [] as string[],
   role: "",
   company: "",
+  pedigreeLevel: "",
+  companyLevel: "",
+  companySector: "",
+  productService: "",
+  productCategory: "",
+  productDomain: "",
+  employmentType: "",
 };
 
 function exportToCSV(data: any[]) {
@@ -288,6 +344,13 @@ const SourceResume = () => {
         return false;
       if (filters.role && c.title !== filters.role) return false;
       if (filters.company && c.currentCompany !== filters.company) return false;
+      if (filters.pedigreeLevel && c.pedigreeLevel !== filters.pedigreeLevel) return false;
+      if (filters.companyLevel && c.companyLevel !== filters.companyLevel) return false;
+      if (filters.companySector && c.companySector !== filters.companySector) return false;
+      if (filters.productService && c.productService !== filters.productService) return false;
+      if (filters.productCategory && c.productCategory !== filters.productCategory) return false;
+      if (filters.productDomain && c.productDomain !== filters.productDomain) return false;
+      if (filters.employmentType && c.employmentType !== filters.employmentType) return false;
       return true;
     });
   };
@@ -532,6 +595,125 @@ const SourceResume = () => {
                 ))}
               </select>
             </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Pedigree Level</label>
+              <select
+                className="w-full border rounded px-2 py-2"
+                value={filters.pedigreeLevel}
+                onChange={(e) =>
+                  setFilters({ ...filters, pedigreeLevel: e.target.value })
+                }
+              >
+                <option value="">Any</option>
+                {allPedigreeLevels.map((level) => (
+                  <option key={level} value={level}>
+                    {level}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Company Level</label>
+              <select
+                className="w-full border rounded px-2 py-2"
+                value={filters.companyLevel}
+                onChange={(e) =>
+                  setFilters({ ...filters, companyLevel: e.target.value })
+                }
+              >
+                <option value="">Any</option>
+                {allCompanyLevels.map((level) => (
+                  <option key={level} value={level}>
+                    {level}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Company Sector</label>
+              <select
+                className="w-full border rounded px-2 py-2"
+                value={filters.companySector}
+                onChange={(e) =>
+                  setFilters({ ...filters, companySector: e.target.value })
+                }
+              >
+                <option value="">Any</option>
+                {allCompanySectors.map((sector) => (
+                  <option key={sector} value={sector}>
+                    {sector}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Product/Service</label>
+              <select
+                className="w-full border rounded px-2 py-2"
+                value={filters.productService}
+                onChange={(e) =>
+                  setFilters({ ...filters, productService: e.target.value })
+                }
+              >
+                <option value="">Any</option>
+                {allProductServices.map((service) => (
+                  <option key={service} value={service}>
+                    {service}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Product Category</label>
+              <select
+                className="w-full border rounded px-2 py-2"
+                value={filters.productCategory}
+                onChange={(e) =>
+                  setFilters({ ...filters, productCategory: e.target.value })
+                }
+              >
+                <option value="">Any</option>
+                {allProductCategories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Product Domain</label>
+              <select
+                className="w-full border rounded px-2 py-2"
+                value={filters.productDomain}
+                onChange={(e) =>
+                  setFilters({ ...filters, productDomain: e.target.value })
+                }
+              >
+                <option value="">Any</option>
+                {allProductDomains.map((domain) => (
+                  <option key={domain} value={domain}>
+                    {domain}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-1">Employment Type</label>
+              <select
+                className="w-full border rounded px-2 py-2"
+                value={filters.employmentType}
+                onChange={(e) =>
+                  setFilters({ ...filters, employmentType: e.target.value })
+                }
+              >
+                <option value="">Any</option>
+                {allEmploymentTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <button
             className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold text-lg mt-6 hover:bg-green-700 transition"
@@ -565,9 +747,9 @@ const SourceResume = () => {
           </button>
         </div>
         
-        <div className="flex flex-col gap-2 mb-4">
+        <div className="flex flex-row gap-2 mb-4">
           <button
-            className={`text-left px-3 py-2 rounded-lg text-base font-medium ${
+            className={`flex-1 text-center px-3 py-2 rounded-lg text-base font-medium ${
               sidebarView === "all"
                 ? "bg-purple-50 text-purple-700"
                 : "text-gray-700 hover:bg-gray-100"
@@ -577,7 +759,7 @@ const SourceResume = () => {
             All Candidates
           </button>
           <button
-            className={`text-left px-3 py-2 rounded-lg text-base font-medium ${
+            className={`flex-1 text-center px-3 py-2 rounded-lg text-base font-medium ${
               sidebarView === "saved"
                 ? "bg-purple-50 text-purple-700"
                 : "text-gray-700 hover:bg-gray-100"
@@ -588,7 +770,7 @@ const SourceResume = () => {
           </button>
         </div>
 
-        <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto space-y-4">
           <div>
             <label className="block text-base font-medium mb-1">Search</label>
             <input
@@ -725,6 +907,132 @@ const SourceResume = () => {
               {allRoles.map((role) => (
                 <option key={role} value={role}>
                   {role}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-base font-medium mb-1">Pedigree Level</label>
+            <select
+              className="w-full border rounded-lg px-3 py-2 text-base"
+              value={filters.pedigreeLevel}
+              onChange={(e) =>
+                setFilters({ ...filters, pedigreeLevel: e.target.value })
+              }
+            >
+              <option value="">Any</option>
+              {allPedigreeLevels.map((level) => (
+                <option key={level} value={level}>
+                  {level}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-base font-medium mb-1">Company Level</label>
+            <select
+              className="w-full border rounded-lg px-3 py-2 text-base"
+              value={filters.companyLevel}
+              onChange={(e) =>
+                setFilters({ ...filters, companyLevel: e.target.value })
+              }
+            >
+              <option value="">Any</option>
+              {allCompanyLevels.map((level) => (
+                <option key={level} value={level}>
+                  {level}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-base font-medium mb-1">Company Sector</label>
+            <select
+              className="w-full border rounded-lg px-3 py-2 text-base"
+              value={filters.companySector}
+              onChange={(e) =>
+                setFilters({ ...filters, companySector: e.target.value })
+              }
+            >
+              <option value="">Any</option>
+              {allCompanySectors.map((sector) => (
+                <option key={sector} value={sector}>
+                  {sector}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-base font-medium mb-1">Product/Service</label>
+            <select
+              className="w-full border rounded-lg px-3 py-2 text-base"
+              value={filters.productService}
+              onChange={(e) =>
+                setFilters({ ...filters, productService: e.target.value })
+              }
+            >
+              <option value="">Any</option>
+              {allProductServices.map((service) => (
+                <option key={service} value={service}>
+                  {service}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-base font-medium mb-1">Product Category</label>
+            <select
+              className="w-full border rounded-lg px-3 py-2 text-base"
+              value={filters.productCategory}
+              onChange={(e) =>
+                setFilters({ ...filters, productCategory: e.target.value })
+              }
+            >
+              <option value="">Any</option>
+              {allProductCategories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-base font-medium mb-1">Product Domain</label>
+            <select
+              className="w-full border rounded-lg px-3 py-2 text-base"
+              value={filters.productDomain}
+              onChange={(e) =>
+                setFilters({ ...filters, productDomain: e.target.value })
+              }
+            >
+              <option value="">Any</option>
+              {allProductDomains.map((domain) => (
+                <option key={domain} value={domain}>
+                  {domain}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-base font-medium mb-1">Employment Type</label>
+            <select
+              className="w-full border rounded-lg px-3 py-2 text-base"
+              value={filters.employmentType}
+              onChange={(e) =>
+                setFilters({ ...filters, employmentType: e.target.value })
+              }
+            >
+              <option value="">Any</option>
+              {allEmploymentTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type}
                 </option>
               ))}
             </select>

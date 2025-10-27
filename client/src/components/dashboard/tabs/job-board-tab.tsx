@@ -497,7 +497,7 @@ export default function JobBoardTab({ onNavigateToJobPreferences, onNavigateToPr
               )}
             </div>
 
-            {/* Hot Jobs / All Jobs Toggle */}
+            {/* Hot Jobs / All Jobs / Saved Jobs Toggle */}
             <div className="flex items-center bg-white dark:bg-gray-700 rounded-full overflow-hidden shadow-sm">
               <button
                 onClick={() => setJobFilter('hot')}
@@ -520,6 +520,17 @@ export default function JobBoardTab({ onNavigateToJobPreferences, onNavigateToPr
                 data-testid="button-all-jobs"
               >
                 All Jobs
+              </button>
+              <button
+                onClick={() => setJobFilter('saved')}
+                className={`px-5 py-1.5 text-sm font-medium transition-colors ${
+                  jobFilter === 'saved'
+                    ? 'bg-purple-500 text-white'
+                    : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                }`}
+                data-testid="button-saved-jobs"
+              >
+                Saved Jobs
               </button>
             </div>
 

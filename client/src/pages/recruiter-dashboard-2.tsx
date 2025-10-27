@@ -153,6 +153,28 @@ export default function RecruiterDashboard2() {
     }
   };
 
+  // Handle pipeline stage clicks
+  const handlePipelineStageClick = (stage: string) => {
+    // For demo purposes, show an alert with the action options
+    // In a real application, this would open a modal with candidate list
+    const stageActions = {
+      'CLOSURE': 'View candidates ready for closure. You can close selected candidates.',
+      'OFFER_DROP': 'View candidates who dropped offers. You can mark them as rejected.',
+      'OFFER_STAGE': 'View candidates in offer stage. You can send offer letters.',
+      'HR_ROUND': 'View candidates in HR round. You can schedule HR interviews.',
+      'FINAL_ROUND': 'View candidates in final round. You can mark interview results.',
+      'L3': 'View candidates in L3 round. You can mark interview results.',
+      'L2': 'View candidates in L2 round. You can mark interview results.',
+      'L1': 'View candidates in L1 round. You can mark interview results.',
+      'ASSIGNMENT': 'View candidates in assignment stage. You can review assignments.',
+      'INTRO_CALL': 'View candidates in intro call stage. You can schedule calls.',
+      'SHORTLISTED': 'View shortlisted candidates. You can move them to next stage.',
+      'SOURCED': 'View sourced candidates. You can shortlist them.'
+    };
+    
+    alert(`${stage}\n\n${stageActions[stage] || 'Manage candidates in this stage.'}`);
+  };
+
   // Form validation and handling functions for Post Jobs and Upload Resume
   const validateForm = () => {
     const required = ['companyName', 'experience', 'salaryPackage', 'aboutCompany', 'roleDefinitions', 'keyResponsibility'];
@@ -1187,74 +1209,104 @@ export default function RecruiterDashboard2() {
             </div>
 
             {/* Pipeline Stages Sidebar */}
-            <div className="w-64 bg-gradient-to-b from-green-100 to-orange-100 px-4 py-6">
-              <div className="space-y-6">
-                {/* Source */}
-                <div className="text-center">
-                  <div className="text-6xl font-bold text-green-600 mb-2">5</div>
-                  <div className="text-lg font-semibold text-gray-800">SOURCE</div>
-                </div>
-
-                {/* Intocall */}
-                <div className="text-center">
-                  <div className="text-6xl font-bold text-green-500 mb-2">3</div>
-                  <div className="text-lg font-semibold text-gray-800">INTOCALL</div>
-                </div>
-
-                {/* Assignment */}
-                <div className="text-center">
-                  <div className="text-6xl font-bold text-green-400 mb-2">9</div>
-                  <div className="text-lg font-semibold text-gray-800">ASSIGNMENT</div>
-                  <div className="text-4xl font-bold text-gray-700">15</div>
-                </div>
-
-                {/* L1 */}
-                <div className="text-center">
-                  <div className="text-6xl font-bold text-green-300 mb-2">9</div>
-                  <div className="text-lg font-semibold text-gray-800">L1</div>
-                </div>
-
-                {/* L2 */}
-                <div className="text-center">
-                  <div className="text-6xl font-bold text-green-200 mb-2">3</div>
-                  <div className="text-lg font-semibold text-gray-800">L2</div>
-                </div>
-
-                {/* L3 */}
-                <div className="text-center">
-                  <div className="text-6xl font-bold text-green-100 mb-2">9</div>
-                  <div className="text-lg font-semibold text-gray-800">L3</div>
-                </div>
-
-                {/* Final Round */}
-                <div className="text-center">
-                  <div className="text-6xl font-bold text-yellow-300 mb-2">9</div>
-                  <div className="text-lg font-semibold text-gray-800">FINAL ROUND</div>
-                </div>
-
-                {/* HR Round */}
-                <div className="text-center">
-                  <div className="text-6xl font-bold text-yellow-400 mb-2">9</div>
-                  <div className="text-lg font-semibold text-gray-800">HR ROUND</div>
-                </div>
-
-                {/* Offer Stage */}
-                <div className="text-center">
-                  <div className="text-6xl font-bold text-orange-300 mb-2">3</div>
-                  <div className="text-lg font-semibold text-gray-800">OFFER STAGE</div>
-                </div>
-
-                {/* Closure */}
-                <div className="text-center">
-                  <div className="text-6xl font-bold text-orange-400 mb-2">3</div>
-                  <div className="text-lg font-semibold text-gray-800">CLOSURE</div>
-                </div>
-
-                {/* Offer Drop */}
-                <div className="text-center">
-                  <div className="text-6xl font-bold text-orange-500 mb-2">3</div>
-                  <div className="text-lg font-semibold text-gray-800">OFFER DROP</div>
-                </div>
+            <div className="w-64 bg-white border-l border-gray-200">
+              <div className="p-4 space-y-1">
+                <button 
+                  onClick={() => handlePipelineStageClick('SOURCED')}
+                  className="w-full flex justify-between items-center py-3 px-4 bg-green-100 rounded hover:bg-green-200 transition-colors cursor-pointer"
+                  data-testid="button-pipeline-sourced"
+                >
+                  <span className="text-sm font-medium text-gray-700">SOURCED</span>
+                  <span className="text-lg font-bold text-gray-900">15</span>
+                </button>
+                <button 
+                  onClick={() => handlePipelineStageClick('SHORTLISTED')}
+                  className="w-full flex justify-between items-center py-3 px-4 bg-green-200 rounded hover:bg-green-300 transition-colors cursor-pointer"
+                  data-testid="button-pipeline-shortlisted"
+                >
+                  <span className="text-sm font-medium text-gray-700">SHORTLISTED</span>
+                  <span className="text-lg font-bold text-gray-900">9</span>
+                </button>
+                <button 
+                  onClick={() => handlePipelineStageClick('INTRO_CALL')}
+                  className="w-full flex justify-between items-center py-3 px-4 bg-green-300 rounded hover:bg-green-400 transition-colors cursor-pointer"
+                  data-testid="button-pipeline-intro-call"
+                >
+                  <span className="text-sm font-medium text-gray-700">INTRO CALL</span>
+                  <span className="text-lg font-bold text-gray-900">7</span>
+                </button>
+                <button 
+                  onClick={() => handlePipelineStageClick('ASSIGNMENT')}
+                  className="w-full flex justify-between items-center py-3 px-4 bg-green-400 rounded hover:bg-green-500 transition-colors cursor-pointer"
+                  data-testid="button-pipeline-assignment"
+                >
+                  <span className="text-sm font-medium text-gray-700">ASSIGNMENT</span>
+                  <span className="text-lg font-bold text-gray-800">9</span>
+                </button>
+                <button 
+                  onClick={() => handlePipelineStageClick('L1')}
+                  className="w-full flex justify-between items-center py-3 px-4 bg-green-500 rounded hover:bg-green-600 transition-colors cursor-pointer"
+                  data-testid="button-pipeline-l1"
+                >
+                  <span className="text-sm font-medium text-white">L1</span>
+                  <span className="text-lg font-bold text-white">15</span>
+                </button>
+                <button 
+                  onClick={() => handlePipelineStageClick('L2')}
+                  className="w-full flex justify-between items-center py-3 px-4 bg-green-600 rounded hover:bg-green-700 transition-colors cursor-pointer"
+                  data-testid="button-pipeline-l2"
+                >
+                  <span className="text-sm font-medium text-white">L2</span>
+                  <span className="text-lg font-bold text-white">9</span>
+                </button>
+                <button 
+                  onClick={() => handlePipelineStageClick('L3')}
+                  className="w-full flex justify-between items-center py-3 px-4 bg-green-700 rounded hover:bg-green-800 transition-colors cursor-pointer"
+                  data-testid="button-pipeline-l3"
+                >
+                  <span className="text-sm font-medium text-white">L3</span>
+                  <span className="text-lg font-bold text-white">3</span>
+                </button>
+                <button 
+                  onClick={() => handlePipelineStageClick('FINAL_ROUND')}
+                  className="w-full flex justify-between items-center py-3 px-4 bg-green-800 rounded hover:bg-green-900 transition-colors cursor-pointer"
+                  data-testid="button-pipeline-final-round"
+                >
+                  <span className="text-sm font-medium text-white">FINAL ROUND</span>
+                  <span className="text-lg font-bold text-white">9</span>
+                </button>
+                <button 
+                  onClick={() => handlePipelineStageClick('HR_ROUND')}
+                  className="w-full flex justify-between items-center py-3 px-4 bg-green-900 rounded hover:bg-green-950 transition-colors cursor-pointer"
+                  data-testid="button-pipeline-hr-round"
+                >
+                  <span className="text-sm font-medium text-white">HR ROUND</span>
+                  <span className="text-lg font-bold text-white">9</span>
+                </button>
+                <button 
+                  onClick={() => handlePipelineStageClick('OFFER_STAGE')}
+                  className="w-full flex justify-between items-center py-3 px-4 bg-green-900 rounded hover:bg-green-950 transition-colors cursor-pointer"
+                  data-testid="button-pipeline-offer-stage"
+                >
+                  <span className="text-sm font-medium text-white">OFFER STAGE</span>
+                  <span className="text-lg font-bold text-white">9</span>
+                </button>
+                <button 
+                  onClick={() => handlePipelineStageClick('CLOSURE')}
+                  className="w-full flex justify-between items-center py-3 px-4 bg-green-950 rounded hover:bg-black transition-colors cursor-pointer"
+                  data-testid="button-pipeline-closure"
+                >
+                  <span className="text-sm font-medium text-white">CLOSURE</span>
+                  <span className="text-lg font-bold text-white">3</span>
+                </button>
+                <button 
+                  onClick={() => handlePipelineStageClick('OFFER_DROP')}
+                  className="w-full flex justify-between items-center py-3 px-4 bg-amber-500 rounded hover:bg-amber-600 transition-colors cursor-pointer"
+                  data-testid="button-pipeline-offer-drop"
+                >
+                  <span className="text-sm font-medium text-white">OFFER DROP</span>
+                  <span className="text-lg font-bold text-white">3</span>
+                </button>
               </div>
             </div>
           </div>
