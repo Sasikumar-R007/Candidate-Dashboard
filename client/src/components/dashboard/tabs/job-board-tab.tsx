@@ -785,7 +785,7 @@ export default function JobBoardTab({ onNavigateToJobPreferences, onNavigateToPr
                 <div className="flex gap-4">
                   {/* Company Logo Section - Redesigned */}
                   <div className="flex-shrink-0">
-                    <div className={`${job.background} rounded-3xl p-6 w-40 h-36 flex flex-col items-center justify-center shadow-sm`}>
+                    <div className={`${job.background} rounded-2xl p-6 w-36 h-52 flex flex-col items-center justify-center shadow-sm`}>
                       <img
                         src={job.logo}
                         alt={`${job.company} logo`}
