@@ -79,6 +79,36 @@ export default function RecruiterDashboard2() {
   const [reason, setReason] = useState('');
   const [requirementCountModal, setRequirementCountModal] = useState<{isOpen: boolean, requirement: any}>({isOpen: false, requirement: null});
   
+  // Calendar modal state for requirements count
+  const [requirementCounts, setRequirementCounts] = useState<{[key: string]: {[date: string]: string}}>({});
+  const [showModal, setShowModal] = useState(false);
+  const [calendarStep, setCalendarStep] = useState<'calendar' | 'input'>('calendar');
+  const [selectedDateForCount, setSelectedDateForCount] = useState('');
+  const [inputCount, setInputCount] = useState('');
+  const [openCalendarId, setOpenCalendarId] = useState<string | null>(null);
+  
+  // Helper functions for calendar modal
+  const getTotalCountForReq = (reqId: string) => {
+    const counts = requirementCounts[reqId];
+    if (!counts) return 0;
+    return Object.values(counts).reduce((sum, count) => sum + parseInt(count || '0'), 0);
+  };
+
+  const getMostRecentDateForReq = (reqId: string) => {
+    const counts = requirementCounts[reqId];
+    if (!counts || Object.keys(counts).length === 0) return null;
+    const dates = Object.keys(counts).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    return dates[0];
+  };
+
+  const getToday = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+  
   // New state variables for Post Jobs and Upload Resume functionality
   const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
   const [isUploadResumeModalOpen, setIsUploadResumeModalOpen] = useState(false);
@@ -835,13 +865,23 @@ export default function RecruiterDashboard2() {
   };
 
   const renderRequirementsContent = () => {
-    // Updated requirements data with SPOC Email field matching the image
+    // Updated requirements data with SPOC Email field and IDs for count tracking
     const requirementsTableData = [
-      { position: 'Frontend Developer', criticality: 'HIGH', company: 'TechCorp', spoc: 'David Wilson', spocEmail: 'david@techcorp.com', count: 'Set' },
-      { position: 'UI/UX Designer', criticality: 'MEDIUM', company: 'Designify', spoc: 'Tom Anderson', spocEmail: 'tom@designify.com', count: 'Set' },
-      { position: 'Backend Developer', criticality: 'LOW', company: 'CodeLabs', spoc: 'Robert Kim', spocEmail: 'robert@codelabs.com', count: 'Set' },
-      { position: 'QA Tester', criticality: 'MEDIUM', company: 'AppLogic', spoc: 'Kevin Brown', spocEmail: 'kevin@applogic.com', count: 'Set' },
-      { position: 'Mobile App Developer', criticality: 'HIGH', company: 'Tesco', spoc: 'Mel Gibson', spocEmail: 'mel@tesco.com', count: 'Set' },
+      { id: 1, position: 'Frontend Developer', criticality: 'HIGH', company: 'TechCorp', spoc: 'David Wilson', spocEmail: 'david@techcorp.com' },
+      { id: 2, position: 'UI/UX Designer', criticality: 'MEDIUM', company: 'Designify', spoc: 'Tom Anderson', spocEmail: 'tom@designify.com' },
+      { id: 3, position: 'Backend Developer', criticality: 'LOW', company: 'CodeLabs', spoc: 'Robert Kim', spocEmail: 'robert@codelabs.com' },
+      { id: 4, position: 'QA Tester', criticality: 'MEDIUM', company: 'AppLogic', spoc: 'Kevin Brown', spocEmail: 'kevin@applogic.com' },
+      { id: 5, position: 'Mobile App Developer', criticality: 'HIGH', company: 'Tesco', spoc: 'Mel Gibson', spocEmail: 'mel@tesco.com' },
+    ];
+
+    // Summary boxes data
+    const summaryBoxes = [
+      { title: 'Total', count: '20', color: 'text-gray-900' },
+      { title: 'High Priority', count: '6', color: 'text-orange-500' },
+      { title: 'Robust', count: '7', color: 'text-green-500' },
+      { title: 'Idle', count: '9', color: 'text-blue-500' },
+      { title: 'Delivery Pending', count: '3', color: 'text-red-400' },
+      { title: 'Easy', count: '2', color: 'text-green-600' }
     ];
 
     return (
@@ -851,7 +891,27 @@ export default function RecruiterDashboard2() {
           <div className="flex h-screen">
             {/* Main Content Area */}
             <div className="flex-1 px-6 py-6 overflow-y-auto">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">Deliverables</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-6">Requirements</h2>
+              
+              {/* 6 Summary Boxes */}
+              <div className="grid grid-cols-6 gap-4 mb-6">
+                {summaryBoxes.map((box, index) => (
+                  <Card
+                    key={index}
+                    className="bg-white border border-gray-200 shadow-sm rounded-lg p-4 flex flex-col justify-between h-24 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+                    data-testid={`card-req-${box.title.toLowerCase().replace(' ', '-')}`}
+                  >
+                    <h3 className="text-sm font-semibold text-gray-700">
+                      {box.title}
+                    </h3>
+                    <p className={`text-4xl font-bold ${box.color} self-end`}>
+                      {box.count}
+                    </p>
+                  </Card>
+                ))}
+              </div>
+              
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Deliverables</h3>
               
               {/* Requirements Table */}
               <Card className="bg-white border border-gray-200">
@@ -885,8 +945,20 @@ export default function RecruiterDashboard2() {
                             <td className="py-3 px-4 text-gray-900">{req.spoc}</td>
                             <td className="py-3 px-4 text-gray-900">{req.spocEmail}</td>
                             <td className="py-3 px-4">
-                              <Button size="sm" className="bg-blue-500 hover:bg-blue-600 text-white rounded" onClick={() => setRequirementCountModal({isOpen: true, requirement: req})}>
-                                {req.count}
+                              <Button 
+                                size="sm" 
+                                className="bg-blue-500 hover:bg-blue-600 text-white rounded" 
+                                onClick={() => {
+                                  setOpenCalendarId(req.id.toString());
+                                  const mostRecentDate = getMostRecentDateForReq(req.id.toString());
+                                  setSelectedDateForCount(mostRecentDate || getToday());
+                                  setInputCount('');
+                                  setCalendarStep('calendar');
+                                  setShowModal(true);
+                                }}
+                                data-testid={`button-set-count-${index}`}
+                              >
+                                {getTotalCountForReq(req.id.toString()) === 0 ? 'Set' : getTotalCountForReq(req.id.toString())}
                               </Button>
                             </td>
                           </tr>
@@ -914,6 +986,116 @@ export default function RecruiterDashboard2() {
                   </div>
                 </CardContent>
               </Card>
+              
+              {/* Calendar Modal for Setting Counts */}
+              {showModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+                  <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <h2 className="text-xl font-bold text-gray-900">
+                        Set Requirements Count
+                      </h2>
+                      <button
+                        onClick={() => setShowModal(false)}
+                        className="text-red-500 hover:text-red-700 font-bold text-lg"
+                        data-testid="button-close-modal"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    
+                    {calendarStep === 'calendar' && (
+                      <div>
+                        <h3 className="text-lg font-semibold mb-4 text-gray-900">
+                          Select Date
+                        </h3>
+                        <div className="mb-4">
+                          <input
+                            type="date"
+                            value={selectedDateForCount}
+                            onChange={(e) => setSelectedDateForCount(e.target.value)}
+                            className="w-full border border-gray-300 px-3 py-2 rounded bg-white text-gray-900"
+                            data-testid="input-date"
+                          />
+                        </div>
+                        <div className="flex gap-4 justify-end">
+                          <button
+                            className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+                            onClick={() => setShowModal(false)}
+                            data-testid="button-cancel"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                            onClick={() => setCalendarStep('input')}
+                            data-testid="button-next"
+                          >
+                            Next
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {calendarStep === 'input' && (
+                      <div>
+                        <h3 className="text-lg font-semibold mb-4 text-gray-900">
+                          Add Count for {selectedDateForCount}
+                        </h3>
+                        <div className="mb-4">
+                          <input
+                            type="number"
+                            value={inputCount}
+                            onChange={(e) => setInputCount(e.target.value)}
+                            placeholder="Enter count to add"
+                            className="w-full border border-gray-300 px-3 py-2 rounded bg-white text-gray-900"
+                            min="0"
+                            autoFocus
+                            data-testid="input-count"
+                          />
+                        </div>
+                        <div className="text-sm text-gray-500 mb-4">
+                          This will be added to the existing count for this date.
+                        </div>
+                        <div className="flex gap-4 justify-end">
+                          <button
+                            className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
+                            onClick={() => setCalendarStep('calendar')}
+                            data-testid="button-back"
+                          >
+                            Back
+                          </button>
+                          <button
+                            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                            onClick={() => {
+                              if (openCalendarId && inputCount) {
+                                const currentCount = parseInt(requirementCounts[openCalendarId]?.[selectedDateForCount] || '0');
+                                const newCount = parseInt(inputCount) || 0;
+                                const totalCount = currentCount + newCount;
+
+                                setRequirementCounts(prev => ({
+                                  ...prev,
+                                  [openCalendarId]: {
+                                    ...(prev[openCalendarId] || {}),
+                                    [selectedDateForCount]: totalCount.toString()
+                                  }
+                                }));
+                                setShowModal(false);
+                                setOpenCalendarId(null);
+                                setCalendarStep('calendar');
+                                setInputCount('');
+                              }
+                            }}
+                            data-testid="button-save"
+                          >
+                            Save
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Priority Distribution Sidebar */}
@@ -1011,130 +1193,81 @@ export default function RecruiterDashboard2() {
                 </div>
               </div>
 
-              {/* Pipeline Table */}
+              {/* Pipeline Table - Stacked Candidates by Stage */}
               <Card className="bg-white border border-gray-200 mb-6">
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full border-collapse">
                       <thead>
-                        <tr className="bg-gray-50 border-b border-gray-200">
-                          <th className="text-left py-3 px-4 font-medium text-gray-700">Level 1</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-700">Level 2</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-700">Level 3</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-700">Final Round</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-700">HR Round</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-700">Offer Stage</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-700">Closure</th>
+                        <tr>
+                          <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[140px]" data-testid="header-pipeline-level1">Level 1</th>
+                          <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[140px]" data-testid="header-pipeline-level2">Level 2</th>
+                          <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[140px]" data-testid="header-pipeline-level3">Level 3</th>
+                          <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[140px]" data-testid="header-pipeline-finalround">Final Round</th>
+                          <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[140px]" data-testid="header-pipeline-hrround">HR Round</th>
+                          <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[140px]" data-testid="header-pipeline-offerstage">Offer Stage</th>
+                          <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[140px]" data-testid="header-pipeline-closure">Closure</th>
                         </tr>
                       </thead>
                       <tbody>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-3 px-4">
-                            <div className="bg-green-200 px-3 py-1 rounded text-center text-sm font-medium">Keerthana</div>
+                        <tr>
+                          <td className="p-3 align-top" data-testid="column-pipeline-level1">
+                            <div className="flex flex-col gap-2">
+                              <div className="px-3 py-2 bg-green-200 rounded text-center text-sm font-medium text-gray-800" data-testid="candidate-level1-0">Keerthana</div>
+                              <div className="px-3 py-2 bg-green-200 rounded text-center text-sm font-medium text-gray-800" data-testid="candidate-level1-1">Vishnu Purana</div>
+                              <div className="px-3 py-2 bg-green-200 rounded text-center text-sm font-medium text-gray-800" data-testid="candidate-level1-2">Chanakya</div>
+                              <div className="px-3 py-2 bg-green-200 rounded text-center text-sm font-medium text-gray-800" data-testid="candidate-level1-3">Adhya</div>
+                              <div className="px-3 py-2 bg-green-200 rounded text-center text-sm font-medium text-gray-800" data-testid="candidate-level1-4">Vanshika</div>
+                              <div className="px-3 py-2 bg-green-200 rounded text-center text-sm font-medium text-gray-800" data-testid="candidate-level1-5">Reyansh</div>
+                              <div className="px-3 py-2 bg-green-200 rounded text-center text-sm font-medium text-gray-800" data-testid="candidate-level1-6">Shaurya</div>
+                              <div className="px-3 py-2 bg-green-200 rounded text-center text-sm font-medium text-gray-800" data-testid="candidate-level1-7">Vihana</div>
+                            </div>
                           </td>
-                          <td className="py-3 px-4">
-                            <div className="bg-green-200 px-3 py-1 rounded text-center text-sm font-medium">Keerthana</div>
+                          <td className="p-3 align-top" data-testid="column-pipeline-level2">
+                            <div className="flex flex-col gap-2">
+                              <div className="px-3 py-2 bg-green-300 rounded text-center text-sm font-medium text-gray-800" data-testid="candidate-level2-0">Keerthana</div>
+                              <div className="px-3 py-2 bg-green-300 rounded text-center text-sm font-medium text-gray-800" data-testid="candidate-level2-1">Vishnu Purana</div>
+                              <div className="px-3 py-2 bg-green-300 rounded text-center text-sm font-medium text-gray-800" data-testid="candidate-level2-2">Chanakya</div>
+                              <div className="px-3 py-2 bg-green-300 rounded text-center text-sm font-medium text-gray-800" data-testid="candidate-level2-3">Adhya</div>
+                              <div className="px-3 py-2 bg-green-300 rounded text-center text-sm font-medium text-gray-800" data-testid="candidate-level2-4">Vanshika</div>
+                            </div>
                           </td>
-                          <td className="py-3 px-4">
-                            <div className="bg-green-200 px-3 py-1 rounded text-center text-sm font-medium">Keerthana</div>
+                          <td className="p-3 align-top" data-testid="column-pipeline-level3">
+                            <div className="flex flex-col gap-2">
+                              <div className="px-3 py-2 bg-green-400 rounded text-center text-sm font-medium text-gray-800" data-testid="candidate-level3-0">Keerthana</div>
+                              <div className="px-3 py-2 bg-green-400 rounded text-center text-sm font-medium text-gray-800" data-testid="candidate-level3-1">Vishnu Purana</div>
+                              <div className="px-3 py-2 bg-green-400 rounded text-center text-sm font-medium text-gray-800" data-testid="candidate-level3-2">Chanakya</div>
+                              <div className="px-3 py-2 bg-green-400 rounded text-center text-sm font-medium text-gray-800" data-testid="candidate-level3-3">Adhya</div>
+                              <div className="px-3 py-2 bg-green-400 rounded text-center text-sm font-medium text-gray-800" data-testid="candidate-level3-4">Vanshika</div>
+                            </div>
                           </td>
-                          <td className="py-3 px-4">
-                            <div className="bg-green-200 px-3 py-1 rounded text-center text-sm font-medium">Keerthana</div>
+                          <td className="p-3 align-top" data-testid="column-pipeline-finalround">
+                            <div className="flex flex-col gap-2">
+                              <div className="px-3 py-2 bg-green-500 rounded text-center text-sm font-medium text-white" data-testid="candidate-finalround-0">Keerthana</div>
+                              <div className="px-3 py-2 bg-green-500 rounded text-center text-sm font-medium text-white" data-testid="candidate-finalround-1">Vishnu Purana</div>
+                              <div className="px-3 py-2 bg-green-500 rounded text-center text-sm font-medium text-white" data-testid="candidate-finalround-2">Chanakya</div>
+                              <div className="px-3 py-2 bg-green-500 rounded text-center text-sm font-medium text-white" data-testid="candidate-finalround-3">Adhya</div>
+                            </div>
                           </td>
-                          <td className="py-3 px-4">
-                            <div className="bg-green-200 px-3 py-1 rounded text-center text-sm font-medium">Keerthana</div>
+                          <td className="p-3 align-top" data-testid="column-pipeline-hrround">
+                            <div className="flex flex-col gap-2">
+                              <div className="px-3 py-2 bg-green-600 rounded text-center text-sm font-medium text-white" data-testid="candidate-hrround-0">Keerthana</div>
+                              <div className="px-3 py-2 bg-green-600 rounded text-center text-sm font-medium text-white" data-testid="candidate-hrround-1">Vishnu Purana</div>
+                              <div className="px-3 py-2 bg-green-600 rounded text-center text-sm font-medium text-white" data-testid="candidate-hrround-2">Chanakya</div>
+                            </div>
                           </td>
-                          <td className="py-3 px-4">
-                            <div className="bg-green-200 px-3 py-1 rounded text-center text-sm font-medium">Keerthana</div>
+                          <td className="p-3 align-top" data-testid="column-pipeline-offerstage">
+                            <div className="flex flex-col gap-2">
+                              <div className="px-3 py-2 bg-green-700 rounded text-center text-sm font-medium text-white" data-testid="candidate-offerstage-0">Keerthana</div>
+                              <div className="px-3 py-2 bg-green-700 rounded text-center text-sm font-medium text-white" data-testid="candidate-offerstage-1">Vishnu Purana</div>
+                            </div>
                           </td>
-                          <td className="py-3 px-4">
-                            <div className="bg-green-200 px-3 py-1 rounded text-center text-sm font-medium">Keerthana</div>
+                          <td className="p-3 align-top" data-testid="column-pipeline-closure">
+                            <div className="flex flex-col gap-2">
+                              <div className="px-3 py-2 bg-green-800 rounded text-center text-sm font-medium text-white" data-testid="candidate-closure-0">Keerthana</div>
+                              <div className="px-3 py-2 bg-green-800 rounded text-center text-sm font-medium text-white" data-testid="candidate-closure-1">Vishnu Purana</div>
+                            </div>
                           </td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-3 px-4">
-                            <div className="bg-cyan-200 px-3 py-1 rounded text-center text-sm font-medium">Vishnu Purana</div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="bg-cyan-200 px-3 py-1 rounded text-center text-sm font-medium">Vishnu Purana</div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="bg-cyan-200 px-3 py-1 rounded text-center text-sm font-medium">Vishnu Purana</div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="bg-cyan-200 px-3 py-1 rounded text-center text-sm font-medium">Vishnu Purana</div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="bg-cyan-200 px-3 py-1 rounded text-center text-sm font-medium">Vishnu Purana</div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="bg-cyan-200 px-3 py-1 rounded text-center text-sm font-medium">Vishnu Purana</div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="bg-cyan-200 px-3 py-1 rounded text-center text-sm font-medium">Vishnu Purana</div>
-                          </td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-3 px-4">
-                            <div className="bg-orange-200 px-3 py-1 rounded text-center text-sm font-medium">Chanakya</div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="bg-orange-200 px-3 py-1 rounded text-center text-sm font-medium">Chanakya</div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="bg-orange-200 px-3 py-1 rounded text-center text-sm font-medium">Chanakya</div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="bg-orange-200 px-3 py-1 rounded text-center text-sm font-medium">Chanakya</div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="bg-orange-200 px-3 py-1 rounded text-center text-sm font-medium">Chanakya</div>
-                          </td>
-                          <td className="py-3 px-4"></td>
-                          <td className="py-3 px-4"></td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-3 px-4">
-                            <div className="bg-red-200 px-3 py-1 rounded text-center text-sm font-medium">Adhya</div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="bg-red-200 px-3 py-1 rounded text-center text-sm font-medium">Adhya</div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="bg-red-200 px-3 py-1 rounded text-center text-sm font-medium">Adhya</div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="bg-red-200 px-3 py-1 rounded text-center text-sm font-medium">Adhya</div>
-                          </td>
-                          <td className="py-3 px-4"></td>
-                          <td className="py-3 px-4"></td>
-                          <td className="py-3 px-4"></td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-3 px-4">
-                            <div className="bg-green-300 px-3 py-1 rounded text-center text-sm font-medium">Vanshika</div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="bg-green-300 px-3 py-1 rounded text-center text-sm font-medium">Vanshika</div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="bg-green-300 px-3 py-1 rounded text-center text-sm font-medium">Vanshika</div>
-                          </td>
-                          <td className="py-3 px-4"></td>
-                          <td className="py-3 px-4"></td>
-                          <td className="py-3 px-4"></td>
-                          <td className="py-3 px-4"></td>
-                        </tr>
-                        <tr className="border-b border-gray-100">
-                          <td className="py-3 px-4">
-                            <div className="bg-purple-200 px-3 py-1 rounded text-center text-sm font-medium">Reyansh</div>
-                          </td>
-                          <td className="py-3 px-4"></td>
-                          <td className="py-3 px-4"></td>
-                          <td className="py-3 px-4"></td>
-                          <td className="py-3 px-4"></td>
-                          <td className="py-3 px-4"></td>
-                          <td className="py-3 px-4"></td>
                         </tr>
                       </tbody>
                     </table>
