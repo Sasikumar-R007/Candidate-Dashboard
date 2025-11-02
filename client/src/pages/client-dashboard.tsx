@@ -14,8 +14,9 @@ import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, 
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import SimpleClientHeader from '@/components/dashboard/simple-client-header';
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChatDock } from '@/components/chat/chat-dock';
+import { useQuery } from '@tanstack/react-query';
 
 interface ChatUser {
   id: number;
@@ -40,6 +41,67 @@ export default function ClientDashboard() {
   const [rejectReason, setRejectReason] = useState('');
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
   const [isHelpChatOpen, setIsHelpChatOpen] = useState(false);
+
+  // Fetch metrics data from API - hooks must be at top level
+  const { data: speedMetricsData } = useQuery({
+    queryKey: ['/api/client/speed-metrics'],
+    initialData: {
+      timeToFirstSubmission: 0,
+      timeToInterview: 0,
+      timeToOffer: 0,
+      timeToFill: 0
+    }
+  });
+
+  const { data: qualityMetricsData } = useQuery({
+    queryKey: ['/api/client/quality-metrics'],
+    initialData: {
+      submissionToShortList: 0,
+      interviewToOffer: 0,
+      offerAcceptance: 0,
+      earlyAttrition: 0
+    }
+  });
+
+  const { data: impactMetrics } = useQuery({
+    queryKey: ['/api/admin/impact-metrics'],
+    initialData: [{
+      speedToHire: 0,
+      revenueImpactOfDelay: 0,
+      clientNps: 0,
+      candidateNps: 0,
+      feedbackTurnAround: 0,
+      firstYearRetentionRate: 0,
+      fulfillmentRate: 0,
+      revenueRecovered: 0
+    }]
+  });
+
+  const { data: speedChartData } = useQuery({
+    queryKey: ['/api/client/speed-metrics-chart'],
+    initialData: [
+      { month: 'Jan', timeToFirstSubmission: 0, timeToInterview: 0, timeToOffer: 0, timeToFill: 0 },
+      { month: 'Feb', timeToFirstSubmission: 0, timeToInterview: 0, timeToOffer: 0, timeToFill: 0 },
+      { month: 'Mar', timeToFirstSubmission: 0, timeToInterview: 0, timeToOffer: 0, timeToFill: 0 },
+      { month: 'Apr', timeToFirstSubmission: 0, timeToInterview: 0, timeToOffer: 0, timeToFill: 0 },
+      { month: 'May', timeToFirstSubmission: 0, timeToInterview: 0, timeToOffer: 0, timeToFill: 0 },
+      { month: 'Jun', timeToFirstSubmission: 0, timeToInterview: 0, timeToOffer: 0, timeToFill: 0 }
+    ]
+  });
+
+  const { data: qualityChartData } = useQuery({
+    queryKey: ['/api/client/quality-metrics-chart'],
+    initialData: [
+      { month: 'Jan', submissionToShortList: 0, interviewToOffer: 0, offerAcceptance: 0, earlyAttrition: 0 },
+      { month: 'Feb', submissionToShortList: 0, interviewToOffer: 0, offerAcceptance: 0, earlyAttrition: 0 },
+      { month: 'Mar', submissionToShortList: 0, interviewToOffer: 0, offerAcceptance: 0, earlyAttrition: 0 },
+      { month: 'Apr', submissionToShortList: 0, interviewToOffer: 0, offerAcceptance: 0, earlyAttrition: 0 },
+      { month: 'May', submissionToShortList: 0, interviewToOffer: 0, offerAcceptance: 0, earlyAttrition: 0 },
+      { month: 'Jun', submissionToShortList: 0, interviewToOffer: 0, offerAcceptance: 0, earlyAttrition: 0 }
+    ]
+  });
+
+  const firstImpactMetrics = impactMetrics[0] || impactMetrics;
 
   // Sample data for the dashboard
   const dashboardStats = {
@@ -720,7 +782,7 @@ export default function ClientDashboard() {
                 <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
                   <h3 className="text-sm font-medium text-blue-700 mb-2">Time to 1st Submission</h3>
                   <div className="flex items-end space-x-3 mb-2">
-                    <span className="text-3xl font-bold text-blue-900">5</span>
+                    <span className="text-3xl font-bold text-blue-900">{speedMetricsData.timeToFirstSubmission}</span>
                     <span className="text-sm text-blue-700 mb-1">days</span>
                     <div className="w-3 h-3 bg-cyan-400 rounded-full mb-1"></div>
                   </div>
@@ -729,7 +791,7 @@ export default function ClientDashboard() {
                 <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
                   <h3 className="text-sm font-medium text-blue-700 mb-2">Time to Interview</h3>
                   <div className="flex items-end space-x-3 mb-2">
-                    <span className="text-3xl font-bold text-blue-900">3</span>
+                    <span className="text-3xl font-bold text-blue-900">{speedMetricsData.timeToInterview}</span>
                     <span className="text-sm text-blue-700 mb-1">days</span>
                     <div className="w-3 h-3 bg-red-400 rounded-full mb-1"></div>
                   </div>
@@ -738,7 +800,7 @@ export default function ClientDashboard() {
                 <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
                   <h3 className="text-sm font-medium text-blue-700 mb-2">Time to Offer</h3>
                   <div className="flex items-end space-x-3 mb-2">
-                    <span className="text-3xl font-bold text-blue-900">15</span>
+                    <span className="text-3xl font-bold text-blue-900">{speedMetricsData.timeToOffer}</span>
                     <span className="text-sm text-blue-700 mb-1">days</span>
                     <div className="w-3 h-3 bg-purple-400 rounded-full mb-1"></div>
                   </div>
@@ -747,7 +809,7 @@ export default function ClientDashboard() {
                 <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
                   <h3 className="text-sm font-medium text-blue-700 mb-2">Time to Fill</h3>
                   <div className="flex items-end space-x-3 mb-2">
-                    <span className="text-3xl font-bold text-blue-900">25</span>
+                    <span className="text-3xl font-bold text-blue-900">{speedMetricsData.timeToFill}</span>
                     <span className="text-sm text-blue-700 mb-1">days</span>
                     <div className="w-3 h-3 bg-amber-600 rounded-full mb-1"></div>
                   </div>
@@ -761,7 +823,7 @@ export default function ClientDashboard() {
                   <div className="bg-green-100 rounded-lg p-4 border border-green-200">
                     <h3 className="text-sm font-medium text-green-700 mb-2">Submission to Short List %</h3>
                     <div className="flex items-end space-x-3 mb-2">
-                      <span className="text-3xl font-bold text-green-800">5</span>
+                      <span className="text-3xl font-bold text-green-800">{qualityMetricsData.submissionToShortList}</span>
                       <span className="text-sm text-green-700 mb-1">%</span>
                       <div className="w-3 h-3 bg-cyan-400 rounded-full mb-1"></div>
                     </div>
@@ -770,7 +832,7 @@ export default function ClientDashboard() {
                   <div className="bg-green-100 rounded-lg p-4 border border-green-200">
                     <h3 className="text-sm font-medium text-green-700 mb-2">Interview to Offer %</h3>
                     <div className="flex items-end space-x-3 mb-2">
-                      <span className="text-3xl font-bold text-green-800">3</span>
+                      <span className="text-3xl font-bold text-green-800">{qualityMetricsData.interviewToOffer}</span>
                       <span className="text-sm text-green-700 mb-1">%</span>
                       <div className="w-3 h-3 bg-red-400 rounded-full mb-1"></div>
                     </div>
@@ -779,7 +841,7 @@ export default function ClientDashboard() {
                   <div className="bg-green-100 rounded-lg p-4 border border-green-200">
                     <h3 className="text-sm font-medium text-green-700 mb-2">Offer Acceptance %</h3>
                     <div className="flex items-end space-x-3 mb-2">
-                      <span className="text-3xl font-bold text-green-800">15</span>
+                      <span className="text-3xl font-bold text-green-800">{qualityMetricsData.offerAcceptance}</span>
                       <span className="text-sm text-green-700 mb-1">%</span>
                       <div className="w-3 h-3 bg-purple-400 rounded-full mb-1"></div>
                     </div>
@@ -788,7 +850,7 @@ export default function ClientDashboard() {
                   <div className="bg-green-100 rounded-lg p-4 border border-green-200">
                     <h3 className="text-sm font-medium text-green-700 mb-2">Early Attrition %</h3>
                     <div className="flex items-end space-x-3 mb-2">
-                      <span className="text-3xl font-bold text-green-800">25</span>
+                      <span className="text-3xl font-bold text-green-800">{qualityMetricsData.earlyAttrition}</span>
                       <span className="text-sm text-green-700 mb-1">%</span>
                       <div className="w-3 h-3 bg-amber-600 rounded-full mb-1"></div>
                     </div>
@@ -802,25 +864,25 @@ export default function ClientDashboard() {
                 <div className="grid grid-cols-4 gap-4 mb-4">
                   <div className="bg-red-50 rounded-lg p-4 border border-red-200">
                     <h3 className="text-sm font-medium text-red-700 mb-2">Speed to Hire value</h3>
-                    <div className="text-3xl font-bold text-red-600">15</div>
+                    <div className="text-3xl font-bold text-red-600">{firstImpactMetrics.speedToHire}</div>
                     <div className="text-sm text-gray-600 mt-1">Days faster*</div>
                   </div>
                   
                   <div className="bg-red-50 rounded-lg p-4 border border-red-200">
                     <h3 className="text-sm font-medium text-red-700 mb-2">Revenue Impact Of Delay</h3>
-                    <div className="text-3xl font-bold text-red-600">75,000</div>
+                    <div className="text-3xl font-bold text-red-600">{firstImpactMetrics.revenueImpactOfDelay}</div>
                     <div className="text-sm text-gray-600 mt-1">Lost per Role*</div>
                   </div>
                   
                   <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
                     <h3 className="text-sm font-medium text-purple-700 mb-2">Client NPS</h3>
-                    <div className="text-3xl font-bold text-purple-600">+60</div>
+                    <div className="text-3xl font-bold text-purple-600">+{firstImpactMetrics.clientNps}</div>
                     <div className="text-sm text-gray-600 mt-1">Net Promoter Score*</div>
                   </div>
                   
                   <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
                     <h3 className="text-sm font-medium text-purple-700 mb-2">Candidate NPS</h3>
-                    <div className="text-3xl font-bold text-purple-600">+70</div>
+                    <div className="text-3xl font-bold text-purple-600">+{firstImpactMetrics.candidateNps}</div>
                     <div className="text-sm text-gray-600 mt-1">Net Promoter Score*</div>
                   </div>
                 </div>
@@ -828,26 +890,26 @@ export default function ClientDashboard() {
                 <div className="grid grid-cols-4 gap-4">
                   <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
                     <h3 className="text-sm font-medium text-yellow-700 mb-2">Feedback Turn Around</h3>
-                    <div className="text-3xl font-bold text-yellow-600">2</div>
+                    <div className="text-3xl font-bold text-yellow-600">{firstImpactMetrics.feedbackTurnAround}</div>
                     <div className="text-sm text-gray-600 mt-1">days</div>
                     <div className="text-xs text-gray-500 mt-1">Industry Avg. 5 days*</div>
                   </div>
                   
                   <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
                     <h3 className="text-sm font-medium text-yellow-700 mb-2">First Year Retention Rate</h3>
-                    <div className="text-3xl font-bold text-yellow-600">90</div>
+                    <div className="text-3xl font-bold text-yellow-600">{firstImpactMetrics.firstYearRetentionRate}</div>
                     <div className="text-sm text-gray-600 mt-1">%</div>
                   </div>
                   
                   <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
                     <h3 className="text-sm font-medium text-yellow-700 mb-2">Fulfillment Rate</h3>
-                    <div className="text-3xl font-bold text-yellow-600">20</div>
+                    <div className="text-3xl font-bold text-yellow-600">{firstImpactMetrics.fulfillmentRate}</div>
                     <div className="text-sm text-gray-600 mt-1">%</div>
                   </div>
                   
                   <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
                     <h3 className="text-sm font-medium text-yellow-700 mb-2">Revenue Recovered</h3>
-                    <div className="text-3xl font-bold text-yellow-600">1.5 <span className="text-2xl">L</span></div>
+                    <div className="text-3xl font-bold text-yellow-600">{firstImpactMetrics.revenueRecovered} <span className="text-2xl">L</span></div>
                     <div className="text-sm text-gray-600 mt-1">Gained per hire*</div>
                   </div>
                 </div>
@@ -856,50 +918,124 @@ export default function ClientDashboard() {
 
             {/* Right Sidebar with Charts */}
             <div className="w-80 bg-white border-l border-gray-200 p-6 space-y-6">
-              {/* First Chart Area */}
+              {/* Speed Metrics Chart - 4 Lines */}
               <div className="space-y-4">
-                <div className="h-48 bg-blue-50 border border-blue-100 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-gray-700">Speed Metrics Trend</h3>
+                <div className="h-56 bg-blue-50 border border-blue-100 rounded-lg p-4">
                   <div className="h-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={[
-                        { day: 'Mon', applications: 65, interviews: 45, offers: 32 },
-                        { day: 'Tue', applications: 78, interviews: 52, offers: 35 },
-                        { day: 'Wed', applications: 85, interviews: 58, offers: 42 },
-                        { day: 'Thu', applications: 72, interviews: 48, offers: 38 },
-                        { day: 'Fri', applications: 90, interviews: 65, offers: 45 },
-                        { day: 'Sat', applications: 88, interviews: 62, offers: 41 },
-                        { day: 'Sun', applications: 95, interviews: 68, offers: 48 }
-                      ]}>
-                        <XAxis dataKey="day" hide />
-                        <YAxis hide />
-                        <Line type="monotone" dataKey="applications" stroke="#3B82F6" strokeWidth={2} dot={false} />
-                        <Line type="monotone" dataKey="interviews" stroke="#EF4444" strokeWidth={2} dot={false} />
-                        <Line type="monotone" dataKey="offers" stroke="#10B981" strokeWidth={2} dot={false} />
+                      <LineChart data={speedChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                        <XAxis 
+                          dataKey="month" 
+                          tick={{ fontSize: 11, fill: '#6B7280' }} 
+                          stroke="#9CA3AF"
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 11, fill: '#6B7280' }} 
+                          stroke="#9CA3AF"
+                        />
+                        <Tooltip 
+                          contentStyle={{ fontSize: 12, backgroundColor: '#FFF', border: '1px solid #E5E7EB' }}
+                        />
+                        <Legend 
+                          wrapperStyle={{ fontSize: 10 }}
+                          iconType="line"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="timeToFirstSubmission" 
+                          stroke="#06B6D4" 
+                          strokeWidth={2} 
+                          dot={false}
+                          name="1st Submission"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="timeToInterview" 
+                          stroke="#EF4444" 
+                          strokeWidth={2} 
+                          dot={false}
+                          name="Interview"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="timeToOffer" 
+                          stroke="#A855F7" 
+                          strokeWidth={2} 
+                          dot={false}
+                          name="Offer"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="timeToFill" 
+                          stroke="#D97706" 
+                          strokeWidth={2} 
+                          dot={false}
+                          name="Fill"
+                        />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
               </div>
 
-              {/* Second Chart Area */}
+              {/* Quality Metrics Chart - 4 Lines */}
               <div className="space-y-4">
-                <div className="h-48 bg-green-50 border border-green-100 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-gray-700">Quality Metrics Trend</h3>
+                <div className="h-56 bg-green-50 border border-green-100 rounded-lg p-4">
                   <div className="h-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={[
-                        { week: 'W1', hired: 55, pending: 40, rejected: 25 },
-                        { week: 'W2', hired: 70, pending: 50, rejected: 30 },
-                        { week: 'W3', hired: 85, pending: 60, rejected: 35 },
-                        { week: 'W4', hired: 95, pending: 70, rejected: 40 },
-                        { week: 'W5', hired: 75, pending: 55, rejected: 32 },
-                        { week: 'W6', hired: 90, pending: 65, rejected: 38 },
-                        { week: 'W7', hired: 105, pending: 75, retired: 45 }
-                      ]}>
-                        <XAxis dataKey="week" hide />
-                        <YAxis hide />
-                        <Line type="monotone" dataKey="hired" stroke="#10B981" strokeWidth={2} dot={false} />
-                        <Line type="monotone" dataKey="pending" stroke="#F59E0B" strokeWidth={2} dot={false} />
-                        <Line type="monotone" dataKey="rejected" stroke="#EF4444" strokeWidth={2} dot={false} />
+                      <LineChart data={qualityChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                        <XAxis 
+                          dataKey="month" 
+                          tick={{ fontSize: 11, fill: '#6B7280' }} 
+                          stroke="#9CA3AF"
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 11, fill: '#6B7280' }} 
+                          stroke="#9CA3AF"
+                        />
+                        <Tooltip 
+                          contentStyle={{ fontSize: 12, backgroundColor: '#FFF', border: '1px solid #E5E7EB' }}
+                        />
+                        <Legend 
+                          wrapperStyle={{ fontSize: 10 }}
+                          iconType="line"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="submissionToShortList" 
+                          stroke="#06B6D4" 
+                          strokeWidth={2} 
+                          dot={false}
+                          name="Submission Rate"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="interviewToOffer" 
+                          stroke="#EF4444" 
+                          strokeWidth={2} 
+                          dot={false}
+                          name="Interview Rate"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="offerAcceptance" 
+                          stroke="#A855F7" 
+                          strokeWidth={2} 
+                          dot={false}
+                          name="Offer Rate"
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="earlyAttrition" 
+                          stroke="#D97706" 
+                          strokeWidth={2} 
+                          dot={false}
+                          name="Attrition"
+                        />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>

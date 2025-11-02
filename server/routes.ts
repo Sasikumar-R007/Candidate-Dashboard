@@ -2455,6 +2455,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Client Metrics Endpoints
+  // Speed metrics current values
+  app.get("/api/client/speed-metrics", (req, res) => {
+    res.json({
+      timeToFirstSubmission: 0,
+      timeToInterview: 0,
+      timeToOffer: 0,
+      timeToFill: 0
+    });
+  });
+
+  // Quality metrics current values
+  app.get("/api/client/quality-metrics", (req, res) => {
+    res.json({
+      submissionToShortList: 0,
+      interviewToOffer: 0,
+      offerAcceptance: 0,
+      earlyAttrition: 0
+    });
+  });
+
+  // Speed metrics chart data
+  app.get("/api/client/speed-metrics-chart", (req, res) => {
+    res.json([
+      { month: 'Jan', timeToFirstSubmission: 0, timeToInterview: 0, timeToOffer: 0, timeToFill: 0 },
+      { month: 'Feb', timeToFirstSubmission: 0, timeToInterview: 0, timeToOffer: 0, timeToFill: 0 },
+      { month: 'Mar', timeToFirstSubmission: 0, timeToInterview: 0, timeToOffer: 0, timeToFill: 0 },
+      { month: 'Apr', timeToFirstSubmission: 0, timeToInterview: 0, timeToOffer: 0, timeToFill: 0 },
+      { month: 'May', timeToFirstSubmission: 0, timeToInterview: 0, timeToOffer: 0, timeToFill: 0 },
+      { month: 'Jun', timeToFirstSubmission: 0, timeToInterview: 0, timeToOffer: 0, timeToFill: 0 }
+    ]);
+  });
+
+  // Quality metrics chart data
+  app.get("/api/client/quality-metrics-chart", (req, res) => {
+    res.json([
+      { month: 'Jan', submissionToShortList: 0, interviewToOffer: 0, offerAcceptance: 0, earlyAttrition: 0 },
+      { month: 'Feb', submissionToShortList: 0, interviewToOffer: 0, offerAcceptance: 0, earlyAttrition: 0 },
+      { month: 'Mar', submissionToShortList: 0, interviewToOffer: 0, offerAcceptance: 0, earlyAttrition: 0 },
+      { month: 'Apr', submissionToShortList: 0, interviewToOffer: 0, offerAcceptance: 0, earlyAttrition: 0 },
+      { month: 'May', submissionToShortList: 0, interviewToOffer: 0, offerAcceptance: 0, earlyAttrition: 0 },
+      { month: 'Jun', submissionToShortList: 0, interviewToOffer: 0, offerAcceptance: 0, earlyAttrition: 0 }
+    ]);
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
