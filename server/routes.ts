@@ -2060,6 +2060,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bootstrap admin - UNAUTHENTICATED endpoint for first-time setup
+  app.post("/api/bootstrap/admin", async (req, res) => {
+    try {
+      // Check if any admin already exists
+      const allEmployees = await storage.getAllEmployees();
+      const existingAdmins = allEmployees.filter(emp => emp.role === 'admin');
+      
+      if (existingAdmins.length > 0) {
+        return res.status(403).json({ 
+          message: "Admin account already exists. Please use the login page.",
+          adminExists: true 
+        });
+      }
+
+      // Validate using Zod schema
+      const bootstrapAdminSchema = insertEmployeeSchema.omit({ 
+        createdAt: true, 
+        employeeId: true 
+      }).extend({
+        role: z.literal('admin'),
+        name: z.string().min(2, "Name must be at least 2 characters"),
+        email: z.string().email("Invalid email address"),
+        password: z.string().min(6, "Password must be at least 6 characters"),
+        phone: z.string().min(10, "Phone number must be at least 10 digits"),
+      });
+
+      const validatedData = bootstrapAdminSchema.parse(req.body);
+
+      // Generate admin employee ID
+      const employeeId = await storage.generateNextEmployeeId('admin');
+      
+      const employeeData = {
+        ...validatedData,
+        employeeId,
+        createdAt: new Date().toISOString(),
+        isActive: true,
+      };
+      
+      // Password will be hashed by storage layer
+      const admin = await storage.createEmployee(employeeData);
+      
+      res.status(201).json({ 
+        message: "Admin account created successfully",
+        employee: {
+          id: admin.id,
+          name: admin.name,
+          email: admin.email,
+          role: admin.role
+        }
+      });
+    } catch (error: any) {
+      console.error('Bootstrap admin error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: "Invalid admin data", 
+          errors: error.errors 
+        });
+      }
+      if (error.message?.includes('duplicate') || error.message?.includes('unique')) {
+        return res.status(409).json({ 
+          message: "An account with this email already exists" 
+        });
+      }
+      res.status(500).json({ message: "Failed to create admin account" });
+    }
+  });
+
+  // Check if admin exists - UNAUTHENTICATED endpoint
+  app.get("/api/bootstrap/check", async (req, res) => {
+    try {
+      const allEmployees = await storage.getAllEmployees();
+      const existingAdmins = allEmployees.filter(emp => emp.role === 'admin');
+      
+      res.json({ 
+        adminExists: existingAdmins.length > 0,
+        setupRequired: existingAdmins.length === 0
+      });
+    } catch (error) {
+      console.error('Admin check error:', error);
+      res.status(500).json({ message: "Failed to check admin status" });
+    }
+  });
+
   // Create employee
   app.post("/api/admin/employees", async (req, res) => {
     try {

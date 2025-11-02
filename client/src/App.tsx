@@ -23,11 +23,13 @@ import NotFound from "@/pages/not-found";
 import Archives from "@/pages/archives";
 import MasterDatabase from "@/pages/master-database";
 import ChatPage from "@/pages/chat-page";
+import SetupAdmin from "@/pages/setup-admin";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+      <Route path="/setup-admin" component={SetupAdmin} />
       <Route path="/employer-login" component={EmployerLogin} />
       <Route path="/candidate-login" component={CandidateLogin} />
       <Route path="/candidate-registration" component={CandidateRegistration} />
