@@ -2180,9 +2180,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allEmployees = await storage.getAllEmployees();
       const existingAdmins = allEmployees.filter(emp => emp.role === 'admin');
       
+      // For testing purposes, return admin email if exists
+      const adminInfo = existingAdmins.length > 0 ? {
+        email: existingAdmins[0].email,
+        name: existingAdmins[0].name,
+        note: "Password is encrypted and cannot be displayed for security"
+      } : null;
+      
       res.json({ 
         adminExists: existingAdmins.length > 0,
-        setupRequired: existingAdmins.length === 0
+        setupRequired: existingAdmins.length === 0,
+        adminInfo
       });
     } catch (error) {
       console.error('Admin check error:', error);

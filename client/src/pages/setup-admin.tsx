@@ -18,10 +18,17 @@ interface AdminSetupForm {
   phone: string;
 }
 
+interface AdminInfo {
+  email: string;
+  name: string;
+  note: string;
+}
+
 export default function SetupAdmin() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [adminExists, setAdminExists] = useState(false);
+  const [adminInfo, setAdminInfo] = useState<AdminInfo | null>(null);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -33,6 +40,7 @@ export default function SetupAdmin() {
         const response = await apiRequest("GET", "/api/bootstrap/check", undefined);
         const result = await response.json();
         setAdminExists(result.adminExists);
+        setAdminInfo(result.adminInfo);
       } catch (error) {
         console.error('Failed to check admin status:', error);
       } finally {
@@ -133,6 +141,28 @@ export default function SetupAdmin() {
                 <br />
                 Please use the login page to access your account.
               </p>
+              
+              {adminInfo && (
+                <Alert className="mt-4 bg-blue-50 border-blue-200" data-testid="alert-admin-info">
+                  <AlertDescription className="text-left space-y-2">
+                    <div className="font-semibold text-blue-900">Testing Information:</div>
+                    <div className="space-y-1 text-sm">
+                      <div>
+                        <span className="font-medium">Name:</span> 
+                        <span className="ml-2" data-testid="text-admin-name">{adminInfo.name}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium">Email:</span> 
+                        <span className="ml-2" data-testid="text-admin-email">{adminInfo.email}</span>
+                      </div>
+                      <div className="pt-2 text-xs text-amber-700 italic">
+                        {adminInfo.note}
+                      </div>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               <Button
                 onClick={() => navigate("/employer-login")}
                 className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
