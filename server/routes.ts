@@ -1665,6 +1665,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin team leaders endpoint - fetch all team leaders with their recruiter counts
+  app.get("/api/admin/team-leaders", async (req, res) => {
+    try {
+      const allEmployees = await storage.getAllEmployees();
+      
+      // Filter team leaders
+      const teamLeaders = allEmployees.filter(emp => emp.role === 'team_leader');
+      
+      // For each team leader, count their recruiters
+      const teamLeadersWithCounts = teamLeaders.map(tl => {
+        // Count recruiters reporting to this team leader
+        const recruiterCount = allEmployees.filter(
+          emp => emp.role === 'recruiter' && emp.reportingTo === tl.employeeId
+        ).length;
+        
+        return {
+          id: tl.id,
+          employeeId: tl.employeeId,
+          name: tl.name,
+          email: tl.email || 'not filled',
+          phone: tl.phone || 'not filled',
+          age: tl.age || 'not filled',
+          department: tl.department || 'not filled',
+          joiningDate: tl.joiningDate || 'not filled',
+          reportingTo: tl.reportingTo || 'not filled',
+          members: recruiterCount,
+          // Default metrics for new profiles
+          tenure: '0',
+          qtrsAchieved: 0,
+          nextMilestone: '+0',
+          totalClosures: 0,
+          targetAchievement: 0,
+          totalRevenue: '0',
+          role: 'Team Leader',
+          image: null,
+          lastLogin: 'not filled',
+          lastClosure: 'not filled'
+        };
+      });
+      
+      res.json(teamLeadersWithCounts);
+    } catch (error) {
+      console.error('Get team leaders error:', error);
+      res.status(500).json({ message: "Failed to fetch team leaders", error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
   // Recruiter Dashboard API routes
   // In-memory storage for recruiter profile to persist changes
   let recruiterProfile = {
@@ -2368,18 +2415,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Sample employee data
       const sampleEmployees = [
         {
-          employeeId: "STTA001",
-          name: "Ram Kumar",
-          email: "ram@gmail.com",
-          password: "ram123",
-          role: "recruiter",
-          age: "28",
-          phone: "9876543210",
-          department: "Talent Acquisition",
-          joiningDate: "2024-01-15",
-          reportingTo: "Team Lead"
-        },
-        {
           employeeId: "STTL001",
           name: "Priya Sharma",
           email: "priya@gmail.com",
@@ -2389,7 +2424,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           phone: "9876543211",
           department: "Talent Acquisition",
           joiningDate: "2023-06-10",
-          reportingTo: "Admin"
+          reportingTo: "ADMIN"
+        },
+        {
+          employeeId: "STTA001",
+          name: "Ram Kumar",
+          email: "ram@gmail.com",
+          password: "ram123",
+          role: "recruiter",
+          age: "28",
+          phone: "9876543210",
+          department: "Talent Acquisition",
+          joiningDate: "2024-01-15",
+          reportingTo: "STTL001"
         },
         {
           employeeId: "STCL001",
