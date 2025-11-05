@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { type Employee } from '@shared/schema';
 import AdminSidebar from '@/components/dashboard/admin-sidebar';
 import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
 import AdminTopHeader from '@/components/dashboard/admin-top-header';
@@ -692,7 +693,7 @@ export default function AdminDashboard() {
   });
 
   // Fetch employees from database
-  const { data: employees = [], isLoading: isLoadingEmployees } = useQuery({
+  const { data: employees = [], isLoading: isLoadingEmployees } = useQuery<Employee[]>({
     queryKey: ['admin', 'employees'],
     queryFn: async () => {
       const response = await fetch('/api/admin/employees');
