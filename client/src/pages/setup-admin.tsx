@@ -240,6 +240,66 @@ export default function SetupAdmin() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Reset Admin Dialog */}
+        <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+          <DialogContent data-testid="dialog-reset-admin">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-600">
+                <Trash2 className="w-5 h-5" />
+                Reset Admin Account
+              </DialogTitle>
+              <DialogDescription>
+                This action will permanently delete the existing admin account. You'll need to enter the security key to proceed.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="securityKey">Security Key *</Label>
+                <Input
+                  id="securityKey"
+                  type="password"
+                  placeholder="Enter security key"
+                  value={securityKey}
+                  onChange={(e) => setSecurityKey(e.target.value)}
+                  className="w-full"
+                  data-testid="input-security-key"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleResetAdmin();
+                    }
+                  }}
+                />
+                <p className="text-xs text-gray-500">
+                  This key was configured by your system administrator
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowResetDialog(false);
+                  setSecurityKey("");
+                }}
+                disabled={isResetting}
+                data-testid="button-cancel-reset"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleResetAdmin}
+                disabled={isResetting}
+                data-testid="button-confirm-reset"
+              >
+                {isResetting ? "Resetting..." : "Reset Admin Account"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -403,66 +463,6 @@ export default function SetupAdmin() {
           </form>
         </CardContent>
       </Card>
-
-      {/* Reset Admin Dialog */}
-      <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-        <DialogContent data-testid="dialog-reset-admin">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <Trash2 className="w-5 h-5" />
-              Reset Admin Account
-            </DialogTitle>
-            <DialogDescription>
-              This action will permanently delete the existing admin account. You'll need to enter the security key to proceed.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="securityKey">Security Key *</Label>
-              <Input
-                id="securityKey"
-                type="password"
-                placeholder="Enter security key"
-                value={securityKey}
-                onChange={(e) => setSecurityKey(e.target.value)}
-                className="w-full"
-                data-testid="input-security-key"
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handleResetAdmin();
-                  }
-                }}
-              />
-              <p className="text-xs text-gray-500">
-                This key was configured by your system administrator
-              </p>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowResetDialog(false);
-                setSecurityKey("");
-              }}
-              disabled={isResetting}
-              data-testid="button-cancel-reset"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleResetAdmin}
-              disabled={isResetting}
-              data-testid="button-confirm-reset"
-            >
-              {isResetting ? "Resetting..." : "Reset Admin Account"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
