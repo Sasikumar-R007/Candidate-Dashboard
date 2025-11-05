@@ -2198,6 +2198,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete admin - UNAUTHENTICATED endpoint (protected by security key)
+  app.delete("/api/bootstrap/admin", async (req, res) => {
+    try {
+      const { securityKey } = req.body;
+      
+      // Verify security key
+      const ADMIN_RESET_KEY = process.env.ADMIN_RESET_KEY;
+      
+      if (!ADMIN_RESET_KEY) {
+        return res.status(500).json({ 
+          message: "Admin reset feature is not configured. Please contact system administrator." 
+        });
+      }
+      
+      if (!securityKey || securityKey !== ADMIN_RESET_KEY) {
+        return res.status(403).json({ 
+          message: "Invalid security key. Access denied." 
+        });
+      }
+      
+      // Get all admin accounts
+      const allEmployees = await storage.getAllEmployees();
+      const existingAdmins = allEmployees.filter(emp => emp.role === 'admin');
+      
+      if (existingAdmins.length === 0) {
+        return res.status(404).json({ 
+          message: "No admin account found to delete." 
+        });
+      }
+      
+      // Delete all admin accounts
+      let deletedCount = 0;
+      for (const admin of existingAdmins) {
+        const deleted = await storage.deleteEmployee(admin.id);
+        if (deleted) {
+          deletedCount++;
+        }
+      }
+      
+      res.json({ 
+        message: `Successfully deleted ${deletedCount} admin account(s). You can now create a new admin.`,
+        deletedCount
+      });
+    } catch (error) {
+      console.error('Delete admin error:', error);
+      res.status(500).json({ message: "Failed to delete admin account" });
+    }
+  });
+
   // Create employee
   app.post("/api/admin/employees", async (req, res) => {
     try {

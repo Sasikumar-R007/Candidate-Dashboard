@@ -4,10 +4,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
-import { BrainCircuit, CheckCircle2, AlertCircle } from "lucide-react";
+import { BrainCircuit, CheckCircle2, AlertCircle, Trash2 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 
 interface AdminSetupForm {
@@ -30,6 +38,9 @@ export default function SetupAdmin() {
   const [adminExists, setAdminExists] = useState(false);
   const [adminInfo, setAdminInfo] = useState<AdminInfo | null>(null);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [securityKey, setSecurityKey] = useState("");
+  const [isResetting, setIsResetting] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
 
@@ -59,6 +70,51 @@ export default function SetupAdmin() {
   } = useForm<AdminSetupForm>();
 
   const password = watch("password");
+
+  const handleResetAdmin = async () => {
+    if (!securityKey.trim()) {
+      toast({
+        title: "Security Key Required",
+        description: "Please enter the security key to proceed.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsResetting(true);
+    
+    try {
+      const response = await apiRequest("DELETE", "/api/bootstrap/admin", {
+        securityKey: securityKey.trim(),
+      });
+      
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to reset admin account");
+      }
+
+      toast({
+        title: "Admin Reset Successful",
+        description: result.message,
+      });
+
+      // Reset state to allow creating new admin
+      setShowResetDialog(false);
+      setSecurityKey("");
+      setAdminExists(false);
+      setAdminInfo(null);
+      
+    } catch (error) {
+      toast({
+        title: "Reset Failed",
+        description: error instanceof Error ? error.message : "Failed to reset admin account. Please check your security key.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   const onSubmit = async (data: AdminSetupForm) => {
     setIsLoading(true);
@@ -163,13 +219,24 @@ export default function SetupAdmin() {
                 </Alert>
               )}
               
-              <Button
-                onClick={() => navigate("/employer-login")}
-                className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
-                data-testid="button-go-to-login"
-              >
-                Go to Login
-              </Button>
+              <div className="flex gap-3 mt-4">
+                <Button
+                  onClick={() => navigate("/employer-login")}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                  data-testid="button-go-to-login"
+                >
+                  Go to Login
+                </Button>
+                <Button
+                  onClick={() => setShowResetDialog(true)}
+                  variant="destructive"
+                  className="flex-1"
+                  data-testid="button-reset-admin"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Reset Admin
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -336,6 +403,66 @@ export default function SetupAdmin() {
           </form>
         </CardContent>
       </Card>
+
+      {/* Reset Admin Dialog */}
+      <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+        <DialogContent data-testid="dialog-reset-admin">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="w-5 h-5" />
+              Reset Admin Account
+            </DialogTitle>
+            <DialogDescription>
+              This action will permanently delete the existing admin account. You'll need to enter the security key to proceed.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="securityKey">Security Key *</Label>
+              <Input
+                id="securityKey"
+                type="password"
+                placeholder="Enter security key"
+                value={securityKey}
+                onChange={(e) => setSecurityKey(e.target.value)}
+                className="w-full"
+                data-testid="input-security-key"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleResetAdmin();
+                  }
+                }}
+              />
+              <p className="text-xs text-gray-500">
+                This key was configured by your system administrator
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowResetDialog(false);
+                setSecurityKey("");
+              }}
+              disabled={isResetting}
+              data-testid="button-cancel-reset"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleResetAdmin}
+              disabled={isResetting}
+              data-testid="button-confirm-reset"
+            >
+              {isResetting ? "Resetting..." : "Reset Admin Account"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
