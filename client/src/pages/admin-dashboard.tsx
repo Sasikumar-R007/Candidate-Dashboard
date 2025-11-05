@@ -849,6 +849,41 @@ export default function AdminDashboard() {
   });
 
   // Delete employee mutation
+  const updateEmployeeMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await fetch(`/api/admin/employees/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update employee');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'employees'] });
+      toast({
+        title: "Success",
+        description: "Employee updated successfully!",
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+      setIsAddRecruiterModalOpen(false);
+      setIsAddTeamLeaderModalNewOpen(false);
+      setEditingUser(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update employee.",
+        variant: "destructive",
+      });
+    }
+  });
+
   const deleteEmployeeMutation = useMutation({
     mutationFn: async (id: string) => {
       const response = await fetch(`/api/admin/employees/${id}`, {
@@ -1040,11 +1075,21 @@ export default function AdminDashboard() {
   };
 
   const handleUpdateUser = (userData: any) => {
-    setUserList(prev => prev.map(user => user.id === userData.id ? userData : user));
-    toast({
-      title: "Success",
-      description: `${userData.role} updated successfully!`,
-      className: "bg-green-50 border-green-200 text-green-800",
+    const employeeData = {
+      employeeId: userData.id || `STU${Date.now()}`,
+      name: userData.name,
+      email: userData.email,
+      password: userData.password,
+      role: userData.role === 'Team Leader' ? 'team_leader' : 'recruiter',
+      phone: userData.phoneNumber || '',
+      department: '',
+      joiningDate: userData.joiningDate || '',
+      age: ''
+    };
+    
+    updateEmployeeMutation.mutate({ 
+      id: userData.dbId, 
+      data: employeeData 
     });
   };
 
@@ -1054,11 +1099,7 @@ export default function AdminDashboard() {
 
   const handleDeleteUser = (userId: string, userName: string) => {
     if (window.confirm(`Are you sure you want to delete ${userName}?`)) {
-      toast({
-        title: "User Deleted",
-        description: `${userName} has been successfully deleted.`,
-        className: "bg-green-50 border-green-200 text-green-800",
-      });
+      deleteEmployeeMutation.mutate(userId);
     }
   };
 
@@ -3708,20 +3749,21 @@ export default function AdminDashboard() {
           </div>
         );
       case 'user-management':
-        // Sample user data matching the design
-        const userData = [
-          { id: "STL001", name: "Sundar Raj", email: "sundar.tl@example.com", role: "Team Leader", status: "Active", lastLogin: "N/A" },
-          { id: "STL002", name: "Kavitha M", email: "kavitha.tl@example.com", role: "Team Leader", status: "Active", lastLogin: "N/A" },
-          { id: "STL003", name: "Vignesh T", email: "vignesh.tl@example.com", role: "Team Leader", status: "Active", lastLogin: "N/A" },
-          { id: "STL004", name: "Sasikumar R", email: "sasikumar@scalingtheory.com", role: "Team Leader", status: "Active", lastLogin: "N/A" },
-          { id: "STL005", name: "Saran K", email: "saran@scalingtheory.com", role: "Team Leader", status: "Active", lastLogin: "N/A" },
-          { id: "STL006", name: "Azzim M", email: "azzim@scalingtheory.com", role: "Team Leader", status: "Active", lastLogin: "N/A" },
-          { id: "STA001", name: "R. Sudharshan", email: "sudharshan@scaling.com", role: "Recruiter", status: "Active", lastLogin: "N/A" },
-          { id: "STA002", name: "S. Kavitha", email: "kavitha@scaling.com", role: "Recruiter", status: "Active", lastLogin: "N/A" },
-          { id: "STA003", name: "Arun Raj", email: "arunraj@scaling.com", role: "Recruiter", status: "Active", lastLogin: "N/A" },
-          { id: "STA004", name: "Priya M", email: "priyam@scaling.com", role: "Recruiter", status: "Active", lastLogin: "N/A" },
-          { id: "STA005", name: "Kumaravel R", email: "kumaravel@scaling.com", role: "Recruiter", status: "Active", lastLogin: "N/A" },
-        ];
+        // Map employees from database to user table format
+        const userData = employees
+          .filter(emp => emp.role === 'recruiter' || emp.role === 'team_leader')
+          .map(emp => ({
+            id: emp.employeeId,
+            dbId: emp.id,
+            name: emp.name,
+            email: emp.email,
+            role: emp.role === 'team_leader' ? 'Team Leader' : 'Recruiter',
+            status: emp.isActive ? 'Active' : 'Inactive',
+            lastLogin: "N/A",
+            phoneNumber: emp.phone || '',
+            joiningDate: emp.joiningDate || '',
+            password: emp.password
+          }));
 
         // Filter users based on search term
         const filteredUsers = userData.filter(user =>
@@ -3790,41 +3832,55 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredUsers.map((user, index) => (
-                        <tr key={user.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium text-sm">{user.id}</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.name}</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.email}</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.role}</td>
-                          <td className="py-3 px-4 text-sm">
-                            <div className="flex items-center gap-2">
-                              <div className={`w-2 h-2 rounded-full ${
-                                user.status === 'Active' ? 'bg-green-500' : 'bg-red-500'
-                              }`}></div>
-                              <span className="text-gray-600 dark:text-gray-400">{user.status}</span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.lastLogin}</td>
-                          <td className="py-3 px-4">
-                            <div className="flex gap-3 text-sm">
-                              <button 
-                                className="text-blue-600 hover:text-blue-700 font-medium"
-                                onClick={() => handleEditUser(user)}
-                                data-testid={`button-edit-${user.id}`}
-                              >
-                                Edit
-                              </button>
-                              <button 
-                                className="text-red-600 hover:text-red-700 font-medium"
-                                onClick={() => handleDeleteUser(user.id, user.name)}
-                                data-testid={`button-delete-${user.id}`}
-                              >
-                                Delete
-                              </button>
-                            </div>
+                      {isLoadingEmployees ? (
+                        <tr>
+                          <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                            Loading employees...
                           </td>
                         </tr>
-                      ))}
+                      ) : filteredUsers.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                            No employees found
+                          </td>
+                        </tr>
+                      ) : (
+                        filteredUsers.map((user, index) => (
+                          <tr key={user.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <td className="py-3 px-4 text-gray-900 dark:text-white font-medium text-sm">{user.id}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.name}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.email}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.role}</td>
+                            <td className="py-3 px-4 text-sm">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${
+                                  user.status === 'Active' ? 'bg-green-500' : 'bg-red-500'
+                                }`}></div>
+                                <span className="text-gray-600 dark:text-gray-400">{user.status}</span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.lastLogin}</td>
+                            <td className="py-3 px-4">
+                              <div className="flex gap-3 text-sm">
+                                <button 
+                                  className="text-blue-600 hover:text-blue-700 font-medium"
+                                  onClick={() => handleEditUser(user)}
+                                  data-testid={`button-edit-${user.id}`}
+                                >
+                                  Edit
+                                </button>
+                                <button 
+                                  className="text-red-600 hover:text-red-700 font-medium"
+                                  onClick={() => handleDeleteUser(user.dbId, user.name)}
+                                  data-testid={`button-delete-${user.id}`}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
