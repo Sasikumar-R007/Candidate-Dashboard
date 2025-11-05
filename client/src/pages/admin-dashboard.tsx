@@ -32,6 +32,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 import GaugeComponent from 'react-gauge-component';
 import { ChatDock } from '@/components/chat/chat-dock';
 // TypeScript interfaces
@@ -351,12 +352,7 @@ function ImpactMetricsEditor() {
   // Create mutation for initial metrics
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
-      const response = await fetch('/api/admin/impact-metrics', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) throw new Error('Failed to create');
+      const response = await apiRequest('POST', '/api/admin/impact-metrics', data);
       return response.json();
     },
     onSuccess: () => {
@@ -367,12 +363,7 @@ function ImpactMetricsEditor() {
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, field, value }: { id: string; field: string; value: number }) => {
-      const response = await fetch(`/api/admin/impact-metrics/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [field]: value }),
-      });
-      if (!response.ok) throw new Error('Failed to update');
+      const response = await apiRequest('PUT', `/api/admin/impact-metrics/${id}`, { [field]: value });
       return response.json();
     },
     onSuccess: () => {
@@ -684,45 +675,27 @@ export default function AdminDashboard() {
 
   // Requirements API queries
   const { data: requirements = [], isLoading: isLoadingRequirements } = useQuery({
-    queryKey: ['admin', 'requirements'],
-    queryFn: async () => {
-      const response = await fetch('/api/admin/requirements');
-      if (!response.ok) throw new Error('Failed to fetch requirements');
-      return response.json();
-    }
+    queryKey: ['/api/admin/requirements']
   });
 
   // Fetch employees from database
   const { data: employees = [], isLoading: isLoadingEmployees } = useQuery<Employee[]>({
-    queryKey: ['admin', 'employees'],
-    queryFn: async () => {
-      const response = await fetch('/api/admin/employees');
-      if (!response.ok) throw new Error('Failed to fetch employees');
-      return response.json();
-    }
+    queryKey: ['/api/admin/employees']
   });
 
   // Fetch clients from database
   const { data: clients = [], isLoading: isLoadingClients } = useQuery({
-    queryKey: ['admin', 'clients'],
-    queryFn: async () => {
-      const response = await fetch('/api/admin/clients');
-      if (!response.ok) throw new Error('Failed to fetch clients');
-      return response.json();
-    }
+    queryKey: ['/api/admin/clients']
   });
 
   // Archive requirement mutation
   const archiveRequirementMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/admin/requirements/${id}/archive`, {
-        method: 'POST',
-      });
-      if (!response.ok) throw new Error('Failed to archive requirement');
+      const response = await apiRequest('POST', `/api/admin/requirements/${id}/archive`);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'requirements'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/requirements'] });
       toast({
         title: "Success",
         description: "Requirement archived successfully!",
@@ -741,18 +714,11 @@ export default function AdminDashboard() {
   // Update requirement mutation
   const updateRequirementMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: any }) => {
-      const response = await fetch(`/api/admin/requirements/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updates),
-      });
-      if (!response.ok) throw new Error('Failed to update requirement');
+      const response = await apiRequest('PATCH', `/api/admin/requirements/${id}`, updates);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'requirements'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/requirements'] });
       toast({
         title: "Success",
         description: "Requirement updated successfully!",
@@ -773,21 +739,11 @@ export default function AdminDashboard() {
   // Create client mutation
   const createClientMutation = useMutation({
     mutationFn: async (clientData: any) => {
-      const response = await fetch('/api/admin/clients', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(clientData),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create client');
-      }
+      const response = await apiRequest('POST', '/api/admin/clients', clientData);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'clients'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
       toast({
         title: "Success",
         description: "Client created successfully!",
@@ -814,21 +770,11 @@ export default function AdminDashboard() {
   // Create employee mutation
   const createEmployeeMutation = useMutation({
     mutationFn: async (employeeData: any) => {
-      const response = await fetch('/api/admin/employees', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(employeeData),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create employee');
-      }
+      const response = await apiRequest('POST', '/api/admin/employees', employeeData);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'employees'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/employees'] });
       toast({
         title: "Success",
         description: "Employee created successfully!",
@@ -852,21 +798,11 @@ export default function AdminDashboard() {
   // Delete employee mutation
   const updateEmployeeMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      const response = await fetch(`/api/admin/employees/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to update employee');
-      }
+      const response = await apiRequest('PUT', `/api/admin/employees/${id}`, data);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'employees'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/employees'] });
       toast({
         title: "Success",
         description: "Employee updated successfully!",
@@ -887,17 +823,11 @@ export default function AdminDashboard() {
 
   const deleteEmployeeMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/admin/employees/${id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to delete employee');
-      }
+      const response = await apiRequest('DELETE', `/api/admin/employees/${id}`);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'employees'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/employees'] });
       toast({
         title: "Success",
         description: "Employee deleted successfully!",
@@ -916,17 +846,11 @@ export default function AdminDashboard() {
   // Delete client mutation
   const deleteClientMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await fetch(`/api/admin/clients/${id}`, {
-        method: 'DELETE',
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to delete client');
-      }
+      const response = await apiRequest('DELETE', `/api/admin/clients/${id}`);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'clients'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
       toast({
         title: "Success",
         description: "Client deleted successfully!",
@@ -1204,7 +1128,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchAdminProfile = async () => {
       try {
-        const response = await fetch('/api/admin/profile');
+        const response = await apiRequest('GET', '/api/admin/profile');
         if (response.ok) {
           const profile = await response.json();
           setAdminProfile(profile);
