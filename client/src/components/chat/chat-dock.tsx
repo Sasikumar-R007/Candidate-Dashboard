@@ -30,6 +30,7 @@ export function ChatDock({ open, onClose, userName = "Support Team" }: ChatDockP
   const [isSending, setIsSending] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const autoResponseShownRef = useRef(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -55,7 +56,28 @@ export function ChatDock({ open, onClose, userName = "Support Team" }: ChatDockP
           isOwn: msg.senderType === 'user',
           status: 'read' as const
         }));
-        setMessages(formattedMessages);
+        
+        const hasRealSupportReply = formattedMessages.some((msg: ChatMessage) => 
+          !msg.isOwn && msg.message !== 'Hello! How can we help you today?'
+        );
+        
+        if (hasRealSupportReply && autoResponseShownRef.current) {
+          autoResponseShownRef.current = false;
+        }
+        
+        if (autoResponseShownRef.current && !hasRealSupportReply) {
+          const autoResponse: ChatMessage = {
+            id: 'auto-response',
+            sender: 'Support Team',
+            message: 'Thank you for your message. Our team will get back to you shortly.',
+            time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            isOwn: false,
+            status: 'read'
+          };
+          setMessages([...formattedMessages, autoResponse]);
+        } else {
+          setMessages(formattedMessages);
+        }
       } else {
         setMessages([
           {
@@ -103,6 +125,8 @@ export function ChatDock({ open, onClose, userName = "Support Team" }: ChatDockP
     setNewMessage('');
     setIsSending(true);
 
+    setIsTyping(true);
+
     try {
       const response = await apiRequest('POST', '/api/support/send-message', {
         message: messageText
@@ -116,6 +140,51 @@ export function ChatDock({ open, onClose, userName = "Support Team" }: ChatDockP
 
       await loadConversation();
 
+      setTimeout(async () => {
+        setIsTyping(false);
+        
+        try {
+          const freshResponse = await fetch('/api/support/my-conversation');
+          const freshData = await freshResponse.json();
+          
+          if (freshData.conversation && freshData.messages) {
+            const hasRealSupportReply = freshData.messages.some((msg: any) => 
+              msg.senderType === 'support' || 
+              (msg.senderType !== 'user' && msg.message !== 'Hello! How can we help you today?')
+            );
+            
+            if (hasRealSupportReply) {
+              autoResponseShownRef.current = false;
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Error checking for support reply:', error);
+        }
+        
+        setMessages(prev => {
+          const hasAutoResponse = prev.some(msg => msg.id === 'auto-response');
+          
+          if (hasAutoResponse) {
+            return prev;
+          }
+          
+          autoResponseShownRef.current = true;
+          
+          const autoResponseTime = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+          const autoResponse: ChatMessage = {
+            id: 'auto-response',
+            sender: 'Support Team',
+            message: 'Thank you for your message. Our team will get back to you shortly.',
+            time: autoResponseTime,
+            isOwn: false,
+            status: 'read'
+          };
+          
+          return [...prev, autoResponse];
+        });
+      }, 1500);
+
       toast({
         title: "Message Sent",
         description: "Your message has been sent to our support team.",
@@ -124,6 +193,7 @@ export function ChatDock({ open, onClose, userName = "Support Team" }: ChatDockP
     } catch (error) {
       console.error('Error sending message:', error);
       
+      setIsTyping(false);
       setMessages(prev => prev.slice(0, -1));
 
       toast({

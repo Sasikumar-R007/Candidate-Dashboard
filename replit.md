@@ -133,6 +133,14 @@ Users interact with support through the floating chat dock:
 - Session-based identification ensures privacy and isolation
 - Messages poll every 3 seconds to show new support replies
 
+#### Automatic Response Features
+
+When users send messages, the chat provides immediate feedback:
+1. **Welcome Message**: First-time users see "Hello! How can we help you today?"
+2. **Typing Indicator**: After sending a message, a 3-dot animation appears for 1.5 seconds
+3. **Auto-Response**: System automatically responds with "Thank you for your message. Our team will get back to you shortly."
+4. These features work across all user profiles (candidate, recruiter, admin, client, team leader) since ChatDock is a shared component
+
 ## Security Features
 
 - **Session Isolation**: Each user session has a unique `supportUserId` preventing message cross-contamination
