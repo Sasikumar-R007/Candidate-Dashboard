@@ -41,36 +41,25 @@ export default function SupportDashboard() {
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
 
+  const { data: conversations = [], isLoading: conversationsLoading, error: conversationsError } = useQuery<Conversation[]>({
+    queryKey: ['/api/support/conversations'],
+    refetchInterval: 5000,
+    retry: false,
+  });
+
   useEffect(() => {
-    const supportUser = sessionStorage.getItem('supportUser');
-    if (!supportUser) {
-      toast({
-        title: "Access Denied",
-        description: "Support team authentication required. Please login first.",
-        variant: "destructive",
-      });
-      navigate("/support-login");
-    } else {
-      try {
-        const user = JSON.parse(supportUser);
-        if (user.role !== 'support') {
-          toast({
-            title: "Access Denied",
-            description: "This dashboard is for support team only.",
-            variant: "destructive",
-          });
-          navigate("/support-login");
-        }
-      } catch {
+    if (conversationsError) {
+      const errorResponse = conversationsError as any;
+      if (errorResponse?.message?.includes('403') || errorResponse?.message?.includes('Access denied')) {
+        toast({
+          title: "Access Denied",
+          description: "Support team authentication required. Please login first.",
+          variant: "destructive",
+        });
         navigate("/support-login");
       }
     }
-  }, [navigate, toast]);
-
-  const { data: conversations = [], isLoading: conversationsLoading } = useQuery<Conversation[]>({
-    queryKey: ['/api/support/conversations'],
-    refetchInterval: 5000,
-  });
+  }, [conversationsError, navigate, toast]);
 
   const { data: conversationData, isLoading: messagesLoading } = useQuery<{
     conversation: Conversation;

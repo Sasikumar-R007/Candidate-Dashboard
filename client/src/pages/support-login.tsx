@@ -43,7 +43,6 @@ export default function SupportLogin() {
           description: `Welcome, ${result.employee.name}!`,
         });
 
-        sessionStorage.setItem('supportUser', JSON.stringify(result.employee));
         navigate("/support-dashboard");
       } else {
         throw new Error("Invalid response from server");
