@@ -237,3 +237,29 @@
 .admin-scrollbar::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+/* Print Styles */
+@media print {
+  /* Hide all dialogs and overlays during print */
+  [role="dialog"],
+  [data-radix-popper-content-wrapper],
+  [data-radix-dialog-overlay],
+  [data-radix-portal] {
+    display: none !important;
+  }
+  
+  /* Hide sidebar during print */
+  .print\:hidden {
+    display: none !important;
+  }
+  
+  /* Ensure main content is visible */
+  body {
+    background: white;
+  }
+  
+  /* Remove unnecessary margins and padding for print */
+  @page {
+    margin: 1cm;
+  }
+}

@@ -939,7 +939,7 @@ export default function ClientDashboard() {
             </div>
 
             {/* Right Sidebar with Charts */}
-            <div className="w-80 bg-white border-l border-gray-200 p-6 space-y-6 overflow-y-auto">
+            <div className="w-80 bg-white border-l border-gray-200 p-6 space-y-6 overflow-y-auto print:hidden">
               {/* Speed Metrics Chart - 4 Lines */}
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-gray-700">Speed Metrics Trend</h3>
@@ -1185,7 +1185,7 @@ export default function ClientDashboard() {
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Left Sidebar - Dark Blue Theme */}
-      <div className="w-16 bg-slate-700 flex flex-col items-center py-6 space-y-6">
+      <div className="w-16 bg-slate-700 flex flex-col items-center py-6 space-y-6 print:hidden">
         {/* Logo */}
         <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
           <span className="text-slate-700 font-bold text-lg">X</span>
@@ -1231,7 +1231,7 @@ export default function ClientDashboard() {
         
         {/* Right Sidebar - Chats - Only show on dashboard */}
         {sidebarTab === 'dashboard' && (
-          <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
+          <div className="w-80 bg-white border-l border-gray-200 flex flex-col print:hidden">
             {/* Recent Chats Header */}
             <div className="p-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-800">Recent Chats</h3>
@@ -1412,7 +1412,7 @@ export default function ClientDashboard() {
 
       {/* Download Metrics Modal */}
       <Dialog open={isDownloadModalOpen} onOpenChange={setIsDownloadModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md print:hidden">
           <DialogHeader>
             <DialogTitle>Download Metrics as PDF</DialogTitle>
           </DialogHeader>
