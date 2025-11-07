@@ -10,9 +10,10 @@ import { ProfileSettingsModal } from "@/components/dashboard/modals/profile-sett
 
 interface AdminTopHeaderProps {
   companyName?: string;
+  onHelpClick?: () => void;
 }
 
-export default function AdminTopHeader({ companyName = "Gumlat Marketing Private Limited" }: AdminTopHeaderProps) {
+export default function AdminTopHeader({ companyName = "Gumlat Marketing Private Limited", onHelpClick }: AdminTopHeaderProps) {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
@@ -114,7 +115,11 @@ export default function AdminTopHeader({ companyName = "Gumlat Marketing Private
       {/* Right - Help and User Dropdown */}
       <div className="flex items-center gap-4">
         {/* Help Button */}
-        <button className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+        <button 
+          onClick={onHelpClick}
+          className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+          data-testid="button-header-help"
+        >
           <HelpCircle size={16} />
           <span className="text-sm">Help</span>
         </button>

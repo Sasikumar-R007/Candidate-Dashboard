@@ -293,7 +293,11 @@ export default function TeamLeaderDashboard() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader userName="John Mathew" companyName="Gumlat Marketing Private Limited" />
+          <AdminTopHeader 
+            userName="John Mathew" 
+            companyName="Gumlat Marketing Private Limited" 
+            onHelpClick={() => setIsHelpChatOpen(true)}
+          />
           <div className="flex h-screen">
             {/* Main Content - Middle Section (Scrollable) */}
             <div className="px-3 py-2 space-y-2 flex-1 overflow-y-auto h-full">
@@ -664,7 +668,11 @@ export default function TeamLeaderDashboard() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader userName="John Mathew" companyName="Gumlat Marketing Private Limited" />
+          <AdminTopHeader 
+            userName="John Mathew" 
+            companyName="Gumlat Marketing Private Limited" 
+            onHelpClick={() => setIsHelpChatOpen(true)}
+          />
           <div className="px-6 py-6 space-y-6 h-full">
             {/* Requirements Section with Priority Distribution */}
             <div className="flex gap-6 h-full">
@@ -1272,7 +1280,11 @@ export default function TeamLeaderDashboard() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader userName="John Mathew" companyName="Gumlat Marketing Private Limited" />
+          <AdminTopHeader 
+            userName="John Mathew" 
+            companyName="Gumlat Marketing Private Limited" 
+            onHelpClick={() => setIsHelpChatOpen(true)}
+          />
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
             
             {/* Team Performance Section */}
@@ -1374,7 +1386,11 @@ export default function TeamLeaderDashboard() {
         <div className="flex-1 ml-16 bg-gray-50 flex">
           {/* Main Chat Area */}
           <div className="flex-1 flex flex-col">
-            <AdminTopHeader userName="John Mathew" companyName="Gumlat Marketing Private Limited" />
+            <AdminTopHeader 
+              userName="John Mathew" 
+              companyName="Gumlat Marketing Private Limited" 
+              onHelpClick={() => setIsHelpChatOpen(true)}
+            />
             <div className="px-6 py-6 h-full flex flex-col">
               
               {/* Chat Header */}

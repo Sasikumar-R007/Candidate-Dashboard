@@ -10,10 +10,12 @@ import { ProfileSettingsModal } from "@/components/dashboard/modals/profile-sett
 
 interface SimpleClientHeaderProps {
   companyName?: string;
+  onHelpClick?: () => void;
 }
 
 export default function SimpleClientHeader({ 
-  companyName = "Gumlet Marketing Private Limited"
+  companyName = "Gumlet Marketing Private Limited",
+  onHelpClick
 }: SimpleClientHeaderProps) {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
@@ -79,7 +81,11 @@ export default function SimpleClientHeader({
         {/* Right side - Help and User Profile */}
         <div className="flex items-center gap-4">
           {/* Help Button */}
-          <button className="flex items-center gap-1 px-3 py-2 text-gray-600 hover:text-gray-900 transition-colors duration-200 hover:bg-gray-100 rounded-lg">
+          <button 
+            onClick={onHelpClick}
+            className="flex items-center gap-1 px-3 py-2 text-gray-600 hover:text-gray-900 transition-colors duration-200 hover:bg-gray-100 rounded-lg"
+            data-testid="button-header-help"
+          >
             <HelpCircle size={16} />
             <span className="text-sm">Help</span>
           </button>

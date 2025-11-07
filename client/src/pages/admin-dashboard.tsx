@@ -391,14 +391,14 @@ function ImpactMetricsEditor() {
     // If no metrics exist, create one first
     if (!metrics || metrics.length === 0) {
       const defaultMetrics = {
-        speedToHire: 15,
-        revenueImpactOfDelay: 75000,
-        clientNps: 60,
-        candidateNps: 70,
-        feedbackTurnAround: 2,
-        firstYearRetentionRate: 90,
-        fulfillmentRate: 20,
-        revenueRecovered: 1.5,
+        speedToHire: 0,
+        revenueImpactOfDelay: 0,
+        clientNps: 0,
+        candidateNps: 0,
+        feedbackTurnAround: 0,
+        firstYearRetentionRate: 0,
+        fulfillmentRate: 0,
+        revenueRecovered: 0,
         [field]: value, // Set the edited field
       };
       await createMutation.mutateAsync(defaultMetrics);
@@ -422,14 +422,14 @@ function ImpactMetricsEditor() {
   }
 
   const currentMetrics = metrics?.[0] || {
-    speedToHire: 15,
-    revenueImpactOfDelay: 75000,
-    clientNps: 60,
-    candidateNps: 70,
-    feedbackTurnAround: 2,
-    firstYearRetentionRate: 90,
-    fulfillmentRate: 20,
-    revenueRecovered: 1.5,
+    speedToHire: 0,
+    revenueImpactOfDelay: 0,
+    clientNps: 0,
+    candidateNps: 0,
+    feedbackTurnAround: 0,
+    firstYearRetentionRate: 0,
+    fulfillmentRate: 0,
+    revenueRecovered: 0,
   };
 
   const MetricCard = ({ title, value, unit, subtitle, bgColor, borderColor, textColor, field, testId }: any) => {
@@ -4370,7 +4370,11 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex flex-col bg-gray-50 dark:bg-gray-900 min-h-screen">
-      <AdminTopHeader userName="Sasi Kumar" companyName="Gumlat Marketing Private Limited" />
+      <AdminTopHeader 
+        userName="Sasi Kumar" 
+        companyName="Gumlat Marketing Private Limited" 
+        onHelpClick={() => setIsChatOpen(true)}
+      />
       <div className="flex flex-1">
         <AdminSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
         <div className="flex-1 ml-16 flex flex-col overflow-hidden" style={{height: 'calc(100vh - 4rem)'}}>

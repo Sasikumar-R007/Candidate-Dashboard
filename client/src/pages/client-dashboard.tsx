@@ -255,8 +255,7 @@ export default function ClientDashboard() {
             {/* Simple Client Header */}
             <SimpleClientHeader 
               companyName="Gumlet Marketing Private Limited"
-              userName="Sasi Kumar"
-              userImage="/api/placeholder/32/32"
+              onHelpClick={() => setIsHelpChatOpen(true)}
             />
             
             <div className="px-6 py-6 space-y-6">
@@ -501,8 +500,7 @@ export default function ClientDashboard() {
             {/* Simple Client Header */}
             <SimpleClientHeader 
               companyName="Gumlet Marketing Private Limited"
-              userName="Sasi Kumar"
-              userImage="/api/placeholder/32/32"
+              onHelpClick={() => setIsHelpChatOpen(true)}
             />
             <div className="flex flex-1 overflow-hidden">
             {/* Main Pipeline Content */}
@@ -740,8 +738,7 @@ export default function ClientDashboard() {
             {/* Simple Client Header */}
             <SimpleClientHeader 
               companyName="Gumlet Marketing Private Limited"
-              userName="Sasi Kumar"
-              userImage="/api/placeholder/32/32"
+              onHelpClick={() => setIsHelpChatOpen(true)}
             />
             <div className="flex flex-1 overflow-hidden">
             {/* Main Content Area */}
