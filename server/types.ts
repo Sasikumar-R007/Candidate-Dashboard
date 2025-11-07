@@ -6,5 +6,7 @@ declare module 'express-session' {
     employeeId?: string;
     employeeRole?: string;
     userType?: 'candidate' | 'employee';
+    supportUserId?: string;
+    conversationId?: string;
   }
 }

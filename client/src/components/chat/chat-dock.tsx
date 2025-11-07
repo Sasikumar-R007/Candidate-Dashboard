@@ -24,27 +24,12 @@ interface ChatDockProps {
 
 export function ChatDock({ open, onClose, userName = "Support Team" }: ChatDockProps) {
   const { toast } = useToast();
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      sender: 'Support Team',
-      message: 'Hello! How can we help you today?',
-      time: '10:00 AM',
-      isOwn: false,
-      status: 'read'
-    },
-    {
-      id: '2',
-      sender: 'Support Team',
-      message: 'We\'re here to assist you with your job search and any questions you might have.',
-      time: '10:00 AM',
-      isOwn: false,
-      status: 'read'
-    }
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -54,6 +39,49 @@ export function ChatDock({ open, onClose, userName = "Support Team" }: ChatDockP
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const loadConversation = async () => {
+    try {
+      const response = await fetch('/api/support/my-conversation');
+      const data = await response.json();
+
+      if (data.conversation) {
+        setConversationId(data.conversation.id);
+        const formattedMessages = data.messages.map((msg: any) => ({
+          id: msg.id,
+          sender: msg.senderType === 'user' ? 'You' : msg.senderName,
+          message: msg.message,
+          time: new Date(msg.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          isOwn: msg.senderType === 'user',
+          status: 'read' as const
+        }));
+        setMessages(formattedMessages);
+      } else {
+        setMessages([
+          {
+            id: '1',
+            sender: 'Support Team',
+            message: 'Hello! How can we help you today?',
+            time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            isOwn: false,
+            status: 'read'
+          }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error loading conversation:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (open) {
+      loadConversation();
+      const interval = setInterval(loadConversation, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [open]);
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || isSending) return;
@@ -73,28 +101,20 @@ export function ChatDock({ open, onClose, userName = "Support Team" }: ChatDockP
 
     setMessages(prev => [...prev, userMessage]);
     setNewMessage('');
-    setIsTyping(true);
     setIsSending(true);
 
     try {
       const response = await apiRequest('POST', '/api/support/send-message', {
-        message: messageText,
-        userName: 'User',
-        userEmail: ''
+        message: messageText
       });
 
       const data = await response.json();
-      setIsTyping(false);
       
-      const responseMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        sender: userName,
-        message: data.message || 'Thank you for your message. Our team will get back to you shortly.',
-        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        isOwn: false,
-        status: 'read'
-      };
-      setMessages(prev => [...prev, responseMessage]);
+      if (data.conversationId && !conversationId) {
+        setConversationId(data.conversationId);
+      }
+
+      await loadConversation();
 
       toast({
         title: "Message Sent",
@@ -103,17 +123,8 @@ export function ChatDock({ open, onClose, userName = "Support Team" }: ChatDockP
       });
     } catch (error) {
       console.error('Error sending message:', error);
-      setIsTyping(false);
       
-      const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        sender: userName,
-        message: 'Sorry, there was an error sending your message. Please try again later.',
-        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        isOwn: false,
-        status: 'read'
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => prev.slice(0, -1));
 
       toast({
         title: "Error",

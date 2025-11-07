@@ -24,6 +24,7 @@ import Archives from "@/pages/archives";
 import MasterDatabase from "@/pages/master-database";
 import ChatPage from "@/pages/chat-page";
 import SetupAdmin from "@/pages/setup-admin";
+import SupportDashboard from "@/pages/support-dashboard";
 
 function Router() {
   return (
@@ -46,6 +47,7 @@ function Router() {
       <Route path="/recruiter-new-applications" component={RecruiterNewApplications} />
       <Route path="/archives" component={Archives} />
       <Route path="/master-database" component={MasterDatabase} />
+      <Route path="/support-dashboard" component={SupportDashboard} />
       <Route component={NotFound} />
     </Switch>
   );

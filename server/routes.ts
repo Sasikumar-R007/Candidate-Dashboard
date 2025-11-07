@@ -2,12 +2,14 @@ import express, { type Express, type Request, type Response, type NextFunction }
 import { createServer, type Server } from "http";
 import fs from "fs";
 import { storage } from "./storage";
-import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema } from "@shared/schema";
+import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
 import "./types"; // Import session types
+import { db } from "./db";
+import { eq, desc } from "drizzle-orm";
 // import pdfParse from "pdf-parse"; // Use dynamic import to avoid initialization issues
 import mammoth from "mammoth";
 
@@ -2722,7 +2724,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/support/send-message", async (req, res) => {
     try {
-      const { message, userEmail, userName } = req.body;
+      const { message } = req.body;
 
       if (!message || !message.trim()) {
         return res.status(400).json({ 
@@ -2730,45 +2732,238 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const { getUncachableResendClient } = await import('./resend-client');
-      const { client, fromEmail } = await getUncachableResendClient();
+      if (!req.session.supportUserId) {
+        req.session.supportUserId = `guest-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      }
 
-      const emailData = {
-        from: fromEmail,
-        to: 'sasikumarr0208@gmail.com',
-        subject: `Support Request from ${userName || userEmail || 'User'}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #7C3AED; border-bottom: 2px solid #7C3AED; padding-bottom: 10px;">
-              New Support Request
-            </h2>
-            <div style="margin: 20px 0;">
-              <p><strong>From:</strong> ${userName || 'Anonymous User'}</p>
-              ${userEmail ? `<p><strong>Email:</strong> ${userEmail}</p>` : ''}
-              <p><strong>Message:</strong></p>
-              <div style="background: #F3F4F6; padding: 15px; border-radius: 8px; margin-top: 10px;">
-                ${message.replace(/\n/g, '<br>')}
-              </div>
-            </div>
-            <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 20px 0;">
-            <p style="color: #6B7280; font-size: 12px;">
-              This message was sent from the StaffOS Support Team chat system.
-            </p>
-          </div>
-        `,
-      };
+      const candidateEmail = req.session.candidateId 
+        ? (await storage.getCandidateByCandidateId(req.session.candidateId))?.email 
+        : null;
+      
+      const emailToUse = candidateEmail || `${req.session.supportUserId}@guest.staffos.com`;
+      const nameToUse = candidateEmail ? 'Candidate' : 'Guest User';
+      
+      const now = new Date().toISOString();
+      let convId = req.session.conversationId;
 
-      await client.emails.send(emailData);
+      if (!convId) {
+        const existingConv = await db.select()
+          .from(supportConversations)
+          .where(eq(supportConversations.userEmail, emailToUse))
+          .orderBy(desc(supportConversations.createdAt))
+          .limit(1);
+
+        if (existingConv.length > 0 && existingConv[0].status !== 'closed') {
+          convId = existingConv[0].id;
+          await db.update(supportConversations)
+            .set({ lastMessageAt: now })
+            .where(eq(supportConversations.id, convId));
+        } else {
+          const newConv = await db.insert(supportConversations).values({
+            userId: req.session.candidateId || req.session.supportUserId || null,
+            userEmail: emailToUse,
+            userName: nameToUse,
+            subject: message.substring(0, 100),
+            status: 'open',
+            lastMessageAt: now,
+            createdAt: now,
+          }).returning();
+          convId = newConv[0].id;
+        }
+        
+        req.session.conversationId = convId;
+        await new Promise<void>((resolve, reject) => {
+          req.session.save((err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      } else {
+        await db.update(supportConversations)
+          .set({ lastMessageAt: now })
+          .where(eq(supportConversations.id, convId));
+      }
+
+      await db.insert(supportMessages).values({
+        conversationId: convId,
+        senderType: 'user',
+        senderName: nameToUse,
+        message: message,
+        createdAt: now,
+      });
 
       res.json({ 
         success: true, 
+        conversationId: convId,
         message: "Your message has been sent to our support team. We'll get back to you shortly." 
       });
     } catch (error) {
-      console.error('Error sending support email:', error);
+      console.error('Error sending support message:', error);
       res.status(500).json({ 
         error: "Failed to send message. Please try again later." 
       });
+    }
+  });
+
+  app.get("/api/support/conversations", requireEmployeeAuth, async (req, res) => {
+    try {
+      const conversations = await db.select()
+        .from(supportConversations)
+        .orderBy(desc(supportConversations.lastMessageAt));
+
+      const conversationsWithCount = await Promise.all(
+        conversations.map(async (conv) => {
+          const messages = await db.select()
+            .from(supportMessages)
+            .where(eq(supportMessages.conversationId, conv.id));
+          
+          const lastMessage = messages[messages.length - 1];
+          
+          return {
+            ...conv,
+            messageCount: messages.length,
+            lastMessage: lastMessage?.message || '',
+          };
+        })
+      );
+
+      res.json(conversationsWithCount);
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+      res.status(500).json({ error: "Failed to fetch conversations" });
+    }
+  });
+
+  app.get("/api/support/conversations/:id/messages", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const conversation = await db.select()
+        .from(supportConversations)
+        .where(eq(supportConversations.id, id))
+        .limit(1);
+
+      if (conversation.length === 0) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
+
+      const messages = await db.select()
+        .from(supportMessages)
+        .where(eq(supportMessages.conversationId, id))
+        .orderBy(supportMessages.createdAt);
+
+      res.json({
+        conversation: conversation[0],
+        messages: messages,
+      });
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      res.status(500).json({ error: "Failed to fetch messages" });
+    }
+  });
+
+  app.post("/api/support/conversations/:id/reply", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { message, senderName } = req.body;
+
+      if (!message || !message.trim()) {
+        return res.status(400).json({ error: "Message is required" });
+      }
+
+      const conversation = await db.select()
+        .from(supportConversations)
+        .where(eq(supportConversations.id, id))
+        .limit(1);
+
+      if (conversation.length === 0) {
+        return res.status(404).json({ error: "Conversation not found" });
+      }
+
+      const now = new Date().toISOString();
+
+      await db.insert(supportMessages).values({
+        conversationId: id,
+        senderType: 'support',
+        senderName: senderName || 'Support Team',
+        message: message,
+        createdAt: now,
+      });
+
+      await db.update(supportConversations)
+        .set({ 
+          lastMessageAt: now,
+          status: 'in_progress' 
+        })
+        .where(eq(supportConversations.id, id));
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error sending reply:', error);
+      res.status(500).json({ error: "Failed to send reply" });
+    }
+  });
+
+  app.patch("/api/support/conversations/:id/status", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+
+      if (!['open', 'in_progress', 'resolved', 'closed'].includes(status)) {
+        return res.status(400).json({ error: "Invalid status" });
+      }
+
+      await db.update(supportConversations)
+        .set({ status })
+        .where(eq(supportConversations.id, id));
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error updating status:', error);
+      res.status(500).json({ error: "Failed to update status" });
+    }
+  });
+
+  app.get("/api/support/my-conversation", async (req, res) => {
+    try {
+      if (!req.session.supportUserId && !req.session.candidateId) {
+        req.session.supportUserId = `guest-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        await new Promise<void>((resolve, reject) => {
+          req.session.save((err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      }
+
+      const candidateEmail = req.session.candidateId 
+        ? (await storage.getCandidateByCandidateId(req.session.candidateId))?.email 
+        : null;
+      
+      const emailToUse = candidateEmail || `${req.session.supportUserId}@guest.staffos.com`;
+
+      const conversation = await db.select()
+        .from(supportConversations)
+        .where(eq(supportConversations.userEmail, emailToUse))
+        .orderBy(desc(supportConversations.createdAt))
+        .limit(1);
+
+      if (conversation.length === 0) {
+        return res.json({ conversation: null, messages: [] });
+      }
+
+      const messages = await db.select()
+        .from(supportMessages)
+        .where(eq(supportMessages.conversationId, conversation[0].id))
+        .orderBy(supportMessages.createdAt);
+
+      res.json({
+        conversation: conversation[0],
+        messages: messages,
+      });
+    } catch (error) {
+      console.error('Error fetching my conversation:', error);
+      res.status(500).json({ error: "Failed to fetch conversation" });
     }
   });
 

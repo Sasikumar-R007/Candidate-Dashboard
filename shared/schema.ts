@@ -451,6 +451,34 @@ export const insertImpactMetricsSchema = createInsertSchema(impactMetrics).omit(
   id: true,
 });
 
+export const supportConversations = pgTable("support_conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id"),
+  userEmail: text("user_email").notNull(),
+  userName: text("user_name").notNull(),
+  subject: text("subject"),
+  status: text("status").notNull().default("open"), // open, in_progress, resolved, closed
+  lastMessageAt: text("last_message_at").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+export const supportMessages = pgTable("support_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  conversationId: varchar("conversation_id").notNull(),
+  senderType: text("sender_type").notNull(), // user, support
+  senderName: text("sender_name").notNull(),
+  message: text("message").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+export const insertSupportConversationSchema = createInsertSchema(supportConversations).omit({
+  id: true,
+});
+
+export const insertSupportMessageSchema = createInsertSchema(supportMessages).omit({
+  id: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
@@ -501,3 +529,7 @@ export type InsertClient = z.infer<typeof insertClientSchema>;
 export type Client = typeof clients.$inferSelect;
 export type InsertImpactMetrics = z.infer<typeof insertImpactMetricsSchema>;
 export type ImpactMetrics = typeof impactMetrics.$inferSelect;
+export type InsertSupportConversation = z.infer<typeof insertSupportConversationSchema>;
+export type SupportConversation = typeof supportConversations.$inferSelect;
+export type InsertSupportMessage = z.infer<typeof insertSupportMessageSchema>;
+export type SupportMessage = typeof supportMessages.$inferSelect;
