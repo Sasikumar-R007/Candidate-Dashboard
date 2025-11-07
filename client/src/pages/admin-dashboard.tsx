@@ -640,11 +640,12 @@ export default function AdminDashboard() {
   const [isPerformanceDataModalOpen, setIsPerformanceDataModalOpen] = useState(false);
   const [clientForm, setClientForm] = useState({
     clientCode: '', brandName: '', incorporatedName: '', gstin: '',
-    address: '', location: '', spoc: '', email: '',
+    address: '', location: '', spoc: '', email: '', password: '',
     website: '', linkedin: '', agreement: '', percentage: '',
     category: '', paymentTerms: '', source: '', startDate: '',
-    referral: '', currentStatus: 'active'
+    currentStatus: 'active'
   });
+  const [clientStartDate, setClientStartDate] = useState<Date | undefined>();
   const [employeeForm, setEmployeeForm] = useState({
     employeeId: '', name: '', email: '', password: '',
     role: '', phone: '', department: '', joiningDate: '', age: ''
@@ -744,19 +745,21 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/employees'] });
       toast({
         title: "Success",
-        description: "Client created successfully!",
+        description: "Client profile created successfully!",
         className: "bg-green-50 border-green-200 text-green-800",
       });
       setIsClientModalOpen(false);
       setClientForm({
         clientCode: '', brandName: '', incorporatedName: '', gstin: '',
-        address: '', location: '', spoc: '', email: '',
+        address: '', location: '', spoc: '', email: '', password: '',
         website: '', linkedin: '', agreement: '', percentage: '',
         category: '', paymentTerms: '', source: '', startDate: '',
-        referral: '', currentStatus: 'active'
+        currentStatus: 'active'
       });
+      setClientStartDate(undefined);
     },
     onError: (error: Error) => {
       toast({
@@ -2090,7 +2093,6 @@ export default function AdminDashboard() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Client Master</CardTitle>
-                <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">+ Add Client</Button>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto admin-scrollbar">
@@ -2514,14 +2516,23 @@ export default function AdminDashboard() {
               <Button 
                 className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white"
                 onClick={() => setIsAddTalentAdvisorModalOpen(true)}
+                data-testid="button-add-recruiter"
               >
                 + Add Recruiter
               </Button>
               <Button 
                 className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white"
                 onClick={() => setIsAddTeamLeaderModalOpen(true)}
+                data-testid="button-add-team-leader"
               >
                 + Add Team Leader
+              </Button>
+              <Button 
+                className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => setIsClientModalOpen(true)}
+                data-testid="button-add-client"
+              >
+                + Add Client
               </Button>
             </div>
 
@@ -3123,12 +3134,6 @@ export default function AdminDashboard() {
                       onClick={() => navigate('/master-database')}
                     >
                       View Full Database
-                    </Button>
-                    <Button 
-                      className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white text-sm px-4"
-                      onClick={() => setIsClientModalOpen(true)}
-                    >
-                      + Add Client
                     </Button>
                     <Button 
                       className="btn-rounded bg-green-600 hover:bg-green-700 text-white text-sm px-4"
@@ -5465,7 +5470,7 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <Input 
-                  placeholder="Email" 
+                  placeholder="Email *" 
                   type="email" 
                   className="input-styled rounded" 
                   value={clientForm.email}
@@ -5473,6 +5478,21 @@ export default function AdminDashboard() {
                   data-testid="input-email"
                 />
               </div>
+            </div>
+
+            {/* Row 4b - Password */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Input 
+                  placeholder="Password *" 
+                  type="password" 
+                  className="input-styled rounded" 
+                  value={clientForm.password}
+                  onChange={(e) => setClientForm({...clientForm, password: e.target.value})}
+                  data-testid="input-password"
+                />
+              </div>
+              <div></div>
             </div>
 
             {/* Row 5 */}
@@ -5500,35 +5520,49 @@ export default function AdminDashboard() {
             {/* Row 6 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Input 
-                  placeholder="Agreement" 
-                  className="input-styled rounded" 
+                <Select 
                   value={clientForm.agreement}
-                  onChange={(e) => setClientForm({...clientForm, agreement: e.target.value})}
-                  data-testid="input-agreement"
-                />
+                  onValueChange={(value) => setClientForm({...clientForm, agreement: value})}
+                >
+                  <SelectTrigger className="input-styled rounded" data-testid="select-agreement">
+                    <SelectValue placeholder="Agreement" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Signup Pending">Signup Pending</SelectItem>
+                    <SelectItem value="Signup Completed">Signup Completed</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div>
+              <div className="relative">
                 <Input 
                   placeholder="Percentage" 
-                  className="input-styled rounded" 
+                  type="number"
+                  min="0"
+                  max="100"
+                  className="input-styled rounded pr-8" 
                   value={clientForm.percentage}
                   onChange={(e) => setClientForm({...clientForm, percentage: e.target.value})}
                   data-testid="input-percentage"
                 />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">%</span>
               </div>
             </div>
 
             {/* Row 7 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Input 
-                  placeholder="Category" 
-                  className="input-styled rounded" 
+                <Select 
                   value={clientForm.category}
-                  onChange={(e) => setClientForm({...clientForm, category: e.target.value})}
-                  data-testid="input-category"
-                />
+                  onValueChange={(value) => setClientForm({...clientForm, category: value})}
+                >
+                  <SelectTrigger className="input-styled rounded" data-testid="select-category">
+                    <SelectValue placeholder="Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Product">Product</SelectItem>
+                    <SelectItem value="Services">Services</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Input 
@@ -5544,36 +5578,51 @@ export default function AdminDashboard() {
             {/* Row 8 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Input 
-                  placeholder="Source" 
-                  className="input-styled rounded" 
+                <Select 
                   value={clientForm.source}
-                  onChange={(e) => setClientForm({...clientForm, source: e.target.value})}
-                  data-testid="input-source"
-                />
+                  onValueChange={(value) => setClientForm({...clientForm, source: value})}
+                >
+                  <SelectTrigger className="input-styled rounded" data-testid="select-source">
+                    <SelectValue placeholder="Source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Outbound Lead (Sales)">Outbound Lead (Sales)</SelectItem>
+                    <SelectItem value="Client Referral">Client Referral</SelectItem>
+                    <SelectItem value="VC Referral">VC Referral</SelectItem>
+                    <SelectItem value="Inbound Lead">Inbound Lead</SelectItem>
+                    <SelectItem value="Other Referral">Other Referral</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
-                <Input 
-                  placeholder="Start Date" 
-                  className="input-styled rounded" 
-                  value={clientForm.startDate}
-                  onChange={(e) => setClientForm({...clientForm, startDate: e.target.value})}
-                  data-testid="input-start-date"
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal input-styled rounded"
+                      data-testid="button-start-date"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {clientStartDate ? format(clientStartDate, "PPP") : <span className="text-gray-500">Start Date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={clientStartDate}
+                      onSelect={(date) => {
+                        setClientStartDate(date);
+                        setClientForm({...clientForm, startDate: date ? format(date, "yyyy-MM-dd") : ''});
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 
             {/* Row 9 */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Input 
-                  placeholder="Referral" 
-                  className="input-styled rounded" 
-                  value={clientForm.referral}
-                  onChange={(e) => setClientForm({...clientForm, referral: e.target.value})}
-                  data-testid="input-referral"
-                />
-              </div>
               <div>
                 <Select 
                   value={clientForm.currentStatus}
@@ -5589,16 +5638,17 @@ export default function AdminDashboard() {
                   </SelectContent>
                 </Select>
               </div>
+              <div></div>
             </div>
 
             <div className="flex justify-center pt-6">
               <Button 
                 className="bg-cyan-400 hover:bg-cyan-500 text-white px-8 py-2 rounded"
                 onClick={() => {
-                  if (!clientForm.brandName) {
+                  if (!clientForm.brandName || !clientForm.email || !clientForm.password) {
                     toast({
                       title: "Validation Error",
-                      description: "Please fill in Brand Name (required field)",
+                      description: "Please fill in Brand Name, Email, and Password (required fields)",
                       variant: "destructive",
                     });
                     return;
