@@ -50,6 +50,10 @@ localPort = 40103
 externalPort = 3002
 
 [[ports]]
+localPort = 40221
+externalPort = 9000
+
+[[ports]]
 localPort = 41141
 externalPort = 8000
 
@@ -99,4 +103,4 @@ externalPort = 6000
 
 [agent]
 expertMode = true
-integrations = ["javascript_database:1.0.0"]
+integrations = ["javascript_database:1.0.0", "resend:1.0.0"]

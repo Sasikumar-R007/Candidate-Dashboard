@@ -2693,6 +2693,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ]);
   });
 
+  app.post("/api/support/send-message", async (req, res) => {
+    try {
+      const { message, userEmail, userName } = req.body;
+
+      if (!message || !message.trim()) {
+        return res.status(400).json({ 
+          error: "Message is required" 
+        });
+      }
+
+      const { getUncachableResendClient } = await import('./resend-client');
+      const { client, fromEmail } = await getUncachableResendClient();
+
+      const emailData = {
+        from: fromEmail,
+        to: 'sasikumarr0208@gmail.com',
+        subject: `Support Request from ${userName || userEmail || 'User'}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #7C3AED; border-bottom: 2px solid #7C3AED; padding-bottom: 10px;">
+              New Support Request
+            </h2>
+            <div style="margin: 20px 0;">
+              <p><strong>From:</strong> ${userName || 'Anonymous User'}</p>
+              ${userEmail ? `<p><strong>Email:</strong> ${userEmail}</p>` : ''}
+              <p><strong>Message:</strong></p>
+              <div style="background: #F3F4F6; padding: 15px; border-radius: 8px; margin-top: 10px;">
+                ${message.replace(/\n/g, '<br>')}
+              </div>
+            </div>
+            <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 20px 0;">
+            <p style="color: #6B7280; font-size: 12px;">
+              This message was sent from the StaffOS Support Team chat system.
+            </p>
+          </div>
+        `,
+      };
+
+      await client.emails.send(emailData);
+
+      res.json({ 
+        success: true, 
+        message: "Your message has been sent to our support team. We'll get back to you shortly." 
+      });
+    } catch (error) {
+      console.error('Error sending support email:', error);
+      res.status(500).json({ 
+        error: "Failed to send message. Please try again later." 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

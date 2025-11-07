@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/hooks/use-toast';
+import { apiRequest } from '@/lib/queryClient';
 
 interface ChatMessage {
   id: string;
@@ -21,6 +23,7 @@ interface ChatDockProps {
 }
 
 export function ChatDock({ open, onClose, userName = "Support Team" }: ChatDockProps) {
+  const { toast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
@@ -41,6 +44,7 @@ export function ChatDock({ open, onClose, userName = "Support Team" }: ChatDockP
   ]);
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -51,16 +55,17 @@ export function ChatDock({ open, onClose, userName = "Support Team" }: ChatDockP
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = () => {
-    if (!newMessage.trim()) return;
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || isSending) return;
 
     const now = new Date();
     const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    const messageText = newMessage;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
       sender: 'You',
-      message: newMessage,
+      message: messageText,
       time: timeString,
       isOwn: true,
       status: 'sent'
@@ -69,20 +74,55 @@ export function ChatDock({ open, onClose, userName = "Support Team" }: ChatDockP
     setMessages(prev => [...prev, userMessage]);
     setNewMessage('');
     setIsTyping(true);
+    setIsSending(true);
 
-    // Simulate support response
-    setTimeout(() => {
+    try {
+      const response = await apiRequest('POST', '/api/support/send-message', {
+        message: messageText,
+        userName: 'User',
+        userEmail: ''
+      });
+
+      const data = await response.json();
       setIsTyping(false);
+      
       const responseMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         sender: userName,
-        message: 'Thank you for your message. Our team will get back to you shortly.',
+        message: data.message || 'Thank you for your message. Our team will get back to you shortly.',
         time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
         isOwn: false,
         status: 'read'
       };
       setMessages(prev => [...prev, responseMessage]);
-    }, 1500);
+
+      toast({
+        title: "Message Sent",
+        description: "Your message has been sent to our support team.",
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setIsTyping(false);
+      
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        sender: userName,
+        message: 'Sorry, there was an error sending your message. Please try again later.',
+        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        isOwn: false,
+        status: 'read'
+      };
+      setMessages(prev => [...prev, errorMessage]);
+
+      toast({
+        title: "Error",
+        description: "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSending(false);
+    }
   };
 
   if (!open) return null;
