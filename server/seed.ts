@@ -16,6 +16,7 @@ async function seed() {
     const saltRounds = 10;
     const adminPasswordHash = await bcrypt.hash("admin123", saltRounds);
     const recruiterPasswordHash = await bcrypt.hash("recruiter123", saltRounds);
+    const supportPasswordHash = await bcrypt.hash("support123", saltRounds);
     const candidatePasswordHash = await bcrypt.hash("candidate123", saltRounds);
 
     // Seed employees
@@ -59,6 +60,20 @@ async function seed() {
         department: "Recruitment",
         joiningDate: "2024-01-15",
         reportingTo: "Admin User",
+        isActive: true,
+        createdAt: new Date().toISOString()
+      },
+      {
+        employeeId: "STTS001",
+        name: "Support Team",
+        email: "support@staffos.com",
+        password: supportPasswordHash,
+        role: "admin",
+        age: "30",
+        phone: "+1234567895",
+        department: "Support",
+        joiningDate: "2024-01-01",
+        reportingTo: "CEO",
         isActive: true,
         createdAt: new Date().toISOString()
       }
@@ -137,6 +152,7 @@ async function seed() {
     console.log("\n📝 Test Credentials:");
     console.log("Employee Login:");
     console.log("  - admin@staffos.com / admin123");
+    console.log("  - support@staffos.com / support123 (Support Team)");
     console.log("  - recruiter@staffos.com / recruiter123");
     console.log("  - teamlead@staffos.com / recruiter123");
     console.log("\nCandidate Login:");
