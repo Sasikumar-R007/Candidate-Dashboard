@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { UserIcon, UsersIcon, Crown, UserSearchIcon, Building2, BrainCircuit, ArrowLeft, Headset } from "lucide-react";
+import { UserIcon, UsersIcon, Crown, UserSearchIcon, Building2, BrainCircuit, ArrowLeft } from "lucide-react";
 
 export default function DashboardSelection() {
   return (
@@ -187,29 +187,6 @@ export default function DashboardSelection() {
               </CardContent>
             </Card>
 
-            {/* Support Team Card */}
-            <Card className="bg-white/10 dark:bg-black/10 backdrop-blur-sm border-2 border-red-300/40 dark:border-red-600/40 hover:bg-white/20 dark:hover:bg-black/20 transition-all duration-300 hover:-translate-y-1 shadow-xl hover:shadow-2xl">
-              <CardHeader className="text-center pb-4">
-                <div className="mx-auto mb-4 p-4 bg-gradient-to-br from-red-400/20 to-red-600/20 backdrop-blur-sm rounded-full w-16 h-16 flex items-center justify-center border border-red-300/30">
-                  <Headset className="h-8 w-8 text-red-600 dark:text-red-400" />
-                </div>
-                <CardTitle className="text-xl text-gray-900 dark:text-white">Support Team</CardTitle>
-                <CardDescription className="text-gray-700 dark:text-gray-300">
-                  Dedicated access for support team to manage user conversations and queries
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Link href="/support-login" data-testid="link-support-login">
-                  <Button 
-                    className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white border-0" 
-                    size="lg"
-                    data-testid="button-support-login"
-                  >
-                    Support Team Login
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>

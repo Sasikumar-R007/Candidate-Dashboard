@@ -2323,6 +2323,146 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bootstrap support - UNAUTHENTICATED endpoint for first-time setup
+  app.post("/api/bootstrap/support", async (req, res) => {
+    try {
+      // Check if any support already exists
+      const allEmployees = await storage.getAllEmployees();
+      const existingSupport = allEmployees.filter(emp => emp.role === 'support');
+      
+      if (existingSupport.length > 0) {
+        return res.status(403).json({ 
+          message: "Support account already exists. Please use the login page.",
+          supportExists: true 
+        });
+      }
+
+      // Validate using Zod schema
+      const bootstrapSupportSchema = insertEmployeeSchema.omit({ 
+        createdAt: true, 
+        employeeId: true 
+      }).extend({
+        role: z.literal('support'),
+        name: z.string().min(2, "Name must be at least 2 characters"),
+        email: z.string().email("Invalid email address"),
+        password: z.string().min(6, "Password must be at least 6 characters"),
+        phone: z.string().min(10, "Phone number must be at least 10 digits"),
+      });
+
+      const validatedData = bootstrapSupportSchema.parse(req.body);
+
+      // Generate support employee ID
+      const employeeId = await storage.generateNextEmployeeId('support');
+      
+      const employeeData = {
+        ...validatedData,
+        employeeId,
+        createdAt: new Date().toISOString(),
+        isActive: true,
+      };
+      
+      // Password will be hashed by storage layer
+      const support = await storage.createEmployee(employeeData);
+      
+      res.status(201).json({ 
+        message: "Support account created successfully",
+        employee: {
+          id: support.id,
+          name: support.name,
+          email: support.email,
+          role: support.role
+        }
+      });
+    } catch (error: any) {
+      console.error('Bootstrap support error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ 
+          message: "Invalid support data", 
+          errors: error.errors 
+        });
+      }
+      if (error.message?.includes('duplicate') || error.message?.includes('unique')) {
+        return res.status(409).json({ 
+          message: "An account with this email already exists" 
+        });
+      }
+      res.status(500).json({ message: "Failed to create support account" });
+    }
+  });
+
+  // Check if support exists - UNAUTHENTICATED endpoint
+  app.get("/api/bootstrap/support/check", async (req, res) => {
+    try {
+      const allEmployees = await storage.getAllEmployees();
+      const existingSupport = allEmployees.filter(emp => emp.role === 'support');
+      
+      // For testing purposes, return support email if exists
+      const supportInfo = existingSupport.length > 0 ? {
+        email: existingSupport[0].email,
+        name: existingSupport[0].name,
+        note: "Password is encrypted and cannot be displayed for security"
+      } : null;
+      
+      res.json({ 
+        supportExists: existingSupport.length > 0,
+        setupRequired: existingSupport.length === 0,
+        supportInfo
+      });
+    } catch (error) {
+      console.error('Support check error:', error);
+      res.status(500).json({ message: "Failed to check support status" });
+    }
+  });
+
+  // Delete support - UNAUTHENTICATED endpoint (protected by security key)
+  app.delete("/api/bootstrap/support", async (req, res) => {
+    try {
+      const { securityKey } = req.body;
+      
+      // Verify security key - use same key as admin for simplicity
+      const SUPPORT_RESET_KEY = process.env.ADMIN_RESET_KEY;
+      
+      if (!SUPPORT_RESET_KEY) {
+        return res.status(500).json({ 
+          message: "Support reset feature is not configured. Please contact system administrator." 
+        });
+      }
+      
+      if (!securityKey || securityKey !== SUPPORT_RESET_KEY) {
+        return res.status(403).json({ 
+          message: "Invalid security key. Access denied." 
+        });
+      }
+      
+      // Get all support accounts
+      const allEmployees = await storage.getAllEmployees();
+      const existingSupport = allEmployees.filter(emp => emp.role === 'support');
+      
+      if (existingSupport.length === 0) {
+        return res.status(404).json({ 
+          message: "No support account found to delete." 
+        });
+      }
+      
+      // Delete all support accounts
+      let deletedCount = 0;
+      for (const support of existingSupport) {
+        const deleted = await storage.deleteEmployee(support.id);
+        if (deleted) {
+          deletedCount++;
+        }
+      }
+      
+      res.json({ 
+        message: `Successfully deleted ${deletedCount} support account(s). You can now create a new support account.`,
+        deletedCount
+      });
+    } catch (error) {
+      console.error('Delete support error:', error);
+      res.status(500).json({ message: "Failed to delete support account" });
+    }
+  });
+
   // Create employee
   app.post("/api/admin/employees", async (req, res) => {
     try {

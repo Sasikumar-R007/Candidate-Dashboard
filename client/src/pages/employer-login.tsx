@@ -96,6 +96,9 @@ export default function EmployerLogin() {
           case 'admin':
             navigate("/admin");
             break;
+          case 'support':
+            navigate("/support-dashboard");
+            break;
           default:
             toast({
               title: "Unknown Role",
