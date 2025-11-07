@@ -909,6 +909,39 @@ export class MemStorage implements IStorage {
     return true;
   }
 
+  async generateNextEmployeeId(role: string): Promise<string> {
+    const allEmployees = Array.from(this.employees.values());
+    
+    // Determine prefix based on role
+    let prefix = 'STTA'; // default recruiter
+    if (role === 'team_leader') {
+      prefix = 'STTL';
+    } else if (role === 'client') {
+      prefix = 'STCL';
+    } else if (role === 'admin') {
+      return 'ADMIN';
+    } else if (role === 'support') {
+      prefix = 'STSU';
+    }
+
+    // Find the highest ID number for this prefix
+    let maxNumber = 0;
+    for (const employee of allEmployees) {
+      if (employee.employeeId.startsWith(prefix)) {
+        const match = employee.employeeId.match(new RegExp(`${prefix}(\\d+)`));
+        if (match) {
+          const number = parseInt(match[1]);
+          if (number > maxNumber) {
+            maxNumber = number;
+          }
+        }
+      }
+    }
+    
+    const nextNumber = maxNumber + 1;
+    return `${prefix}${nextNumber.toString().padStart(3, '0')}`;
+  }
+
   // Candidate methods using in-memory storage
   async getCandidateByEmail(email: string): Promise<Candidate | undefined> {
     const candidatesList = Array.from(this.candidates.values());
