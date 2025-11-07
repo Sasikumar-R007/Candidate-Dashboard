@@ -34,6 +34,11 @@ Preferred communication style: Simple, everyday language.
 - **Session Management**: Express sessions with PostgreSQL session store.
 - **User System**: Username-based authentication with demo user support.
 - **Authorization**: Profile-based access control.
+- **Support Chat Authentication**:
+  - **Guest Users**: Automatically assigned unique session-based `supportUserId` identifier.
+  - **Logged-in Candidates**: Use their candidate email for conversation identification.
+  - **Support Dashboard**: Protected by `requireEmployeeAuth` middleware - only authenticated staff can access.
+  - **Conversation Isolation**: Each session maintains its own conversation ID preventing cross-user message leakage.
 - **Client Login System**: 
   - **Client Companies**: Stored in the `clients` table with auto-generated codes (e.g., STCL001, STCL002). These represent business entities and do NOT have direct login credentials.
   - **Client User Accounts**: To enable login access for a client company, create an Employee record with `role="client"`. This employee account will have:
@@ -53,6 +58,12 @@ Preferred communication style: Simple, everyday language.
     - **Team Leader Dashboard**: Team metrics, target tracking, performance monitoring.
     - **Admin Dashboard**: Team oversight, target & incentives tracking, daily metrics, user management, and reporting.
 - **Chat System**: Standalone WhatsApp-style chat page with three-column layout (user profiles, conversation list, chat area, group details).
+- **Support Chat System**: 
+    - **User Side**: Floating chat dock available on all public pages for users to contact support.
+    - **Support Team Side**: Dedicated dashboard at `/support-dashboard` for viewing and replying to user queries.
+    - **Security**: Session-based user identification with unique guest IDs, protected support endpoints requiring employee authentication.
+    - **Storage**: All conversations and messages stored permanently in PostgreSQL database.
+    - **Real-time**: Polling mechanism (conversations poll every 5 seconds, messages every 3 seconds) for real-time message updates.
 
 ## Development Tools
 - **Build System**: Vite for fast development and optimized builds.
@@ -68,3 +79,70 @@ Preferred communication style: Simple, everyday language.
 - **Icons**: Font Awesome, Lucide React
 - **Date Handling**: date-fns
 - **Validation**: Zod
+
+# Support Chat System
+
+## How Conversations Are Stored
+
+All support chat conversations are permanently stored in the PostgreSQL database across two tables:
+
+### Database Tables
+
+1. **`support_conversations`** - Stores conversation metadata
+   - `id` (serial): Unique conversation identifier
+   - `userId`: Session-based identifier (candidateId, supportUserId, or null)
+   - `userEmail`: Email address for identification
+   - `userName`: Display name (e.g., "Candidate", "Guest User")
+   - `subject`: First 100 characters of initial message
+   - `status`: Conversation status ('open', 'in_progress', or 'closed')
+   - `createdAt`: ISO timestamp of conversation creation
+   - `lastMessageAt`: ISO timestamp of most recent message
+
+2. **`support_messages`** - Stores all individual messages
+   - `id` (serial): Unique message identifier
+   - `conversationId`: References parent conversation
+   - `senderType`: Either 'user' or 'support'
+   - `senderName`: Display name of message sender
+   - `message`: Message content (text)
+   - `sentAt`: ISO timestamp when message was sent
+
+## How to View Conversations
+
+### For Support Team Members
+
+1. **Login as Employee**: Access the Support Dashboard requires authentication
+   - Login at `/employer-login` using employee credentials
+   - Must have employee role with proper authentication
+
+2. **Access Support Dashboard**: Navigate to `/support-dashboard`
+   - View all conversations in chronological order (most recent first)
+   - See conversation details: user email, subject, status, message count
+   - Filter/search conversations by email or subject
+
+3. **View and Reply to Messages**:
+   - Click on any conversation to view full message history
+   - Messages are displayed in chronological order with sender identification
+   - Use the reply box to send responses to users
+   - All replies are stored permanently in the database
+
+### For End Users
+
+Users interact with support through the floating chat dock:
+- Available on all public pages (bottom-right corner)
+- Automatically creates a conversation on first message
+- Session-based identification ensures privacy and isolation
+- Messages poll every 3 seconds to show new support replies
+
+## Security Features
+
+- **Session Isolation**: Each user session has a unique `supportUserId` preventing message cross-contamination
+- **Authentication Required**: All support dashboard endpoints protected by `requireEmployeeAuth` middleware
+- **No Client-Side Storage**: User identification handled server-side via sessions (no localStorage)
+- **Conversation Persistence**: `conversationId` stored in session for continuity across page refreshes
+
+## Message Retention
+
+- All conversations and messages are stored indefinitely in PostgreSQL
+- No automatic deletion or archiving
+- Can be manually closed via support dashboard (status change only, messages preserved)
+- Future enhancements could include conversation archiving or deletion workflows
