@@ -25,6 +25,7 @@ import MasterDatabase from "@/pages/master-database";
 import ChatPage from "@/pages/chat-page";
 import SetupAdmin from "@/pages/setup-admin";
 import SupportDashboard from "@/pages/support-dashboard";
+import SupportLogin from "@/pages/support-login";
 
 function Router() {
   return (
@@ -32,6 +33,7 @@ function Router() {
       <Route path="/" component={Landing} />
       <Route path="/setup-admin" component={SetupAdmin} />
       <Route path="/employer-login" component={EmployerLogin} />
+      <Route path="/support-login" component={SupportLogin} />
       <Route path="/candidate-login" component={CandidateLogin} />
       <Route path="/candidate-registration" component={CandidateRegistration} />
       <Route path="/dashboard-selection" component={DashboardSelection} />

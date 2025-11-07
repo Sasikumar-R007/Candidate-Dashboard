@@ -68,7 +68,7 @@ async function seed() {
         name: "Support Team",
         email: "support@staffos.com",
         password: supportPasswordHash,
-        role: "admin",
+        role: "support",
         age: "30",
         phone: "+1234567895",
         department: "Support",
