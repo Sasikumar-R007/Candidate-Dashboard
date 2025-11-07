@@ -49,6 +49,11 @@ export default function ClientDashboard() {
     quality: false,
     impact: false
   });
+  const [printMetrics, setPrintMetrics] = useState({
+    speed: true,
+    quality: true,
+    impact: true
+  });
 
   // Fetch metrics data from API - hooks must be at top level
   const { data: speedMetricsData } = useQuery({
@@ -783,7 +788,7 @@ export default function ClientDashboard() {
               </div>
 
               {/* Speed Metrics Row */}
-              <div className="grid grid-cols-4 gap-4">
+              <div className={`grid grid-cols-4 gap-4 ${!printMetrics.speed ? 'print:hidden' : ''}`} data-metric-section="speed">
                 <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
                   <h3 className="text-sm font-medium text-blue-700 mb-2">Time to 1st Submission</h3>
                   <div className="flex items-end space-x-3 mb-2">
@@ -822,7 +827,7 @@ export default function ClientDashboard() {
               </div>
 
               {/* Quality Metrics */}
-              <div>
+              <div className={`${!printMetrics.quality ? 'print:hidden' : ''}`} data-metric-section="quality">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Quality Metrics</h2>
                 <div className="grid grid-cols-4 gap-4">
                   <div className="bg-green-100 rounded-lg p-4 border border-green-200">
@@ -864,7 +869,7 @@ export default function ClientDashboard() {
               </div>
 
               {/* Impact Metrics */}
-              <div>
+              <div className={`${!printMetrics.impact ? 'print:hidden' : ''}`} data-metric-section="impact">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Impact Metrics</h2>
                 <div className="grid grid-cols-4 gap-4 mb-4">
                   <div className="bg-red-50 rounded-lg p-4 border border-red-200">
@@ -1110,6 +1115,73 @@ export default function ClientDashboard() {
     closeCandidatePopup();
   };
 
+  const handleMetricCheckboxChange = (metric: 'speed' | 'quality' | 'impact') => {
+    setSelectedMetrics(prev => ({
+      ...prev,
+      [metric]: !prev[metric]
+    }));
+  };
+
+  const handleSelectAll = () => {
+    const allSelected = selectedMetrics.speed && selectedMetrics.quality && selectedMetrics.impact;
+    setSelectedMetrics({
+      speed: !allSelected,
+      quality: !allSelected,
+      impact: !allSelected
+    });
+  };
+
+  const handleDownloadPDF = () => {
+    const hasSelection = selectedMetrics.speed || selectedMetrics.quality || selectedMetrics.impact;
+    
+    if (!hasSelection) {
+      toast({
+        title: "No Metrics Selected",
+        description: "Please select at least one metric to download.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setPrintMetrics({
+      speed: selectedMetrics.speed,
+      quality: selectedMetrics.quality,
+      impact: selectedMetrics.impact
+    });
+
+    setIsDownloadModalOpen(false);
+
+    toast({
+      title: "Download Confirmation",
+      description: "Your metrics will be downloaded as a PDF file.",
+      className: "bg-blue-50 border-blue-200 text-blue-800",
+    });
+
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        window.print();
+        
+        setPrintMetrics({
+          speed: true,
+          quality: true,
+          impact: true
+        });
+
+        toast({
+          title: "Download Complete",
+          description: "Your metrics PDF has been generated successfully.",
+          className: "bg-green-50 border-green-200 text-green-800",
+        });
+
+        setSelectedMetrics({
+          speed: false,
+          quality: false,
+          impact: false
+        });
+      }, 100);
+    });
+  };
+
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Left Sidebar - Dark Blue Theme */}
@@ -1334,6 +1406,109 @@ export default function ClientDashboard() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Download Metrics Modal */}
+      <Dialog open={isDownloadModalOpen} onOpenChange={setIsDownloadModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Download Metrics as PDF</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6">
+            <p className="text-sm text-gray-600">
+              Select the metrics you want to include in your PDF download. Your selected metrics will be downloaded as a PDF file.
+            </p>
+            
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <Checkbox 
+                  id="speed-metrics"
+                  checked={selectedMetrics.speed}
+                  onCheckedChange={() => handleMetricCheckboxChange('speed')}
+                  data-testid="checkbox-speed-metrics"
+                />
+                <Label 
+                  htmlFor="speed-metrics" 
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  Speed Metrics (with graphs)
+                </Label>
+              </div>
+              
+              <div className="flex items-center space-x-3">
+                <Checkbox 
+                  id="quality-metrics"
+                  checked={selectedMetrics.quality}
+                  onCheckedChange={() => handleMetricCheckboxChange('quality')}
+                  data-testid="checkbox-quality-metrics"
+                />
+                <Label 
+                  htmlFor="quality-metrics" 
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  Quality Metrics (with graphs)
+                </Label>
+              </div>
+              
+              <div className="flex items-center space-x-3">
+                <Checkbox 
+                  id="impact-metrics"
+                  checked={selectedMetrics.impact}
+                  onCheckedChange={() => handleMetricCheckboxChange('impact')}
+                  data-testid="checkbox-impact-metrics"
+                />
+                <Label 
+                  htmlFor="impact-metrics" 
+                  className="text-sm font-medium cursor-pointer"
+                >
+                  Impact Metrics (with graphs)
+                </Label>
+              </div>
+              
+              <div className="border-t pt-4">
+                <div className="flex items-center space-x-3">
+                  <Checkbox 
+                    id="select-all"
+                    checked={selectedMetrics.speed && selectedMetrics.quality && selectedMetrics.impact}
+                    onCheckedChange={handleSelectAll}
+                    data-testid="checkbox-select-all"
+                  />
+                  <Label 
+                    htmlFor="select-all" 
+                    className="text-sm font-semibold cursor-pointer"
+                  >
+                    Select All
+                  </Label>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs text-blue-800">
+                <strong>Note:</strong> The selected metrics will be downloaded as a PDF file. You can use your browser's print-to-PDF function to save the document.
+              </p>
+            </div>
+            
+            <div className="flex justify-end space-x-3 pt-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsDownloadModalOpen(false)}
+                className="rounded"
+                data-testid="button-cancel-download"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleDownloadPDF}
+                className="bg-cyan-400 hover:bg-cyan-500 text-black rounded flex items-center gap-2"
+                data-testid="button-confirm-download"
+              >
+                <Download className="h-4 w-4" />
+                Download PDF
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
