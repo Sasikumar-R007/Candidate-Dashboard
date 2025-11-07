@@ -236,6 +236,14 @@ function requireEmployeeAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+// Authentication middleware for support team ONLY
+function requireSupportAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.employeeId || req.session.employeeRole !== 'support') {
+    return res.status(403).json({ message: "Access denied. Support team authentication required." });
+  }
+  next();
+}
+
 async function processBulkUpload(jobId: string): Promise<void> {
   try {
     const job = await storage.getBulkUploadJob(jobId);
@@ -438,6 +446,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Employee login error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Support Team Authentication Route
+  app.post("/api/auth/support-login", async (req, res) => {
+    try {
+      const validationResult = loginSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid input", 
+          errors: validationResult.error.errors 
+        });
+      }
+      
+      const { email, password } = validationResult.data;
+      
+      // Find employee by email
+      const employee = await storage.getEmployeeByEmail(email);
+      
+      // Check if employee exists and has support role
+      if (!employee || employee.role !== 'support') {
+        return res.status(401).json({ message: "Invalid credentials or access denied" });
+      }
+      
+      // Check password using bcrypt
+      const isPasswordValid = await bcrypt.compare(password, employee.password);
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "Invalid credentials or access denied" });
+      }
+      
+      // Check if employee is active
+      if (!employee.isActive) {
+        return res.status(401).json({ message: "Account is inactive" });
+      }
+      
+      // Regenerate session to prevent session fixation attacks
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error('Session regeneration error:', err);
+          return res.status(500).json({ message: "Internal server error" });
+        }
+        
+        // Set session with support role
+        req.session.employeeId = employee.id;
+        req.session.employeeRole = 'support';
+        req.session.userType = 'support';
+        
+        // Save session before responding
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error('Session save error:', saveErr);
+            return res.status(500).json({ message: "Internal server error" });
+          }
+          
+          // Return employee data (excluding password)
+          const { password: _, ...employeeData } = employee;
+          res.json({
+            success: true,
+            employee: employeeData,
+            message: "Support login successful"
+          });
+        });
+      });
+    } catch (error) {
+      console.error('Support login error:', error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -2805,7 +2879,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/support/conversations", requireEmployeeAuth, async (req, res) => {
+  app.get("/api/support/conversations", requireSupportAuth, async (req, res) => {
     try {
       const conversations = await db.select()
         .from(supportConversations)
@@ -2834,7 +2908,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/support/conversations/:id/messages", requireEmployeeAuth, async (req, res) => {
+  app.get("/api/support/conversations/:id/messages", requireSupportAuth, async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -2862,7 +2936,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/support/conversations/:id/reply", requireEmployeeAuth, async (req, res) => {
+  app.post("/api/support/conversations/:id/reply", requireSupportAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const { message, senderName } = req.body;
@@ -2904,7 +2978,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/support/conversations/:id/status", requireEmployeeAuth, async (req, res) => {
+  app.patch("/api/support/conversations/:id/status", requireSupportAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const { status } = req.body;
