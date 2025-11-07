@@ -2282,7 +2282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/clients", async (req, res) => {
     try {
       const clientSchema = z.object({
-        clientCode: z.string().min(1),
+        clientCode: z.string().optional(),
         brandName: z.string().min(1),
         incorporatedName: z.string().optional(),
         gstin: z.string().optional(),
@@ -2303,8 +2303,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: z.string(),
       });
 
+      let clientCode = req.body.clientCode;
+      if (!clientCode) {
+        clientCode = await storage.generateNextClientCode();
+      }
+
       const clientData = clientSchema.parse({
         ...req.body,
+        clientCode,
         createdAt: new Date().toISOString(),
       });
       

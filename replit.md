@@ -34,6 +34,13 @@ Preferred communication style: Simple, everyday language.
 - **Session Management**: Express sessions with PostgreSQL session store.
 - **User System**: Username-based authentication with demo user support.
 - **Authorization**: Profile-based access control.
+- **Client Login System**: 
+  - **Client Companies**: Stored in the `clients` table with auto-generated codes (e.g., STCL001, STCL002). These represent business entities and do NOT have direct login credentials.
+  - **Client User Accounts**: To enable login access for a client company, create an Employee record with `role="client"`. This employee account will have:
+    - Email (used as login username)
+    - Password (set during employee creation)
+    - Employee ID (auto-generated with STCL prefix for client roles)
+  - **Login Process**: Client company representatives login through the employee login page (`/employer-login`) using their employee email and password.
 
 ## System Design Choices
 - **Dashboard Layout**: Sidebar navigation with main content area and tabbed interfaces.

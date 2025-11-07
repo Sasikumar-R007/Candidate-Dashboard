@@ -529,6 +529,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Client methods
+  async generateNextClientCode(): Promise<string> {
+    const prefix = 'STCL';
+    
+    const allClients = await db.select().from(clients);
+    const maxNumber = allClients
+      .filter(c => c.clientCode.startsWith(prefix))
+      .map(c => parseInt(c.clientCode.replace(prefix, '')))
+      .filter(n => !isNaN(n))
+      .reduce((max, current) => Math.max(max, current), 0);
+    
+    const nextNumber = maxNumber + 1;
+    return `${prefix}${nextNumber.toString().padStart(3, '0')}`;
+  }
+
   async createClient(client: InsertClient): Promise<Client> {
     const [newClient] = await db.insert(clients).values(client).returning();
     return newClient;

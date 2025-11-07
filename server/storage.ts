@@ -119,6 +119,7 @@ export interface IStorage {
   deleteNotification(id: string): Promise<boolean>;
   
   // Client methods
+  generateNextClientCode(): Promise<string>;
   createClient(client: InsertClient): Promise<Client>;
   getAllClients(): Promise<Client[]>;
   getClientByClientCode(clientCode: string): Promise<Client | undefined>;
@@ -1207,6 +1208,52 @@ export class MemStorage implements IStorage {
 
   async deleteNotification(id: string): Promise<boolean> {
     return this.notifications.delete(id);
+  }
+
+  // Client methods (stub - not implemented in MemStorage)
+  async generateNextClientCode(): Promise<string> {
+    throw new Error("Client methods not implemented in MemStorage. Use DatabaseStorage.");
+  }
+
+  async createClient(client: InsertClient): Promise<Client> {
+    throw new Error("Client methods not implemented in MemStorage. Use DatabaseStorage.");
+  }
+
+  async getAllClients(): Promise<Client[]> {
+    throw new Error("Client methods not implemented in MemStorage. Use DatabaseStorage.");
+  }
+
+  async getClientByClientCode(clientCode: string): Promise<Client | undefined> {
+    throw new Error("Client methods not implemented in MemStorage. Use DatabaseStorage.");
+  }
+
+  async updateClient(id: string, updates: Partial<Client>): Promise<Client | undefined> {
+    throw new Error("Client methods not implemented in MemStorage. Use DatabaseStorage.");
+  }
+
+  async deleteClient(id: string): Promise<boolean> {
+    throw new Error("Client methods not implemented in MemStorage. Use DatabaseStorage.");
+  }
+
+  // Impact Metrics methods (stub - not implemented in MemStorage)
+  async createImpactMetrics(metrics: InsertImpactMetrics): Promise<ImpactMetrics> {
+    throw new Error("Impact Metrics methods not implemented in MemStorage. Use DatabaseStorage.");
+  }
+
+  async getImpactMetrics(clientId?: string): Promise<ImpactMetrics | undefined> {
+    throw new Error("Impact Metrics methods not implemented in MemStorage. Use DatabaseStorage.");
+  }
+
+  async getAllImpactMetrics(): Promise<ImpactMetrics[]> {
+    throw new Error("Impact Metrics methods not implemented in MemStorage. Use DatabaseStorage.");
+  }
+
+  async updateImpactMetrics(id: string, updates: Partial<ImpactMetrics>): Promise<ImpactMetrics | undefined> {
+    throw new Error("Impact Metrics methods not implemented in MemStorage. Use DatabaseStorage.");
+  }
+
+  async deleteImpactMetrics(id: string): Promise<boolean> {
+    throw new Error("Impact Metrics methods not implemented in MemStorage. Use DatabaseStorage.");
   }
 }
 

@@ -5389,10 +5389,11 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input 
-                  placeholder="Client Code *" 
-                  className="input-styled rounded" 
-                  value={clientForm.clientCode}
-                  onChange={(e) => setClientForm({...clientForm, clientCode: e.target.value})}
+                  placeholder="Client Code (Auto-generated)" 
+                  className="input-styled rounded bg-gray-100 dark:bg-gray-800 cursor-not-allowed" 
+                  value={clientForm.clientCode || "Will be auto-generated"}
+                  readOnly
+                  disabled
                   data-testid="input-client-code"
                 />
               </div>
@@ -5594,10 +5595,10 @@ export default function AdminDashboard() {
               <Button 
                 className="bg-cyan-400 hover:bg-cyan-500 text-white px-8 py-2 rounded"
                 onClick={() => {
-                  if (!clientForm.clientCode || !clientForm.brandName) {
+                  if (!clientForm.brandName) {
                     toast({
                       title: "Validation Error",
-                      description: "Please fill in all required fields (Client Code and Brand Name)",
+                      description: "Please fill in Brand Name (required field)",
                       variant: "destructive",
                     });
                     return;
