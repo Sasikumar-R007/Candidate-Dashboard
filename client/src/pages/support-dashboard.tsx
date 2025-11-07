@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MessageSquare, Send, Search, Clock, User, Mail, X, CheckCircle2, Circle, AlertCircle } from 'lucide-react';
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 
 interface Conversation {
   id: string;
@@ -38,6 +39,33 @@ export default function SupportDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
+
+  useEffect(() => {
+    const supportUser = sessionStorage.getItem('supportUser');
+    if (!supportUser) {
+      toast({
+        title: "Access Denied",
+        description: "Support team authentication required. Please login first.",
+        variant: "destructive",
+      });
+      navigate("/support-login");
+    } else {
+      try {
+        const user = JSON.parse(supportUser);
+        if (user.role !== 'support') {
+          toast({
+            title: "Access Denied",
+            description: "This dashboard is for support team only.",
+            variant: "destructive",
+          });
+          navigate("/support-login");
+        }
+      } catch {
+        navigate("/support-login");
+      }
+    }
+  }, [navigate, toast]);
 
   const { data: conversations = [], isLoading: conversationsLoading } = useQuery<Conversation[]>({
     queryKey: ['/api/support/conversations'],

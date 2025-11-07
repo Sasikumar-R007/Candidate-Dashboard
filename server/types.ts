@@ -5,7 +5,7 @@ declare module 'express-session' {
     candidateId?: string;
     employeeId?: string;
     employeeRole?: string;
-    userType?: 'candidate' | 'employee';
+    userType?: 'candidate' | 'employee' | 'support';
     supportUserId?: string;
     conversationId?: string;
   }
