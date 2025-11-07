@@ -749,17 +749,19 @@ export default function ClientDashboard() {
         return (
           <div className="flex flex-col h-full">
             {/* Simple Client Header */}
-            <SimpleClientHeader 
-              companyName="Gumlet Marketing Private Limited"
-              onHelpClick={() => setIsHelpChatOpen(true)}
-            />
+            <div className="print:hidden">
+              <SimpleClientHeader 
+                companyName="Gumlet Marketing Private Limited"
+                onHelpClick={() => setIsHelpChatOpen(true)}
+              />
+            </div>
             <div className="flex flex-1 overflow-hidden">
             {/* Main Content Area */}
-            <div className="flex-1 p-6 space-y-6 overflow-y-auto bg-gray-50">
+            <div id="metrics-print-area" className="flex-1 p-6 space-y-6 overflow-y-auto bg-gray-50">
               {/* Header with controls */}
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-gray-900">Speed Metrics</h2>
-                <div className="flex items-center space-x-4">
+              <div className="flex justify-between items-center print:mb-8">
+                <h2 className="text-xl font-semibold text-gray-900 print:text-2xl">Speed Metrics</h2>
+                <div className="flex items-center space-x-4 print:hidden">
                   <Select>
                     <SelectTrigger className="w-32">
                       <SelectValue defaultValue="All Roles" placeholder="All Roles" />
@@ -926,7 +928,7 @@ export default function ClientDashboard() {
               </div>
 
               {/* Download Button */}
-              <div className="flex justify-end mt-6">
+              <div className="flex justify-end mt-6 print:hidden">
                 <Button 
                   onClick={() => setIsDownloadModalOpen(true)}
                   className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded shadow-lg flex items-center gap-2"
@@ -1153,33 +1155,25 @@ export default function ClientDashboard() {
 
     toast({
       title: "Download Confirmation",
-      description: "Your metrics will be downloaded as a PDF file.",
+      description: "Your metrics will be downloaded as a PDF file. Use your browser's print dialog to save as PDF.",
       className: "bg-blue-50 border-blue-200 text-blue-800",
     });
 
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        window.print();
-        
-        setPrintMetrics({
-          speed: true,
-          quality: true,
-          impact: true
-        });
+    setTimeout(() => {
+      window.print();
+      
+      setPrintMetrics({
+        speed: true,
+        quality: true,
+        impact: true
+      });
 
-        toast({
-          title: "Download Complete",
-          description: "Your metrics PDF has been generated successfully.",
-          className: "bg-green-50 border-green-200 text-green-800",
-        });
-
-        setSelectedMetrics({
-          speed: false,
-          quality: false,
-          impact: false
-        });
-      }, 100);
-    });
+      setSelectedMetrics({
+        speed: false,
+        quality: false,
+        impact: false
+      });
+    }, 500);
   };
 
   return (
