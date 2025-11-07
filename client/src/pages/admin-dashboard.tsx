@@ -3743,6 +3743,14 @@ export default function AdminDashboard() {
                     <UserPlus className="h-4 w-4" />
                     Add Recruiter
                   </Button>
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm flex items-center gap-2"
+                    onClick={() => setIsClientModalOpen(true)}
+                    data-testid="button-add-client"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    Add Client
+                  </Button>
                 </div>
               </div>
 
