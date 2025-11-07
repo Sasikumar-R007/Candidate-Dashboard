@@ -3729,6 +3729,14 @@ export default function AdminDashboard() {
                 <div className="flex gap-3">
                   <Button 
                     className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm flex items-center gap-2"
+                    onClick={() => setIsClientModalOpen(true)}
+                    data-testid="button-add-client"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    Add Client
+                  </Button>
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm flex items-center gap-2"
                     onClick={() => setIsAddTeamLeaderModalNewOpen(true)}
                     data-testid="button-add-team-leader"
                   >
@@ -3742,14 +3750,6 @@ export default function AdminDashboard() {
                   >
                     <UserPlus className="h-4 w-4" />
                     Add Recruiter
-                  </Button>
-                  <Button 
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm flex items-center gap-2"
-                    onClick={() => setIsClientModalOpen(true)}
-                    data-testid="button-add-client"
-                  >
-                    <UserPlus className="h-4 w-4" />
-                    Add Client
                   </Button>
                 </div>
               </div>
@@ -5489,18 +5489,15 @@ export default function AdminDashboard() {
             </div>
 
             {/* Row 4b - Password */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Input 
-                  placeholder="Password *" 
-                  type="password" 
-                  className="input-styled rounded" 
-                  value={clientForm.password}
-                  onChange={(e) => setClientForm({...clientForm, password: e.target.value})}
-                  data-testid="input-password"
-                />
-              </div>
-              <div></div>
+            <div>
+              <Input 
+                placeholder="Password *" 
+                type="password" 
+                className="input-styled rounded" 
+                value={clientForm.password}
+                onChange={(e) => setClientForm({...clientForm, password: e.target.value})}
+                data-testid="input-password"
+              />
             </div>
 
             {/* Row 5 */}
