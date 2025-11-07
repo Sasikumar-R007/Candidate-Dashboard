@@ -922,7 +922,7 @@ export default function ClientDashboard() {
             </div>
 
             {/* Right Sidebar with Charts */}
-            <div className="w-80 bg-white border-l border-gray-200 p-6 space-y-6">
+            <div className="w-80 bg-white border-l border-gray-200 p-6 space-y-6 overflow-y-auto">
               {/* Speed Metrics Chart - 4 Lines */}
               <div className="space-y-4">
                 <h3 className="text-sm font-semibold text-gray-700">Speed Metrics Trend</h3>
