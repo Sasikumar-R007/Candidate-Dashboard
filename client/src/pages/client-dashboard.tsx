@@ -10,7 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
-import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, MessageSquare, Minus, Users, Play, Trophy, ArrowLeft, Send, Calendar as CalendarIcon, MoreVertical, HelpCircle } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, MessageSquare, Minus, Users, Play, Trophy, ArrowLeft, Send, Calendar as CalendarIcon, MoreVertical, HelpCircle, Download } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import SimpleClientHeader from '@/components/dashboard/simple-client-header';
@@ -41,6 +43,12 @@ export default function ClientDashboard() {
   const [rejectReason, setRejectReason] = useState('');
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
   const [isHelpChatOpen, setIsHelpChatOpen] = useState(false);
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [selectedMetrics, setSelectedMetrics] = useState({
+    speed: false,
+    quality: false,
+    impact: false
+  });
 
   // Fetch metrics data from API - hooks must be at top level
   const { data: speedMetricsData } = useQuery({
