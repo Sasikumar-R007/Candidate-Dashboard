@@ -919,6 +919,18 @@ export default function ClientDashboard() {
                   </div>
                 </div>
               </div>
+
+              {/* Download Button */}
+              <div className="flex justify-end mt-6">
+                <Button 
+                  onClick={() => setIsDownloadModalOpen(true)}
+                  className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded shadow-lg flex items-center gap-2"
+                  data-testid="button-download-metrics"
+                >
+                  <Download className="h-4 w-4" />
+                  Download
+                </Button>
+              </div>
             </div>
 
             {/* Right Sidebar with Charts */}
@@ -1058,13 +1070,6 @@ export default function ClientDashboard() {
                   <div className="text-2xl font-bold text-gray-900">20%</div>
                 </div>
               </div>
-            </div>
-            
-            {/* Fixed Download Button - Bottom Right */}
-            <div className="fixed bottom-6 right-6 z-50">
-              <Button className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded shadow-lg">
-                Download
-              </Button>
             </div>
             </div>
           </div>
