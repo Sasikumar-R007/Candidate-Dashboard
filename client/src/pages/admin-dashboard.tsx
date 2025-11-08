@@ -14,6 +14,7 @@ import AddTeamLeaderModal from '@/components/dashboard/modals/add-team-leader-mo
 import AddTalentAdvisorModal from '@/components/dashboard/modals/add-talent-advisor-modal';
 import AddRecruiterModal from '@/components/dashboard/modals/add-recruiter-modal';
 import AddTeamLeaderModalNew from '@/components/dashboard/modals/add-team-leader-modal-new';
+import AddClientCredentialsModal from '@/components/dashboard/modals/add-client-credentials-modal';
 import BulkResumeUpload from '@/components/dashboard/bulk-resume-upload';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -626,6 +627,7 @@ export default function AdminDashboard() {
   const [isAddTalentAdvisorModalOpen, setIsAddTalentAdvisorModalOpen] = useState(false);
   const [isAddRecruiterModalOpen, setIsAddRecruiterModalOpen] = useState(false);
   const [isAddTeamLeaderModalNewOpen, setIsAddTeamLeaderModalNewOpen] = useState(false);
+  const [isAddClientCredentialsModalOpen, setIsAddClientCredentialsModalOpen] = useState(false);
   const [userList, setUserList] = useState<any[]>([]);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [editingUser, setEditingUser] = useState<any>(null);
@@ -643,7 +645,7 @@ export default function AdminDashboard() {
     address: '', location: '', spoc: '', email: '', password: '',
     website: '', linkedin: '', agreement: '', percentage: '',
     category: '', paymentTerms: '', source: '', startDate: '',
-    referral: '', currentStatus: 'active'
+    currentStatus: 'active'
   });
   const [clientStartDate, setClientStartDate] = useState<Date | undefined>();
   const [employeeForm, setEmployeeForm] = useState({
@@ -1026,6 +1028,26 @@ export default function AdminDashboard() {
     // Save to database using the employee mutation
     createEmployeeMutation.mutate(employeeData);
     setUserList(prev => [...prev, userData]);
+  };
+
+  const handleAddClientCredentials = (userData: any) => {
+    // Convert modal data to employee form format for client login
+    const employeeData = {
+      employeeId: userData.id || `STCL${Date.now()}`,
+      name: userData.name,
+      email: userData.email,
+      password: userData.password,
+      role: 'client',
+      phone: userData.phoneNumber || '',
+      department: '',
+      joiningDate: userData.joiningDate || '',
+      age: ''
+    };
+    
+    // Save to database using the employee mutation
+    createEmployeeMutation.mutate(employeeData);
+    setUserList(prev => [...prev, userData]);
+    setIsAddClientCredentialsModalOpen(false);
   };
 
   const handleEditUser = (user: any) => {
@@ -2564,7 +2586,7 @@ export default function AdminDashboard() {
               </Button>
               <Button 
                 className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={() => setIsClientModalOpen(true)}
+                onClick={() => setIsAddClientCredentialsModalOpen(true)}
                 data-testid="button-add-client"
               >
                 + Add Client
@@ -3772,7 +3794,7 @@ export default function AdminDashboard() {
                 <div className="flex gap-3">
                   <Button 
                     className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm flex items-center gap-2"
-                    onClick={() => setIsClientModalOpen(true)}
+                    onClick={() => setIsAddClientCredentialsModalOpen(true)}
                     data-testid="button-add-client"
                   >
                     <UserPlus className="h-4 w-4" />
@@ -5151,6 +5173,13 @@ export default function AdminDashboard() {
         onSubmit={editingUser ? handleUpdateUser : handleAddUser}
       />
 
+      {/* Add Client Credentials Modal */}
+      <AddClientCredentialsModal
+        isOpen={isAddClientCredentialsModalOpen}
+        onClose={() => setIsAddClientCredentialsModalOpen(false)}
+        onSubmit={handleAddClientCredentials}
+      />
+
       {/* Reassign Requirement Modal */}
       <Dialog open={isReassignModalOpen} onOpenChange={setIsReassignModalOpen}>
         <DialogContent className="max-w-md">
@@ -5657,31 +5686,20 @@ export default function AdminDashboard() {
             </div>
 
             {/* Row 9 */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Input 
-                  placeholder="Referral" 
-                  className="input-styled rounded" 
-                  value={clientForm.referral}
-                  onChange={(e) => setClientForm({...clientForm, referral: e.target.value})}
-                  data-testid="input-referral"
-                />
-              </div>
-              <div>
-                <Select 
-                  value={clientForm.currentStatus}
-                  onValueChange={(value) => setClientForm({...clientForm, currentStatus: value})}
-                >
-                  <SelectTrigger className="input-styled rounded" data-testid="select-current-status">
-                    <SelectValue placeholder="Active" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="frozen">Frozen</SelectItem>
-                    <SelectItem value="churned">Churned</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Select 
+                value={clientForm.currentStatus}
+                onValueChange={(value) => setClientForm({...clientForm, currentStatus: value})}
+              >
+                <SelectTrigger className="input-styled rounded" data-testid="select-current-status">
+                  <SelectValue placeholder="Active" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="frozen">Frozen</SelectItem>
+                  <SelectItem value="churned">Churned</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex justify-center pt-6">
