@@ -3172,8 +3172,16 @@ export default function AdminDashboard() {
                       View Full Database
                     </Button>
                     <Button 
+                      className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white text-sm px-4"
+                      onClick={() => setIsClientModalOpen(true)}
+                      data-testid="button-add-new-client"
+                    >
+                      + Add New Client
+                    </Button>
+                    <Button 
                       className="btn-rounded bg-green-600 hover:bg-green-700 text-white text-sm px-4"
                       onClick={() => setIsEmployeeModalOpen(true)}
+                      data-testid="button-add-employee"
                     >
                       + Add Employee
                     </Button>

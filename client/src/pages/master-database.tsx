@@ -294,15 +294,6 @@ export default function MasterDatabase() {
           </div>
           
           <div className="flex items-center gap-2">
-            <Button 
-              className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2" 
-              size="sm"
-              data-testid="button-add-new-client"
-              onClick={() => setIsClientModalOpen(true)}
-            >
-              <Plus size={16} />
-              Add New Client
-            </Button>
             <Button variant="outline" size="sm" className="flex items-center gap-2" data-testid="button-export-data">
               <Download size={16} />
               Export Data
