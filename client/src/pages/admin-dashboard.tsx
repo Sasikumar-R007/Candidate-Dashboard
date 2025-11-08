@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { type Employee } from '@shared/schema';
 import AdminSidebar from '@/components/dashboard/admin-sidebar';
 import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
@@ -906,6 +906,16 @@ export default function AdminDashboard() {
     }
   });
 
+  // Calculate priority distribution from requirements
+  const priorityDistribution = useMemo(() => {
+    const high = requirements.filter((req: any) => req.criticality === 'HIGH').length;
+    const medium = requirements.filter((req: any) => req.criticality === 'MEDIUM').length;
+    const low = requirements.filter((req: any) => req.criticality === 'LOW').length;
+    const total = requirements.length;
+    
+    return { high, medium, low, total };
+  }, [requirements]);
+
   const handleMemberClick = (member: any) => {
     setSelectedMember(member);
     setIsModalOpen(true);
@@ -1252,38 +1262,8 @@ export default function AdminDashboard() {
 
       {/* Daily Metrics Section */}
       <Card className="bg-teal-50 dark:bg-teal-900/30">
-        <CardHeader className="flex flex-row items-center justify-between pb-1 pt-2">
+        <CardHeader className="pb-1 pt-2">
           <CardTitle className="text-lg text-gray-900 dark:text-white">Daily Metrics</CardTitle>
-          <div className="flex items-center space-x-2">
-            <Select defaultValue="overall">
-              <SelectTrigger className="w-20 h-7 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="overall">Overall</SelectItem>
-                <SelectItem value="team1">Team 1</SelectItem>
-                <SelectItem value="team2">Team 2</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="flex items-center space-x-1 h-7 px-2">
-                  <CalendarIcon className="h-3 w-3" />
-                  <span className="text-sm">{format(selectedDate, "dd-MMM-yyyy")}</span>
-                  <EditIcon className="h-3 w-3" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => date && setSelectedDate(date)}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
         </CardHeader>
         
         <CardContent className="p-3">
@@ -1351,10 +1331,41 @@ export default function AdminDashboard() {
             {/* Right side - Overall Performance */}
             <div className="bg-white dark:bg-gray-900 rounded p-4">
               <div className="text-left">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
                   <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Overall Performance</h3>
-                  <div className="text-4xl font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900 w-16 h-16 rounded-sm flex items-center justify-center">
-                    {dailyMetricsData.overallPerformance}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Select defaultValue="overall">
+                      <SelectTrigger className="w-20 h-7 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="overall">Overall</SelectItem>
+                        <SelectItem value="team1">Team 1</SelectItem>
+                        <SelectItem value="team2">Team 2</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="flex items-center space-x-1 h-7 px-2">
+                          <CalendarIcon className="h-3 w-3" />
+                          <span className="text-sm">{format(selectedDate, "dd-MMM-yyyy")}</span>
+                          <EditIcon className="h-3 w-3" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="end">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={(date) => date && setSelectedDate(date)}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    
+                    <div className="text-4xl font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900 w-16 h-16 rounded-sm flex items-center justify-center">
+                      {dailyMetricsData.overallPerformance}
+                    </div>
                   </div>
                 </div>
                 <div className="flex justify-start space-x-2 mb-2">
@@ -1659,7 +1670,7 @@ export default function AdminDashboard() {
                         <div className="text-4xl font-bold text-red-600 dark:text-red-400">H</div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">IGH</div>
                       </div>
-                      <div className="text-2xl font-bold text-red-600 dark:text-red-400">15</div>
+                      <div className="text-2xl font-bold text-red-600 dark:text-red-400">{priorityDistribution.high}</div>
                     </div>
                     
                     <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 ">
@@ -1667,7 +1678,7 @@ export default function AdminDashboard() {
                         <div className="text-4xl font-bold text-blue-600 dark:text-blue-400">M</div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">EDIUM</div>
                       </div>
-                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">9</div>
+                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{priorityDistribution.medium}</div>
                     </div>
                     
                     <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 ">
@@ -1675,7 +1686,7 @@ export default function AdminDashboard() {
                         <div className="text-4xl font-bold text-gray-600 dark:text-gray-400">L</div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">OW</div>
                       </div>
-                      <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">3</div>
+                      <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">{priorityDistribution.low}</div>
                     </div>
                     
                     <div className="flex items-center justify-between p-3 bg-slate-100 dark:bg-slate-800 ">
@@ -1683,7 +1694,7 @@ export default function AdminDashboard() {
                         <div className="text-4xl font-bold text-gray-900 dark:text-white">T</div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">OTAL</div>
                       </div>
-                      <div className="text-2xl font-bold text-gray-900 dark:text-white">27</div>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{priorityDistribution.total}</div>
                     </div>
                   </div>
                 </div>
@@ -2864,7 +2875,7 @@ export default function AdminDashboard() {
                         <div className="text-4xl font-bold text-red-600 dark:text-red-400">H</div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">IGH</div>
                       </div>
-                      <div className="text-2xl font-bold text-red-600 dark:text-red-400">15</div>
+                      <div className="text-2xl font-bold text-red-600 dark:text-red-400">{priorityDistribution.high}</div>
                     </div>
                     
                     <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 ">
@@ -2872,7 +2883,7 @@ export default function AdminDashboard() {
                         <div className="text-4xl font-bold text-blue-600 dark:text-blue-400">M</div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">EDIUM</div>
                       </div>
-                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">9</div>
+                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{priorityDistribution.medium}</div>
                     </div>
                     
                     <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 ">
@@ -2880,7 +2891,7 @@ export default function AdminDashboard() {
                         <div className="text-4xl font-bold text-gray-600 dark:text-gray-400">L</div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">OW</div>
                       </div>
-                      <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">3</div>
+                      <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">{priorityDistribution.low}</div>
                     </div>
                     
                     <div className="flex items-center justify-between p-3 bg-slate-100 dark:bg-slate-800 ">
@@ -2888,7 +2899,7 @@ export default function AdminDashboard() {
                         <div className="text-4xl font-bold text-gray-900 dark:text-white">T</div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">OTAL</div>
                       </div>
-                      <div className="text-2xl font-bold text-gray-900 dark:text-white">27</div>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{priorityDistribution.total}</div>
                     </div>
                   </div>
                 </div>

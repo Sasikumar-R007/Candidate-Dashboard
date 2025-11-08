@@ -1,8 +1,14 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Search, X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { type Employee } from "@shared/schema";
 import TeamMemberProfileModal from "./modals/team-member-profile-modal";
 
-const teamMembers = [
+const hardcodedTeamMembers = [
   { 
     name: "Deepika", 
     salary: "3,50,000 INR", 
@@ -196,10 +202,62 @@ const teamMembers = [
 ];
 
 export default function TeamMembersSidebar() {
-  const [selectedMember, setSelectedMember] = useState<typeof teamMembers[0] | null>(null);
+  const [selectedMember, setSelectedMember] = useState<any | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  const handleMemberClick = (member: typeof teamMembers[0]) => {
+  // Fetch employees from database
+  const { data: employees = [], isLoading } = useQuery<Employee[]>({
+    queryKey: ['/api/admin/employees']
+  });
+
+  // Map employees to team member format, merging with hardcoded data where available
+  const teamMembers = useMemo(() => {
+    return employees
+      .filter(emp => emp.role !== 'admin') // Exclude admin users
+      .map((emp) => {
+        // Try to find matching hardcoded member by name
+        const hardcodedMatch = hardcodedTeamMembers.find(
+          hm => hm.name.toLowerCase() === emp.name.toLowerCase()
+        );
+        
+        // If match found, use hardcoded detailed data; otherwise use defaults
+        return {
+          name: emp.name,
+          salary: hardcodedMatch?.salary || "0 INR",
+          year: hardcodedMatch?.year || new Date().getFullYear().toString(),
+          count: hardcodedMatch?.count || 0,
+          image: hardcodedMatch?.image || null,
+          role: hardcodedMatch?.role || (emp.role === 'recruiter' ? 'Recruiter' : emp.role === 'team_leader' ? 'Team Leader' : 'Client'),
+          department: hardcodedMatch?.department || emp.department || 'N/A',
+          email: emp.email,
+          age: hardcodedMatch?.age || (emp.age ? parseInt(emp.age) : 0),
+          joiningDate: hardcodedMatch?.joiningDate || emp.joiningDate || 'N/A',
+          lastLogin: hardcodedMatch?.lastLogin || 'N/A',
+          lastClosure: hardcodedMatch?.lastClosure || 'N/A',
+          tenure: hardcodedMatch?.tenure || '0 years',
+          totalClosures: hardcodedMatch?.totalClosures || 0,
+          quartersAchieved: hardcodedMatch?.quartersAchieved || 0,
+          targetAchievement: hardcodedMatch?.targetAchievement || 0,
+          totalRevenue: hardcodedMatch?.totalRevenue || "0"
+        };
+      });
+  }, [employees]);
+
+  // Filter team members based on search query
+  const filteredMembers = useMemo(() => {
+    if (!searchQuery.trim()) return teamMembers;
+    
+    const query = searchQuery.toLowerCase();
+    return teamMembers.filter(member => 
+      member.name.toLowerCase().includes(query) ||
+      member.role.toLowerCase().includes(query) ||
+      member.email.toLowerCase().includes(query)
+    );
+  }, [teamMembers, searchQuery]);
+
+  const handleMemberClick = (member: any) => {
     setSelectedMember(member);
     setIsModalOpen(true);
   };
@@ -211,17 +269,58 @@ export default function TeamMembersSidebar() {
     }
   };
 
+  const toggleSearch = () => {
+    setIsSearchOpen(!isSearchOpen);
+    if (isSearchOpen) {
+      setSearchQuery("");
+    }
+  };
+
   return (
     <>
     <div className="w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700" style={{height: 'calc(100vh - 4rem)'}}>
       <div className="h-full flex flex-col">
         <div className="p-4 flex-shrink-0">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Team Members</h3>
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Users</h3>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleSearch}
+                className="h-8 w-8"
+                data-testid="button-search-toggle"
+              >
+                {isSearchOpen ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+          
+          {isSearchOpen && (
+            <div className="mb-4">
+              <Input
+                type="text"
+                placeholder="Search users..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full"
+                data-testid="input-search-users"
+                autoFocus
+              />
+            </div>
+          )}
         </div>
         
         <div className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide">
-          <div className="space-y-1">
-            {teamMembers.map((member, index) => {
+          {isLoading ? (
+            <div className="text-center py-8 text-gray-500">Loading users...</div>
+          ) : filteredMembers.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              {searchQuery ? 'No users found' : 'No users available'}
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {filteredMembers.map((member, index) => {
               const isEven = index % 2 === 0;
               
               return (
@@ -237,21 +336,20 @@ export default function TeamMembersSidebar() {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
-                    <img 
-                      src={member.image} 
-                      alt={member.name}
-                      className="w-10 h-10 rounded-sm object-cover"
-                      style={{ borderRadius: '2px' }}
-                    />
+                    <Avatar className="w-10 h-10 rounded-sm">
+                      <AvatarFallback className="rounded-sm bg-blue-600 text-white">
+                        {member.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-900 dark:text-gray-100 text-sm">
                         {member.name}
                       </h4>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
-                        {member.salary}
+                        {member.role}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-500">
-                        {member.year}
+                        {member.email}
                       </p>
                     </div>
                   </div>
@@ -265,7 +363,8 @@ export default function TeamMembersSidebar() {
               </Card>
               );
             })}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
