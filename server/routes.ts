@@ -2530,9 +2530,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date().toISOString(),
       });
 
-      // Hash the password for employee login
-      const hashedPassword = await bcrypt.hash(validatedData.password, 10);
-      
       // Create client record (without password)
       const { password, ...clientDataWithoutPassword } = validatedData;
       // Ensure clientCode is included in the data
@@ -2543,11 +2540,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const client = await storage.createClient(clientDataToInsert);
       
       // Create employee profile for client login
+      // Note: storage.createEmployee will hash the password, so pass raw password
       const employeeData = {
         employeeId: clientCode,
         name: validatedData.brandName,
         email: validatedData.email,
-        password: hashedPassword,
+        password: validatedData.password,
         role: "client",
         phone: validatedData.spoc || "",
         department: "Client",
