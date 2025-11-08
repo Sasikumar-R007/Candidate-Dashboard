@@ -641,7 +641,7 @@ export default function AdminDashboard() {
   const [isResumeDatabaseModalOpen, setIsResumeDatabaseModalOpen] = useState(false);
   const [isPerformanceDataModalOpen, setIsPerformanceDataModalOpen] = useState(false);
   const [clientForm, setClientForm] = useState({
-    clientCode: '', brandName: '', incorporatedName: '', gstin: '',
+    brandName: '', incorporatedName: '', gstin: '',
     address: '', location: '', spoc: '', email: '', password: '',
     website: '', linkedin: '', agreement: '', percentage: '',
     category: '', paymentTerms: '', source: '', startDate: '',
@@ -790,7 +790,7 @@ export default function AdminDashboard() {
       });
       setIsClientModalOpen(false);
       setClientForm({
-        clientCode: '', brandName: '', incorporatedName: '', gstin: '',
+        brandName: '', incorporatedName: '', gstin: '',
         address: '', location: '', spoc: '', email: '', password: '',
         website: '', linkedin: '', agreement: '', percentage: '',
         category: '', paymentTerms: '', source: '', startDate: '',
@@ -5474,15 +5474,6 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input 
-                  placeholder="Client Code *" 
-                  className="input-styled rounded" 
-                  value={clientForm.clientCode}
-                  onChange={(e) => setClientForm({...clientForm, clientCode: e.target.value})}
-                  data-testid="input-client-code"
-                />
-              </div>
-              <div>
-                <Input 
                   placeholder="Brand Name *" 
                   className="input-styled rounded" 
                   value={clientForm.brandName}
@@ -5490,10 +5481,6 @@ export default function AdminDashboard() {
                   data-testid="input-brand-name"
                 />
               </div>
-            </div>
-
-            {/* Row 2 */}
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input 
                   placeholder="Incorporated Name" 
@@ -5503,6 +5490,10 @@ export default function AdminDashboard() {
                   data-testid="input-incorporated-name"
                 />
               </div>
+            </div>
+
+            {/* Row 2 */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input 
                   placeholder="GSTIN" 
@@ -5512,10 +5503,6 @@ export default function AdminDashboard() {
                   data-testid="input-gstin"
                 />
               </div>
-            </div>
-
-            {/* Row 3 */}
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input 
                   placeholder="Address" 
@@ -5525,6 +5512,10 @@ export default function AdminDashboard() {
                   data-testid="input-address"
                 />
               </div>
+            </div>
+
+            {/* Row 3 */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input 
                   placeholder="Location" 
@@ -5534,10 +5525,6 @@ export default function AdminDashboard() {
                   data-testid="input-location"
                 />
               </div>
-            </div>
-
-            {/* Row 4 */}
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input 
                   placeholder="SPOC" 
@@ -5547,6 +5534,10 @@ export default function AdminDashboard() {
                   data-testid="input-spoc"
                 />
               </div>
+            </div>
+
+            {/* Row 4 */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input 
                   placeholder="Email *" 
@@ -5557,10 +5548,6 @@ export default function AdminDashboard() {
                   data-testid="input-email"
                 />
               </div>
-            </div>
-
-            {/* Row 5 */}
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input 
                   placeholder="Website" 
@@ -5570,6 +5557,10 @@ export default function AdminDashboard() {
                   data-testid="input-website"
                 />
               </div>
+            </div>
+
+            {/* Row 5 */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input 
                   placeholder="LinkedIn" 
@@ -5579,10 +5570,6 @@ export default function AdminDashboard() {
                   data-testid="input-linkedin"
                 />
               </div>
-            </div>
-
-            {/* Row 6 */}
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Select 
                   value={clientForm.agreement}
@@ -5597,6 +5584,10 @@ export default function AdminDashboard() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            {/* Row 6 */}
+            <div className="grid grid-cols-2 gap-4">
               <div className="relative">
                 <Input 
                   placeholder="Percentage" 
