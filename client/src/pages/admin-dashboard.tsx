@@ -14,6 +14,7 @@ import AddTeamLeaderModal from '@/components/dashboard/modals/add-team-leader-mo
 import AddTalentAdvisorModal from '@/components/dashboard/modals/add-talent-advisor-modal';
 import AddRecruiterModal from '@/components/dashboard/modals/add-recruiter-modal';
 import AddTeamLeaderModalNew from '@/components/dashboard/modals/add-team-leader-modal-new';
+import AddClientCredentialsModal from '@/components/dashboard/modals/add-client-credentials-modal';
 import BulkResumeUpload from '@/components/dashboard/bulk-resume-upload';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -737,7 +738,42 @@ export default function AdminDashboard() {
     }
   });
 
-  // Create client mutation
+  // Create client credentials (simplified) mutation
+  const createClientCredentialsMutation = useMutation({
+    mutationFn: async (clientData: any) => {
+      // Send simplified client credentials to the API
+      const response = await apiRequest('POST', '/api/admin/clients/credentials', {
+        firstName: clientData.firstName,
+        lastName: clientData.lastName,
+        name: clientData.name,
+        phoneNumber: clientData.phoneNumber,
+        email: clientData.email,
+        password: clientData.password,
+        joiningDate: clientData.joiningDate,
+        linkedinProfile: clientData.linkedinProfile,
+        role: 'client'
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/employees'] });
+      toast({
+        title: "Success",
+        description: "Client credentials created successfully!",
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create client credentials. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Create client mutation (comprehensive - for Master Data page)
   const createClientMutation = useMutation({
     mutationFn: async (clientData: any) => {
       const response = await apiRequest('POST', '/api/admin/clients', clientData);
@@ -5391,284 +5427,12 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Add Client Modal */}
-      <Dialog open={isClientModalOpen} onOpenChange={setIsClientModalOpen}>
-        <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Client Details</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {/* Row 1 */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Input 
-                  placeholder="Client Code (Auto-generated)" 
-                  className="input-styled rounded bg-gray-100 dark:bg-gray-800 cursor-not-allowed" 
-                  value={clientForm.clientCode || "Will be auto-generated"}
-                  readOnly
-                  disabled
-                  data-testid="input-client-code"
-                />
-              </div>
-              <div>
-                <Input 
-                  placeholder="Brand Name *" 
-                  className="input-styled rounded" 
-                  value={clientForm.brandName}
-                  onChange={(e) => setClientForm({...clientForm, brandName: e.target.value})}
-                  data-testid="input-brand-name"
-                />
-              </div>
-            </div>
-
-            {/* Row 2 */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Input 
-                  placeholder="Incorporated Name" 
-                  className="input-styled rounded" 
-                  value={clientForm.incorporatedName}
-                  onChange={(e) => setClientForm({...clientForm, incorporatedName: e.target.value})}
-                  data-testid="input-incorporated-name"
-                />
-              </div>
-              <div>
-                <Input 
-                  placeholder="GSTIN" 
-                  className="input-styled rounded" 
-                  value={clientForm.gstin}
-                  onChange={(e) => setClientForm({...clientForm, gstin: e.target.value})}
-                  data-testid="input-gstin"
-                />
-              </div>
-            </div>
-
-            {/* Row 3 */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Input 
-                  placeholder="Address" 
-                  className="input-styled rounded" 
-                  value={clientForm.address}
-                  onChange={(e) => setClientForm({...clientForm, address: e.target.value})}
-                  data-testid="input-address"
-                />
-              </div>
-              <div>
-                <Input 
-                  placeholder="Location" 
-                  className="input-styled rounded" 
-                  value={clientForm.location}
-                  onChange={(e) => setClientForm({...clientForm, location: e.target.value})}
-                  data-testid="input-location"
-                />
-              </div>
-            </div>
-
-            {/* Row 4 */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Input 
-                  placeholder="SPOC" 
-                  className="input-styled rounded" 
-                  value={clientForm.spoc}
-                  onChange={(e) => setClientForm({...clientForm, spoc: e.target.value})}
-                  data-testid="input-spoc"
-                />
-              </div>
-              <div>
-                <Input 
-                  placeholder="Email *" 
-                  type="email" 
-                  className="input-styled rounded" 
-                  value={clientForm.email}
-                  onChange={(e) => setClientForm({...clientForm, email: e.target.value})}
-                  data-testid="input-email"
-                />
-              </div>
-            </div>
-
-            {/* Row 4b - Password */}
-            <div>
-              <Input 
-                placeholder="Password *" 
-                type="password" 
-                className="input-styled rounded" 
-                value={clientForm.password}
-                onChange={(e) => setClientForm({...clientForm, password: e.target.value})}
-                data-testid="input-password"
-              />
-            </div>
-
-            {/* Row 5 */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Input 
-                  placeholder="Website" 
-                  className="input-styled rounded" 
-                  value={clientForm.website}
-                  onChange={(e) => setClientForm({...clientForm, website: e.target.value})}
-                  data-testid="input-website"
-                />
-              </div>
-              <div>
-                <Input 
-                  placeholder="LinkedIn" 
-                  className="input-styled rounded" 
-                  value={clientForm.linkedin}
-                  onChange={(e) => setClientForm({...clientForm, linkedin: e.target.value})}
-                  data-testid="input-linkedin"
-                />
-              </div>
-            </div>
-
-            {/* Row 6 */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Select 
-                  value={clientForm.agreement}
-                  onValueChange={(value) => setClientForm({...clientForm, agreement: value})}
-                >
-                  <SelectTrigger className="input-styled rounded" data-testid="select-agreement">
-                    <SelectValue placeholder="Agreement" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Signup Pending">Signup Pending</SelectItem>
-                    <SelectItem value="Signup Completed">Signup Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="relative">
-                <Input 
-                  placeholder="Percentage" 
-                  type="number"
-                  min="0"
-                  max="100"
-                  className="input-styled rounded pr-8" 
-                  value={clientForm.percentage}
-                  onChange={(e) => setClientForm({...clientForm, percentage: e.target.value})}
-                  data-testid="input-percentage"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">%</span>
-              </div>
-            </div>
-
-            {/* Row 7 */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Select 
-                  value={clientForm.category}
-                  onValueChange={(value) => setClientForm({...clientForm, category: value})}
-                >
-                  <SelectTrigger className="input-styled rounded" data-testid="select-category">
-                    <SelectValue placeholder="Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Product">Product</SelectItem>
-                    <SelectItem value="Services">Services</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Input 
-                  placeholder="Payment terms" 
-                  className="input-styled rounded" 
-                  value={clientForm.paymentTerms}
-                  onChange={(e) => setClientForm({...clientForm, paymentTerms: e.target.value})}
-                  data-testid="input-payment-terms"
-                />
-              </div>
-            </div>
-
-            {/* Row 8 */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Select 
-                  value={clientForm.source}
-                  onValueChange={(value) => setClientForm({...clientForm, source: value})}
-                >
-                  <SelectTrigger className="input-styled rounded" data-testid="select-source">
-                    <SelectValue placeholder="Source" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Outbound Lead (Sales)">Outbound Lead (Sales)</SelectItem>
-                    <SelectItem value="Client Referral">Client Referral</SelectItem>
-                    <SelectItem value="VC Referral">VC Referral</SelectItem>
-                    <SelectItem value="Inbound Lead">Inbound Lead</SelectItem>
-                    <SelectItem value="Other Referral">Other Referral</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal input-styled rounded"
-                      data-testid="button-start-date"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {clientStartDate ? format(clientStartDate, "PPP") : <span className="text-gray-500">Start Date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={clientStartDate}
-                      onSelect={(date) => {
-                        setClientStartDate(date);
-                        setClientForm({...clientForm, startDate: date ? format(date, "yyyy-MM-dd") : ''});
-                      }}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-
-            {/* Row 9 */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Select 
-                  value={clientForm.currentStatus}
-                  onValueChange={(value) => setClientForm({...clientForm, currentStatus: value})}
-                >
-                  <SelectTrigger className="input-styled rounded" data-testid="select-current-status">
-                    <SelectValue placeholder="Current Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="frozen">Frozen</SelectItem>
-                    <SelectItem value="churned">Churned</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div></div>
-            </div>
-
-            <div className="flex justify-center pt-6">
-              <Button 
-                className="bg-cyan-400 hover:bg-cyan-500 text-white px-8 py-2 rounded"
-                onClick={() => {
-                  if (!clientForm.brandName || !clientForm.email || !clientForm.password) {
-                    toast({
-                      title: "Validation Error",
-                      description: "Please fill in Brand Name, Email, and Password (required fields)",
-                      variant: "destructive",
-                    });
-                    return;
-                  }
-                  createClientMutation.mutate(clientForm);
-                }}
-                disabled={createClientMutation.isPending}
-                data-testid="button-submit-client"
-              >
-                {createClientMutation.isPending ? 'Submitting...' : 'Submit'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Add Client Credentials Modal - Simplified for User Management */}
+      <AddClientCredentialsModal
+        isOpen={isClientModalOpen}
+        onClose={() => setIsClientModalOpen(false)}
+        onSubmit={(data) => createClientCredentialsMutation.mutate(data)}
+      />
 
       {/* Add Employee Modal */}
       <Dialog open={isEmployeeModalOpen} onOpenChange={setIsEmployeeModalOpen}>
