@@ -2570,6 +2570,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create client credentials (simplified - for User Management)
+  app.post("/api/admin/clients/credentials", async (req, res) => {
+    try {
+      const credentialsSchema = z.object({
+        firstName: z.string().min(1),
+        lastName: z.string().min(1),
+        name: z.string().min(1),
+        phoneNumber: z.string().min(1),
+        email: z.string().email(),
+        password: z.string().min(6),
+        joiningDate: z.string(),
+        linkedinProfile: z.string().optional(),
+      });
+
+      const validatedData = credentialsSchema.parse(req.body);
+      
+      // Generate client code
+      const clientCode = await storage.generateNextClientCode();
+
+      // Create minimal client record with just the essential information
+      const minimalClientData = {
+        clientCode,
+        brandName: validatedData.name,
+        email: validatedData.email,
+        currentStatus: 'active',
+        createdAt: new Date().toISOString(),
+      };
+      
+      const client = await storage.createClient(minimalClientData);
+      
+      // Create employee profile for client login
+      // SECURITY: Always set role to "client" on server-side to prevent privilege escalation
+      const employeeData = {
+        employeeId: clientCode,
+        name: validatedData.name,
+        email: validatedData.email,
+        password: validatedData.password,
+        role: "client",
+        phone: validatedData.phoneNumber,
+        department: "Client",
+        joiningDate: validatedData.joiningDate,
+        reportingTo: "Admin",
+        isActive: true,
+        createdAt: new Date().toISOString(),
+      };
+      
+      await storage.createEmployee(employeeData);
+      
+      res.status(201).json({ 
+        message: "Client credentials created successfully", 
+        client,
+        employeeId: clientCode
+      });
+    } catch (error: any) {
+      console.error('Create client credentials error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid credentials data", errors: error.errors });
+      }
+      if (error.message?.includes('duplicate') || error.message?.includes('unique')) {
+        return res.status(409).json({ message: "Client with this email already exists" });
+      }
+      res.status(500).json({ message: "Failed to create client credentials" });
+    }
+  });
+
   // Get all employees
   app.get("/api/admin/employees", async (req, res) => {
     try {

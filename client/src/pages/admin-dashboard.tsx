@@ -742,6 +742,7 @@ export default function AdminDashboard() {
   const createClientCredentialsMutation = useMutation({
     mutationFn: async (clientData: any) => {
       // Send simplified client credentials to the API
+      // Note: role is always set to "client" on the server-side for security
       const response = await apiRequest('POST', '/api/admin/clients/credentials', {
         firstName: clientData.firstName,
         lastName: clientData.lastName,
@@ -751,7 +752,6 @@ export default function AdminDashboard() {
         password: clientData.password,
         joiningDate: clientData.joiningDate,
         linkedinProfile: clientData.linkedinProfile,
-        role: 'client'
       });
       return response.json();
     },
