@@ -57,6 +57,12 @@ Preferred communication style: Simple, everyday language.
     - **Candidate Dashboard**: Profile management, job preferences, resume upload.
     - **Team Leader Dashboard**: Team metrics, target tracking, performance monitoring.
     - **Admin Dashboard**: Team oversight, target & incentives tracking, daily metrics, user management, and reporting.
+- **Daily Metrics System**: 
+    - **Real-time Calculations**: API endpoint `/api/admin/daily-metrics` calculates metrics on-demand from database.
+    - **Total Requirements**: Count of requirements created on target date.
+    - **Avg. Resumes per Requirement**: Weighted average based on criticality (HIGH=1, MEDIUM=3, LOW/EASY=5).
+    - **Requirements per Recruiter**: Total requirements divided by active recruiters (role="recruiter", isActive=true).
+    - **Completed Requirements**: Count of requirements with status="completed" and completedAt matching target date (counts requirements completed today regardless of creation date).
 - **Chat System**: Standalone WhatsApp-style chat page with three-column layout (user profiles, conversation list, chat area, group details).
 - **Support Chat System**: 
     - **User Side**: Floating chat dock available on all public pages for users to contact support.
