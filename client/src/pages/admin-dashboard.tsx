@@ -3926,19 +3926,18 @@ export default function AdminDashboard() {
         );
       case 'report':
         return (
-          <div className="px-6 py-6 space-y-6 overflow-y-auto max-h-full admin-scrollbar">
-            {/* Teams Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg text-gray-900 dark:text-white">Teams</CardTitle>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Generate team-based reports with customizable filters</p>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Report Type</label>
+          <div className="px-6 py-6 h-full flex flex-col">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 flex-1 min-h-0">
+              {/* Teams Section */}
+              <Card className="flex flex-col min-h-0">
+                <CardHeader className="pb-3 flex-shrink-0">
+                  <CardTitle className="text-base text-gray-900 dark:text-white">Teams</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 overflow-y-auto admin-scrollbar space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Report Type</label>
                     <Select value={teamsReportType} onValueChange={setTeamsReportType}>
-                      <SelectTrigger className="w-full" data-testid="select-teams-report-type">
+                      <SelectTrigger className="w-full h-8 text-sm" data-testid="select-teams-report-type">
                         <SelectValue placeholder="Select Report Type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -3953,10 +3952,10 @@ export default function AdminDashboard() {
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Period</label>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Period</label>
                     <Select value={teamsPeriod} onValueChange={setTeamsPeriod}>
-                      <SelectTrigger className="w-full" data-testid="select-teams-period">
+                      <SelectTrigger className="w-full h-8 text-sm" data-testid="select-teams-period">
                         <SelectValue placeholder="Select Period" />
                       </SelectTrigger>
                       <SelectContent>
@@ -3970,12 +3969,12 @@ export default function AdminDashboard() {
                   </div>
 
                   {teamsPeriod === 'custom' && (
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Custom Date</label>
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Custom Date</label>
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full justify-start text-left" data-testid="button-teams-custom-date">
-                            <CalendarIcon className="h-4 w-4 mr-2" />
+                          <Button variant="outline" className="w-full h-8 justify-start text-left text-sm" data-testid="button-teams-custom-date">
+                            <CalendarIcon className="h-3 w-3 mr-2" />
                             {teamsCustomDate ? format(teamsCustomDate, 'PPP') : 'Pick date'}
                           </Button>
                         </PopoverTrigger>
@@ -3986,10 +3985,10 @@ export default function AdminDashboard() {
                     </div>
                   )}
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">File Format</label>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300">File Format</label>
                     <Select value={teamsFileFormat} onValueChange={setTeamsFileFormat}>
-                      <SelectTrigger className="w-full" data-testid="select-teams-file-format">
+                      <SelectTrigger className="w-full h-8 text-sm" data-testid="select-teams-file-format">
                         <SelectValue placeholder="File Format" />
                       </SelectTrigger>
                       <SelectContent>
@@ -4000,170 +3999,146 @@ export default function AdminDashboard() {
                     </Select>
                   </div>
 
-                  <div className="md:col-span-2 flex justify-end pt-2">
+                  <div className="pt-2">
                     <Button 
-                      className="bg-cyan-400 hover:bg-cyan-500 text-black px-8"
+                      className="bg-cyan-400 hover:bg-cyan-500 text-black w-full h-8 text-sm"
                       onClick={() => handleDownloadClick('teams')}
                       data-testid="button-download-teams"
                     >
-                      Download Report
+                      Download
                     </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            {/* Reports Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg text-gray-900 dark:text-white">Reports</CardTitle>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Select specific reports and apply custom filters</p>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {/* Report Type Checkboxes */}
+                </CardContent>
+              </Card>
+              
+              {/* Reports Section */}
+              <Card className="flex flex-col min-h-0">
+                <CardHeader className="pb-3 flex-shrink-0">
+                  <CardTitle className="text-base text-gray-900 dark:text-white">Reports</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 overflow-y-auto admin-scrollbar space-y-3">
                   <div>
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-3">Select Reports</label>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <label 
-                        className="flex items-center space-x-2 cursor-pointer" 
-                        data-testid="checkbox-requirements"
-                      >
+                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-2">Select Reports</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <label className="flex items-center space-x-1 cursor-pointer" data-testid="checkbox-requirements">
                         <Checkbox 
                           checked={reportsCheckboxes.requirements}
                           onCheckedChange={() => toggleReportCheckbox('requirements')}
                         />
-                        <span className={`text-sm ${reportsCheckboxes.requirements ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600'}`}>
+                        <span className={`text-xs ${reportsCheckboxes.requirements ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600'}`}>
                           Requirements
                         </span>
                       </label>
-                      <label 
-                        className="flex items-center space-x-2 cursor-pointer"
-                        data-testid="checkbox-pipeline"
-                      >
+                      <label className="flex items-center space-x-1 cursor-pointer" data-testid="checkbox-pipeline">
                         <Checkbox 
                           checked={reportsCheckboxes.pipeline}
                           onCheckedChange={() => toggleReportCheckbox('pipeline')}
                         />
-                        <span className={`text-sm ${reportsCheckboxes.pipeline ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600'}`}>
+                        <span className={`text-xs ${reportsCheckboxes.pipeline ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600'}`}>
                           Pipeline
                         </span>
                       </label>
-                      <label 
-                        className="flex items-center space-x-2 cursor-pointer"
-                        data-testid="checkbox-closure-reports"
-                      >
+                      <label className="flex items-center space-x-1 cursor-pointer" data-testid="checkbox-closure-reports">
                         <Checkbox 
                           checked={reportsCheckboxes.closureReports}
                           onCheckedChange={() => toggleReportCheckbox('closureReports')}
                         />
-                        <span className={`text-sm ${reportsCheckboxes.closureReports ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600'}`}>
-                          Closure Reports
+                        <span className={`text-xs ${reportsCheckboxes.closureReports ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600'}`}>
+                          Closure
                         </span>
                       </label>
-                      <label 
-                        className="flex items-center space-x-2 cursor-pointer"
-                        data-testid="checkbox-team-performance"
-                      >
+                      <label className="flex items-center space-x-1 cursor-pointer" data-testid="checkbox-team-performance">
                         <Checkbox 
                           checked={reportsCheckboxes.teamPerformance}
                           onCheckedChange={() => toggleReportCheckbox('teamPerformance')}
                         />
-                        <span className={`text-sm ${reportsCheckboxes.teamPerformance ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600'}`}>
-                          Team Performance
+                        <span className={`text-xs ${reportsCheckboxes.teamPerformance ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400 dark:text-gray-600'}`}>
+                          Performance
                         </span>
                       </label>
                     </div>
                   </div>
 
-                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-3">Filters</label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Team</label>
-                        <Select value={reportsTeam} onValueChange={setReportsTeam}>
-                          <SelectTrigger className="w-full" data-testid="select-reports-team">
-                            <SelectValue placeholder="Team" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="arun">Arun</SelectItem>
-                            <SelectItem value="anusha">Anusha</SelectItem>
-                            <SelectItem value="all">All</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Priority</label>
-                        <Select value={reportsPriority} onValueChange={setReportsPriority}>
-                          <SelectTrigger className="w-full" data-testid="select-reports-priority">
-                            <SelectValue placeholder="Priority" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="high">High</SelectItem>
-                            <SelectItem value="medium">Medium</SelectItem>
-                            <SelectItem value="low">Low</SelectItem>
-                            <SelectItem value="all">All</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Type</label>
-                        <Select value={reportsType} onValueChange={setReportsType}>
-                          <SelectTrigger className="w-full" data-testid="select-reports-type">
-                            <SelectValue placeholder="Type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="opened">Opened</SelectItem>
-                            <SelectItem value="closed">Closed</SelectItem>
-                            <SelectItem value="archived">Archived</SelectItem>
-                            <SelectItem value="all">All</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">File Format</label>
-                        <Select value={reportsFileFormat} onValueChange={setReportsFileFormat}>
-                          <SelectTrigger className="w-full" data-testid="select-reports-file-format">
-                            <SelectValue placeholder="File Format" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="excel">Excel</SelectItem>
-                            <SelectItem value="docx">DOCX</SelectItem>
-                            <SelectItem value="pdf">PDF</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="md:col-span-2 flex justify-end pt-2">
-                        <Button 
-                          className="bg-cyan-400 hover:bg-cyan-500 text-black px-8"
-                          onClick={() => handleDownloadClick('reports')}
-                          data-testid="button-download-reports"
-                        >
-                          Download Report
-                        </Button>
-                      </div>
-                    </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Team</label>
+                    <Select value={reportsTeam} onValueChange={setReportsTeam}>
+                      <SelectTrigger className="w-full h-8 text-sm" data-testid="select-reports-team">
+                        <SelectValue placeholder="Team" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="arun">Arun</SelectItem>
+                        <SelectItem value="anusha">Anusha</SelectItem>
+                        <SelectItem value="all">All</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            {/* General Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg text-gray-900 dark:text-white">General</CardTitle>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Download master data and general reports</p>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Report Type</label>
+                  
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Priority</label>
+                    <Select value={reportsPriority} onValueChange={setReportsPriority}>
+                      <SelectTrigger className="w-full h-8 text-sm" data-testid="select-reports-priority">
+                        <SelectValue placeholder="Priority" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="high">High</SelectItem>
+                        <SelectItem value="medium">Medium</SelectItem>
+                        <SelectItem value="low">Low</SelectItem>
+                        <SelectItem value="all">All</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Type</label>
+                    <Select value={reportsType} onValueChange={setReportsType}>
+                      <SelectTrigger className="w-full h-8 text-sm" data-testid="select-reports-type">
+                        <SelectValue placeholder="Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="opened">Opened</SelectItem>
+                        <SelectItem value="closed">Closed</SelectItem>
+                        <SelectItem value="archived">Archived</SelectItem>
+                        <SelectItem value="all">All</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300">File Format</label>
+                    <Select value={reportsFileFormat} onValueChange={setReportsFileFormat}>
+                      <SelectTrigger className="w-full h-8 text-sm" data-testid="select-reports-file-format">
+                        <SelectValue placeholder="File Format" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="excel">Excel</SelectItem>
+                        <SelectItem value="docx">DOCX</SelectItem>
+                        <SelectItem value="pdf">PDF</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="pt-2">
+                    <Button 
+                      className="bg-cyan-400 hover:bg-cyan-500 text-black w-full h-8 text-sm"
+                      onClick={() => handleDownloadClick('reports')}
+                      data-testid="button-download-reports"
+                    >
+                      Download
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* General Section */}
+              <Card className="flex flex-col min-h-0">
+                <CardHeader className="pb-3 flex-shrink-0">
+                  <CardTitle className="text-base text-gray-900 dark:text-white">General</CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 overflow-y-auto admin-scrollbar space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Report Type</label>
                     <Select value={generalReportType} onValueChange={setGeneralReportType}>
-                      <SelectTrigger className="w-full" data-testid="select-general-report-type">
+                      <SelectTrigger className="w-full h-8 text-sm" data-testid="select-general-report-type">
                         <SelectValue placeholder="Select Report Type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -4173,10 +4148,10 @@ export default function AdminDashboard() {
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">File Format</label>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-gray-700 dark:text-gray-300">File Format</label>
                     <Select value={generalFileFormat} onValueChange={setGeneralFileFormat}>
-                      <SelectTrigger className="w-full" data-testid="select-general-file-format">
+                      <SelectTrigger className="w-full h-8 text-sm" data-testid="select-general-file-format">
                         <SelectValue placeholder="File Format" />
                       </SelectTrigger>
                       <SelectContent>
@@ -4187,18 +4162,18 @@ export default function AdminDashboard() {
                     </Select>
                   </div>
 
-                  <div className="md:col-span-2 flex justify-end pt-2">
+                  <div className="pt-2">
                     <Button 
-                      className="bg-cyan-400 hover:bg-cyan-500 text-black px-8"
+                      className="bg-cyan-400 hover:bg-cyan-500 text-black w-full h-8 text-sm"
                       onClick={() => handleDownloadClick('general')}
                       data-testid="button-download-general"
                     >
-                      Download Report
+                      Download
                     </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         );
       case 'metrics':
