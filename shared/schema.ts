@@ -165,6 +165,8 @@ export const requirements = pgTable("requirements", {
   spoc: text("spoc").notNull(),
   talentAdvisor: text("talent_advisor"),
   teamLead: text("team_lead"),
+  status: text("status").notNull().default("open"), // open, in_progress, completed
+  completedAt: text("completed_at"),
   isArchived: boolean("is_archived").default(false),
   createdAt: text("created_at").notNull(),
 });

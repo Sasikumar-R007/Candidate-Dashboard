@@ -1956,6 +1956,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Daily Metrics API endpoint
+  app.get("/api/admin/daily-metrics", async (req, res) => {
+    try {
+      const { date } = req.query;
+      const targetDate = date ? new Date(date as string) : new Date();
+      
+      // Get start and end of day in ISO format
+      const startOfDay = new Date(targetDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(targetDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      
+      const startISO = startOfDay.toISOString();
+      const endISO = endOfDay.toISOString();
+      
+      // Import schema tables
+      const { requirements, employees } = await import("@shared/schema");
+      
+      // Get all requirements (createdAt is stored as text, so we filter in JavaScript)
+      const todayRequirements = await db.select().from(requirements);
+      
+      // Filter requirements created today
+      const requirementsCreatedToday = todayRequirements.filter(req => {
+        const createdDate = new Date(req.createdAt);
+        return createdDate >= startOfDay && createdDate <= endOfDay;
+      });
+      
+      // 1. Total Requirements - count from Requirements table with TODAY's date
+      const totalRequirements = requirementsCreatedToday.length;
+      
+      // 2. Avg. Resumes per Requirement - calculate based on criticality
+      // HIGH=1, MEDIUM=3, LOW/EASY=5
+      let totalExpectedResumes = 0;
+      requirementsCreatedToday.forEach(req => {
+        if (req.criticality === 'HIGH') {
+          totalExpectedResumes += 1;
+        } else if (req.criticality === 'MEDIUM') {
+          totalExpectedResumes += 3;
+        } else { // LOW or EASY
+          totalExpectedResumes += 5;
+        }
+      });
+      const avgResumesPerRequirement = totalRequirements > 0 
+        ? (totalExpectedResumes / totalRequirements).toFixed(2)
+        : "0.00";
+      
+      // 3. Requirements per Recruiter - get count of active recruiters
+      const allEmployees = await db.select().from(employees);
+      const activeRecruiters = allEmployees.filter(emp => 
+        emp.role === 'recruiter' && emp.isActive === true
+      );
+      const recruiterCount = activeRecruiters.length;
+      const requirementsPerRecruiter = recruiterCount > 0
+        ? (totalRequirements / recruiterCount).toFixed(2)
+        : "0.00";
+      
+      // 4. Completed Requirements - count requirements with status='completed' created today
+      const completedRequirements = requirementsCreatedToday.filter(req => 
+        req.status === 'completed'
+      ).length;
+      
+      // Return the calculated metrics
+      res.json({
+        totalRequirements,
+        avgResumesPerRequirement,
+        requirementsPerRecruiter,
+        completedRequirements,
+        // These would come from other sources - for now returning 0
+        dailyDeliveryDelivered: 0,
+        dailyDeliveryDefaulted: 0,
+        overallPerformance: "G" // This would need separate calculation logic
+      });
+    } catch (error) {
+      console.error('Daily metrics error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Employer forgot password endpoint
   app.post("/api/employer/forgot-password", async (req, res) => {
     try {
