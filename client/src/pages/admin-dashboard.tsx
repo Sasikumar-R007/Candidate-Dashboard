@@ -299,16 +299,6 @@ const allTargetsData = [
   { resource: "Nisha", role: "TA", quarter: "ASO 2025", minimumTarget: "5,80,000", targetAchieved: "6,40,000", closures: 5, incentives: "9,500" }
 ];
 
-const dailyMetricsData = {
-  totalRequirements: 20,
-  completedRequirements: 12,
-  overallPerformance: "G",
-  avgResumesPerRequirement: "02",
-  requirementsPerRecruiter: "03",
-  dailyDeliveryDelivered: 3,
-  dailyDeliveryDefaulted: 1
-};
-
 const initialMessagesData = [
   { name: "Arun", message: "Discuss ...", date: "12-June", status: "active", timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) },
   { name: "Anusha", message: "Discuss ...", date: "12-June", status: "active", timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) },
@@ -689,6 +679,19 @@ export default function AdminDashboard() {
   // Fetch clients from database
   const { data: clients = [], isLoading: isLoadingClients } = useQuery({
     queryKey: ['/api/admin/clients']
+  });
+
+  // Fetch daily metrics from API
+  const { data: dailyMetricsData = {
+    totalRequirements: 0,
+    completedRequirements: 0,
+    avgResumesPerRequirement: "0.00",
+    requirementsPerRecruiter: "0.00",
+    dailyDeliveryDelivered: 0,
+    dailyDeliveryDefaulted: 0,
+    overallPerformance: "G"
+  }, isLoading: isLoadingMetrics } = useQuery({
+    queryKey: ['/api/admin/daily-metrics'],
   });
 
   // Archive requirement mutation

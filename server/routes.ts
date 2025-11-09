@@ -1975,10 +1975,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { requirements, employees } = await import("@shared/schema");
       
       // Get all requirements (createdAt is stored as text, so we filter in JavaScript)
-      const todayRequirements = await db.select().from(requirements);
+      const allRequirements = await db.select().from(requirements);
       
       // Filter requirements created today
-      const requirementsCreatedToday = todayRequirements.filter(req => {
+      const requirementsCreatedToday = allRequirements.filter(req => {
         const createdDate = new Date(req.createdAt);
         return createdDate >= startOfDay && createdDate <= endOfDay;
       });
@@ -2012,10 +2012,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? (totalRequirements / recruiterCount).toFixed(2)
         : "0.00";
       
-      // 4. Completed Requirements - count requirements with status='completed' created today
-      const completedRequirements = requirementsCreatedToday.filter(req => 
-        req.status === 'completed'
-      ).length;
+      // 4. Completed Requirements - count requirements completed today (based on completedAt, not createdAt)
+      const requirementsCompletedToday = allRequirements.filter(req => {
+        if (!req.completedAt || req.status !== 'completed') return false;
+        const completedDate = new Date(req.completedAt);
+        return completedDate >= startOfDay && completedDate <= endOfDay;
+      });
+      const completedRequirements = requirementsCompletedToday.length;
       
       // Return the calculated metrics
       res.json({
