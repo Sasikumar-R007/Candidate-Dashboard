@@ -3646,6 +3646,16 @@ export default function AdminDashboard() {
                       </tbody>
                     </table>
                   </div>
+                  {/* View More button */}
+                  <div className="flex justify-end mt-4">
+                    <Button 
+                      className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded text-sm"
+                      onClick={() => setIsResumeDatabaseModalOpen(true)}
+                      data-testid="button-view-more-resume-database"
+                    >
+                      View More
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 
