@@ -2,7 +2,7 @@ import express, { type Express, type Request, type Response, type NextFunction }
 import { createServer, type Server } from "http";
 import fs from "fs";
 import { storage } from "./storage";
-import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages } from "@shared/schema";
+import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import multer from "multer";
@@ -1953,6 +1953,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(archivedRequirements);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Meetings API endpoints
+  app.get("/api/admin/meetings", async (req, res) => {
+    try {
+      const { category } = req.query;
+      const allMeetings = await db.select().from(meetings).orderBy(meetings.createdAt);
+      
+      if (category && (category === 'tl' || category === 'ceo_ta')) {
+        const filteredMeetings = allMeetings.filter(m => m.meetingCategory === category);
+        return res.json(filteredMeetings);
+      }
+      
+      res.json(allMeetings);
+    } catch (error) {
+      console.error('Get meetings error:', error);
+      res.status(500).json({ message: "Failed to get meetings" });
+    }
+  });
+
+  app.post("/api/admin/meetings", async (req, res) => {
+    try {
+      const validatedData = insertMeetingSchema.parse({
+        ...req.body,
+        createdAt: new Date().toISOString(),
+      });
+      
+      const [meeting] = await db.insert(meetings).values([validatedData]).returning();
+      res.status(201).json(meeting);
+    } catch (error: any) {
+      console.error('Create meeting error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid meeting data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create meeting" });
+    }
+  });
+
+  app.patch("/api/admin/meetings/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = insertMeetingSchema.partial().parse(req.body);
+      
+      const [updatedMeeting] = await db.update(meetings)
+        .set(updateData)
+        .where(eq(meetings.id, id))
+        .returning();
+      
+      if (!updatedMeeting) {
+        return res.status(404).json({ message: "Meeting not found" });
+      }
+      
+      res.json(updatedMeeting);
+    } catch (error: any) {
+      console.error('Update meeting error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid meeting data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update meeting" });
+    }
+  });
+
+  app.delete("/api/admin/meetings/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [deletedMeeting] = await db.delete(meetings)
+        .where(eq(meetings.id, id))
+        .returning();
+      
+      if (!deletedMeeting) {
+        return res.status(404).json({ message: "Meeting not found" });
+      }
+      
+      res.json({ message: "Meeting deleted successfully" });
+    } catch (error) {
+      console.error('Delete meeting error:', error);
+      res.status(500).json({ message: "Failed to delete meeting" });
     }
   });
 

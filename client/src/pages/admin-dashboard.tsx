@@ -602,11 +602,12 @@ export default function AdminDashboard() {
   const [meetingFor, setMeetingFor] = useState('');
   const [meetingWith, setMeetingWith] = useState('');
   const [meetingType, setMeetingType] = useState('');
-  const [meetingDate, setMeetingDate] = useState('');
+  const [meetingDate, setMeetingDate] = useState<Date | undefined>();
   const [meetingTime, setMeetingTime] = useState('');
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
-  const [isCustomDate, setIsCustomDate] = useState(false);
+  const [isEditingMeeting, setIsEditingMeeting] = useState(false);
+  const [editingMeetingId, setEditingMeetingId] = useState<string | null>(null);
   const [isAllRequirementsModalOpen, setIsAllRequirementsModalOpen] = useState(false);
   const [isTargetMappingModalOpen, setIsTargetMappingModalOpen] = useState(false);
   const [isRevenueMappingModalOpen, setIsRevenueMappingModalOpen] = useState(false);
@@ -624,8 +625,8 @@ export default function AdminDashboard() {
   const [messagesData, setMessagesData] = useState(initialMessagesData);
   const [tlMeetingsData, setTlMeetingsData] = useState(initialTlMeetingsData);
   const [ceoMeetingsData, setCeoMeetingsData] = useState(initialCeoMeetingsData);
-  const [tlMeetingsCount, setTlMeetingsCount] = useState(3);
-  const [ceoMeetingsCount, setCeoMeetingsCount] = useState(1);
+  const [tlMeetingsCount, setTlMeetingsCount] = useState(0);
+  const [ceoMeetingsCount, setCeoMeetingsCount] = useState(0);
   const [isAllMessagesModalOpen, setIsAllMessagesModalOpen] = useState(false);
   const [selectedPerformanceTeam, setSelectedPerformanceTeam] = useState<string>("all");
   const [isResumeDatabaseModalOpen, setIsResumeDatabaseModalOpen] = useState(false);
@@ -4985,43 +4986,45 @@ export default function AdminDashboard() {
                     <SelectValue placeholder="Meeting type" />
                   </SelectTrigger>
                   <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                    <SelectItem value="ceo" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">CEO</SelectItem>
-                    <SelectItem value="performance" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Performance Review</SelectItem>
-                    <SelectItem value="planning" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Team Planning</SelectItem>
-                    <SelectItem value="one-on-one" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">One-on-One</SelectItem>
+                    <SelectItem value="Performance Review" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Performance Review</SelectItem>
+                    <SelectItem value="Team Planning" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Team Planning</SelectItem>
+                    <SelectItem value="One-on-One" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">One-on-One</SelectItem>
                   </SelectContent>
                 </Select>
                 
-                {!isCustomDate ? (
-                  <Select value={meetingDate} onValueChange={handleDateChange} data-testid="select-meeting-date" required>
-                    <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded">
-                      <SelectValue placeholder="Date" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                      <SelectItem value="today" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Today</SelectItem>
-                      <SelectItem value="tomorrow" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Tomorrow</SelectItem>
-                      <SelectItem value="custom" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Other Date</SelectItem>
-                    </SelectContent>
-                  </Select>
-                ) : (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded"
+                      data-testid="button-meeting-date"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {meetingDate ? format(meetingDate, "PPP") : <span className="text-gray-500 dark:text-gray-400">Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={meetingDate}
+                      onSelect={setMeetingDate}
+                      initialFocus
+                      className="dark:text-white"
+                    />
+                  </PopoverContent>
+                </Popover>
+                
+                <div className="relative">
                   <Input
-                    type="date"
-                    value={meetingDate}
-                    onChange={(e) => setMeetingDate(e.target.value)}
-                    className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded"
-                    data-testid="input-custom-date"
+                    type="time"
+                    value={meetingTime}
+                    onChange={(e) => setMeetingTime(e.target.value)}
+                    className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded pl-10"
+                    data-testid="input-meeting-time"
                     required
                   />
-                )}
-                
-                <Input
-                  type="time"
-                  value={meetingTime}
-                  onChange={(e) => setMeetingTime(e.target.value)}
-                  className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded"
-                  data-testid="input-meeting-time"
-                  required
-                />
+                  <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                </div>
                 
                 <div className="flex justify-end">
                   <Button 

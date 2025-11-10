@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, json, boolean, real } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, json, boolean, real, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -145,10 +145,21 @@ export const dailyMetrics = pgTable("daily_metrics", {
   dailyDeliveryDefaulted: text("daily_delivery_defaulted").notNull(),
 });
 
+export const meetingCategoryEnum = pgEnum("meeting_category", ["tl", "ceo_ta"]);
+export const meetingStatusEnum = pgEnum("meeting_status", ["scheduled", "pending", "completed", "cancelled"]);
+
 export const meetings = pgTable("meetings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  type: text("type").notNull(), // TL's Meeting, CEO's Meeting
-  count: text("count").notNull(),
+  meetingType: text("meeting_type").notNull(),
+  meetingDate: text("meeting_date").notNull(),
+  meetingTime: text("meeting_time").notNull(),
+  person: text("person").notNull(),
+  personId: varchar("person_id"),
+  agenda: text("agenda").notNull(),
+  status: meetingStatusEnum("status").notNull().default("pending"),
+  meetingCategory: meetingCategoryEnum("meeting_category").notNull(),
+  notes: text("notes"),
+  createdAt: text("created_at").notNull(),
 });
 
 export const ceoComments = pgTable("ceo_comments", {
@@ -399,6 +410,7 @@ export const insertDailyMetricsSchema = createInsertSchema(dailyMetrics).omit({
 
 export const insertMeetingSchema = createInsertSchema(meetings).omit({
   id: true,
+  createdAt: true,
 });
 
 export const insertCeoCommentSchema = createInsertSchema(ceoComments).omit({
