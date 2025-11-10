@@ -553,6 +553,222 @@ function ImpactMetricsEditor() {
   );
 }
 
+// Client Settings Section Component
+function ClientSettingsSection() {
+  const queryClient = useQueryClient();
+  const [isEditingFeedback, setIsEditingFeedback] = useState(false);
+  const [feedbackValue, setFeedbackValue] = useState<string>("");
+
+  // Fetch impact metrics
+  const { data: metrics, isLoading } = useQuery<any[]>({
+    queryKey: ['/api/admin/impact-metrics'],
+  });
+
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, value }: { id: string; value: number }) => {
+      const response = await apiRequest('PUT', `/api/admin/impact-metrics/${id}`, { feedbackTurnAround: value });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/impact-metrics'] });
+      toast({ title: "Success", description: "Feedback Turn Around updated successfully" });
+      setIsEditingFeedback(false);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update Feedback Turn Around", variant: "destructive" });
+    },
+  });
+
+  const currentMetrics = (metrics && metrics.length > 0 && metrics[0]) || {
+    speedToHire: 0,
+    revenueImpactOfDelay: 0,
+    clientNps: 0,
+    candidateNps: 0,
+    feedbackTurnAround: 0,
+    firstYearRetentionRate: 0,
+    fulfillmentRate: 0,
+    revenueRecovered: 0,
+  };
+
+  const handleEditClick = () => {
+    setFeedbackValue(currentMetrics.feedbackTurnAround.toString());
+    setIsEditingFeedback(true);
+  };
+
+  const handleSave = () => {
+    const value = parseFloat(feedbackValue);
+    if (isNaN(value)) {
+      toast({ title: "Error", description: "Please enter a valid number", variant: "destructive" });
+      return;
+    }
+    if (metrics && metrics.length > 0 && metrics[0]) {
+      updateMutation.mutate({ id: metrics[0].id, value });
+    }
+  };
+
+  const handleCancel = () => {
+    setIsEditingFeedback(false);
+    setFeedbackValue("");
+  };
+
+  if (isLoading) {
+    return (
+      <div className="px-6 py-6 flex items-center justify-center h-full">
+        <div className="text-center text-gray-500">Loading client settings...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Client Settings</h2>
+        <p className="text-sm text-gray-600 dark:text-gray-400">View and manage client configuration settings</p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Impact Metrics</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Speed to Hire - Read Only */}
+          <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Speed to Hire</label>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Days</p>
+            </div>
+            <div className="text-right">
+              <p className="text-lg font-semibold text-gray-900 dark:text-white">{currentMetrics.speedToHire}</p>
+            </div>
+          </div>
+
+          {/* Revenue Impact of Delay - Read Only */}
+          <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Revenue Impact of Delay</label>
+              <p className="text-sm text-gray-500 dark:text-gray-400">USD</p>
+            </div>
+            <div className="text-right">
+              <p className="text-lg font-semibold text-gray-900 dark:text-white">${currentMetrics.revenueImpactOfDelay.toLocaleString()}</p>
+            </div>
+          </div>
+
+          {/* Client NPS - Read Only */}
+          <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Client NPS</label>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Score</p>
+            </div>
+            <div className="text-right">
+              <p className="text-lg font-semibold text-gray-900 dark:text-white">{currentMetrics.clientNps}%</p>
+            </div>
+          </div>
+
+          {/* Candidate NPS - Read Only */}
+          <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Candidate NPS</label>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Score</p>
+            </div>
+            <div className="text-right">
+              <p className="text-lg font-semibold text-gray-900 dark:text-white">{currentMetrics.candidateNps}%</p>
+            </div>
+          </div>
+
+          {/* Feedback Turn Around - Editable */}
+          <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700 bg-yellow-50 dark:bg-yellow-900/20 px-4 rounded-md">
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Feedback Turn Around</label>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Avg. date (days)</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {isEditingFeedback ? (
+                <>
+                  <Input
+                    type="number"
+                    value={feedbackValue}
+                    onChange={(e) => setFeedbackValue(e.target.value)}
+                    className="w-24 h-9"
+                    data-testid="input-feedback-turnaround"
+                    autoFocus
+                  />
+                  <Button 
+                    size="sm" 
+                    onClick={handleSave}
+                    disabled={updateMutation.isPending}
+                    data-testid="button-save-feedback"
+                  >
+                    {updateMutation.isPending ? "Saving..." : "Save"}
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={handleCancel}
+                    data-testid="button-cancel-feedback"
+                  >
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <p className="text-lg font-semibold text-gray-900 dark:text-white">{currentMetrics.feedbackTurnAround}</p>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={handleEditClick}
+                    className="hover-elevate"
+                    data-testid="button-edit-feedback"
+                  >
+                    <EditIcon className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* First Year Retention Rate - Read Only */}
+          <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">First Year Retention Rate</label>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Percentage</p>
+            </div>
+            <div className="text-right">
+              <p className="text-lg font-semibold text-gray-900 dark:text-white">{currentMetrics.firstYearRetentionRate}%</p>
+            </div>
+          </div>
+
+          {/* Fulfillment Rate - Read Only */}
+          <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Fulfillment Rate</label>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Percentage</p>
+            </div>
+            <div className="text-right">
+              <p className="text-lg font-semibold text-gray-900 dark:text-white">{currentMetrics.fulfillmentRate}%</p>
+            </div>
+          </div>
+
+          {/* Revenue Recovered - Read Only */}
+          <div className="flex items-center justify-between py-3">
+            <div className="flex-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Revenue Recovered</label>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Millions</p>
+            </div>
+            <div className="text-right">
+              <p className="text-lg font-semibold text-gray-900 dark:text-white">${currentMetrics.revenueRecovered}M</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="text-sm text-gray-500 dark:text-gray-400 italic">
+        * Only Feedback Turn Around can be edited. All other fields are read-only.
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [activeTab, setActiveTab] = useState('team');
@@ -2899,14 +3115,7 @@ export default function AdminDashboard() {
           </div>
         );
       case 'profile-details':
-        return (
-          <div className="px-6 py-6 flex items-center justify-center h-full">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Profile Details</h2>
-              <p className="text-gray-600 dark:text-gray-400">Your profile details are shown in the header above.</p>
-            </div>
-          </div>
-        );
+        return <ClientSettingsSection />;
       default:
         return renderTeamSection();
     }
