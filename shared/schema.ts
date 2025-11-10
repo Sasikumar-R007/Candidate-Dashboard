@@ -199,7 +199,7 @@ export const employees = pgTable("employees", {
   employeeId: text("employee_id").notNull().unique(), // STTA001, STTL001, STCL001
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
-  password: text("password").notNull(),
+  password: text("password"), // Optional - only required for login credentials
   role: text("role").notNull(), // recruiter, team_leader, client, admin
   age: text("age"),
   phone: text("phone"),
@@ -427,6 +427,9 @@ export const insertArchivedRequirementSchema = createInsertSchema(archivedRequir
 
 export const insertEmployeeSchema = createInsertSchema(employees).omit({
   id: true,
+  createdAt: true,
+}).extend({
+  password: z.string().min(6).optional().or(z.literal("")).transform((val) => val?.trim() ? val : undefined)
 });
 
 export const insertCandidateSchema = createInsertSchema(candidates).omit({
