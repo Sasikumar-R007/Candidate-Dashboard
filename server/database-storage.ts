@@ -245,9 +245,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createEmployee(insertEmployee: InsertEmployee): Promise<Employee> {
-    // Hash password before storing
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(insertEmployee.password, saltRounds);
+    // Hash password only if provided (for login credentials)
+    // If no password, employee record is created without login capability
+    let hashedPassword = null;
+    if (insertEmployee.password) {
+      const saltRounds = 10;
+      hashedPassword = await bcrypt.hash(insertEmployee.password, saltRounds);
+    }
     
     const employeeData = {
       ...insertEmployee,
