@@ -57,12 +57,10 @@ export default function AddRecruiterModal({ isOpen, onClose, editData, onSubmit 
 
   // Sync joiningDate state with formData
   useEffect(() => {
-    if (joiningDate) {
-      setFormData(prev => ({
-        ...prev,
-        joiningDate: format(joiningDate, "yyyy-MM-dd")
-      }));
-    }
+    setFormData(prev => ({
+      ...prev,
+      joiningDate: joiningDate ? format(joiningDate, "yyyy-MM-dd") : ""
+    }));
   }, [joiningDate]);
 
   const handleSubmit = (e: React.FormEvent) => {
