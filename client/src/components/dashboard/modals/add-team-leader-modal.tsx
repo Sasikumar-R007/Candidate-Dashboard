@@ -3,8 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { X } from "lucide-react";
-import { useState } from "react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { X, CalendarIcon } from "lucide-react";
+import { useState, useEffect } from "react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface AddTeamLeaderModalProps {
   isOpen: boolean;
@@ -24,6 +28,36 @@ export default function AddTeamLeaderModal({ isOpen, onClose, editData, onSubmit
     experience: editData?.experience || "",
     status: editData?.status || "Active"
   });
+  const [joiningDate, setJoiningDate] = useState<Date | undefined>(
+    editData?.joiningDate ? new Date(editData.joiningDate) : undefined
+  );
+
+  // Update form data when editData changes
+  useEffect(() => {
+    if (editData) {
+      setFormData({
+        id: editData?.id || "",
+        name: editData?.name || "",
+        email: editData?.email || "",
+        phone: editData?.phone || "",
+        department: editData?.department || "",
+        joiningDate: editData?.joiningDate || "",
+        experience: editData?.experience || "",
+        status: editData?.status || "Active"
+      });
+      setJoiningDate(editData?.joiningDate ? new Date(editData.joiningDate) : undefined);
+    }
+  }, [editData]);
+
+  // Sync joiningDate state with formData
+  useEffect(() => {
+    if (joiningDate) {
+      setFormData(prev => ({
+        ...prev,
+        joiningDate: format(joiningDate, "yyyy-MM-dd")
+      }));
+    }
+  }, [joiningDate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +83,7 @@ export default function AddTeamLeaderModal({ isOpen, onClose, editData, onSubmit
       experience: "",
       status: "Active"
     });
+    setJoiningDate(undefined);
     onClose();
   };
 
@@ -136,13 +171,29 @@ export default function AddTeamLeaderModal({ isOpen, onClose, editData, onSubmit
             <Label htmlFor="joiningDate" className="text-sm font-medium text-gray-700 mb-2 block">
               Joining Date
             </Label>
-            <Input
-              id="joiningDate"
-              type="date"
-              value={formData.joiningDate}
-              onChange={(e) => setFormData({...formData, joiningDate: e.target.value})}
-              className="w-full"
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !joiningDate && "text-muted-foreground"
+                  )}
+                  id="joiningDate"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {joiningDate ? format(joiningDate, "dd-MM-yyyy") : <span>Select date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={joiningDate}
+                  onSelect={setJoiningDate}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div>

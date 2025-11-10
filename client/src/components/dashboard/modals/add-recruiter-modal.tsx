@@ -3,8 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
 import { useState, useEffect } from "react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
 
 interface AddRecruiterModalProps {
   isOpen: boolean;
@@ -24,6 +29,14 @@ export default function AddRecruiterModal({ isOpen, onClose, editData, onSubmit 
     linkedinProfile: editData?.linkedinProfile || "",
     reportingTo: editData?.reportingTo || "",
   });
+  const [joiningDate, setJoiningDate] = useState<Date | undefined>(
+    editData?.joiningDate ? new Date(editData.joiningDate) : undefined
+  );
+
+  // Fetch team leaders from API
+  const { data: teamLeaders, isLoading: teamLeadersLoading } = useQuery<any[]>({
+    queryKey: ['/api/admin/team-leaders'],
+  });
 
   // Update form data when editData changes
   useEffect(() => {
@@ -38,8 +51,19 @@ export default function AddRecruiterModal({ isOpen, onClose, editData, onSubmit 
         linkedinProfile: editData?.linkedinProfile || "",
         reportingTo: editData?.reportingTo || "",
       });
+      setJoiningDate(editData?.joiningDate ? new Date(editData.joiningDate) : undefined);
     }
   }, [editData]);
+
+  // Sync joiningDate state with formData
+  useEffect(() => {
+    if (joiningDate) {
+      setFormData(prev => ({
+        ...prev,
+        joiningDate: format(joiningDate, "yyyy-MM-dd")
+      }));
+    }
+  }, [joiningDate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,6 +90,7 @@ export default function AddRecruiterModal({ isOpen, onClose, editData, onSubmit 
       linkedinProfile: "",
       reportingTo: "",
     });
+    setJoiningDate(undefined);
     onClose();
   };
 
@@ -135,18 +160,29 @@ export default function AddRecruiterModal({ isOpen, onClose, editData, onSubmit 
             data-testid="input-password"
           />
 
-          <div className="relative">
-            <Input
-              id="joiningDate"
-              type="text"
-              value={formData.joiningDate}
-              onChange={(e) => setFormData({...formData, joiningDate: e.target.value})}
-              placeholder="dd-mm-yyyy"
-              className="w-full bg-gray-50 border-gray-200 text-sm text-gray-500 pr-10"
-              data-testid="input-joining-date"
-            />
-            <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal bg-gray-50 border-gray-200 text-sm",
+                  !joiningDate && "text-gray-500"
+                )}
+                data-testid="input-joining-date"
+              >
+                <CalendarIcon className="mr-2 h-4 w-4 text-gray-400" />
+                {joiningDate ? format(joiningDate, "dd-MM-yyyy") : <span>dd-mm-yyyy</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={joiningDate}
+                onSelect={setJoiningDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
 
           <Input
             id="linkedinProfile"
@@ -163,12 +199,17 @@ export default function AddRecruiterModal({ isOpen, onClose, editData, onSubmit 
               <SelectValue placeholder="Select Team Leader" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="STL001">Sundar Raj</SelectItem>
-              <SelectItem value="STL002">Kavitha M</SelectItem>
-              <SelectItem value="STL003">Vignesh T</SelectItem>
-              <SelectItem value="STL004">Sasikumar R</SelectItem>
-              <SelectItem value="STL005">Saran K</SelectItem>
-              <SelectItem value="STL006">Azzim M</SelectItem>
+              {teamLeadersLoading ? (
+                <SelectItem value="loading" disabled>Loading team leaders...</SelectItem>
+              ) : teamLeaders && teamLeaders.length > 0 ? (
+                teamLeaders.map((tl: any) => (
+                  <SelectItem key={tl.employeeId} value={tl.employeeId}>
+                    {tl.name}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="no-leaders" disabled>No team leaders available</SelectItem>
+              )}
             </SelectContent>
           </Select>
 
