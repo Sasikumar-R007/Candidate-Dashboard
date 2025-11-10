@@ -3080,6 +3080,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         clientNps: z.number().optional(),
         candidateNps: z.number().optional(),
         feedbackTurnAround: z.number().optional(),
+        feedbackTurnAroundAvgDays: z.number().optional(),
         firstYearRetentionRate: z.number().optional(),
         fulfillmentRate: z.number().optional(),
         revenueRecovered: z.number().optional(),

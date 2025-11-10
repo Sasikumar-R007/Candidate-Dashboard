@@ -366,6 +366,7 @@ export const impactMetrics = pgTable("impact_metrics", {
   clientNps: real("client_nps").notNull().default(60),
   candidateNps: real("candidate_nps").notNull().default(70),
   feedbackTurnAround: real("feedback_turn_around").notNull().default(2),
+  feedbackTurnAroundAvgDays: real("feedback_turn_around_avg_days").notNull().default(5),
   firstYearRetentionRate: real("first_year_retention_rate").notNull().default(90),
   fulfillmentRate: real("fulfillment_rate").notNull().default(20),
   revenueRecovered: real("revenue_recovered").notNull().default(1.5),

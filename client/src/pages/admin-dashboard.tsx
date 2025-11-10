@@ -557,7 +557,7 @@ function ImpactMetricsEditor() {
 function ClientSettingsSection() {
   const queryClient = useQueryClient();
   const [isEditingFeedback, setIsEditingFeedback] = useState(false);
-  const [feedbackValue, setFeedbackValue] = useState<string>("");
+  const [avgDaysValue, setAvgDaysValue] = useState<string>("");
 
   // Fetch impact metrics
   const { data: metrics, isLoading } = useQuery<any[]>({
@@ -572,7 +572,7 @@ function ClientSettingsSection() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/impact-metrics'] });
-      toast({ title: "Success", description: "Feedback Turn Around updated successfully" });
+      toast({ title: "Success", description: "Feedback Turn Around Avg Days updated successfully" });
       setIsEditingFeedback(false);
     },
     onError: () => {
@@ -583,16 +583,16 @@ function ClientSettingsSection() {
   // Update mutation
   const updateMutation = useMutation({
     mutationFn: async ({ id, value }: { id: string; value: number }) => {
-      const response = await apiRequest('PUT', `/api/admin/impact-metrics/${id}`, { feedbackTurnAround: value });
+      const response = await apiRequest('PUT', `/api/admin/impact-metrics/${id}`, { feedbackTurnAroundAvgDays: value });
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/impact-metrics'] });
-      toast({ title: "Success", description: "Feedback Turn Around updated successfully" });
+      toast({ title: "Success", description: "Feedback Turn Around Avg Days updated successfully" });
       setIsEditingFeedback(false);
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to update Feedback Turn Around", variant: "destructive" });
+      toast({ title: "Error", description: "Failed to update Feedback Turn Around Avg Days", variant: "destructive" });
     },
   });
 
@@ -602,18 +602,19 @@ function ClientSettingsSection() {
     clientNps: 0,
     candidateNps: 0,
     feedbackTurnAround: 0,
+    feedbackTurnAroundAvgDays: 5,
     firstYearRetentionRate: 0,
     fulfillmentRate: 0,
     revenueRecovered: 0,
   };
 
   const handleEditClick = () => {
-    setFeedbackValue(currentMetrics.feedbackTurnAround.toString());
+    setAvgDaysValue(currentMetrics.feedbackTurnAroundAvgDays.toString());
     setIsEditingFeedback(true);
   };
 
   const handleSave = async () => {
-    const value = parseFloat(feedbackValue);
+    const value = parseFloat(avgDaysValue);
     if (isNaN(value)) {
       toast({ title: "Error", description: "Please enter a valid number", variant: "destructive" });
       return;
@@ -626,7 +627,8 @@ function ClientSettingsSection() {
         revenueImpactOfDelay: 75000,
         clientNps: 60,
         candidateNps: 70,
-        feedbackTurnAround: value,
+        feedbackTurnAround: 2,
+        feedbackTurnAroundAvgDays: value,
         firstYearRetentionRate: 90,
         fulfillmentRate: 20,
         revenueRecovered: 1.5,
@@ -643,7 +645,7 @@ function ClientSettingsSection() {
 
   const handleCancel = () => {
     setIsEditingFeedback(false);
-    setFeedbackValue("");
+    setAvgDaysValue("");
   };
 
   if (isLoading) {
@@ -662,7 +664,7 @@ function ClientSettingsSection() {
       <Card className="bg-white dark:bg-gray-800">
         <CardHeader className="pb-2 pt-3">
           <CardTitle className="text-lg text-gray-900 dark:text-white">Impact Metrics</CardTitle>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Only Feedback Turn Around can be edited</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Only Feedback Turn Around's Avg Days can be edited</p>
         </CardHeader>
         <CardContent className="p-3">
           <div className="grid grid-cols-4 gap-4">
@@ -696,19 +698,24 @@ function ClientSettingsSection() {
           </div>
 
           <div className="grid grid-cols-4 gap-4 mt-4">
-            {/* Feedback Turn Around - Editable */}
+            {/* Feedback Turn Around - Avg Days Editable */}
             <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800 relative">
               <div className="text-sm font-medium text-yellow-700 dark:text-yellow-400 mb-2">Feedback Turn Around</div>
+              <div className="text-3xl font-bold text-yellow-900 dark:text-yellow-300 mb-1">{currentMetrics.feedbackTurnAround}</div>
               {isEditingFeedback ? (
                 <div className="space-y-2">
-                  <Input
-                    type="number"
-                    value={feedbackValue}
-                    onChange={(e) => setFeedbackValue(e.target.value)}
-                    className="h-8 text-lg font-bold"
-                    data-testid="input-feedback-turnaround"
-                    autoFocus
-                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-600 dark:text-gray-400">days (Avg.</span>
+                    <Input
+                      type="number"
+                      value={avgDaysValue}
+                      onChange={(e) => setAvgDaysValue(e.target.value)}
+                      className="h-7 w-16 text-sm"
+                      data-testid="input-feedback-turnaround-avg"
+                      autoFocus
+                    />
+                    <span className="text-xs text-gray-600 dark:text-gray-400">days)*</span>
+                  </div>
                   <div className="flex gap-1">
                     <Button 
                       size="sm" 
@@ -732,8 +739,7 @@ function ClientSettingsSection() {
                 </div>
               ) : (
                 <>
-                  <div className="text-3xl font-bold text-yellow-900 dark:text-yellow-300 mb-1">{currentMetrics.feedbackTurnAround}</div>
-                  <div className="text-xs text-gray-600 dark:text-gray-400">days (Avg_5 days)*</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">days (Avg. {currentMetrics.feedbackTurnAroundAvgDays} days)*</div>
                   <Button
                     size="icon"
                     variant="ghost"
