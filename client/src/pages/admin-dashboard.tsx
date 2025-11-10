@@ -638,7 +638,7 @@ export default function AdminDashboard() {
   });
   const [clientStartDate, setClientStartDate] = useState<Date | undefined>();
   const [employeeForm, setEmployeeForm] = useState({
-    employeeId: '', name: '', email: '', password: '',
+    employeeId: '', name: '', email: '',
     role: '', phone: '', department: '', joiningDate: '', age: ''
   });
 
@@ -824,7 +824,7 @@ export default function AdminDashboard() {
       });
       setIsEmployeeModalOpen(false);
       setEmployeeForm({
-        employeeId: '', name: '', email: '', password: '',
+        employeeId: '', name: '', email: '',
         role: '', phone: '', department: '', joiningDate: '', age: ''
       });
     },
@@ -6035,12 +6035,11 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <Input 
-                    placeholder="Password *" 
-                    type="password" 
+                    placeholder="Age" 
                     className="input-styled rounded" 
-                    value={employeeForm.password}
-                    onChange={(e) => setEmployeeForm({...employeeForm, password: e.target.value})}
-                    data-testid="input-password"
+                    value={employeeForm.age}
+                    onChange={(e) => setEmployeeForm({...employeeForm, age: e.target.value})}
+                    data-testid="input-age"
                   />
                 </div>
               </div>
@@ -6224,10 +6223,10 @@ export default function AdminDashboard() {
               <Button 
                 className="bg-cyan-400 hover:bg-cyan-500 text-white px-8 py-2 rounded"
                 onClick={() => {
-                  if (!employeeForm.employeeId || !employeeForm.name || !employeeForm.email || !employeeForm.password || !employeeForm.role) {
+                  if (!employeeForm.employeeId || !employeeForm.name || !employeeForm.email || !employeeForm.role) {
                     toast({
                       title: "Validation Error",
-                      description: "Please fill in all required fields (Employee ID, Name, Email, Password, Role)",
+                      description: "Please fill in all required fields (Employee ID, Name, Email, Role)",
                       variant: "destructive",
                     });
                     return;
