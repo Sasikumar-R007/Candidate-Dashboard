@@ -933,6 +933,15 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/employees']
   });
 
+  // Filter employees for HR-related tables (exclude system users like recruiters, team leaders, clients)
+  const hrEmployees = useMemo(() => {
+    return employees.filter((emp: any) => 
+      emp.role !== 'recruiter' && 
+      emp.role !== 'team_leader' && 
+      emp.role !== 'client'
+    );
+  }, [employees]);
+
   // Fetch clients from database
   const { data: clients = [], isLoading: isLoadingClients } = useQuery({
     queryKey: ['/api/admin/clients']
@@ -3628,12 +3637,12 @@ export default function AdminDashboard() {
                           <tr>
                             <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading employees...</td>
                           </tr>
-                        ) : employees.length === 0 ? (
+                        ) : hrEmployees.length === 0 ? (
                           <tr>
                             <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">No employees found. Click "+ Add Employee" to add one.</td>
                           </tr>
                         ) : (
-                          employees.slice(0, 5).map((row: any, index: number) => (
+                          hrEmployees.slice(0, 5).map((row: any, index: number) => (
                             <tr key={row.id || index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
                               <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{row.employeeId}</td>
                               <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.name}</td>
@@ -3688,12 +3697,12 @@ export default function AdminDashboard() {
                           <tr>
                             <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading employees...</td>
                           </tr>
-                        ) : employees.length === 0 ? (
+                        ) : hrEmployees.length === 0 ? (
                           <tr>
                             <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">No employees found. Click "+ Add Employee" to add one.</td>
                           </tr>
                         ) : (
-                          employees.slice(0, 5).map((row: any, index: number) => (
+                          hrEmployees.slice(0, 5).map((row: any, index: number) => (
                             <tr key={row.id || index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
                               <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{row.employeeId}</td>
                               <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.name}</td>
@@ -6730,12 +6739,12 @@ export default function AdminDashboard() {
                     <tr>
                       <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading employees...</td>
                     </tr>
-                  ) : employees.length === 0 ? (
+                  ) : hrEmployees.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">No employees found. Click "+ Add Employee" to add one.</td>
                     </tr>
                   ) : (
-                    employees.map((row: any, index: number) => (
+                    hrEmployees.map((row: any, index: number) => (
                       <tr key={row.id || index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
                         <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.employeeId}</td>
                         <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.name}</td>
@@ -6792,12 +6801,12 @@ export default function AdminDashboard() {
                     <tr>
                       <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading employees...</td>
                     </tr>
-                  ) : employees.length === 0 ? (
+                  ) : hrEmployees.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">No employees found. Click "+ Add Employee" to add one.</td>
                     </tr>
                   ) : (
-                    employees.map((row: any, index: number) => (
+                    hrEmployees.map((row: any, index: number) => (
                       <tr key={row.id || index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
                         <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.employeeId}</td>
                         <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.name}</td>
