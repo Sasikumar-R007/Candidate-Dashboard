@@ -27,7 +27,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users, ExternalLink, HelpCircle } from "lucide-react";
+import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users, ExternalLink, HelpCircle, MoreVertical } from "lucide-react";
 import { format } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useLocation } from "wouter";
@@ -910,6 +910,121 @@ export default function AdminDashboard() {
     }
   });
 
+  // Meetings mutations
+  const createMeetingMutation = useMutation({
+    mutationFn: async (meetingData: any) => {
+      const response = await apiRequest('POST', '/api/admin/meetings', meetingData);
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Failed to create meeting' }));
+        throw new Error(error.message || 'Failed to create meeting');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/meetings'] });
+      toast({
+        title: "Success",
+        description: "Meeting created successfully!",
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+      resetForm();
+      setIsCreateModalOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create meeting.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const updateMeetingMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await apiRequest('PATCH', `/api/admin/meetings/${id}`, data);
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Failed to update meeting' }));
+        throw new Error(error.message || 'Failed to update meeting');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/meetings'] });
+      toast({
+        title: "Success",
+        description: "Meeting updated successfully!",
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+      resetForm();
+      setIsCreateModalOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update meeting.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const deleteMeetingMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest('DELETE', `/api/admin/meetings/${id}`);
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: 'Failed to delete meeting' }));
+        throw new Error(error.message || 'Failed to delete meeting');
+      }
+      return response.json().catch(() => ({}));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/meetings'] });
+      toast({
+        title: "Success",
+        description: "Meeting deleted successfully!",
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete meeting.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Fetch meetings from API
+  const { data: allMeetings = [], isLoading: meetingsLoading } = useQuery({
+    queryKey: ['/api/admin/meetings'],
+    staleTime: 1000 * 60,
+  });
+
+  // Derive TL and CEO meetings from query data
+  const tlMeetings = useMemo(() => {
+    return allMeetings.filter((m: any) => m.meetingCategory === 'tl' && m.status === 'pending');
+  }, [allMeetings]);
+
+  const ceoMeetings = useMemo(() => {
+    return allMeetings.filter((m: any) => m.meetingCategory === 'ceo_ta' && m.status === 'pending');
+  }, [allMeetings]);
+
+  // Meeting action handlers
+  const handleRescheduleMeeting = (meeting: any) => {
+    setMeetingFor(meeting.meetingCategory === 'tl' ? 'TL' : 'TA');
+    setMeetingWith(meeting.personId || '');
+    setMeetingType(meeting.meetingType);
+    setMeetingDate(new Date(meeting.meetingDate));
+    setMeetingTime(meeting.meetingTime);
+    setEditingMeetingId(meeting.id);
+    setIsCreateModalOpen(true);
+  };
+
+  const handleDeleteMeeting = (meetingId: string, personName: string) => {
+    if (window.confirm(`Are you sure you want to delete the meeting with ${personName}?`)) {
+      deleteMeetingMutation.mutate(meetingId);
+    }
+  };
+
   // Calculate priority distribution from requirements
   const priorityDistribution = useMemo(() => {
     const high = requirements.filter((req: any) => req.criticality === 'HIGH').length;
@@ -939,9 +1054,9 @@ export default function AdminDashboard() {
     setMeetingFor('');
     setMeetingWith('');
     setMeetingType('');
-    setMeetingDate('');
+    setMeetingDate(undefined);
     setMeetingTime('');
-    setIsCustomDate(false);
+    setEditingMeetingId(null);
   };
 
   const showSuccessAlert = (message: string) => {
@@ -979,31 +1094,26 @@ export default function AdminDashboard() {
     if (!meetingFor || !meetingWith || !meetingType || !meetingDate || !meetingTime) {
       return;
     }
-    const personName = (meetingFor === 'TL' ? tlList : taList).find(emp => emp.id === meetingWith)?.name || meetingWith;
     
-    // Create new meeting object
-    const newMeeting = {
-      meetingType: meetingType,
-      date: meetingDate,
-      time: meetingTime,
+    const personName = (meetingFor === 'TL' ? tlList : taList).find(emp => emp.id === meetingWith)?.name || meetingWith;
+    const meetingCategory = meetingFor === 'TL' ? 'tl' : 'ceo_ta';
+    
+    const meetingData = {
+      meetingType,
+      meetingDate: format(meetingDate, 'yyyy-MM-dd'),
+      meetingTime,
       person: personName,
+      personId: meetingWith,
       agenda: "Meeting agenda",
-      status: "Pending"
+      status: 'pending' as const,
+      meetingCategory,
     };
     
-    // Add to appropriate meeting list and increment count
-    if (meetingFor === 'TL') {
-      setTlMeetingsData(prev => [...prev, newMeeting]);
-      setTlMeetingsCount(prev => prev + 1);
+    if (editingMeetingId) {
+      updateMeetingMutation.mutate({ id: editingMeetingId, data: meetingData });
     } else {
-      // TA meetings go to CEO's meetings
-      setCeoMeetingsData(prev => [...prev, newMeeting]);
-      setCeoMeetingsCount(prev => prev + 1);
+      createMeetingMutation.mutate(meetingData);
     }
-    
-    showSuccessAlert(`Meeting set with ${personName} successfully`);
-    resetForm();
-    setIsCreateModalOpen(false);
   };
 
   // Requirements handlers
@@ -1451,7 +1561,7 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center">
                   <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">TL's Meeting</h3>
-                  <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">{tlMeetingsCount}</div>
+                  <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">{tlMeetings.length}</div>
                   <Button 
                     size="sm" 
                     className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-sm rounded"
@@ -1465,7 +1575,7 @@ export default function AdminDashboard() {
                 <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-300 dark:bg-gray-600 transform -translate-x-0.5"></div>
                 <div className="text-center">
                   <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">CEO's Meeting</h3>
-                  <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">{ceoMeetingsCount}</div>
+                  <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">{ceoMeetings.length}</div>
                   <Button 
                     size="sm" 
                     className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-sm rounded"
@@ -4739,25 +4849,65 @@ export default function AdminDashboard() {
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Person</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Agenda</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Status</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {tlMeetingsData.map((meeting, index) => (
-                    <tr key={index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
-                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{meeting.meetingType}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.date}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.time}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.person}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.agenda}</td>
-                      <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
-                        <span className={`px-2 py-1 rounded-full text-sm font-medium ${
-                          meeting.status === 'Scheduled' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
-                        }`}>
-                          {meeting.status}
-                        </span>
-                      </td>
+                  {meetingsLoading ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading meetings...</td>
                     </tr>
-                  ))}
+                  ) : tlMeetings.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">No pending meetings</td>
+                    </tr>
+                  ) : (
+                    tlMeetings.map((meeting: any, index: number) => (
+                      <tr key={meeting.id || index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
+                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{meeting.meetingType}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{format(new Date(meeting.meetingDate), 'dd-MMM-yyyy')}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.meetingTime}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.person}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.agenda}</td>
+                        <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
+                          <span className={`px-2 py-1 rounded-full text-sm font-medium ${
+                            meeting.status === 'scheduled' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                          }`}>
+                            {meeting.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                data-testid={`button-meeting-actions-${meeting.id}`}
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                              <DropdownMenuItem
+                                onClick={() => handleRescheduleMeeting(meeting)}
+                                data-testid={`menuitem-reschedule-${meeting.id}`}
+                                className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                              >
+                                Reschedule
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteMeeting(meeting.id, meeting.person)}
+                                data-testid={`menuitem-delete-${meeting.id}`}
+                                className="text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -4847,25 +4997,65 @@ export default function AdminDashboard() {
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Person</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Agenda</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Status</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {ceoMeetingsData.map((meeting, index) => (
-                    <tr key={index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
-                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{meeting.meetingType}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.date}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.time}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.person}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.agenda}</td>
-                      <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
-                        <span className={`px-2 py-1 rounded-full text-sm font-medium ${
-                          meeting.status === 'Scheduled' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
-                        }`}>
-                          {meeting.status}
-                        </span>
-                      </td>
+                  {meetingsLoading ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading meetings...</td>
                     </tr>
-                  ))}
+                  ) : ceoMeetings.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">No pending meetings</td>
+                    </tr>
+                  ) : (
+                    ceoMeetings.map((meeting: any, index: number) => (
+                      <tr key={meeting.id || index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
+                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{meeting.meetingType}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{format(new Date(meeting.meetingDate), 'dd-MMM-yyyy')}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.meetingTime}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.person}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.agenda}</td>
+                        <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
+                          <span className={`px-2 py-1 rounded-full text-sm font-medium ${
+                            meeting.status === 'scheduled' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                          }`}>
+                            {meeting.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                data-testid={`button-meeting-actions-${meeting.id}`}
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                              <DropdownMenuItem
+                                onClick={() => handleRescheduleMeeting(meeting)}
+                                data-testid={`menuitem-reschedule-${meeting.id}`}
+                                className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                              >
+                                Reschedule
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteMeeting(meeting.id, meeting.person)}
+                                data-testid={`menuitem-delete-${meeting.id}`}
+                                className="text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
