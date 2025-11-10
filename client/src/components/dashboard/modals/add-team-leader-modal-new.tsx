@@ -2,8 +2,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
 import { useState, useEffect } from "react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface AddTeamLeaderModalNewProps {
   isOpen: boolean;
@@ -22,6 +26,9 @@ export default function AddTeamLeaderModalNew({ isOpen, onClose, editData, onSub
     joiningDate: editData?.joiningDate || "",
     linkedinProfile: editData?.linkedinProfile || "",
   });
+  const [joiningDate, setJoiningDate] = useState<Date | undefined>(
+    editData?.joiningDate ? new Date(editData.joiningDate) : undefined
+  );
 
   // Update form data when editData changes
   useEffect(() => {
@@ -35,8 +42,17 @@ export default function AddTeamLeaderModalNew({ isOpen, onClose, editData, onSub
         joiningDate: editData?.joiningDate || "",
         linkedinProfile: editData?.linkedinProfile || "",
       });
+      setJoiningDate(editData?.joiningDate ? new Date(editData.joiningDate) : undefined);
     }
   }, [editData]);
+
+  // Sync joiningDate state with formData
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      joiningDate: joiningDate ? format(joiningDate, "yyyy-MM-dd") : ""
+    }));
+  }, [joiningDate]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,6 +78,7 @@ export default function AddTeamLeaderModalNew({ isOpen, onClose, editData, onSub
       joiningDate: "",
       linkedinProfile: "",
     });
+    setJoiningDate(undefined);
     onClose();
   };
 
@@ -131,18 +148,29 @@ export default function AddTeamLeaderModalNew({ isOpen, onClose, editData, onSub
             data-testid="input-password"
           />
 
-          <div className="relative">
-            <Input
-              id="joiningDate"
-              type="text"
-              value={formData.joiningDate}
-              onChange={(e) => setFormData({...formData, joiningDate: e.target.value})}
-              placeholder="dd-mm-yyyy"
-              className="w-full bg-gray-50 border-gray-200 text-sm text-gray-500 pr-10"
-              data-testid="input-joining-date"
-            />
-            <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-full justify-start text-left font-normal bg-gray-50 border-gray-200 text-sm",
+                  !joiningDate && "text-gray-500"
+                )}
+                data-testid="input-joining-date"
+              >
+                <CalendarIcon className="mr-2 h-4 w-4 text-gray-400" />
+                {joiningDate ? format(joiningDate, "dd-MM-yyyy") : <span>dd-mm-yyyy</span>}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={joiningDate}
+                onSelect={setJoiningDate}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
 
           <Input
             id="linkedinProfile"
