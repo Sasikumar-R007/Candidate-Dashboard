@@ -404,6 +404,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid email or password" });
       }
       
+      // Check if employee has login credentials configured
+      if (!employee.password) {
+        return res.status(401).json({ message: "Login credentials not configured for this account. Please contact your administrator." });
+      }
+      
       // Check password using bcrypt
       const isPasswordValid = await bcrypt.compare(password, employee.password);
       console.log('[DEBUG] Password valid:', isPasswordValid);
@@ -469,6 +474,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if employee exists and has support role
       if (!employee || employee.role !== 'support') {
         return res.status(401).json({ message: "Invalid credentials or access denied" });
+      }
+      
+      // Check if employee has login credentials configured
+      if (!employee.password) {
+        return res.status(401).json({ message: "Login credentials not configured for this account. Please contact your administrator." });
       }
       
       // Check password using bcrypt
@@ -3008,9 +3018,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           phone: emp.phone,
           department: emp.department,
           joiningDate: emp.joiningDate,
-          reportingTo: emp.reportingTo,
-          isActive: true,
-          createdAt: new Date().toISOString()
+          reportingTo: emp.reportingTo
         });
         createdEmployees.push(employee);
       }
