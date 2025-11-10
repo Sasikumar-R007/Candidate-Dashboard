@@ -951,28 +951,6 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/daily-metrics'],
   });
 
-  // Memoized Daily Metrics chart data based on selected team
-  const dailyMetricsMembers = useMemo(() => {
-    if (selectedDailyMetricsTeam === 'team1') {
-      return teamsData[0].members.slice(0, 5).map(member => ({
-        member: member.name,
-        requirements: member.count
-      }));
-    } else if (selectedDailyMetricsTeam === 'team2') {
-      return teamsData[1].members.slice(0, 5).map(member => ({
-        member: member.name,
-        requirements: member.count
-      }));
-    } else {
-      // 'overall' - combine first 5 members from all teams
-      const allMembers = [...teamsData[0].members, ...teamsData[1].members];
-      return allMembers.slice(0, 5).map(member => ({
-        member: member.name,
-        requirements: member.count
-      }));
-    }
-  }, [selectedDailyMetricsTeam]);
-
   // Archive requirement mutation
   const archiveRequirementMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -1801,7 +1779,14 @@ export default function AdminDashboard() {
                 </div>
                 <div className="h-48 mt-2">
                   <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={dailyMetricsMembers}>
+                    <ComposedChart data={[
+                      { member: 'Arun', requirements: 12 },
+                      { member: 'Anusha', requirements: 8 },
+                      { member: 'Rajesh', requirements: 14 },
+                      { member: 'Priya', requirements: 9 },
+                      { member: 'Kiran', requirements: 11 },
+                      { member: 'Deepa', requirements: 7 }
+                    ]}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis 
                         dataKey="member" 
