@@ -814,6 +814,7 @@ export default function AdminDashboard() {
   // Pipeline modal state
   const [, navigate] = useLocation();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDailyMetricsTeam, setSelectedDailyMetricsTeam] = useState<'overall' | 'team1' | 'team2'>('overall');
   const [selectedMember, setSelectedMember] = useState<any>(null);
   const [selectedPipelineTeam, setSelectedPipelineTeam] = useState<string>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -949,6 +950,28 @@ export default function AdminDashboard() {
   }, isLoading: isLoadingMetrics } = useQuery({
     queryKey: ['/api/admin/daily-metrics'],
   });
+
+  // Memoized Daily Metrics chart data based on selected team
+  const dailyMetricsMembers = useMemo(() => {
+    if (selectedDailyMetricsTeam === 'team1') {
+      return teamsData[0].members.slice(0, 5).map(member => ({
+        member: member.name,
+        requirements: member.count
+      }));
+    } else if (selectedDailyMetricsTeam === 'team2') {
+      return teamsData[1].members.slice(0, 5).map(member => ({
+        member: member.name,
+        requirements: member.count
+      }));
+    } else {
+      // 'overall' - combine first 5 members from all teams
+      const allMembers = [...teamsData[0].members, ...teamsData[1].members];
+      return allMembers.slice(0, 5).map(member => ({
+        member: member.name,
+        requirements: member.count
+      }));
+    }
+  }, [selectedDailyMetricsTeam]);
 
   // Archive requirement mutation
   const archiveRequirementMutation = useMutation({
@@ -1661,8 +1684,38 @@ export default function AdminDashboard() {
 
       {/* Daily Metrics Section */}
       <Card className="bg-teal-50 dark:bg-teal-900/30">
-        <CardHeader className="pb-1 pt-2">
+        <CardHeader className="pb-1 pt-2 flex flex-row flex-wrap items-center justify-between gap-2">
           <CardTitle className="text-lg text-gray-900 dark:text-white">Daily Metrics</CardTitle>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Select value={selectedDailyMetricsTeam} onValueChange={(value) => setSelectedDailyMetricsTeam(value as 'overall' | 'team1' | 'team2')}>
+              <SelectTrigger className="w-24 h-7 text-sm" data-testid="select-daily-metrics-team">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="overall">Overall</SelectItem>
+                <SelectItem value="team1">Team 1</SelectItem>
+                <SelectItem value="team2">Team 2</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="flex items-center space-x-1 h-7 px-2" data-testid="button-daily-metrics-date">
+                  <CalendarIcon className="h-3 w-3" />
+                  <span className="text-sm">{format(selectedDate, "dd-MMM-yyyy")}</span>
+                  <EditIcon className="h-3 w-3" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => date && setSelectedDate(date)}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
         </CardHeader>
         
         <CardContent className="p-3">
@@ -1732,39 +1785,8 @@ export default function AdminDashboard() {
               <div className="text-left">
                 <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
                   <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Overall Performance</h3>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <Select defaultValue="overall">
-                      <SelectTrigger className="w-20 h-7 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="overall">Overall</SelectItem>
-                        <SelectItem value="team1">Team 1</SelectItem>
-                        <SelectItem value="team2">Team 2</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="flex items-center space-x-1 h-7 px-2">
-                          <CalendarIcon className="h-3 w-3" />
-                          <span className="text-sm">{format(selectedDate, "dd-MMM-yyyy")}</span>
-                          <EditIcon className="h-3 w-3" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="end">
-                        <Calendar
-                          mode="single"
-                          selected={selectedDate}
-                          onSelect={(date) => date && setSelectedDate(date)}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    
-                    <div className="text-4xl font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900 w-16 h-16 rounded-sm flex items-center justify-center">
-                      {dailyMetricsData.overallPerformance}
-                    </div>
+                  <div className="text-4xl font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900 w-16 h-16 rounded-sm flex items-center justify-center">
+                    {dailyMetricsData.overallPerformance}
                   </div>
                 </div>
                 <div className="flex justify-start space-x-2 mb-2">
@@ -1779,14 +1801,7 @@ export default function AdminDashboard() {
                 </div>
                 <div className="h-48 mt-2">
                   <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={[
-                      { member: 'Arun', requirements: 12 },
-                      { member: 'Anusha', requirements: 8 },
-                      { member: 'Rajesh', requirements: 14 },
-                      { member: 'Priya', requirements: 9 },
-                      { member: 'Kiran', requirements: 11 },
-                      { member: 'Deepa', requirements: 7 }
-                    ]}>
+                    <ComposedChart data={dailyMetricsMembers}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis 
                         dataKey="member" 
