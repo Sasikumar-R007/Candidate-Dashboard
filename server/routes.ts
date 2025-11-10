@@ -1976,12 +1976,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/meetings", async (req, res) => {
     try {
-      const validatedData = insertMeetingSchema.parse({
-        ...req.body,
-        createdAt: new Date().toISOString(),
-      });
+      const validatedData = insertMeetingSchema.parse(req.body);
       
-      const [meeting] = await db.insert(meetings).values([validatedData]).returning();
+      const [meeting] = await db.insert(meetings).values([{
+        ...validatedData,
+        createdAt: new Date().toISOString(),
+      }]).returning();
       res.status(201).json(meeting);
     } catch (error: any) {
       console.error('Create meeting error:', error);
