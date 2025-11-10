@@ -29,7 +29,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from "@/components/ui/input";
 import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users, ExternalLink, HelpCircle, MoreVertical } from "lucide-react";
 import { format } from "date-fns";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ComposedChart } from 'recharts';
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
@@ -1770,34 +1770,36 @@ export default function AdminDashboard() {
                 <div className="flex justify-start space-x-2 mb-2">
                   <div className="flex items-center space-x-1">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Arun's Team</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Team Performance</span>
                   </div>
                   <div className="flex items-center space-x-1">
-                    <div className="w-2 h-2 bg-pink-500 rounded-full"></div>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Anusha's Team</span>
+                    <div className="w-3 h-0.5 bg-red-500"></div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Average Benchmark (10)</span>
                   </div>
                 </div>
                 <div className="h-48 mt-2">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={[
-                      { month: 'Jan', arunTeam: 65, anushaTeam: 60 },
-                      { month: 'Feb', arunTeam: 78, anushaTeam: 72 },
-                      { month: 'Mar', arunTeam: 85, anushaTeam: 80 },
-                      { month: 'Apr', arunTeam: 72, anushaTeam: 75 },
-                      { month: 'May', arunTeam: 90, anushaTeam: 85 },
-                      { month: 'Jun', arunTeam: 88, anushaTeam: 92 }
+                    <ComposedChart data={[
+                      { member: 'Arun', requirements: 12 },
+                      { member: 'Anusha', requirements: 8 },
+                      { member: 'Rajesh', requirements: 14 },
+                      { member: 'Priya', requirements: 9 },
+                      { member: 'Kiran', requirements: 11 },
+                      { member: 'Deepa', requirements: 7 }
                     ]}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis 
-                        dataKey="month" 
+                        dataKey="member" 
                         stroke="#6b7280" 
-                        style={{ fontSize: '12px' }}
+                        style={{ fontSize: '11px' }}
                         tick={{ fill: '#6b7280' }}
                       />
                       <YAxis 
                         stroke="#6b7280" 
                         style={{ fontSize: '12px' }}
                         tick={{ fill: '#6b7280' }}
+                        ticks={[3, 6, 9, 12, 15]}
+                        domain={[0, 15]}
                       />
                       <Tooltip 
                         contentStyle={{ 
@@ -1806,25 +1808,23 @@ export default function AdminDashboard() {
                           borderRadius: '8px'
                         }}
                       />
+                      <ReferenceLine 
+                        y={10} 
+                        stroke="#ef4444" 
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        label={{ value: 'Avg: 10', position: 'right', fill: '#ef4444', fontSize: 12 }}
+                      />
                       <Line 
                         type="monotone" 
-                        dataKey="arunTeam" 
+                        dataKey="requirements" 
                         stroke="#3b82f6" 
                         strokeWidth={3} 
-                        dot={{ fill: '#3b82f6', r: 4 }}
-                        activeDot={{ r: 6 }}
-                        name="Arun's Team"
+                        dot={{ fill: '#3b82f6', r: 5 }}
+                        activeDot={{ r: 7 }}
+                        name="Requirements"
                       />
-                      <Line 
-                        type="monotone" 
-                        dataKey="anushaTeam" 
-                        stroke="#ec4899" 
-                        strokeWidth={3} 
-                        dot={{ fill: '#ec4899', r: 4 }}
-                        activeDot={{ r: 6 }}
-                        name="Anusha's Team"
-                      />
-                    </LineChart>
+                    </ComposedChart>
                   </ResponsiveContainer>
                 </div>
               </div>
