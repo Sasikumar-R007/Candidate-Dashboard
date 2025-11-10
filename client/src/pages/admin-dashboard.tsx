@@ -625,8 +625,6 @@ export default function AdminDashboard() {
   const [messagesData, setMessagesData] = useState(initialMessagesData);
   const [tlMeetingsData, setTlMeetingsData] = useState(initialTlMeetingsData);
   const [ceoMeetingsData, setCeoMeetingsData] = useState(initialCeoMeetingsData);
-  const [tlMeetingsCount, setTlMeetingsCount] = useState(0);
-  const [ceoMeetingsCount, setCeoMeetingsCount] = useState(0);
   const [isAllMessagesModalOpen, setIsAllMessagesModalOpen] = useState(false);
   const [selectedPerformanceTeam, setSelectedPerformanceTeam] = useState<string>("all");
   const [isResumeDatabaseModalOpen, setIsResumeDatabaseModalOpen] = useState(false);
