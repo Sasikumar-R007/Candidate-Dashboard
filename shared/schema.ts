@@ -196,15 +196,43 @@ export const archivedRequirements = pgTable("archived_requirements", {
 
 export const employees = pgTable("employees", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  employeeId: text("employee_id").notNull().unique(), // STTA001, STTL001, STCL001
+  employeeId: text("employee_id").notNull().unique(), // SCE001, SCE002, etc
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   password: text("password"), // Optional - only required for login credentials
-  role: text("role").notNull(), // recruiter, team_leader, client, admin
-  age: text("age"),
+  role: text("role").notNull().default('employee_record'), // recruiter, team_leader, client, admin, employee_record
+  
+  // Basic Information
+  address: text("address"),
+  designation: text("designation"),
   phone: text("phone"),
   department: text("department"),
   joiningDate: text("joining_date"),
+  employmentStatus: text("employment_status"), // Active, Inactive, etc
+  
+  // ESIC & EPFO
+  esic: text("esic"), // Yes/No dropdown
+  epfo: text("epfo"), // Yes/No dropdown
+  esicNo: text("esic_no"),
+  epfoNo: text("epfo_no"),
+  
+  // Family Details
+  fatherName: text("father_name"),
+  motherName: text("mother_name"),
+  fatherNumber: text("father_number"),
+  motherNumber: text("mother_number"),
+  
+  // CTC & Appraisal
+  offeredCtc: text("offered_ctc"),
+  currentStatus: text("current_status"), // dropdown
+  incrementCount: text("increment_count"), // dropdown 
+  appraisedQuarter: text("appraised_quarter"), // dropdown
+  appraisedAmount: text("appraised_amount"),
+  appraisedYear: text("appraised_year"), // dropdown
+  yearlyCTC: text("yearly_ctc"),
+  currentMonthlyCTC: text("current_monthly_ctc"),
+  
+  // Legacy/Other
   reportingTo: text("reporting_to"),
   isActive: boolean("is_active").default(true),
   createdAt: text("created_at").notNull(),

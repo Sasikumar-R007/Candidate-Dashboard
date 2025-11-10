@@ -2636,15 +2636,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create employee
   app.post("/api/admin/employees", async (req, res) => {
     try {
-      // Generate employee ID if not provided or invalid
-      let employeeId = req.body.employeeId;
-      if (!employeeId || employeeId.startsWith('STU')) {
-        employeeId = await storage.generateNextEmployeeId(req.body.role);
-      }
+      // Always generate employee ID on backend (SCE001, SCE002, etc.)
+      const employeeId = await storage.generateNextEmployeeId(req.body.role || 'employee');
       
       const employeeData = insertEmployeeSchema.parse({
         ...req.body,
-        employeeId,
+        employeeId, // Override any client-provided ID
         createdAt: new Date().toISOString(),
       });
       

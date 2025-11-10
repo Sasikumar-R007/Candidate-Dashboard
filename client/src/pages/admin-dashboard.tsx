@@ -638,8 +638,32 @@ export default function AdminDashboard() {
   });
   const [clientStartDate, setClientStartDate] = useState<Date | undefined>();
   const [employeeForm, setEmployeeForm] = useState({
-    employeeId: '', name: '', email: '',
-    role: '', phone: '', department: '', joiningDate: '', age: ''
+    employeeId: '', 
+    name: '', 
+    address: '',
+    designation: '',
+    email: '',
+    phone: '',
+    joiningDate: '',
+    employmentStatus: '',
+    esic: '',
+    epfo: '',
+    esicNo: '',
+    epfoNo: '',
+    fatherName: '',
+    motherName: '',
+    fatherNumber: '',
+    motherNumber: '',
+    offeredCtc: '',
+    currentStatus: '',
+    incrementCount: '',
+    appraisedQuarter: '',
+    appraisedAmount: '',
+    appraisedYear: '',
+    yearlyCTC: '',
+    currentMonthlyCTC: '',
+    department: '',
+    role: ''
   });
 
   // Report tab state
@@ -824,8 +848,32 @@ export default function AdminDashboard() {
       });
       setIsEmployeeModalOpen(false);
       setEmployeeForm({
-        employeeId: '', name: '', email: '',
-        role: '', phone: '', department: '', joiningDate: '', age: ''
+        employeeId: '', 
+        name: '', 
+        address: '',
+        designation: '',
+        email: '',
+        phone: '',
+        joiningDate: '',
+        employmentStatus: '',
+        esic: '',
+        epfo: '',
+        esicNo: '',
+        epfoNo: '',
+        fatherName: '',
+        motherName: '',
+        fatherNumber: '',
+        motherNumber: '',
+        offeredCtc: '',
+        currentStatus: '',
+        incrementCount: '',
+        appraisedQuarter: '',
+        appraisedAmount: '',
+        appraisedYear: '',
+        yearlyCTC: '',
+        currentMonthlyCTC: '',
+        department: '',
+        role: ''
       });
     },
     onError: (error: Error) => {
@@ -5952,270 +6000,316 @@ export default function AdminDashboard() {
           <DialogHeader>
             <DialogTitle>Employee Details</DialogTitle>
           </DialogHeader>
-          <div className="space-y-6">
-            {/* Employee Details Section */}
-            <div className="space-y-4">
-              {/* Row 1 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Input 
-                    placeholder="Employee ID *" 
-                    className="input-styled rounded" 
-                    value={employeeForm.employeeId}
-                    onChange={(e) => setEmployeeForm({...employeeForm, employeeId: e.target.value})}
-                    data-testid="input-employee-id"
-                  />
-                </div>
-                <div>
-                  <Input 
-                    placeholder="Employee Name *" 
-                    className="input-styled rounded" 
-                    value={employeeForm.name}
-                    onChange={(e) => setEmployeeForm({...employeeForm, name: e.target.value})}
-                    data-testid="input-employee-name"
-                  />
-                </div>
+          <div className="space-y-4">
+            {/* Row 1 - Employee ID (read-only/auto-generated) and Employee Name */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Input 
+                  placeholder="Employee ID" 
+                  className="input-styled rounded bg-gray-50 dark:bg-gray-800" 
+                  value={employeeForm.employeeId || 'Auto-generated'}
+                  readOnly
+                  data-testid="input-employee-id"
+                />
               </div>
-
-              {/* Row 2 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Input 
-                    placeholder="Department" 
-                    className="input-styled rounded" 
-                    value={employeeForm.department}
-                    onChange={(e) => setEmployeeForm({...employeeForm, department: e.target.value})}
-                    data-testid="input-department"
-                  />
-                </div>
-                <div>
-                  <Input 
-                    placeholder="Role *" 
-                    className="input-styled rounded" 
-                    value={employeeForm.role}
-                    onChange={(e) => setEmployeeForm({...employeeForm, role: e.target.value})}
-                    data-testid="input-role"
-                  />
-                </div>
-              </div>
-
-              {/* Row 3 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Input 
-                    placeholder="Email *" 
-                    type="email" 
-                    className="input-styled rounded" 
-                    value={employeeForm.email}
-                    onChange={(e) => setEmployeeForm({...employeeForm, email: e.target.value})}
-                    data-testid="input-employee-email"
-                  />
-                </div>
-                <div>
-                  <Input 
-                    placeholder="Mobile Number" 
-                    className="input-styled rounded" 
-                    value={employeeForm.phone}
-                    onChange={(e) => setEmployeeForm({...employeeForm, phone: e.target.value})}
-                    data-testid="input-phone"
-                  />
-                </div>
-              </div>
-
-              {/* Row 4 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Input 
-                    placeholder="Date of Joining" 
-                    className="input-styled rounded" 
-                    value={employeeForm.joiningDate}
-                    onChange={(e) => setEmployeeForm({...employeeForm, joiningDate: e.target.value})}
-                    data-testid="input-joining-date"
-                  />
-                </div>
-                <div>
-                  <Input 
-                    placeholder="Age" 
-                    className="input-styled rounded" 
-                    value={employeeForm.age}
-                    onChange={(e) => setEmployeeForm({...employeeForm, age: e.target.value})}
-                    data-testid="input-age"
-                  />
-                </div>
-              </div>
-
-              {/* Row 5 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Select>
-                    <SelectTrigger className="input-styled rounded">
-                      <SelectValue placeholder="Select Bank" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="sbi">State Bank of India</SelectItem>
-                      <SelectItem value="hdfc">HDFC Bank</SelectItem>
-                      <SelectItem value="icici">ICICI Bank</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Input placeholder="EPFO" className="input-styled rounded" />
-                </div>
-              </div>
-
-              {/* Row 6 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Input placeholder="PF ACC No" className="input-styled rounded" />
-                </div>
-                <div>
-                  <Input placeholder="EPFUAN" className="input-styled rounded" />
-                </div>
-              </div>
-
-              {/* Row 7 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Input placeholder="Father Name" className="input-styled rounded" />
-                </div>
-                <div>
-                  <Input placeholder="Mother Name" className="input-styled rounded" />
-                </div>
-              </div>
-
-              {/* Row 8 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Input placeholder="Father's Number" className="input-styled rounded" />
-                </div>
-                <div>
-                  <Input placeholder="Mother's Number" className="input-styled rounded" />
-                </div>
-              </div>
-
-              {/* Row 9 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Input placeholder="Official CTC" className="input-styled rounded" />
-                </div>
-                <div>
-                  <Select>
-                    <SelectTrigger className="input-styled rounded">
-                      <SelectValue placeholder="Current Salary" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="10000">10,000</SelectItem>
-                      <SelectItem value="15000">15,000</SelectItem>
-                      <SelectItem value="20000">20,000</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Row 10 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Select>
-                    <SelectTrigger className="input-styled rounded">
-                      <SelectValue placeholder="Recruitment Count" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">1</SelectItem>
-                      <SelectItem value="2">2</SelectItem>
-                      <SelectItem value="3">3</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Select>
-                    <SelectTrigger className="input-styled rounded">
-                      <SelectValue placeholder="Appraisal Remarks" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="excellent">Excellent</SelectItem>
-                      <SelectItem value="good">Good</SelectItem>
-                      <SelectItem value="average">Average</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Row 11 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Input placeholder="Appraisal Amount" className="input-styled rounded" />
-                </div>
-                <div>
-                  <Input placeholder="Yearly CTC" className="input-styled rounded" />
-                </div>
-              </div>
-
-              {/* Row 12 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Current Monthly CTC</label>
-                  <Input placeholder="Current Monthly CTC" className="input-styled rounded" />
-                </div>
-                <div></div>
+              <div>
+                <Input 
+                  placeholder="Employee Name *" 
+                  className="input-styled rounded" 
+                  value={employeeForm.name}
+                  onChange={(e) => setEmployeeForm({...employeeForm, name: e.target.value})}
+                  data-testid="input-employee-name"
+                />
               </div>
             </div>
 
-            {/* Bank Details Section */}
-            <div className="border-t pt-6">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Bank Details</h3>
-              <div className="space-y-4">
-                {/* Row 1 */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name as per Bank</label>
-                    <Input placeholder="Name as per Bank" className="input-styled rounded" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Account Number</label>
-                    <Input placeholder="Account Number" className="input-styled rounded" />
-                  </div>
-                </div>
+            {/* Row 2 - Address and Designation */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Input 
+                  placeholder="Address" 
+                  className="input-styled rounded" 
+                  value={employeeForm.address}
+                  onChange={(e) => setEmployeeForm({...employeeForm, address: e.target.value})}
+                  data-testid="input-address"
+                />
+              </div>
+              <div>
+                <Input 
+                  placeholder="Designation" 
+                  className="input-styled rounded" 
+                  value={employeeForm.designation}
+                  onChange={(e) => setEmployeeForm({...employeeForm, designation: e.target.value})}
+                  data-testid="input-designation"
+                />
+              </div>
+            </div>
 
-                {/* Row 2 */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">IFSC Code</label>
-                    <Input placeholder="IFSC Code" className="input-styled rounded" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Base Name</label>
-                    <Input placeholder="Base Name" className="input-styled rounded" />
-                  </div>
-                </div>
+            {/* Row 3 - Email and Mobile Number */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Input 
+                  placeholder="Email *" 
+                  type="email" 
+                  className="input-styled rounded" 
+                  value={employeeForm.email}
+                  onChange={(e) => setEmployeeForm({...employeeForm, email: e.target.value})}
+                  data-testid="input-employee-email"
+                />
+              </div>
+              <div>
+                <Input 
+                  placeholder="Mobile Number" 
+                  className="input-styled rounded" 
+                  value={employeeForm.phone}
+                  onChange={(e) => setEmployeeForm({...employeeForm, phone: e.target.value})}
+                  data-testid="input-phone"
+                />
+              </div>
+            </div>
 
-                {/* Row 3 */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Branch</label>
-                    <Select>
-                      <SelectTrigger className="input-styled rounded">
-                        <SelectValue placeholder="Select Branch" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="main">Main Branch</SelectItem>
-                        <SelectItem value="sub">Sub Branch</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City</label>
-                    <Select>
-                      <SelectTrigger className="input-styled rounded">
-                        <SelectValue placeholder="Select City" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="bangalore">Bangalore</SelectItem>
-                        <SelectItem value="chennai">Chennai</SelectItem>
-                        <SelectItem value="mumbai">Mumbai</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+            {/* Row 4 - Date of Joining and Employment Status */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Input 
+                  placeholder="Date of Joining" 
+                  type="date"
+                  className="input-styled rounded" 
+                  value={employeeForm.joiningDate}
+                  onChange={(e) => setEmployeeForm({...employeeForm, joiningDate: e.target.value})}
+                  data-testid="input-joining-date"
+                />
+              </div>
+              <div>
+                <Select 
+                  value={employeeForm.employmentStatus}
+                  onValueChange={(value) => setEmployeeForm({...employeeForm, employmentStatus: value})}
+                >
+                  <SelectTrigger className="input-styled rounded" data-testid="select-employment-status">
+                    <SelectValue placeholder="Employment Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Inactive">Inactive</SelectItem>
+                    <SelectItem value="On Leave">On Leave</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Row 5 - ESIC and EPFO */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Select 
+                  value={employeeForm.esic}
+                  onValueChange={(value) => setEmployeeForm({...employeeForm, esic: value})}
+                >
+                  <SelectTrigger className="input-styled rounded" data-testid="select-esic">
+                    <SelectValue placeholder="ESIC" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Yes">Yes</SelectItem>
+                    <SelectItem value="No">No</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Select 
+                  value={employeeForm.epfo}
+                  onValueChange={(value) => setEmployeeForm({...employeeForm, epfo: value})}
+                >
+                  <SelectTrigger className="input-styled rounded" data-testid="select-epfo">
+                    <SelectValue placeholder="EPFO" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Yes">Yes</SelectItem>
+                    <SelectItem value="No">No</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Row 6 - ESIC.No and EPFO.No */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Input 
+                  placeholder="ESIC.No" 
+                  className="input-styled rounded" 
+                  value={employeeForm.esicNo}
+                  onChange={(e) => setEmployeeForm({...employeeForm, esicNo: e.target.value})}
+                  data-testid="input-esic-no"
+                />
+              </div>
+              <div>
+                <Input 
+                  placeholder="EPFO.No" 
+                  className="input-styled rounded" 
+                  value={employeeForm.epfoNo}
+                  onChange={(e) => setEmployeeForm({...employeeForm, epfoNo: e.target.value})}
+                  data-testid="input-epfo-no"
+                />
+              </div>
+            </div>
+
+            {/* Row 7 - Father Name and Mother Name */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Input 
+                  placeholder="Father Name" 
+                  className="input-styled rounded" 
+                  value={employeeForm.fatherName}
+                  onChange={(e) => setEmployeeForm({...employeeForm, fatherName: e.target.value})}
+                  data-testid="input-father-name"
+                />
+              </div>
+              <div>
+                <Input 
+                  placeholder="Mother Name" 
+                  className="input-styled rounded" 
+                  value={employeeForm.motherName}
+                  onChange={(e) => setEmployeeForm({...employeeForm, motherName: e.target.value})}
+                  data-testid="input-mother-name"
+                />
+              </div>
+            </div>
+
+            {/* Row 8 - Father's Number and Mother's Number */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Input 
+                  placeholder="Father's Number" 
+                  className="input-styled rounded" 
+                  value={employeeForm.fatherNumber}
+                  onChange={(e) => setEmployeeForm({...employeeForm, fatherNumber: e.target.value})}
+                  data-testid="input-father-number"
+                />
+              </div>
+              <div>
+                <Input 
+                  placeholder="Mother's Number" 
+                  className="input-styled rounded" 
+                  value={employeeForm.motherNumber}
+                  onChange={(e) => setEmployeeForm({...employeeForm, motherNumber: e.target.value})}
+                  data-testid="input-mother-number"
+                />
+              </div>
+            </div>
+
+            {/* Row 9 - Offered CTC and Current Status */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Input 
+                  placeholder="Offered CTC" 
+                  className="input-styled rounded" 
+                  value={employeeForm.offeredCtc}
+                  onChange={(e) => setEmployeeForm({...employeeForm, offeredCtc: e.target.value})}
+                  data-testid="input-offered-ctc"
+                />
+              </div>
+              <div>
+                <Select 
+                  value={employeeForm.currentStatus}
+                  onValueChange={(value) => setEmployeeForm({...employeeForm, currentStatus: value})}
+                >
+                  <SelectTrigger className="input-styled rounded" data-testid="select-current-status">
+                    <SelectValue placeholder="Current Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Probation">Probation</SelectItem>
+                    <SelectItem value="Notice Period">Notice Period</SelectItem>
+                    <SelectItem value="Resigned">Resigned</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Row 10 - Increment Count and Appraised Quarter */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Select 
+                  value={employeeForm.incrementCount}
+                  onValueChange={(value) => setEmployeeForm({...employeeForm, incrementCount: value})}
+                >
+                  <SelectTrigger className="input-styled rounded" data-testid="select-increment-count">
+                    <SelectValue placeholder="Increment Count" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">0</SelectItem>
+                    <SelectItem value="1">1</SelectItem>
+                    <SelectItem value="2">2</SelectItem>
+                    <SelectItem value="3">3</SelectItem>
+                    <SelectItem value="4">4</SelectItem>
+                    <SelectItem value="5+">5+</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Select 
+                  value={employeeForm.appraisedQuarter}
+                  onValueChange={(value) => setEmployeeForm({...employeeForm, appraisedQuarter: value})}
+                >
+                  <SelectTrigger className="input-styled rounded" data-testid="select-appraised-quarter">
+                    <SelectValue placeholder="Appraised Quarter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Q1">Q1</SelectItem>
+                    <SelectItem value="Q2">Q2</SelectItem>
+                    <SelectItem value="Q3">Q3</SelectItem>
+                    <SelectItem value="Q4">Q4</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Row 11 - Appraised Amount and Appraised Year */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Input 
+                  placeholder="Appraised Amount" 
+                  className="input-styled rounded" 
+                  value={employeeForm.appraisedAmount}
+                  onChange={(e) => setEmployeeForm({...employeeForm, appraisedAmount: e.target.value})}
+                  data-testid="input-appraised-amount"
+                />
+              </div>
+              <div>
+                <Select 
+                  value={employeeForm.appraisedYear}
+                  onValueChange={(value) => setEmployeeForm({...employeeForm, appraisedYear: value})}
+                >
+                  <SelectTrigger className="input-styled rounded" data-testid="select-appraised-year">
+                    <SelectValue placeholder="Appraised Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="2025">2025</SelectItem>
+                    <SelectItem value="2024">2024</SelectItem>
+                    <SelectItem value="2023">2023</SelectItem>
+                    <SelectItem value="2022">2022</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Row 12 - Yearly CTC and Current Monthly CTC */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Input 
+                  placeholder="Yearly CTC" 
+                  className="input-styled rounded" 
+                  value={employeeForm.yearlyCTC}
+                  onChange={(e) => setEmployeeForm({...employeeForm, yearlyCTC: e.target.value})}
+                  data-testid="input-yearly-ctc"
+                />
+              </div>
+              <div>
+                <Input 
+                  placeholder="Current Monthly CTC" 
+                  className="input-styled rounded" 
+                  value={employeeForm.currentMonthlyCTC}
+                  onChange={(e) => setEmployeeForm({...employeeForm, currentMonthlyCTC: e.target.value})}
+                  data-testid="input-current-monthly-ctc"
+                />
               </div>
             </div>
 
@@ -6223,10 +6317,10 @@ export default function AdminDashboard() {
               <Button 
                 className="bg-cyan-400 hover:bg-cyan-500 text-white px-8 py-2 rounded"
                 onClick={() => {
-                  if (!employeeForm.employeeId || !employeeForm.name || !employeeForm.email || !employeeForm.role) {
+                  if (!employeeForm.name || !employeeForm.email) {
                     toast({
                       title: "Validation Error",
-                      description: "Please fill in all required fields (Employee ID, Name, Email, Role)",
+                      description: "Please fill in all required fields (Name, Email)",
                       variant: "destructive",
                     });
                     return;

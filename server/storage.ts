@@ -912,23 +912,14 @@ export class MemStorage implements IStorage {
   async generateNextEmployeeId(role: string): Promise<string> {
     const allEmployees = Array.from(this.employees.values());
     
-    // Determine prefix based on role
-    let prefix = 'STTA'; // default recruiter
-    if (role === 'team_leader') {
-      prefix = 'STTL';
-    } else if (role === 'client') {
-      prefix = 'STCL';
-    } else if (role === 'admin') {
-      return 'ADMIN';
-    } else if (role === 'support') {
-      prefix = 'STSU';
-    }
+    // Use uniform "SCE" prefix for all employees
+    const prefix = 'SCE';
 
-    // Find the highest ID number for this prefix
+    // Find the highest ID number for SCE prefix
     let maxNumber = 0;
     for (const employee of allEmployees) {
       if (employee.employeeId.startsWith(prefix)) {
-        const match = employee.employeeId.match(new RegExp(`${prefix}(\\d+)`));
+        const match = employee.employeeId.match(/SCE(\d+)/);
         if (match) {
           const number = parseInt(match[1]);
           if (number > maxNumber) {
