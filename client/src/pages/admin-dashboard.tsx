@@ -663,7 +663,13 @@ export default function AdminDashboard() {
     yearlyCTC: '',
     currentMonthlyCTC: '',
     department: '',
-    role: ''
+    role: '',
+    nameAsPerBank: '',
+    accountNumber: '',
+    ifscCode: '',
+    bankName: '',
+    branch: '',
+    city: ''
   });
 
   // Report tab state
@@ -873,7 +879,13 @@ export default function AdminDashboard() {
         yearlyCTC: '',
         currentMonthlyCTC: '',
         department: '',
-        role: ''
+        role: '',
+        nameAsPerBank: '',
+        accountNumber: '',
+        ifscCode: '',
+        bankName: '',
+        branch: '',
+        city: ''
       });
     },
     onError: (error: Error) => {
@@ -6310,6 +6322,77 @@ export default function AdminDashboard() {
                   onChange={(e) => setEmployeeForm({...employeeForm, currentMonthlyCTC: e.target.value})}
                   data-testid="input-current-monthly-ctc"
                 />
+              </div>
+            </div>
+
+            {/* Bank Details Section */}
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Bank Details</h3>
+              
+              {/* Row 13 - Name as per Bank and Account Number */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Input 
+                    placeholder="Name as per Bank" 
+                    className="input-styled rounded" 
+                    value={employeeForm.nameAsPerBank}
+                    onChange={(e) => setEmployeeForm({...employeeForm, nameAsPerBank: e.target.value})}
+                    data-testid="input-name-as-per-bank"
+                  />
+                </div>
+                <div>
+                  <Input 
+                    placeholder="Account Number" 
+                    className="input-styled rounded" 
+                    value={employeeForm.accountNumber}
+                    onChange={(e) => setEmployeeForm({...employeeForm, accountNumber: e.target.value})}
+                    data-testid="input-account-number"
+                  />
+                </div>
+              </div>
+
+              {/* Row 14 - IFSC Code and Bank Name */}
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                  <Input 
+                    placeholder="IFSC Code" 
+                    className="input-styled rounded" 
+                    value={employeeForm.ifscCode}
+                    onChange={(e) => setEmployeeForm({...employeeForm, ifscCode: e.target.value})}
+                    data-testid="input-ifsc-code"
+                  />
+                </div>
+                <div>
+                  <Input 
+                    placeholder="Bank Name" 
+                    className="input-styled rounded" 
+                    value={employeeForm.bankName}
+                    onChange={(e) => setEmployeeForm({...employeeForm, bankName: e.target.value})}
+                    data-testid="input-bank-name"
+                  />
+                </div>
+              </div>
+
+              {/* Row 15 - Branch and City */}
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                  <Input 
+                    placeholder="Branch" 
+                    className="input-styled rounded" 
+                    value={employeeForm.branch}
+                    onChange={(e) => setEmployeeForm({...employeeForm, branch: e.target.value})}
+                    data-testid="input-branch"
+                  />
+                </div>
+                <div>
+                  <Input 
+                    placeholder="City" 
+                    className="input-styled rounded" 
+                    value={employeeForm.city}
+                    onChange={(e) => setEmployeeForm({...employeeForm, city: e.target.value})}
+                    data-testid="input-city"
+                  />
+                </div>
               </div>
             </div>
 

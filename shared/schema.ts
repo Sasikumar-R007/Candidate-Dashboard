@@ -232,6 +232,14 @@ export const employees = pgTable("employees", {
   yearlyCTC: text("yearly_ctc"),
   currentMonthlyCTC: text("current_monthly_ctc"),
   
+  // Bank Details
+  nameAsPerBank: text("name_as_per_bank"),
+  accountNumber: text("account_number"),
+  ifscCode: text("ifsc_code"),
+  bankName: text("bank_name"),
+  branch: text("branch"),
+  city: text("city"),
+  
   // Legacy/Other
   reportingTo: text("reporting_to"),
   isActive: boolean("is_active").default(true),
