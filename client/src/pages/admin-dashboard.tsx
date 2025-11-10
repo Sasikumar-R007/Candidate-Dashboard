@@ -621,150 +621,121 @@ function ClientSettingsSection() {
   }
 
   return (
-    <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Client Settings</h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400">View and manage client configuration settings</p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Impact Metrics</CardTitle>
+    <div className="px-6 py-6 space-y-4 overflow-auto">
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Client Settings</h2>
+      
+      {/* Impact Metrics Section */}
+      <Card className="bg-white dark:bg-gray-800">
+        <CardHeader className="pb-2 pt-3">
+          <CardTitle className="text-lg text-gray-900 dark:text-white">Impact Metrics</CardTitle>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Only Feedback Turn Around can be edited</p>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Speed to Hire - Read Only */}
-          <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex-1">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Speed to Hire</label>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Days</p>
+        <CardContent className="p-3">
+          <div className="grid grid-cols-4 gap-4">
+            {/* Speed to Hire - Read Only */}
+            <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
+              <div className="text-sm font-medium text-red-700 dark:text-red-400 mb-2">Speed to Hire value</div>
+              <div className="text-3xl font-bold text-red-900 dark:text-red-300 mb-1">{currentMetrics.speedToHire}</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">Days faster*</div>
             </div>
-            <div className="text-right">
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">{currentMetrics.speedToHire}</p>
+
+            {/* Revenue Impact of Delay - Read Only */}
+            <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
+              <div className="text-sm font-medium text-red-700 dark:text-red-400 mb-2">Revenue Impact Of Delay</div>
+              <div className="text-3xl font-bold text-red-900 dark:text-red-300 mb-1">{currentMetrics.revenueImpactOfDelay}</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">Lost per Role*</div>
+            </div>
+
+            {/* Client NPS - Read Only */}
+            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+              <div className="text-sm font-medium text-purple-700 dark:text-purple-400 mb-2">Client NPS</div>
+              <div className="text-3xl font-bold text-purple-900 dark:text-purple-300 mb-1">{currentMetrics.clientNps}</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">Net Promoter Score*</div>
+            </div>
+
+            {/* Candidate NPS - Read Only */}
+            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+              <div className="text-sm font-medium text-purple-700 dark:text-purple-400 mb-2">Candidate NPS</div>
+              <div className="text-3xl font-bold text-purple-900 dark:text-purple-300 mb-1">{currentMetrics.candidateNps}</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">Net Promoter Score*</div>
             </div>
           </div>
 
-          {/* Revenue Impact of Delay - Read Only */}
-          <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex-1">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Revenue Impact of Delay</label>
-              <p className="text-sm text-gray-500 dark:text-gray-400">USD</p>
-            </div>
-            <div className="text-right">
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">${currentMetrics.revenueImpactOfDelay.toLocaleString()}</p>
-            </div>
-          </div>
-
-          {/* Client NPS - Read Only */}
-          <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex-1">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Client NPS</label>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Score</p>
-            </div>
-            <div className="text-right">
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">{currentMetrics.clientNps}%</p>
-            </div>
-          </div>
-
-          {/* Candidate NPS - Read Only */}
-          <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex-1">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Candidate NPS</label>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Score</p>
-            </div>
-            <div className="text-right">
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">{currentMetrics.candidateNps}%</p>
-            </div>
-          </div>
-
-          {/* Feedback Turn Around - Editable */}
-          <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700 bg-yellow-50 dark:bg-yellow-900/20 px-4 rounded-md">
-            <div className="flex-1">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Feedback Turn Around</label>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Avg. date (days)</p>
-            </div>
-            <div className="flex items-center gap-3">
+          <div className="grid grid-cols-4 gap-4 mt-4">
+            {/* Feedback Turn Around - Editable */}
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800 relative">
+              <div className="text-sm font-medium text-yellow-700 dark:text-yellow-400 mb-2">Feedback Turn Around</div>
               {isEditingFeedback ? (
-                <>
+                <div className="space-y-2">
                   <Input
                     type="number"
                     value={feedbackValue}
                     onChange={(e) => setFeedbackValue(e.target.value)}
-                    className="w-24 h-9"
+                    className="h-8 text-lg font-bold"
                     data-testid="input-feedback-turnaround"
                     autoFocus
                   />
-                  <Button 
-                    size="sm" 
-                    onClick={handleSave}
-                    disabled={updateMutation.isPending}
-                    data-testid="button-save-feedback"
-                  >
-                    {updateMutation.isPending ? "Saving..." : "Save"}
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={handleCancel}
-                    data-testid="button-cancel-feedback"
-                  >
-                    Cancel
-                  </Button>
-                </>
+                  <div className="flex gap-1">
+                    <Button 
+                      size="sm" 
+                      onClick={handleSave}
+                      disabled={updateMutation.isPending}
+                      className="text-xs h-7"
+                      data-testid="button-save-feedback"
+                    >
+                      {updateMutation.isPending ? "Saving..." : "Save"}
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={handleCancel}
+                      className="text-xs h-7"
+                      data-testid="button-cancel-feedback"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-white">{currentMetrics.feedbackTurnAround}</p>
+                  <div className="text-3xl font-bold text-yellow-900 dark:text-yellow-300 mb-1">{currentMetrics.feedbackTurnAround}</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">days (Avg_5 days)*</div>
                   <Button
                     size="icon"
                     variant="ghost"
                     onClick={handleEditClick}
-                    className="hover-elevate"
+                    className="absolute top-2 right-2 h-6 w-6 hover-elevate"
                     data-testid="button-edit-feedback"
                   >
-                    <EditIcon className="h-4 w-4" />
+                    <EditIcon className="h-3 w-3" />
                   </Button>
                 </>
               )}
             </div>
-          </div>
 
-          {/* First Year Retention Rate - Read Only */}
-          <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex-1">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">First Year Retention Rate</label>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Percentage</p>
+            {/* First Year Retention Rate - Read Only */}
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
+              <div className="text-sm font-medium text-yellow-700 dark:text-yellow-400 mb-2">First Year Retention Rate</div>
+              <div className="text-3xl font-bold text-yellow-900 dark:text-yellow-300 mb-1">{currentMetrics.firstYearRetentionRate}%</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">&nbsp;</div>
             </div>
-            <div className="text-right">
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">{currentMetrics.firstYearRetentionRate}%</p>
-            </div>
-          </div>
 
-          {/* Fulfillment Rate - Read Only */}
-          <div className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex-1">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Fulfillment Rate</label>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Percentage</p>
+            {/* Fulfillment Rate - Read Only */}
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
+              <div className="text-sm font-medium text-yellow-700 dark:text-yellow-400 mb-2">Fulfillment Rate</div>
+              <div className="text-3xl font-bold text-yellow-900 dark:text-yellow-300 mb-1">{currentMetrics.fulfillmentRate}%</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">&nbsp;</div>
             </div>
-            <div className="text-right">
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">{currentMetrics.fulfillmentRate}%</p>
-            </div>
-          </div>
 
-          {/* Revenue Recovered - Read Only */}
-          <div className="flex items-center justify-between py-3">
-            <div className="flex-1">
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Revenue Recovered</label>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Millions</p>
-            </div>
-            <div className="text-right">
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">${currentMetrics.revenueRecovered}M</p>
+            {/* Revenue Recovered - Read Only */}
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
+              <div className="text-sm font-medium text-yellow-700 dark:text-yellow-400 mb-2">Revenue Recovered</div>
+              <div className="text-3xl font-bold text-yellow-900 dark:text-yellow-300 mb-1">{currentMetrics.revenueRecovered} L</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">Gained per hire*</div>
             </div>
           </div>
         </CardContent>
       </Card>
-
-      <div className="text-sm text-gray-500 dark:text-gray-400 italic">
-        * Only Feedback Turn Around can be edited. All other fields are read-only.
-      </div>
     </div>
   );
 }
