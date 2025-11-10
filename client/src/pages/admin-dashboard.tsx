@@ -6760,11 +6760,11 @@ export default function AdminDashboard() {
 
       {/* Resume Database View More Modal */}
       <Dialog open={isResumeDatabaseModalOpen} onOpenChange={setIsResumeDatabaseModalOpen}>
-        <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-hidden">
+        <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Resume Database - Full Table</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto pr-2">
+          <div className="overflow-y-auto pr-2 flex-1">
             <div className="overflow-x-auto">
               <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
                 <thead>
@@ -6801,6 +6801,25 @@ export default function AdminDashboard() {
                 </tbody>
               </table>
             </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsResumeDatabaseModalOpen(false)}
+              data-testid="button-close-resume-modal"
+            >
+              Close
+            </Button>
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => {
+                setIsResumeDatabaseModalOpen(false);
+                navigate('/master-database');
+              }}
+              data-testid="button-view-full-database"
+            >
+              View Full Database
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
