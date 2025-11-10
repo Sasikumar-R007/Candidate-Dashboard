@@ -1389,12 +1389,12 @@ export default function AdminDashboard() {
               <div className="border-t border-gray-200"></div>
               <div className="flex justify-between items-center py-2">
                 <span className="text-sm font-medium text-gray-700">Avg. Resumes per Requirement</span>
-                <span className="text-2xl font-bold text-blue-600">{dailyMetricsData.avgResumesPerRequirement}</span>
+                <span className="text-2xl font-bold text-blue-600">{Math.round(Number(dailyMetricsData.avgResumesPerRequirement))}</span>
               </div>
               <div className="border-t border-gray-200"></div>
               <div className="flex justify-between items-center py-2">
                 <span className="text-sm font-medium text-gray-700">Requirements per Recruiter</span>
-                <span className="text-2xl font-bold text-blue-600">{dailyMetricsData.requirementsPerRecruiter}</span>
+                <span className="text-2xl font-bold text-blue-600">{Math.round(Number(dailyMetricsData.requirementsPerRecruiter))}</span>
               </div>
               <div className="border-t border-gray-200"></div>
               <div className="flex justify-between items-center py-2">
@@ -4882,7 +4882,7 @@ export default function AdminDashboard() {
                                 size="icon"
                                 data-testid={`button-meeting-actions-${meeting.id}`}
                               >
-                                <MoreVertical className="h-4 w-4" />
+                                <EditIcon className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
@@ -5030,7 +5030,7 @@ export default function AdminDashboard() {
                                 size="icon"
                                 data-testid={`button-meeting-actions-${meeting.id}`}
                               >
-                                <MoreVertical className="h-4 w-4" />
+                                <EditIcon className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
