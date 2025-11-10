@@ -39,11 +39,17 @@ Preferred communication style: Simple, everyday language.
   - **Logged-in Candidates**: Use their candidate email for conversation identification.
   - **Support Dashboard**: Protected by `requireEmployeeAuth` middleware - only authenticated staff can access.
   - **Conversation Isolation**: Each session maintains its own conversation ID preventing cross-user message leakage.
+- **Employee Management System**:
+  - **Two-Step Onboarding**: Employees can be created as data entries without login credentials, which can be configured separately later.
+  - **Password Field**: Employee passwords are optional/nullable in the database schema.
+  - **Admin Dashboard**: The "Add Employee" function stores employee details (name, email, role, etc.) without requiring password creation.
+  - **Login Credential Setup**: Login credentials can be configured separately after employee creation (future enhancement).
+  - **Login Authentication**: Employees without configured passwords receive a clear error message when attempting to login: "Login credentials not configured for this account. Please contact your administrator."
 - **Client Login System**: 
   - **Client Companies**: Stored in the `clients` table with auto-generated codes (e.g., STCL001, STCL002). These represent business entities and do NOT have direct login credentials.
   - **Client User Accounts**: To enable login access for a client company, create an Employee record with `role="client"`. This employee account will have:
     - Email (used as login username)
-    - Password (set during employee creation)
+    - Password (can be set during employee creation or configured later)
     - Employee ID (auto-generated with STCL prefix for client roles)
   - **Login Process**: Client company representatives login through the employee login page (`/employer-login`) using their employee email and password.
 
