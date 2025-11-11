@@ -454,10 +454,9 @@ export default function MasterDatabase() {
                 onValueChange={(value) => setAdvancedFilters(prev => ({ ...prev, source: value }))}
               >
                 <SelectTrigger data-testid="select-source">
-                  <SelectValue placeholder="Select source" />
+                  <SelectValue placeholder="All Sources" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Sources</SelectItem>
                   <SelectItem value="LinkedIn">LinkedIn</SelectItem>
                   <SelectItem value="Naukri">Naukri</SelectItem>
                   <SelectItem value="Indeed">Indeed</SelectItem>
