@@ -6908,27 +6908,41 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {allTargetsData.slice(0, 10).map((row, index) => {
-                    const targetValue = parseInt(row.minimumTarget.replace(/,/g, ''), 10);
-                    const achievedValue = parseInt(row.targetAchieved.replace(/,/g, ''), 10);
-                    const performancePercent = ((achievedValue / targetValue) * 100).toFixed(2);
-                    const performanceColor = parseFloat(performancePercent) >= 80 ? 'text-green-600 dark:text-green-400' : 
-                                            parseFloat(performancePercent) >= 60 ? 'text-yellow-600 dark:text-yellow-400' : 
-                                            'text-red-600 dark:text-red-400';
-                    
-                    return (
-                      <tr key={index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-900/50' : ''}`}>
-                        <td className="py-3 px-3 text-gray-900 dark:text-white font-medium" data-testid={`text-resource-${index}`}>{row.resource}</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.role}</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.quarter}</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.minimumTarget}</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.targetAchieved}</td>
-                        <td className={`py-3 px-3 font-semibold ${performanceColor}`}>{performancePercent}%</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.closures}</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.incentives}</td>
-                      </tr>
-                    );
-                  })}
+                  {isLoadingTargets ? (
+                    <tr>
+                      <td colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                        Loading performance data...
+                      </td>
+                    </tr>
+                  ) : targetMappings.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                        No performance data available yet
+                      </td>
+                    </tr>
+                  ) : (
+                    targetMappings.slice(0, 10).map((row: any, index) => {
+                      const targetValue = typeof row.minimumTarget === 'number' ? row.minimumTarget : parseInt(String(row.minimumTarget).replace(/,/g, ''), 10);
+                      const achievedValue = typeof row.targetAchieved === 'number' ? row.targetAchieved : parseInt(String(row.targetAchieved).replace(/,/g, ''), 10);
+                      const performancePercent = targetValue > 0 ? ((achievedValue / targetValue) * 100).toFixed(2) : '0.00';
+                      const performanceColor = parseFloat(performancePercent) >= 80 ? 'text-green-600 dark:text-green-400' : 
+                                              parseFloat(performancePercent) >= 60 ? 'text-yellow-600 dark:text-yellow-400' : 
+                                              'text-red-600 dark:text-red-400';
+                      
+                      return (
+                        <tr key={row.id || index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-900/50' : ''}`}>
+                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium" data-testid={`text-resource-${index}`}>{row.teamMemberName || 'N/A'}</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.teamMemberRole || 'N/A'}</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.quarter}-{row.year}</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{targetValue.toLocaleString()}</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{achievedValue.toLocaleString()}</td>
+                          <td className={`py-3 px-3 font-semibold ${performanceColor}`}>{performancePercent}%</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.closures || 0}</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{(row.incentives || 0).toLocaleString()}</td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
