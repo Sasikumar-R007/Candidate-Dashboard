@@ -34,10 +34,7 @@ export default function TargetMappingModal({ isOpen, onClose }: TargetMappingMod
 
   const createTargetMappingMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("/api/admin/target-mappings", {
-        method: "POST",
-        body: JSON.stringify(data),
-      });
+      return await apiRequest("POST", "/api/admin/target-mappings", data);
     },
     onSuccess: () => {
       toast({
@@ -82,8 +79,8 @@ export default function TargetMappingModal({ isOpen, onClose }: TargetMappingMod
       teamLeadId: selectedTL.id,
       teamMemberId: selectedMember.id,
       quarter,
-      year,
-      minimumTarget,
+      year: parseInt(year, 10),
+      minimumTarget: parseInt(minimumTarget.replace(/,/g, ''), 10),
     });
   };
 
