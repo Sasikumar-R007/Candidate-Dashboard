@@ -289,15 +289,9 @@ const initialMessagesData = [
   { name: "Meera", message: "Interview scheduling", date: "29-Sep", status: "pending", timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000) }
 ];
 
-const deliveredData = [
-  { requirement: "Mobile App Developer", candidate: "John Smith", client: "Tesco", deliveredDate: "31-Aug-2025", status: "Delivered" },
-  { requirement: "Backend Engineer", candidate: "Sarah Johnson", client: "Amazon", deliveredDate: "30-Aug-2025", status: "Delivered" },
-  { requirement: "UI/UX Designer", candidate: "Mike Wilson", client: "Google", deliveredDate: "29-Aug-2025", status: "Delivered" }
-];
+const deliveredData: Array<{ requirement: string; candidate: string; client: string; deliveredDate: string; status: string }> = [];
 
-const defaultedData = [
-  { requirement: "Frontend Developer", candidate: "Alex Brown", client: "Microsoft", expectedDate: "28-Aug-2025", status: "Defaulted" }
-];
+const defaultedData: Array<{ requirement: string; candidate: string; client: string; expectedDate: string; status: string }> = [];
 
 const initialTlMeetingsData = [
   { meetingType: "Performance Review", date: "05-Sep-2025", time: "10:00 AM", person: "Arun KS", agenda: "Quarterly performance discussion", status: "Scheduled" },
@@ -1709,11 +1703,6 @@ export default function AdminDashboard() {
             {/* Left side - Metrics with simplified design matching image 2 */}
             <div className="bg-white rounded p-4 space-y-3">
               <div className="flex justify-between items-center py-2">
-                <span className="text-sm font-medium text-gray-700">Total Requirements</span>
-                <span className="text-2xl font-bold text-blue-600">{dailyMetricsData.totalRequirements}</span>
-              </div>
-              <div className="border-t border-gray-200"></div>
-              <div className="flex justify-between items-center py-2">
                 <span className="text-sm font-medium text-gray-700">Avg. Resumes per Requirement</span>
                 <span className="text-2xl font-bold text-blue-600">{Math.round(Number(dailyMetricsData.avgResumesPerRequirement))}</span>
               </div>
@@ -1726,6 +1715,11 @@ export default function AdminDashboard() {
               <div className="flex justify-between items-center py-2">
                 <span className="text-sm font-medium text-gray-700">Completed Requirements</span>
                 <span className="text-2xl font-bold text-blue-600">{dailyMetricsData.completedRequirements}</span>
+              </div>
+              <div className="border-t border-gray-200"></div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm font-medium text-gray-700">Total Requirements</span>
+                <span className="text-2xl font-bold text-blue-600">{dailyMetricsData.totalRequirements}</span>
               </div>
             </div>
             
