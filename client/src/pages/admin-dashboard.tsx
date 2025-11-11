@@ -2037,15 +2037,22 @@ export default function AdminDashboard() {
         return (
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
             {/* Header with Requirements title and Add button */}
-            <div className="mb-6 flex items-center justify-between">
+            <div className="mb-6 flex items-center justify-between gap-4">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Requirements</h2>
-              <Button 
-                className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded text-sm"
-                onClick={() => setIsAddRequirementModalOpen(true)}
-                data-testid="button-add-requirements"
-              >
-                + Add Requirements
-              </Button>
+              <div className="flex items-center gap-4">
+                <SearchBar
+                  value={requirementsSearch}
+                  onChange={setRequirementsSearch}
+                  placeholder="Search requirements..."
+                />
+                <Button 
+                  className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded text-sm whitespace-nowrap"
+                  onClick={() => setIsAddRequirementModalOpen(true)}
+                  data-testid="button-add-requirements"
+                >
+                  + Add Requirements
+                </Button>
+              </div>
             </div>
             
             <div className="flex gap-6 h-full">
@@ -2067,7 +2074,7 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {displayedRequirements.map((requirement: Requirement) => (
+                        {filteredRequirements.map((requirement: Requirement) => (
                           <tr key={requirement.id} className="border-b border-gray-100 dark:border-gray-800">
                             <td className="py-2 px-2 text-gray-900 dark:text-white font-medium text-sm">REQ-{String(requirement.id).padStart(3, '0')}</td>
                             <td className="py-2 px-2 text-gray-900 dark:text-white font-medium text-sm">{requirement.position}</td>
@@ -5080,9 +5087,16 @@ export default function AdminDashboard() {
       <Dialog open={isTargetModalOpen} onOpenChange={setIsTargetModalOpen}>
         <DialogContent className="max-w-5xl mx-auto max-h-[80vh]" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
-              All Target & Incentives Data
-            </DialogTitle>
+            <div className="flex items-center justify-between gap-4">
+              <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+                All Target & Incentives Data
+              </DialogTitle>
+              <SearchBar
+                value={targetSearch}
+                onChange={setTargetSearch}
+                placeholder="Search targets..."
+              />
+            </div>
           </DialogHeader>
           <div className="p-4 overflow-y-auto admin-scrollbar" style={{maxHeight: '60vh'}}>
             <div className="overflow-x-auto">
@@ -5105,14 +5119,14 @@ export default function AdminDashboard() {
                         Loading...
                       </td>
                     </tr>
-                  ) : targetMappings.length === 0 ? (
+                  ) : filteredTargetMappings.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="py-4 px-4 text-sm text-gray-600 dark:text-gray-400 text-center">
-                        No target mappings found
+                        {targetSearch ? 'No matching target mappings found' : 'No target mappings found'}
                       </td>
                     </tr>
                   ) : (
-                    targetMappings.map((target, index) => (
+                    filteredTargetMappings.map((target, index) => (
                       <tr key={target.id} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
                         <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{target.teamMemberName}</td>
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.teamMemberRole}</td>
@@ -5338,9 +5352,16 @@ export default function AdminDashboard() {
       <Dialog open={isAllMessagesModalOpen} onOpenChange={setIsAllMessagesModalOpen}>
         <DialogContent className="max-w-5xl mx-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
-              All Messages (Last 3 Days)
-            </DialogTitle>
+            <div className="flex items-center justify-between gap-4">
+              <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+                All Messages (Last 3 Days)
+              </DialogTitle>
+              <SearchBar
+                value={messagesSearch}
+                onChange={setMessagesSearch}
+                placeholder="Search messages..."
+              />
+            </div>
           </DialogHeader>
           <div className="p-4">
             <div className="overflow-x-auto">
@@ -5354,7 +5375,7 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {messagesData
+                  {filteredMessages
                     .filter(message => {
                       const threeDaysAgo = new Date();
                       threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
@@ -5647,9 +5668,16 @@ export default function AdminDashboard() {
       <Dialog open={isClosureReportsModalOpen} onOpenChange={setIsClosureReportsModalOpen}>
         <DialogContent className="max-w-5xl mx-auto max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
-              All Closure Reports
-            </DialogTitle>
+            <div className="flex items-center justify-between gap-4">
+              <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+                All Closure Reports
+              </DialogTitle>
+              <SearchBar
+                value={closureReportsSearch}
+                onChange={setClosureReportsSearch}
+                placeholder="Search closures..."
+              />
+            </div>
           </DialogHeader>
           <div className="p-4 overflow-y-auto admin-scrollbar" style={{maxHeight: '60vh'}}>
             <div className="overflow-x-auto">
@@ -6036,7 +6064,14 @@ export default function AdminDashboard() {
       <Dialog open={isCashoutModalOpen} onOpenChange={setIsCashoutModalOpen}>
         <DialogContent className="max-w-6xl max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle>All Cash Outflow Data</DialogTitle>
+            <div className="flex items-center justify-between gap-4">
+              <DialogTitle>All Cash Outflow Data</DialogTitle>
+              <SearchBar
+                value={cashoutSearch}
+                onChange={setCashoutSearch}
+                placeholder="Search cash outflow..."
+              />
+            </div>
           </DialogHeader>
           <div className="overflow-y-auto">
             <div className="overflow-x-auto">
@@ -6054,7 +6089,7 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {cashoutData.map((row, index) => (
+                  {filteredCashoutData.map((row, index) => (
                     <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
                       <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.month}</td>
                       <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.year}</td>
@@ -6776,7 +6811,14 @@ export default function AdminDashboard() {
       <Dialog open={isClientMasterModalOpen} onOpenChange={setIsClientMasterModalOpen}>
         <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Client Master - Full Table</DialogTitle>
+            <div className="flex items-center justify-between gap-4">
+              <DialogTitle>Client Master - Full Table</DialogTitle>
+              <SearchBar
+                value={clientMasterSearch}
+                onChange={setClientMasterSearch}
+                placeholder="Search clients..."
+              />
+            </div>
           </DialogHeader>
           <div className="overflow-y-auto pr-2">
             <div className="overflow-x-auto">
@@ -6797,12 +6839,12 @@ export default function AdminDashboard() {
                     <tr>
                       <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading clients...</td>
                     </tr>
-                  ) : clients.length === 0 ? (
+                  ) : filteredClients.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">No clients found. Click "+ Add Client" to add one.</td>
+                      <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">{clientMasterSearch ? 'No matching clients found' : 'No clients found. Click "+ Add Client" to add one.'}</td>
                     </tr>
                   ) : (
-                    clients.map((row: any, index: number) => {
+                    filteredClients.map((row: any, index: number) => {
                       const statusClass = row.currentStatus === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
                                         row.currentStatus === 'frozen' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' : 
                                         'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
@@ -6846,7 +6888,14 @@ export default function AdminDashboard() {
       <Dialog open={isEmployeeMasterModalOpen} onOpenChange={setIsEmployeeMasterModalOpen}>
         <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Employee Master - Full Table</DialogTitle>
+            <div className="flex items-center justify-between gap-4">
+              <DialogTitle>Employee Master - Full Table</DialogTitle>
+              <SearchBar
+                value={employeeMasterSearch}
+                onChange={setEmployeeMasterSearch}
+                placeholder="Search employees..."
+              />
+            </div>
           </DialogHeader>
           <div className="overflow-y-auto pr-2">
             <div className="overflow-x-auto">
@@ -6867,12 +6916,12 @@ export default function AdminDashboard() {
                     <tr>
                       <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading employees...</td>
                     </tr>
-                  ) : hrEmployees.length === 0 ? (
+                  ) : filteredHrEmployees.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">No employees found. Click "+ Add Employee" to add one.</td>
+                      <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">{employeeMasterSearch ? 'No matching employees found' : 'No employees found. Click "+ Add Employee" to add one.'}</td>
                     </tr>
                   ) : (
-                    hrEmployees.map((row: any, index: number) => (
+                    filteredHrEmployees.map((row: any, index: number) => (
                       <tr key={row.id || index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
                         <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.employeeId}</td>
                         <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.name}</td>
@@ -6909,7 +6958,14 @@ export default function AdminDashboard() {
       <Dialog open={isResumeDatabaseModalOpen} onOpenChange={setIsResumeDatabaseModalOpen}>
         <DialogContent className="max-w-6xl w-[95vw] max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Resume Database - Full Table</DialogTitle>
+            <div className="flex items-center justify-between gap-4">
+              <DialogTitle>Resume Database - Full Table</DialogTitle>
+              <SearchBar
+                value={resumeDatabaseSearch}
+                onChange={setResumeDatabaseSearch}
+                placeholder="Search database..."
+              />
+            </div>
           </DialogHeader>
           <div className="overflow-y-auto pr-2 flex-1">
             <div className="overflow-x-auto">
@@ -6929,12 +6985,12 @@ export default function AdminDashboard() {
                     <tr>
                       <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading employees...</td>
                     </tr>
-                  ) : hrEmployees.length === 0 ? (
+                  ) : filteredHrEmployees.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">No employees found. Click "+ Add Employee" to add one.</td>
+                      <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">{resumeDatabaseSearch ? 'No matching employees found' : 'No employees found. Click "+ Add Employee" to add one.'}</td>
                     </tr>
                   ) : (
-                    hrEmployees.map((row: any, index: number) => (
+                    filteredHrEmployees.map((row: any, index: number) => (
                       <tr key={row.id || index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
                         <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.employeeId}</td>
                         <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.name}</td>
