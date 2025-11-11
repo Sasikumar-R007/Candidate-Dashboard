@@ -2,7 +2,7 @@ import express, { type Express, type Request, type Response, type NextFunction }
 import { createServer, type Server } from "http";
 import fs from "fs";
 import { storage } from "./storage";
-import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings } from "@shared/schema";
+import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import multer from "multer";
@@ -2799,6 +2799,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(409).json({ message: "Client with this email already exists" });
       }
       res.status(500).json({ message: "Failed to create client credentials" });
+    }
+  });
+
+  // Create target mapping
+  app.post("/api/admin/target-mappings", async (req, res) => {
+    try {
+      const targetMappingData = insertTargetMappingsSchema.parse({
+        ...req.body,
+        createdAt: new Date().toISOString(),
+      });
+      
+      const targetMapping = await storage.createTargetMapping(targetMappingData);
+      
+      res.status(201).json({ message: "Target mapping created successfully", targetMapping });
+    } catch (error: any) {
+      console.error('Create target mapping error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid target mapping data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create target mapping" });
+    }
+  });
+
+  // Get all target mappings
+  app.get("/api/admin/target-mappings", async (req, res) => {
+    try {
+      const targetMappings = await storage.getAllTargetMappings();
+      res.json(targetMappings);
+    } catch (error) {
+      console.error('Get target mappings error:', error);
+      res.status(500).json({ message: "Failed to get target mappings" });
     }
   });
 

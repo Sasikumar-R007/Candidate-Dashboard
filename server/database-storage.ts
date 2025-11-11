@@ -34,6 +34,8 @@ import {
   type InsertClient,
   type ImpactMetrics,
   type InsertImpactMetrics,
+  type TargetMappings,
+  type InsertTargetMappings,
   users,
   profiles,
   jobPreferences,
@@ -50,7 +52,8 @@ import {
   bulkUploadFiles,
   notifications,
   clients,
-  impactMetrics
+  impactMetrics,
+  targetMappings
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
@@ -607,5 +610,14 @@ export class DatabaseStorage implements IStorage {
   async deleteImpactMetrics(id: string): Promise<boolean> {
     const result = await db.delete(impactMetrics).where(eq(impactMetrics.id, id));
     return (result.rowCount ?? 0) > 0;
+  }
+
+  async createTargetMapping(mapping: InsertTargetMappings): Promise<TargetMappings> {
+    const [targetMapping] = await db.insert(targetMappings).values(mapping).returning();
+    return targetMapping;
+  }
+
+  async getAllTargetMappings(): Promise<TargetMappings[]> {
+    return await db.select().from(targetMappings).orderBy(desc(targetMappings.createdAt));
   }
 }

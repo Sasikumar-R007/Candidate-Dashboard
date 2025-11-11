@@ -32,7 +32,9 @@ import {
   type Client,
   type InsertClient,
   type ImpactMetrics,
-  type InsertImpactMetrics
+  type InsertImpactMetrics,
+  type TargetMappings,
+  type InsertTargetMappings
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
@@ -132,6 +134,10 @@ export interface IStorage {
   getAllImpactMetrics(): Promise<ImpactMetrics[]>;
   updateImpactMetrics(id: string, updates: Partial<ImpactMetrics>): Promise<ImpactMetrics | undefined>;
   deleteImpactMetrics(id: string): Promise<boolean>;
+  
+  // Target Mapping methods
+  createTargetMapping(mapping: InsertTargetMappings): Promise<TargetMappings>;
+  getAllTargetMappings(): Promise<TargetMappings[]>;
 }
 
 export class MemStorage implements IStorage {
