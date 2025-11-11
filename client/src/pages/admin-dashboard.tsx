@@ -932,6 +932,7 @@ export default function AdminDashboard() {
     completedRequirements: 0,
     avgResumesPerRequirement: "0.00",
     requirementsPerRecruiter: "0.00",
+    totalResumes: 0,
     dailyDeliveryDelivered: 0,
     dailyDeliveryDefaulted: 0,
     overallPerformance: "G"
@@ -1703,6 +1704,11 @@ export default function AdminDashboard() {
             {/* Left side - Metrics with simplified design matching image 2 */}
             <div className="bg-white rounded p-4 space-y-3">
               <div className="flex justify-between items-center py-2">
+                <span className="text-sm font-medium text-gray-700">Total Requirements</span>
+                <span className="text-2xl font-bold text-blue-600">{dailyMetricsData.totalRequirements}</span>
+              </div>
+              <div className="border-t border-gray-200"></div>
+              <div className="flex justify-between items-center py-2">
                 <span className="text-sm font-medium text-gray-700">Avg. Resumes per Requirement</span>
                 <span className="text-2xl font-bold text-blue-600">{Math.round(Number(dailyMetricsData.avgResumesPerRequirement))}</span>
               </div>
@@ -1718,8 +1724,8 @@ export default function AdminDashboard() {
               </div>
               <div className="border-t border-gray-200"></div>
               <div className="flex justify-between items-center py-2">
-                <span className="text-sm font-medium text-gray-700">Total Requirements</span>
-                <span className="text-2xl font-bold text-blue-600">{dailyMetricsData.totalRequirements}</span>
+                <span className="text-sm font-medium text-gray-700">Total Resumes</span>
+                <span className="text-2xl font-bold text-blue-600">{dailyMetricsData.totalResumes}</span>
               </div>
             </div>
             

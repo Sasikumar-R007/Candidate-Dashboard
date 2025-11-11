@@ -2061,7 +2061,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const endISO = endOfDay.toISOString();
       
       // Import schema tables
-      const { requirements, employees } = await import("@shared/schema");
+      const { requirements, employees, candidates } = await import("@shared/schema");
       
       // Get all requirements (createdAt is stored as text, so we filter in JavaScript)
       const allRequirements = await db.select().from(requirements);
@@ -2109,12 +2109,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       const completedRequirements = requirementsCompletedToday.length;
       
+      // 5. Total Resumes - count candidates (resumes) created today
+      const allCandidates = await db.select().from(candidates);
+      const candidatesCreatedToday = allCandidates.filter(candidate => {
+        const createdDate = new Date(candidate.createdAt);
+        return createdDate >= startOfDay && createdDate <= endOfDay;
+      });
+      const totalResumes = candidatesCreatedToday.length;
+      
       // Return the calculated metrics
       res.json({
         totalRequirements,
         avgResumesPerRequirement,
         requirementsPerRecruiter,
         completedRequirements,
+        totalResumes,
         // These would come from other sources - for now returning 0
         dailyDeliveryDelivered: 0,
         dailyDeliveryDefaulted: 0,
