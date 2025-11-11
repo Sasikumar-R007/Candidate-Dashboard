@@ -2044,6 +2044,7 @@ export default function AdminDashboard() {
                   value={requirementsSearch}
                   onChange={setRequirementsSearch}
                   placeholder="Search requirements..."
+                  testId="input-search-requirements"
                 />
                 <Button 
                   className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded text-sm whitespace-nowrap"
@@ -5095,6 +5096,7 @@ export default function AdminDashboard() {
                 value={targetSearch}
                 onChange={setTargetSearch}
                 placeholder="Search targets..."
+                testId="input-search-targets"
               />
             </div>
           </DialogHeader>
@@ -5360,6 +5362,7 @@ export default function AdminDashboard() {
                 value={messagesSearch}
                 onChange={setMessagesSearch}
                 placeholder="Search messages..."
+                testId="input-search-messages"
               />
             </div>
           </DialogHeader>
@@ -5676,6 +5679,7 @@ export default function AdminDashboard() {
                 value={closureReportsSearch}
                 onChange={setClosureReportsSearch}
                 placeholder="Search closures..."
+                testId="input-search-closure-reports"
               />
             </div>
           </DialogHeader>
@@ -6070,6 +6074,7 @@ export default function AdminDashboard() {
                 value={cashoutSearch}
                 onChange={setCashoutSearch}
                 placeholder="Search cash outflow..."
+                testId="input-search-cash-outflow"
               />
             </div>
           </DialogHeader>
@@ -6817,6 +6822,7 @@ export default function AdminDashboard() {
                 value={clientMasterSearch}
                 onChange={setClientMasterSearch}
                 placeholder="Search clients..."
+                testId="input-search-clients"
               />
             </div>
           </DialogHeader>
@@ -6894,6 +6900,7 @@ export default function AdminDashboard() {
                 value={employeeMasterSearch}
                 onChange={setEmployeeMasterSearch}
                 placeholder="Search employees..."
+                testId="input-search-employees"
               />
             </div>
           </DialogHeader>
@@ -6964,6 +6971,7 @@ export default function AdminDashboard() {
                 value={resumeDatabaseSearch}
                 onChange={setResumeDatabaseSearch}
                 placeholder="Search database..."
+                testId="input-search-resume-database"
               />
             </div>
           </DialogHeader>
