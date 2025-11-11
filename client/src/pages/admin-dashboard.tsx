@@ -2927,6 +2927,58 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Right Sidebar - Quarterly/Yearly Metrics */}
+            <div className="w-64 bg-gray-100 dark:bg-gray-800 p-4 flex flex-col space-y-3 overflow-y-auto">
+              {/* Quarterly/Yearly Selector */}
+              <div>
+                <Select defaultValue="quarterly">
+                  <SelectTrigger className="w-full bg-teal-400 text-black font-medium">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="quarterly">Quarterly/Yearly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Current Quarter Section */}
+              <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
+                <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">CURRENT</div>
+                <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">QUARTER</div>
+                <div className="text-right text-2xl font-bold mt-2">ASO-2025</div>
+              </div>
+
+              {/* Minimum Target */}
+              <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
+                <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">MINIMUM</div>
+                <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">TARGET</div>
+                <div className="text-right text-2xl font-bold mt-2">27,00,000</div>
+              </div>
+
+              {/* Target Achieved */}
+              <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
+                <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">TARGET</div>
+                <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">ACHIEVED</div>
+                <div className="text-right text-2xl font-bold mt-2">21,00,000</div>
+              </div>
+
+              {/* Closures Made */}
+              <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
+                <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">CLOSURES</div>
+                <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">MADE</div>
+                <div className="text-right text-3xl font-bold mt-2">8</div>
+              </div>
+
+              {/* Incentives Made */}
+              <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
+                <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">INCENTIVES</div>
+                <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">MADE</div>
+                <div className="text-right text-2xl font-bold mt-2">65,000</div>
+              </div>
+            </div>
           </div>
         );
       case 'user-management':
@@ -3773,30 +3825,32 @@ export default function AdminDashboard() {
         );
       case 'performance':
         return (
-          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
-            {/* Performance Header with Tabs */}
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Performance</h2>
-              <div className="flex gap-2">
-                <Button 
-                  className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm"
-                  onClick={() => setIsTargetMappingModalOpen(true)}
-                >
-                  Target Mapping
-                </Button>
-                <Button 
-                  className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm"
-                  onClick={() => setIsRevenueMappingModalOpen(true)}
-                >
-                  Revenue Mapping
-                </Button>
+          <div className="flex h-full">
+            {/* Middle Column - Scrollable Content */}
+            <div className="flex-1 px-6 py-6 overflow-y-auto admin-scrollbar space-y-6">
+              {/* Performance Header with Tabs */}
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Performance</h2>
+                <div className="flex gap-2">
+                  <Button 
+                    className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm"
+                    onClick={() => setIsTargetMappingModalOpen(true)}
+                  >
+                    Target Mapping
+                  </Button>
+                  <Button 
+                    className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm"
+                    onClick={() => setIsRevenueMappingModalOpen(true)}
+                  >
+                    Revenue Mapping
+                  </Button>
+                </div>
               </div>
-            </div>
 
-            {/* Filters and Main Content */}
-            <div className="flex gap-6">
-              {/* Left Section with Chart */}
-              <div className="flex-1">
+              {/* Filters and Main Content */}
+              <div className="flex gap-6">
+                {/* Left Section with Chart */}
+                <div className="flex-1">
                 {/* Filter Dropdowns */}
                 <div className="flex gap-4 mb-4">
                   <Select value={selectedPerformanceTeam} onValueChange={setSelectedPerformanceTeam} data-testid="select-performance-team">
@@ -4056,6 +4110,59 @@ export default function AdminDashboard() {
                 </div>
               </CardContent>
             </Card>
+            </div>
+
+            {/* Right Sidebar - Quarterly/Yearly Metrics */}
+            <div className="w-64 bg-gray-100 dark:bg-gray-800 p-4 flex flex-col space-y-3 overflow-y-auto">
+              {/* Quarterly/Yearly Selector */}
+              <div>
+                <Select defaultValue="quarterly">
+                  <SelectTrigger className="w-full bg-teal-400 text-black font-medium">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="quarterly">Quarterly/Yearly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Current Quarter Section */}
+              <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
+                <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">CURRENT</div>
+                <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">QUARTER</div>
+                <div className="text-right text-2xl font-bold mt-2">ASO-2025</div>
+              </div>
+
+              {/* Minimum Target */}
+              <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
+                <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">MINIMUM</div>
+                <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">TARGET</div>
+                <div className="text-right text-2xl font-bold mt-2">27,00,000</div>
+              </div>
+
+              {/* Target Achieved */}
+              <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
+                <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">TARGET</div>
+                <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">ACHIEVED</div>
+                <div className="text-right text-2xl font-bold mt-2">21,00,000</div>
+              </div>
+
+              {/* Closures Made */}
+              <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
+                <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">CLOSURES</div>
+                <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">MADE</div>
+                <div className="text-right text-3xl font-bold mt-2">8</div>
+              </div>
+
+              {/* Incentives Made */}
+              <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
+                <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">INCENTIVES</div>
+                <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">MADE</div>
+                <div className="text-right text-2xl font-bold mt-2">65,000</div>
+              </div>
+            </div>
           </div>
         );
       case 'user-management':
