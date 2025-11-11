@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, json, boolean, real, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, json, boolean, real, pgEnum, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -137,17 +137,14 @@ export const targetMetrics = pgTable("target_metrics", {
 export const targetMappings = pgTable("target_mappings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   teamLeadId: varchar("team_lead_id").notNull(),
-  teamLeadName: text("team_lead_name").notNull(),
   teamMemberId: varchar("team_member_id").notNull(),
-  teamMemberName: text("team_member_name").notNull(),
-  teamMemberRole: text("team_member_role").notNull(),
   quarter: text("quarter").notNull(),
-  year: text("year").notNull(),
-  minimumTarget: text("minimum_target").notNull(),
-  targetAchieved: text("target_achieved").default("0"),
-  closures: text("closures").default("0"),
-  incentives: text("incentives").default("0"),
-  createdAt: text("created_at").notNull(),
+  year: integer("year").notNull(),
+  minimumTarget: integer("minimum_target").notNull(),
+  targetAchieved: integer("target_achieved").default(0),
+  closures: integer("closures").default(0),
+  incentives: integer("incentives").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const dailyMetrics = pgTable("daily_metrics", {

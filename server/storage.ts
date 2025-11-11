@@ -75,6 +75,7 @@ export interface IStorage {
   getArchivedRequirements(): Promise<ArchivedRequirement[]>;
   
   // Employee methods
+  getEmployeeById(id: string): Promise<Employee | undefined>;
   getEmployeeByEmail(email: string): Promise<Employee | undefined>;
   getEmployeeByEmployeeId(employeeId: string): Promise<Employee | undefined>;
   createEmployee(employee: InsertEmployee): Promise<Employee>;

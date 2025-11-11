@@ -2805,9 +2805,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create target mapping
   app.post("/api/admin/target-mappings", async (req, res) => {
     try {
+      // Validate only the required fields from client
+      const { teamLeadId, teamMemberId, quarter, year, minimumTarget } = req.body;
+      
+      if (!teamLeadId || !teamMemberId || !quarter || !year || minimumTarget === undefined) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      // Validate team lead and member are different
+      if (teamLeadId === teamMemberId) {
+        return res.status(400).json({ message: "Team lead and team member cannot be the same person" });
+      }
+      
+      // Validate numeric fields parse correctly
+      const yearNum = parseInt(year);
+      const minimumTargetNum = parseInt(minimumTarget);
+      
+      if (isNaN(yearNum) || yearNum < 2000 || yearNum > 2100) {
+        return res.status(400).json({ message: "Invalid year value" });
+      }
+      
+      if (isNaN(minimumTargetNum) || minimumTargetNum < 0) {
+        return res.status(400).json({ message: "Invalid minimum target value" });
+      }
+      
+      // Fetch employee information to verify and get metadata
+      const teamLead = await storage.getEmployeeById(teamLeadId);
+      const teamMember = await storage.getEmployeeById(teamMemberId);
+      
+      if (!teamLead) {
+        return res.status(400).json({ message: "Team lead not found" });
+      }
+      
+      if (!teamMember) {
+        return res.status(400).json({ message: "Team member not found" });
+      }
+      
+      // Validate team lead role
+      if (teamLead.role !== "team_leader") {
+        return res.status(400).json({ message: "Selected employee is not a team leader" });
+      }
+      
+      // Server-side derived data - createdAt is handled by database default
       const targetMappingData = insertTargetMappingsSchema.parse({
-        ...req.body,
-        createdAt: new Date().toISOString(),
+        teamLeadId,
+        teamMemberId,
+        quarter,
+        year: yearNum,
+        minimumTarget: minimumTargetNum,
       });
       
       const targetMapping = await storage.createTargetMapping(targetMappingData);
@@ -2822,11 +2867,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all target mappings
+  // Get all target mappings with joined employee data
   app.get("/api/admin/target-mappings", async (req, res) => {
     try {
       const targetMappings = await storage.getAllTargetMappings();
-      res.json(targetMappings);
+      
+      // Enrich with employee data
+      const enrichedMappings = await Promise.all(
+        targetMappings.map(async (mapping) => {
+          const teamLead = await storage.getEmployeeById(mapping.teamLeadId);
+          const teamMember = await storage.getEmployeeById(mapping.teamMemberId);
+          
+          return {
+            ...mapping,
+            teamLeadName: teamLead?.name || "Unknown",
+            teamMemberName: teamMember?.name || "Unknown",
+            teamMemberRole: teamMember?.role || "Unknown",
+          };
+        })
+      );
+      
+      res.json(enrichedMappings);
     } catch (error) {
       console.error('Get target mappings error:', error);
       res.status(500).json({ message: "Failed to get target mappings" });

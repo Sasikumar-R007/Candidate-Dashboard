@@ -80,14 +80,10 @@ export default function TargetMappingModal({ isOpen, onClose }: TargetMappingMod
 
     createTargetMappingMutation.mutate({
       teamLeadId: selectedTL.id,
-      teamLeadName: selectedTL.name,
       teamMemberId: selectedMember.id,
-      teamMemberName: selectedMember.name,
-      teamMemberRole: selectedMember.role || "recruiter",
       quarter,
       year,
       minimumTarget,
-      createdAt: new Date().toISOString(),
     });
   };
 
