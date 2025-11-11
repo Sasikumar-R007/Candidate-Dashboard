@@ -4832,57 +4832,70 @@ export default function AdminDashboard() {
 
             {/* Right Side - Key Aspects - Separately Scrollable */}
             <div className="w-80 border-l-2 border-gray-300 dark:border-gray-600 pl-6 overflow-y-auto admin-scrollbar">
-              <Card className="shadow-lg border-2 border-cyan-200 dark:border-cyan-700">
-                <CardHeader>
-                  <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Key Aspects</CardTitle>
+              <Card className="bg-gray-100 dark:bg-gray-800">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-semibold text-gray-700 dark:text-gray-300">Key Aspects</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                      {/* Growth Metrics */}
-                      <div className="bg-teal-50 dark:bg-teal-900/20 p-4 ">
-                        <div className="text-sm text-teal-600 dark:text-teal-400 mb-1">GROWTH</div>
-                        <div className="text-2xl font-bold text-teal-600 dark:text-teal-400">15%</div>
+                  <div className="space-y-0">
+                      {/* Growth MoM */}
+                      <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+                        <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                          GROWTH<span className="text-xs align-super ml-0.5">MoM</span>
+                        </div>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">15%</div>
                       </div>
                       
-                      <div className="bg-teal-50 dark:bg-teal-900/20 p-4 ">
-                        <div className="text-sm text-teal-600 dark:text-teal-400 mb-1">GROWTH</div>
-                        <div className="text-2xl font-bold text-teal-600 dark:text-teal-400">9%</div>
+                      {/* Growth YoY */}
+                      <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+                        <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                          GROWTH<span className="text-xs align-super ml-0.5">YoY</span>
+                        </div>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white">9%</div>
                       </div>
                       
                       {/* Burn Rate */}
-                      <div className="bg-gray-50 dark:bg-gray-800 p-4 ">
-                        <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">BURN <span className="text-sm">RATE</span></div>
+                      <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+                        <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                          BURN<span className="text-xs align-super ml-0.5">RATE</span>
+                        </div>
                         <div className="text-2xl font-bold text-gray-900 dark:text-white">3%</div>
                       </div>
                       
                       {/* Churn Rate */}
-                      <div className="bg-gray-50 dark:bg-gray-800 p-4 ">
-                        <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">CHURN <span className="text-sm">RATE</span></div>
+                      <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+                        <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                          CHURN<span className="text-xs align-super ml-0.5">RATE</span>
+                        </div>
                         <div className="text-2xl font-bold text-gray-900 dark:text-white">9%</div>
                       </div>
                       
                       {/* Attrition */}
-                      <div className="bg-gray-50 dark:bg-gray-800 p-4 ">
-                        <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">ATTRITION</div>
+                      <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+                        <div className="text-sm font-bold text-gray-700 dark:text-gray-300">ATTRITION</div>
                         <div className="text-2xl font-bold text-gray-900 dark:text-white">3%</div>
                       </div>
                       
                       {/* Net Profit */}
-                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 ">
-                        <div className="text-sm text-blue-600 dark:text-blue-400 mb-1">NET PROFIT</div>
-                        <div className="text-xl font-bold text-blue-900 dark:text-blue-300">2,50,000</div>
+                      <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+                        <div className="text-sm font-bold text-gray-700 dark:text-gray-300">NET PROFIT</div>
+                        <div className="text-xl font-bold text-gray-900 dark:text-white">3,50,000</div>
                       </div>
                       
                       {/* Revenue */}
-                      <div className="bg-green-50 dark:bg-green-900/20 p-4 ">
-                        <div className="text-sm text-green-600 dark:text-green-400 mb-1">REVENUE <span className="text-sm">PER EMPLOYEE</span></div>
-                        <div className="text-xl font-bold text-green-900 dark:text-green-300">75,000</div>
+                      <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+                        <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                          REVENUE<span className="text-xs align-super ml-0.5">PER EMPLOYEE</span>
+                        </div>
+                        <div className="text-xl font-bold text-gray-900 dark:text-white">75,000</div>
                       </div>
                       
-                      {/* Client */}
-                      <div className="bg-orange-50 dark:bg-orange-900/20 p-4 ">
-                        <div className="text-sm text-orange-600 dark:text-orange-400 mb-1">CLIENT <span className="text-sm">ACQUISITION COST</span></div>
-                        <div className="text-xl font-bold text-orange-900 dark:text-orange-300">75,000</div>
+                      {/* Client Acquisition Cost */}
+                      <div className="flex items-center justify-between py-4">
+                        <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                          CLIENT<span className="text-xs align-super ml-0.5">ACQUISITION COST</span>
+                        </div>
+                        <div className="text-xl font-bold text-gray-900 dark:text-white">75,000</div>
                       </div>
                     </div>
                   </CardContent>
