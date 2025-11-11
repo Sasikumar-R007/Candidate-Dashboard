@@ -2647,57 +2647,55 @@ export default function AdminDashboard() {
         );
       case 'performance':
         return (
-          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
-            {/* Performance Header with Tabs */}
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Performance</h2>
-              <div className="flex gap-2">
-                <Button 
-                  className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm"
-                  onClick={() => setIsTargetMappingModalOpen(true)}
-                >
-                  Target Mapping
-                </Button>
-                <Button 
-                  className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm"
-                  onClick={() => setIsRevenueMappingModalOpen(true)}
-                >
-                  Revenue Mapping
-                </Button>
-              </div>
-            </div>
-
-            {/* Filters and Main Content */}
-            <div className="flex gap-6">
-              {/* Left Section with Chart */}
-              <div className="flex-1">
-                {/* Filter Dropdowns */}
-                <div className="flex gap-4 mb-4">
-                  <Select value={selectedPerformanceTeam} onValueChange={setSelectedPerformanceTeam} data-testid="select-performance-team">
-                    <SelectTrigger className="w-48 bg-cyan-400 text-black">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="arun">Arun</SelectItem>
-                      <SelectItem value="anusha">Anusha</SelectItem>
-                      <SelectItem value="all">All</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  <Select defaultValue="monthly">
-                    <SelectTrigger className="w-32 bg-cyan-400 text-black">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                      <SelectItem value="quarterly">Quarterly</SelectItem>
-                      <SelectItem value="yearly">Yearly</SelectItem>
-                    </SelectContent>
-                  </Select>
+          <div className="flex h-full">
+            {/* Middle Column - Scrollable Content */}
+            <div className="flex-1 px-6 py-6 overflow-y-auto admin-scrollbar">
+              {/* Performance Header with Tabs */}
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Performance</h2>
+                <div className="flex gap-2">
+                  <Button 
+                    className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm"
+                    onClick={() => setIsTargetMappingModalOpen(true)}
+                  >
+                    Target Mapping
+                  </Button>
+                  <Button 
+                    className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm"
+                    onClick={() => setIsRevenueMappingModalOpen(true)}
+                  >
+                    Revenue Mapping
+                  </Button>
                 </div>
+              </div>
 
-                {/* Chart Area */}
-                <div className="bg-white dark:bg-gray-900  px-6 pb-6 flex gap-6">
+              {/* Filter Dropdowns */}
+              <div className="flex gap-4 mb-4">
+                <Select value={selectedPerformanceTeam} onValueChange={setSelectedPerformanceTeam} data-testid="select-performance-team">
+                  <SelectTrigger className="w-48 bg-cyan-400 text-black">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="arun">Arun</SelectItem>
+                    <SelectItem value="anusha">Anusha</SelectItem>
+                    <SelectItem value="all">All</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Select defaultValue="monthly">
+                  <SelectTrigger className="w-32 bg-cyan-400 text-black">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="quarterly">Quarterly</SelectItem>
+                    <SelectItem value="yearly">Yearly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Chart Area */}
+              <div className="bg-white dark:bg-gray-900 px-6 pb-6 flex gap-6">
                   {/* Line Chart */}
                   <div className="flex-1">
                     <ResponsiveContainer width="100%" height={300}>
@@ -2793,195 +2791,194 @@ export default function AdminDashboard() {
                     </Button>
                   </div>
                 </div>
-              </div>
 
-              {/* Right Sidebar - Quarterly/Yearly Metrics */}
-              <div className="w-64 bg-teal-50 dark:bg-teal-900/30 p-4 flex flex-col space-y-2">
-                {/* Quarterly/Yearly Selector */}
-                <div className="mb-2">
-                  <Select defaultValue="quarterly">
-                    <SelectTrigger className="w-full bg-teal-400 text-black">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="quarterly">Quarterly/Yearly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Team Performance Table */}
+              <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
+                <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg text-gray-900 dark:text-white">Team Performance</CardTitle>
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    className="text-blue-600 text-sm"
+                    onClick={() => setIsTeamPerformanceModalOpen(true)}
+                  >
+                    view list
+                  </Button>
+                </CardHeader>
+                <CardContent className="p-3">
+                  <div className="overflow-x-auto admin-scrollbar">
+                    <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
+                      <thead>
+                        <tr className="bg-gray-200 dark:bg-gray-700">
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Talent Advisor</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Joining Date</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Tenure</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Closures</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Last Closure</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Qtrs Achieved</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-b border-gray-100 dark:border-gray-700">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">David Wilson</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">23-04-2023</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2 yrs,3 months</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">4</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">23-04-2023</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">3</td>
+                        </tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-700">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Tom Anderson</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">28-04-2023</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2 yrs,3 months</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">8</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">29-04-2023</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">6</td>
+                        </tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-700">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Robert Kim</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">04-05-2023</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2 yrs,2 months</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">9</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">02-05-2023</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">11</td>
+                        </tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-700">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Kevin Brown</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">12-05-2023</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2 yrs,2 months</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">13</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">18-05-2023</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">5</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
 
-                {/* Current Quarter Section */}
-                <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
-                  <div className="text-xs font-bold uppercase">CURRENT</div>
-                  <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">QUARTER</div>
-                  <div className="text-right text-xl font-bold mt-1">ASO-2025</div>
-                </div>
-
-                {/* Minimum Target */}
-                <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
-                  <div className="text-xs font-bold uppercase">MINIMUM</div>
-                  <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">TARGET</div>
-                  <div className="text-right text-xl font-bold mt-1">27,00,000</div>
-                </div>
-
-                {/* Target Achieved */}
-                <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
-                  <div className="text-xs font-bold uppercase">TARGET</div>
-                  <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">ACHIEVED</div>
-                  <div className="text-right text-xl font-bold mt-1">21,00,000</div>
-                </div>
-
-                {/* Closures Made */}
-                <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
-                  <div className="text-xs font-bold uppercase">CLOSURES</div>
-                  <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">MADE</div>
-                  <div className="text-right text-xl font-bold mt-1">8</div>
-                </div>
-
-                {/* Incentives Made */}
-                <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
-                  <div className="text-xs font-bold uppercase">INCENTIVES</div>
-                  <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">MADE</div>
-                  <div className="text-right text-xl font-bold mt-1">65,000</div>
-                </div>
-              </div>
+              {/* List of Closures Table */}
+              <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
+                <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg text-gray-900 dark:text-white">List Of Closures</CardTitle>
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    className="text-blue-600 text-sm"
+                    onClick={() => setIsClosureModalOpen(true)}
+                  >
+                    view list
+                  </Button>
+                </CardHeader>
+                <CardContent className="p-3">
+                  <div className="overflow-x-auto admin-scrollbar">
+                    <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
+                      <thead>
+                        <tr className="bg-gray-200 dark:bg-gray-700">
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Candidate</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Positions</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Client</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Quarter</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Talent Advisor</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">CTC</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Revenue</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-b border-gray-100 dark:border-gray-700">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">David Wilson</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Frontend Developer</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">TechCorp</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">MJJ, 2025</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Kavitha</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">15,00,000</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">1,12,455</td>
+                        </tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-700">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Tom Anderson</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">UI/UX Designer</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Designify</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">ASO, 2025</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Rajesh</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,00,000</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">1,87,425</td>
+                        </tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-700">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Robert Kim</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Backend Developer</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">CodeLabs</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">MJJ, 2025</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Sowmiya</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">18,00,000</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">1,34,948</td>
+                        </tr>
+                        <tr className="border-b border-gray-100 dark:border-gray-700">
+                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Kevin Brown</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">QA Tester</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">AppLogic</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">FMA, 2025</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Kalaiselvi</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">30,00,000</td>
+                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2,24,910</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
-            {/* Team Performance Table */}
-            <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
-              <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
-                <CardTitle className="text-lg text-gray-900 dark:text-white">Team Performance</CardTitle>
-                <Button 
-                  variant="link" 
-                  size="sm" 
-                  className="text-blue-600 text-sm"
-                  onClick={() => setIsTeamPerformanceModalOpen(true)}
-                >
-                  view list
-                </Button>
-              </CardHeader>
-              <CardContent className="p-3">
-                <div className="overflow-x-auto admin-scrollbar">
-                  <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
-                    <thead>
-                      <tr className="bg-gray-200 dark:bg-gray-700">
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Talent Advisor</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Joining Date</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Tenure</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Closures</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Last Closure</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Qtrs Achieved</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="border-b border-gray-100 dark:border-gray-700">
-                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">David Wilson</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">23-04-2023</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2 yrs,3 months</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">4</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">23-04-2023</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">3</td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-700">
-                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Tom Anderson</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">28-04-2023</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2 yrs,3 months</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">8</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">29-04-2023</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">6</td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-700">
-                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Robert Kim</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">04-05-2023</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2 yrs,2 months</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">9</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">02-05-2023</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">11</td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-700">
-                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Kevin Brown</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">12-05-2023</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2 yrs,2 months</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">13</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">18-05-2023</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">5</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Right Sidebar - Quarterly/Yearly Metrics */}
+            <div className="w-64 bg-teal-50 dark:bg-teal-900/30 p-4 flex flex-col space-y-2">
+              {/* Quarterly/Yearly Selector */}
+              <div className="mb-2">
+                <Select defaultValue="quarterly">
+                  <SelectTrigger className="w-full bg-teal-400 text-black">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="quarterly">Quarterly/Yearly</SelectItem>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {/* List of Closures Table */}
-            <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
-              <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
-                <CardTitle className="text-lg text-gray-900 dark:text-white">List Of Closures</CardTitle>
-                <Button 
-                  variant="link" 
-                  size="sm" 
-                  className="text-blue-600 text-sm"
-                  onClick={() => setIsClosureModalOpen(true)}
-                >
-                  view list
-                </Button>
-              </CardHeader>
-              <CardContent className="p-3">
-                <div className="overflow-x-auto admin-scrollbar">
-                  <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
-                    <thead>
-                      <tr className="bg-gray-200 dark:bg-gray-700">
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Candidate</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Positions</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Client</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Quarter</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Talent Advisor</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">CTC</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Revenue</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="border-b border-gray-100 dark:border-gray-700">
-                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">David Wilson</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Frontend Developer</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">TechCorp</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">MJJ, 2025</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Kavitha</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">15,00,000</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">1,12,455</td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-700">
-                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Tom Anderson</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">UI/UX Designer</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Designify</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">ASO, 2025</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Rajesh</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,00,000</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">1,87,425</td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-700">
-                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Robert Kim</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Backend Developer</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">CodeLabs</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">MJJ, 2025</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Sowmiya</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">18,00,000</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">1,34,948</td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-700">
-                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Kevin Brown</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">QA Tester</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">AppLogic</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">FMA, 2025</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Kalaiselvi</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">30,00,000</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2,24,910</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
+              {/* Current Quarter Section */}
+              <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
+                <div className="text-xs font-bold uppercase">CURRENT</div>
+                <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">QUARTER</div>
+                <div className="text-right text-xl font-bold mt-1">ASO-2025</div>
+              </div>
+
+              {/* Minimum Target */}
+              <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
+                <div className="text-xs font-bold uppercase">MINIMUM</div>
+                <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">TARGET</div>
+                <div className="text-right text-xl font-bold mt-1">27,00,000</div>
+              </div>
+
+              {/* Target Achieved */}
+              <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
+                <div className="text-xs font-bold uppercase">TARGET</div>
+                <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">ACHIEVED</div>
+                <div className="text-right text-xl font-bold mt-1">21,00,000</div>
+              </div>
+
+              {/* Closures Made */}
+              <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
+                <div className="text-xs font-bold uppercase">CLOSURES</div>
+                <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">MADE</div>
+                <div className="text-right text-xl font-bold mt-1">8</div>
+              </div>
+
+              {/* Incentives Made */}
+              <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
+                <div className="text-xs font-bold uppercase">INCENTIVES</div>
+                <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">MADE</div>
+                <div className="text-right text-xl font-bold mt-1">65,000</div>
+              </div>
+            </div>
           </div>
         );
       case 'user-management':
