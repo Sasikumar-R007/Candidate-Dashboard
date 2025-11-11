@@ -16,6 +16,7 @@ import AddRecruiterModal from '@/components/dashboard/modals/add-recruiter-modal
 import AddTeamLeaderModalNew from '@/components/dashboard/modals/add-team-leader-modal-new';
 import AddClientCredentialsModal from '@/components/dashboard/modals/add-client-credentials-modal';
 import BulkResumeUpload from '@/components/dashboard/bulk-resume-upload';
+import { SearchBar } from '@/components/ui/search-bar';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -836,6 +837,19 @@ export default function AdminDashboard() {
   const [selectedPerformanceTeam, setSelectedPerformanceTeam] = useState<string>("all");
   const [isResumeDatabaseModalOpen, setIsResumeDatabaseModalOpen] = useState(false);
   const [isPerformanceDataModalOpen, setIsPerformanceDataModalOpen] = useState(false);
+  
+  // Search term states for modals and tables
+  const [targetSearch, setTargetSearch] = useState('');
+  const [messagesSearch, setMessagesSearch] = useState('');
+  const [closureReportsSearch, setClosureReportsSearch] = useState('');
+  const [cashoutSearch, setCashoutSearch] = useState('');
+  const [resumeDatabaseSearch, setResumeDatabaseSearch] = useState('');
+  const [employeeMasterSearch, setEmployeeMasterSearch] = useState('');
+  const [clientMasterSearch, setClientMasterSearch] = useState('');
+  const [teamPerformanceSearch, setTeamPerformanceSearch] = useState('');
+  const [closureListSearch, setClosureListSearch] = useState('');
+  const [requirementsSearch, setRequirementsSearch] = useState('');
+  
   const [clientForm, setClientForm] = useState({
     brandName: '', incorporatedName: '', gstin: '',
     address: '', location: '', spoc: '', email: '', password: '',
