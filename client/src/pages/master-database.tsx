@@ -3,7 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Filter, Search, Pencil, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, Filter, Search, Pencil, Trash2, X } from "lucide-react";
 
 type ProfileType = 'resume' | 'employee' | 'client';
 
@@ -48,6 +50,17 @@ export default function MasterDatabase() {
   const [searchQuery, setSearchQuery] = useState("");
   const [profileType, setProfileType] = useState<ProfileType>('resume');
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
+  
+  // Advanced filter state
+  const [advancedFilters, setAdvancedFilters] = useState({
+    dateFrom: "",
+    dateTo: "",
+    position: "",
+    experience: "",
+    skills: "",
+    source: ""
+  });
 
   // Sample data for resumes
   const resumeData: ResumeData[] = [
@@ -114,7 +127,7 @@ export default function MasterDatabase() {
     }
   };
 
-  // Filter data based on search and status
+  // Filter data based on search, status, and advanced filters
   const filteredData = getCurrentData().filter(item => {
     const searchMatch = searchQuery === "" || 
       Object.values(item).some(value => 
@@ -124,8 +137,67 @@ export default function MasterDatabase() {
     const statusMatch = statusFilter === "all" || 
       item.status.toLowerCase() === statusFilter.toLowerCase();
     
-    return searchMatch && statusMatch;
+    // Advanced filter matches
+    const positionMatch = !advancedFilters.position || 
+      item.position.toLowerCase().includes(advancedFilters.position.toLowerCase());
+    
+    const experienceMatch = !advancedFilters.experience || 
+      item.experience.toLowerCase().includes(advancedFilters.experience.toLowerCase());
+    
+    const skillsMatch = !advancedFilters.skills || 
+      item.skills.toLowerCase().includes(advancedFilters.skills.toLowerCase());
+    
+    const sourceMatch = !advancedFilters.source || 
+      item.source.toLowerCase().includes(advancedFilters.source.toLowerCase());
+    
+    // Date range filtering
+    let dateMatch = true;
+    if (advancedFilters.dateFrom || advancedFilters.dateTo) {
+      const parseDate = (dateStr: string) => {
+        // Handle DD-MM-YY format
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+          const day = parseInt(parts[0]);
+          const month = parseInt(parts[1]) - 1;
+          const year = 2000 + parseInt(parts[2]); // Assuming 20xx
+          return new Date(year, month, day);
+        }
+        return new Date(dateStr);
+      };
+      
+      const itemDate = parseDate(item.uploadedDate);
+      
+      if (advancedFilters.dateFrom) {
+        const fromDate = new Date(advancedFilters.dateFrom);
+        dateMatch = dateMatch && itemDate >= fromDate;
+      }
+      
+      if (advancedFilters.dateTo) {
+        const toDate = new Date(advancedFilters.dateTo);
+        dateMatch = dateMatch && itemDate <= toDate;
+      }
+    }
+    
+    return searchMatch && statusMatch && positionMatch && experienceMatch && 
+           skillsMatch && sourceMatch && dateMatch;
   });
+  
+  // Handle apply advanced filters
+  const handleApplyFilters = () => {
+    setIsAdvancedFilterOpen(false);
+  };
+  
+  // Handle clear advanced filters
+  const handleClearFilters = () => {
+    setAdvancedFilters({
+      dateFrom: "",
+      dateTo: "",
+      position: "",
+      experience: "",
+      skills: "",
+      source: ""
+    });
+  };
 
   // Get status badge color
   const getStatusBadgeColor = (status: string) => {
@@ -223,7 +295,12 @@ export default function MasterDatabase() {
             </SelectContent>
           </Select>
 
-          <Button variant="outline" className="flex items-center gap-2 bg-white dark:bg-gray-800" data-testid="button-advanced-filter">
+          <Button 
+            variant="outline" 
+            className="flex items-center gap-2 bg-white dark:bg-gray-800" 
+            onClick={() => setIsAdvancedFilterOpen(true)}
+            data-testid="button-advanced-filter"
+          >
             <Filter size={16} />
             Advanced Filter
           </Button>
@@ -298,6 +375,120 @@ export default function MasterDatabase() {
           </div>
         </div>
       </div>
+
+      {/* Advanced Filter Dialog */}
+      <Dialog open={isAdvancedFilterOpen} onOpenChange={setIsAdvancedFilterOpen}>
+        <DialogContent className="max-w-2xl" data-testid="dialog-advanced-filter">
+          <DialogHeader>
+            <DialogTitle>Advanced Filter</DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-2 gap-4 py-4">
+            {/* Date Range */}
+            <div className="space-y-2">
+              <Label htmlFor="dateFrom">Date From</Label>
+              <Input
+                id="dateFrom"
+                type="date"
+                value={advancedFilters.dateFrom}
+                onChange={(e) => setAdvancedFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+                data-testid="input-date-from"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="dateTo">Date To</Label>
+              <Input
+                id="dateTo"
+                type="date"
+                value={advancedFilters.dateTo}
+                onChange={(e) => setAdvancedFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+                data-testid="input-date-to"
+              />
+            </div>
+            
+            {/* Position */}
+            <div className="space-y-2">
+              <Label htmlFor="position">Position/Role</Label>
+              <Input
+                id="position"
+                type="text"
+                placeholder="e.g. Software Engineer"
+                value={advancedFilters.position}
+                onChange={(e) => setAdvancedFilters(prev => ({ ...prev, position: e.target.value }))}
+                data-testid="input-position"
+              />
+            </div>
+            
+            {/* Experience */}
+            <div className="space-y-2">
+              <Label htmlFor="experience">Experience</Label>
+              <Input
+                id="experience"
+                type="text"
+                placeholder="e.g. 2 years, 3-5 years"
+                value={advancedFilters.experience}
+                onChange={(e) => setAdvancedFilters(prev => ({ ...prev, experience: e.target.value }))}
+                data-testid="input-experience"
+              />
+            </div>
+            
+            {/* Skills */}
+            <div className="space-y-2">
+              <Label htmlFor="skills">Skills</Label>
+              <Input
+                id="skills"
+                type="text"
+                placeholder="e.g. Python, React, SQL"
+                value={advancedFilters.skills}
+                onChange={(e) => setAdvancedFilters(prev => ({ ...prev, skills: e.target.value }))}
+                data-testid="input-skills"
+              />
+            </div>
+            
+            {/* Source */}
+            <div className="space-y-2">
+              <Label htmlFor="source">Source</Label>
+              <Select 
+                value={advancedFilters.source} 
+                onValueChange={(value) => setAdvancedFilters(prev => ({ ...prev, source: value }))}
+              >
+                <SelectTrigger data-testid="select-source">
+                  <SelectValue placeholder="Select source" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Sources</SelectItem>
+                  <SelectItem value="LinkedIn">LinkedIn</SelectItem>
+                  <SelectItem value="Naukri">Naukri</SelectItem>
+                  <SelectItem value="Indeed">Indeed</SelectItem>
+                  <SelectItem value="Monster">Monster</SelectItem>
+                  <SelectItem value="Referral">Referral</SelectItem>
+                  <SelectItem value="Direct">Direct</SelectItem>
+                  <SelectItem value="Behance">Behance</SelectItem>
+                  <SelectItem value="Marketing">Marketing</SelectItem>
+                  <SelectItem value="Partnership">Partnership</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={handleClearFilters}
+              data-testid="button-clear-filters"
+            >
+              Clear Filters
+            </Button>
+            <Button 
+              onClick={handleApplyFilters}
+              data-testid="button-apply-filters"
+            >
+              Apply Filters
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
