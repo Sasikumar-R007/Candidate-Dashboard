@@ -3982,13 +3982,6 @@ export default function AdminDashboard() {
                   </Select>
                 </div>
 
-                {/* Current Quarter Section */}
-                <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
-                  <div className="text-xs font-bold uppercase">CURRENT</div>
-                  <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">QUARTER</div>
-                  <div className="text-right text-xl font-bold mt-1">ASO-2025</div>
-                </div>
-
                 {/* Minimum Target */}
                 <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
                   <div className="text-xs font-bold uppercase">MINIMUM</div>
