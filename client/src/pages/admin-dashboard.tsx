@@ -940,6 +940,73 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/clients']
   });
 
+  // Filtered data using useMemo for search functionality
+  const filteredTargetMappings = useMemo(() => {
+    if (!targetSearch.trim()) return targetMappings;
+    const search = targetSearch.toLowerCase();
+    return targetMappings.filter((mapping: any) => 
+      mapping.resource?.toLowerCase().includes(search) ||
+      mapping.role?.toLowerCase().includes(search) ||
+      mapping.quarter?.toLowerCase().includes(search)
+    );
+  }, [targetMappings, targetSearch]);
+
+  const filteredMessages = useMemo(() => {
+    if (!messagesSearch.trim()) return messagesData;
+    const search = messagesSearch.toLowerCase();
+    return messagesData.filter(msg => 
+      msg.name?.toLowerCase().includes(search) ||
+      msg.message?.toLowerCase().includes(search) ||
+      msg.date?.toLowerCase().includes(search) ||
+      msg.status?.toLowerCase().includes(search)
+    );
+  }, [messagesData, messagesSearch]);
+
+  const filteredCashoutData = useMemo(() => {
+    if (!cashoutSearch.trim()) return cashoutData;
+    const search = cashoutSearch.toLowerCase();
+    return cashoutData.filter(row => 
+      row.month?.toLowerCase().includes(search) ||
+      row.year?.toString().includes(search)
+    );
+  }, [cashoutData, cashoutSearch]);
+
+  const filteredClients = useMemo(() => {
+    if (!clientMasterSearch.trim()) return clients;
+    const search = clientMasterSearch.toLowerCase();
+    return clients.filter((client: any) => 
+      client.brandName?.toLowerCase().includes(search) ||
+      client.location?.toLowerCase().includes(search) ||
+      client.spoc?.toLowerCase().includes(search) ||
+      client.website?.toLowerCase().includes(search) ||
+      client.currentStatus?.toLowerCase().includes(search)
+    );
+  }, [clients, clientMasterSearch]);
+
+  const filteredHrEmployees = useMemo(() => {
+    if (!employeeMasterSearch.trim()) return hrEmployees;
+    const search = employeeMasterSearch.toLowerCase();
+    return hrEmployees.filter((emp: any) => 
+      emp.name?.toLowerCase().includes(search) ||
+      emp.email?.toLowerCase().includes(search) ||
+      emp.designation?.toLowerCase().includes(search) ||
+      emp.employmentStatus?.toLowerCase().includes(search)
+    );
+  }, [hrEmployees, employeeMasterSearch]);
+
+  const filteredRequirements = useMemo(() => {
+    if (!requirementsSearch.trim()) return requirements;
+    const search = requirementsSearch.toLowerCase();
+    return requirements.filter((req: any) => 
+      req.position?.toLowerCase().includes(search) ||
+      req.criticality?.toLowerCase().includes(search) ||
+      req.company?.toLowerCase().includes(search) ||
+      req.spoc?.toLowerCase().includes(search) ||
+      req.talentAdvisor?.toLowerCase().includes(search) ||
+      req.teamLead?.toLowerCase().includes(search)
+    );
+  }, [requirements, requirementsSearch]);
+
   // Fetch daily metrics from API
   const { data: dailyMetricsData = {
     totalRequirements: 0,
