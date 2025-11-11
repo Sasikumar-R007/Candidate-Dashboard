@@ -134,6 +134,22 @@ export const targetMetrics = pgTable("target_metrics", {
   incentiveEarned: text("incentive_earned").notNull(),
 });
 
+export const targetMappings = pgTable("target_mappings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  teamLeadId: varchar("team_lead_id").notNull(),
+  teamLeadName: text("team_lead_name").notNull(),
+  teamMemberId: varchar("team_member_id").notNull(),
+  teamMemberName: text("team_member_name").notNull(),
+  teamMemberRole: text("team_member_role").notNull(),
+  quarter: text("quarter").notNull(),
+  year: text("year").notNull(),
+  minimumTarget: text("minimum_target").notNull(),
+  targetAchieved: text("target_achieved").default("0"),
+  closures: text("closures").default("0"),
+  incentives: text("incentives").default("0"),
+  createdAt: text("created_at").notNull(),
+});
+
 export const dailyMetrics = pgTable("daily_metrics", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   date: text("date").notNull(),
@@ -441,6 +457,10 @@ export const insertTargetMetricsSchema = createInsertSchema(targetMetrics).omit(
   id: true,
 });
 
+export const insertTargetMappingsSchema = createInsertSchema(targetMappings).omit({
+  id: true,
+});
+
 export const insertDailyMetricsSchema = createInsertSchema(dailyMetrics).omit({
   id: true,
 });
@@ -553,6 +573,8 @@ export type InsertTeamLeaderProfile = z.infer<typeof insertTeamLeaderProfileSche
 export type TeamLeaderProfile = typeof teamLeaderProfile.$inferSelect;
 export type InsertTargetMetrics = z.infer<typeof insertTargetMetricsSchema>;
 export type TargetMetrics = typeof targetMetrics.$inferSelect;
+export type InsertTargetMappings = z.infer<typeof insertTargetMappingsSchema>;
+export type TargetMappings = typeof targetMappings.$inferSelect;
 export type InsertDailyMetrics = z.infer<typeof insertDailyMetricsSchema>;
 export type DailyMetrics = typeof dailyMetrics.$inferSelect;
 export type InsertMeeting = z.infer<typeof insertMeetingSchema>;
