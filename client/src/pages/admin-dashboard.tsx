@@ -4585,10 +4585,9 @@ export default function AdminDashboard() {
         );
       case 'metrics':
         return (
-          <div className="px-6 py-6 space-y-6 overflow-y-auto max-h-full admin-scrollbar">
-            <div className="flex gap-8">
-              {/* Left Side - Key Metrics and Cash Outflow */}
-              <div className="flex-1 space-y-6">
+          <div className="flex h-full gap-6 px-6 py-6">
+            {/* Middle Section - Key Metrics and Cash Outflow - Scrollable */}
+            <div className="flex-1 overflow-y-auto space-y-6 admin-scrollbar pr-4">
                 {/* Key Metrics Section */}
                 <Card>
                   <CardHeader>
@@ -4675,87 +4674,110 @@ export default function AdminDashboard() {
                     {/* Input Form */}
                     <div className="grid grid-cols-3 gap-4 mb-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Month</label>
-                        <Input 
-                          placeholder="Month" 
-                          className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
+                        <Select 
                           value={cashoutForm.month}
-                          onChange={(e) => setCashoutForm({...cashoutForm, month: e.target.value})}
-                        />
+                          onValueChange={(value) => setCashoutForm({...cashoutForm, month: value})}
+                        >
+                          <SelectTrigger className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" data-testid="select-cashout-month">
+                            <SelectValue placeholder="Month" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="January">January</SelectItem>
+                            <SelectItem value="February">February</SelectItem>
+                            <SelectItem value="March">March</SelectItem>
+                            <SelectItem value="April">April</SelectItem>
+                            <SelectItem value="May">May</SelectItem>
+                            <SelectItem value="June">June</SelectItem>
+                            <SelectItem value="July">July</SelectItem>
+                            <SelectItem value="August">August</SelectItem>
+                            <SelectItem value="September">September</SelectItem>
+                            <SelectItem value="October">October</SelectItem>
+                            <SelectItem value="November">November</SelectItem>
+                            <SelectItem value="December">December</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year</label>
                         <Input 
+                          type="number"
                           placeholder="Year" 
                           className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
                           value={cashoutForm.year}
                           onChange={(e) => setCashoutForm({...cashoutForm, year: e.target.value})}
+                          data-testid="input-cashout-year"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Number of Employees</label>
                         <Input 
+                          type="number"
                           placeholder="Number of Employees" 
                           className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
                           value={cashoutForm.employees}
                           onChange={(e) => setCashoutForm({...cashoutForm, employees: e.target.value})}
+                          data-testid="input-cashout-employees"
                         />
                       </div>
                     </div>
                     
                     <div className="grid grid-cols-3 gap-4 mb-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Total Salary</label>
                         <Input 
+                          type="number"
                           placeholder="Total Salary" 
                           className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
                           value={cashoutForm.salary}
                           onChange={(e) => setCashoutForm({...cashoutForm, salary: e.target.value})}
+                          data-testid="input-cashout-salary"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Incentive</label>
                         <Input 
+                          type="number"
                           placeholder="Incentive" 
                           className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
                           value={cashoutForm.incentive}
                           onChange={(e) => setCashoutForm({...cashoutForm, incentive: e.target.value})}
+                          data-testid="input-cashout-incentive"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Database & Tools cost</label>
                         <Input 
+                          type="number"
                           placeholder="Database & Tools cost" 
                           className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
                           value={cashoutForm.tools}
                           onChange={(e) => setCashoutForm({...cashoutForm, tools: e.target.value})}
+                          data-testid="input-cashout-tools"
                         />
                       </div>
                     </div>
                     
                     <div className="grid grid-cols-3 gap-4 mb-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rent</label>
                         <Input 
+                          type="number"
                           placeholder="Rent" 
                           className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
                           value={cashoutForm.rent}
                           onChange={(e) => setCashoutForm({...cashoutForm, rent: e.target.value})}
+                          data-testid="input-cashout-rent"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Other Expenses</label>
                         <Input 
+                          type="number"
                           placeholder="Other Expenses" 
                           className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
                           value={cashoutForm.others}
                           onChange={(e) => setCashoutForm({...cashoutForm, others: e.target.value})}
+                          data-testid="input-cashout-others"
                         />
                       </div>
                       <div className="flex items-end">
                         <Button 
                           className="bg-cyan-400 hover:bg-cyan-500 text-black px-4 py-2 rounded w-20"
                           onClick={handleAddCashoutData}
+                          data-testid="button-add-cashout"
                         >
                           Add
                         </Button>
@@ -4806,16 +4828,16 @@ export default function AdminDashboard() {
                     )}
                   </CardContent>
                 </Card>
-              </div>
+            </div>
 
-              {/* Right Side - Key Aspects - Separated */}
-              <div className="w-80 border-l-2 border-gray-300 dark:border-gray-600 pl-6">
-                <Card className="shadow-lg border-2 border-cyan-200 dark:border-cyan-700">
-                  <CardHeader>
-                    <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Key Aspects</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
+            {/* Right Side - Key Aspects - Separately Scrollable */}
+            <div className="w-80 border-l-2 border-gray-300 dark:border-gray-600 pl-6 overflow-y-auto admin-scrollbar">
+              <Card className="shadow-lg border-2 border-cyan-200 dark:border-cyan-700">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Key Aspects</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
                       {/* Growth Metrics */}
                       <div className="bg-teal-50 dark:bg-teal-900/20 p-4 ">
                         <div className="text-sm text-teal-600 dark:text-teal-400 mb-1">GROWTH</div>
@@ -4866,7 +4888,6 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
               </div>
-            </div>
           </div>
         );
       case 'client-settings':
