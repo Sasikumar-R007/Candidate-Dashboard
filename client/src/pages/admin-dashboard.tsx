@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { type Employee } from '@shared/schema';
+import { type Employee, type TargetMappings } from '@shared/schema';
 import AdminSidebar from '@/components/dashboard/admin-sidebar';
 import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
 import AdminTopHeader from '@/components/dashboard/admin-top-header';
@@ -264,10 +264,7 @@ const pipelineDataAnusha = [
   { name: "Ishaan", level1: true, level2: false, level3: false, finalRound: false, hrRound: false, offerStage: false, closure: false }
 ];
 
-const targetsData = [
-  { resource: "Arun KS", role: "TL", quarter: "ASO 2025", minimumTarget: "15,00,000", targetAchieved: "13,00,000", closures: 6, incentives: "15,000" },
-  { resource: "Anusha", role: "TL", quarter: "ASO 2025", minimumTarget: "12,00,000", targetAchieved: "8,00,000", closures: 3, incentives: "35,000" }
-];
+// Removed sample data - now using real data from API
 
 // All employees list from teams data
 const allEmployees = [
@@ -280,24 +277,7 @@ const allEmployees = [
 const tlList = allEmployees.filter(emp => emp.role === 'TL' || emp.role === 'Lead Recruiter').map(emp => ({ ...emp, displayRole: emp.role === 'TL' ? 'TL - Team Leader' : 'TL' }));
 const taList = allEmployees.filter(emp => emp.role === 'Senior Recruiter' || emp.role === 'Recruitment Executive' || emp.role === 'Junior Recruiter').map(emp => ({ ...emp, displayRole: 'TA' }));
 
-// Extended data for the modal with additional sample content
-const allTargetsData = [
-  { resource: "Arun KS", role: "TL", quarter: "ASO 2025", minimumTarget: "15,00,000", targetAchieved: "13,00,000", closures: 6, incentives: "15,000" },
-  { resource: "Anusha", role: "TL", quarter: "ASO 2025", minimumTarget: "12,00,000", targetAchieved: "8,00,000", closures: 3, incentives: "35,000" },
-  { resource: "Sudharshan", role: "RE", quarter: "ASO 2025", minimumTarget: "8,00,000", targetAchieved: "9,50,000", closures: 8, incentives: "12,000" },
-  { resource: "Deepika", role: "SR", quarter: "ASO 2025", minimumTarget: "10,00,000", targetAchieved: "11,20,000", closures: 7, incentives: "18,000" },
-  { resource: "Dharshan", role: "JR", quarter: "ASO 2025", minimumTarget: "5,00,000", targetAchieved: "4,80,000", closures: 4, incentives: "8,000" },
-  { resource: "Kavya", role: "RE", quarter: "ASO 2025", minimumTarget: "8,00,000", targetAchieved: "10,50,000", closures: 9, incentives: "20,000" },
-  { resource: "Thamarai Selvi", role: "LR", quarter: "ASO 2025", minimumTarget: "12,00,000", targetAchieved: "14,80,000", closures: 10, incentives: "25,000" },
-  { resource: "Karthikayan", role: "RE", quarter: "ASO 2025", minimumTarget: "8,00,000", targetAchieved: "7,20,000", closures: 5, incentives: "9,000" },
-  { resource: "Umar", role: "TL", quarter: "ASO 2025", minimumTarget: "14,00,000", targetAchieved: "12,30,000", closures: 5, incentives: "16,000" },
-  { resource: "Siva", role: "SR", quarter: "ASO 2025", minimumTarget: "10,00,000", targetAchieved: "8,90,000", closures: 6, incentives: "14,000" },
-  { resource: "Priya", role: "TA", quarter: "ASO 2025", minimumTarget: "6,00,000", targetAchieved: "7,20,000", closures: 5, incentives: "10,000" },
-  { resource: "Rajesh", role: "TA", quarter: "ASO 2025", minimumTarget: "6,50,000", targetAchieved: "5,80,000", closures: 4, incentives: "8,500" },
-  { resource: "Meera", role: "TA", quarter: "ASO 2025", minimumTarget: "6,00,000", targetAchieved: "6,90,000", closures: 6, incentives: "11,000" },
-  { resource: "Arjun", role: "TA", quarter: "ASO 2025", minimumTarget: "6,20,000", targetAchieved: "7,50,000", closures: 7, incentives: "12,500" },
-  { resource: "Nisha", role: "TA", quarter: "ASO 2025", minimumTarget: "5,80,000", targetAchieved: "6,40,000", closures: 5, incentives: "9,500" }
-];
+// Removed sample data for modal - now using real data from API
 
 const initialMessagesData = [
   { name: "Arun", message: "Discuss ...", date: "12-June", status: "active", timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) },
@@ -810,6 +790,11 @@ export default function AdminDashboard() {
   });
   const [selectedRequirement, setSelectedRequirement] = useState<any>(null);
   const queryClient = useQueryClient();
+  
+  // Fetch target mappings from API
+  const { data: targetMappings = [], isLoading: isLoadingTargets } = useQuery<TargetMappings[]>({
+    queryKey: ["/api/admin/target-mappings"],
+  });
   
   // Pipeline modal state
   const [, navigate] = useLocation();
@@ -1652,17 +1637,31 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {targetsData.map((target, index) => (
-                  <tr key={index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
-                    <td className="py-2 px-3 text-sm text-gray-900 dark:text-white font-medium">{target.resource}</td>
-                    <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.role}</td>
-                    <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.quarter}</td>
-                    <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.minimumTarget}</td>
-                    <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.targetAchieved}</td>
-                    <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.closures}</td>
-                    <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.incentives}</td>
+                {isLoadingTargets ? (
+                  <tr>
+                    <td colSpan={7} className="py-4 px-3 text-sm text-gray-600 dark:text-gray-400 text-center">
+                      Loading...
+                    </td>
                   </tr>
-                ))}
+                ) : targetMappings.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-4 px-3 text-sm text-gray-600 dark:text-gray-400 text-center">
+                      No target mappings found
+                    </td>
+                  </tr>
+                ) : (
+                  targetMappings.slice(0, 5).map((target, index) => (
+                    <tr key={target.id} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
+                      <td className="py-2 px-3 text-sm text-gray-900 dark:text-white font-medium">{target.teamMemberName}</td>
+                      <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.teamMemberRole}</td>
+                      <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.quarter} {target.year}</td>
+                      <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.minimumTarget}</td>
+                      <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.targetAchieved || "-"}</td>
+                      <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.closures || "-"}</td>
+                      <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.incentives || "-"}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -4985,17 +4984,31 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {allTargetsData.map((target, index) => (
-                    <tr key={index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
-                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{target.resource}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.role}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.quarter}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.minimumTarget}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.targetAchieved}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.closures}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.incentives}</td>
+                  {isLoadingTargets ? (
+                    <tr>
+                      <td colSpan={7} className="py-4 px-4 text-sm text-gray-600 dark:text-gray-400 text-center">
+                        Loading...
+                      </td>
                     </tr>
-                  ))}
+                  ) : targetMappings.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-4 px-4 text-sm text-gray-600 dark:text-gray-400 text-center">
+                        No target mappings found
+                      </td>
+                    </tr>
+                  ) : (
+                    targetMappings.map((target, index) => (
+                      <tr key={target.id} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
+                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{target.teamMemberName}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.teamMemberRole}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.quarter} {target.year}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.minimumTarget}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.targetAchieved || "-"}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.closures || "-"}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.incentives || "-"}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
