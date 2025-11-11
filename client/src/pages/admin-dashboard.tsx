@@ -2796,7 +2796,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Right Sidebar - Quarterly/Yearly Metrics */}
-              <div className="w-72 flex flex-col p-4 gap-2">
+              <div className="w-64 bg-teal-50 dark:bg-teal-900/30 p-4 flex flex-col space-y-2">
                 {/* Quarterly/Yearly Selector */}
                 <div className="mb-2">
                   <Select defaultValue="quarterly">
@@ -2812,38 +2812,38 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Current Quarter Section */}
-                <div className="bg-card border border-border rounded-md px-4 py-3">
-                  <div className="text-xs font-semibold text-foreground uppercase tracking-wide mb-0.5">CURRENT</div>
-                  <div className="text-[11px] text-muted-foreground uppercase tracking-wide mb-2">QUARTER</div>
-                  <div className="text-right text-xl font-semibold text-foreground">ASO-2025</div>
+                <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
+                  <div className="text-xs font-bold uppercase">CURRENT</div>
+                  <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">QUARTER</div>
+                  <div className="text-right text-xl font-bold mt-1">ASO-2025</div>
                 </div>
 
                 {/* Minimum Target */}
-                <div className="bg-card border border-border rounded-md px-4 py-3">
-                  <div className="text-xs font-semibold text-foreground uppercase tracking-wide mb-0.5">MINIMUM</div>
-                  <div className="text-[11px] text-muted-foreground uppercase tracking-wide mb-2">TARGET</div>
-                  <div className="text-right text-xl font-semibold text-foreground">27,00,000</div>
+                <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
+                  <div className="text-xs font-bold uppercase">MINIMUM</div>
+                  <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">TARGET</div>
+                  <div className="text-right text-xl font-bold mt-1">27,00,000</div>
                 </div>
 
                 {/* Target Achieved */}
-                <div className="bg-card border border-border rounded-md px-4 py-3">
-                  <div className="text-xs font-semibold text-foreground uppercase tracking-wide mb-0.5">TARGET</div>
-                  <div className="text-[11px] text-muted-foreground uppercase tracking-wide mb-2">ACHIEVED</div>
-                  <div className="text-right text-xl font-semibold text-foreground">21,00,000</div>
+                <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
+                  <div className="text-xs font-bold uppercase">TARGET</div>
+                  <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">ACHIEVED</div>
+                  <div className="text-right text-xl font-bold mt-1">21,00,000</div>
                 </div>
 
                 {/* Closures Made */}
-                <div className="bg-card border border-border rounded-md px-4 py-3">
-                  <div className="text-xs font-semibold text-foreground uppercase tracking-wide mb-0.5">CLOSURES</div>
-                  <div className="text-[11px] text-muted-foreground uppercase tracking-wide mb-2">MADE</div>
-                  <div className="text-right text-xl font-semibold text-foreground">8</div>
+                <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
+                  <div className="text-xs font-bold uppercase">CLOSURES</div>
+                  <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">MADE</div>
+                  <div className="text-right text-xl font-bold mt-1">8</div>
                 </div>
 
                 {/* Incentives Made */}
-                <div className="bg-card border border-border rounded-md px-4 py-3">
-                  <div className="text-xs font-semibold text-foreground uppercase tracking-wide mb-0.5">INCENTIVES</div>
-                  <div className="text-[11px] text-muted-foreground uppercase tracking-wide mb-2">MADE</div>
-                  <div className="text-right text-xl font-semibold text-foreground">65,000</div>
+                <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
+                  <div className="text-xs font-bold uppercase">INCENTIVES</div>
+                  <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">MADE</div>
+                  <div className="text-right text-xl font-bold mt-1">65,000</div>
                 </div>
               </div>
             </div>
@@ -3977,7 +3977,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Right Sidebar - Quarterly/Yearly Metrics */}
-              <div className="w-72 flex flex-col p-4 gap-2">
+              <div className="w-64 bg-teal-50 dark:bg-teal-900/30 p-4 flex flex-col space-y-2">
                 {/* Quarterly/Yearly Selector */}
                 <div className="mb-2">
                   <Select defaultValue="quarterly">
@@ -3993,38 +3993,38 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Current Quarter Section */}
-                <div className="bg-card border border-border rounded-md px-4 py-3">
-                  <div className="text-xs font-semibold text-foreground uppercase tracking-wide mb-0.5">CURRENT</div>
-                  <div className="text-[11px] text-muted-foreground uppercase tracking-wide mb-2">QUARTER</div>
-                  <div className="text-right text-xl font-semibold text-foreground">ASO-2025</div>
+                <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
+                  <div className="text-xs font-bold uppercase">CURRENT</div>
+                  <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">QUARTER</div>
+                  <div className="text-right text-xl font-bold mt-1">ASO-2025</div>
                 </div>
 
                 {/* Minimum Target */}
-                <div className="bg-card border border-border rounded-md px-4 py-3">
-                  <div className="text-xs font-semibold text-foreground uppercase tracking-wide mb-0.5">MINIMUM</div>
-                  <div className="text-[11px] text-muted-foreground uppercase tracking-wide mb-2">TARGET</div>
-                  <div className="text-right text-xl font-semibold text-foreground">27,00,000</div>
+                <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
+                  <div className="text-xs font-bold uppercase">MINIMUM</div>
+                  <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">TARGET</div>
+                  <div className="text-right text-xl font-bold mt-1">27,00,000</div>
                 </div>
 
                 {/* Target Achieved */}
-                <div className="bg-card border border-border rounded-md px-4 py-3">
-                  <div className="text-xs font-semibold text-foreground uppercase tracking-wide mb-0.5">TARGET</div>
-                  <div className="text-[11px] text-muted-foreground uppercase tracking-wide mb-2">ACHIEVED</div>
-                  <div className="text-right text-xl font-semibold text-foreground">21,00,000</div>
+                <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
+                  <div className="text-xs font-bold uppercase">TARGET</div>
+                  <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">ACHIEVED</div>
+                  <div className="text-right text-xl font-bold mt-1">21,00,000</div>
                 </div>
 
                 {/* Closures Made */}
-                <div className="bg-card border border-border rounded-md px-4 py-3">
-                  <div className="text-xs font-semibold text-foreground uppercase tracking-wide mb-0.5">CLOSURES</div>
-                  <div className="text-[11px] text-muted-foreground uppercase tracking-wide mb-2">MADE</div>
-                  <div className="text-right text-xl font-semibold text-foreground">8</div>
+                <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
+                  <div className="text-xs font-bold uppercase">CLOSURES</div>
+                  <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">MADE</div>
+                  <div className="text-right text-xl font-bold mt-1">8</div>
                 </div>
 
                 {/* Incentives Made */}
-                <div className="bg-card border border-border rounded-md px-4 py-3">
-                  <div className="text-xs font-semibold text-foreground uppercase tracking-wide mb-0.5">INCENTIVES</div>
-                  <div className="text-[11px] text-muted-foreground uppercase tracking-wide mb-2">MADE</div>
-                  <div className="text-right text-xl font-semibold text-foreground">65,000</div>
+                <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
+                  <div className="text-xs font-bold uppercase">INCENTIVES</div>
+                  <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">MADE</div>
+                  <div className="text-right text-xl font-bold mt-1">65,000</div>
                 </div>
               </div>
             </div>
