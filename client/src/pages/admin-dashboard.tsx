@@ -2927,51 +2927,6 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
             </div>
-
-            {/* Right Sidebar - Quarterly/Yearly Metrics */}
-            <div className="w-64 bg-teal-50 dark:bg-teal-900/30 p-4 flex flex-col space-y-2">
-              {/* Quarterly/Yearly Selector */}
-              <div className="mb-2">
-                <Select defaultValue="quarterly">
-                  <SelectTrigger className="w-full bg-teal-400 text-black">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="quarterly">Quarterly/Yearly</SelectItem>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="weekly">Weekly</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Minimum Target */}
-              <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
-                <div className="text-xs font-bold uppercase">MINIMUM</div>
-                <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">TARGET</div>
-                <div className="text-right text-xl font-bold mt-1">27,00,000</div>
-              </div>
-
-              {/* Target Achieved */}
-              <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
-                <div className="text-xs font-bold uppercase">TARGET</div>
-                <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">ACHIEVED</div>
-                <div className="text-right text-xl font-bold mt-1">21,00,000</div>
-              </div>
-
-              {/* Closures Made */}
-              <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
-                <div className="text-xs font-bold uppercase">CLOSURES</div>
-                <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">MADE</div>
-                <div className="text-right text-xl font-bold mt-1">8</div>
-              </div>
-
-              {/* Incentives Made */}
-              <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
-                <div className="text-xs font-bold uppercase">INCENTIVES</div>
-                <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">MADE</div>
-                <div className="text-right text-xl font-bold mt-1">65,000</div>
-              </div>
-            </div>
           </div>
         );
       case 'user-management':
@@ -3963,51 +3918,6 @@ export default function AdminDashboard() {
                       Show Data
                     </Button>
                   </div>
-                </div>
-              </div>
-
-              {/* Right Sidebar - Quarterly/Yearly Metrics */}
-              <div className="w-64 bg-teal-50 dark:bg-teal-900/30 p-4 flex flex-col space-y-2">
-                {/* Quarterly/Yearly Selector */}
-                <div className="mb-2">
-                  <Select defaultValue="quarterly">
-                    <SelectTrigger className="w-full bg-teal-400 text-black">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="quarterly">Quarterly/Yearly</SelectItem>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                      <SelectItem value="weekly">Weekly</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Minimum Target */}
-                <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
-                  <div className="text-xs font-bold uppercase">MINIMUM</div>
-                  <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">TARGET</div>
-                  <div className="text-right text-xl font-bold mt-1">27,00,000</div>
-                </div>
-
-                {/* Target Achieved */}
-                <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
-                  <div className="text-xs font-bold uppercase">TARGET</div>
-                  <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">ACHIEVED</div>
-                  <div className="text-right text-xl font-bold mt-1">21,00,000</div>
-                </div>
-
-                {/* Closures Made */}
-                <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
-                  <div className="text-xs font-bold uppercase">CLOSURES</div>
-                  <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">MADE</div>
-                  <div className="text-right text-xl font-bold mt-1">8</div>
-                </div>
-
-                {/* Incentives Made */}
-                <div className="bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-3 rounded-sm">
-                  <div className="text-xs font-bold uppercase">INCENTIVES</div>
-                  <div className="text-[10px] text-gray-600 dark:text-gray-400 uppercase">MADE</div>
-                  <div className="text-right text-xl font-bold mt-1">65,000</div>
                 </div>
               </div>
             </div>
