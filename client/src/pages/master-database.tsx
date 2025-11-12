@@ -395,7 +395,7 @@ export default function MasterDatabase() {
       {/* Main Content Area - Side by Side Layout */}
       <div className="flex-1 flex overflow-hidden">
         {/* Table Section */}
-        <div className={`p-6 overflow-auto transition-all duration-300 ${
+        <div className={`p-6 overflow-auto ${
           isResumeDrawerOpen ? 'flex-1' : 'w-full'
         }`}>
           <div className="bg-white dark:bg-gray-800 rounded-md overflow-hidden">
@@ -476,33 +476,20 @@ export default function MasterDatabase() {
 
         {/* Resume Display Section - Side Panel */}
         {isResumeDrawerOpen && selectedResume && (
-          <div className="w-full max-w-md border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto">
-            {/* Close Button */}
-            <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700 flex justify-end">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleCloseDrawer}
-                className="rounded-full"
-                data-testid="button-close-drawer"
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-
+          <div className="w-full max-w-md h-screen border-l-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 flex flex-col">
             {/* Content */}
-            <div className="p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* Candidate Profile Header - Redesigned */}
               <div className="flex items-start justify-between gap-4">
                 {/* Left Side: Profile Info */}
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3 flex-1">
                   <Avatar className="h-12 w-12">
                     <AvatarImage src="" alt={selectedResume.name} />
                     <AvatarFallback className="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300">
                       {getInitials(selectedResume.name)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="space-y-2">
+                  <div className="space-y-2 flex-1">
                     <div>
                       <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100" data-testid="text-candidate-name">
                         {selectedResume.name}
@@ -511,20 +498,17 @@ export default function MasterDatabase() {
                         {selectedResume.position}
                       </p>
                     </div>
-                    {/* Status and Uploaded Date Badges */}
+                    {/* Status Badge */}
                     <div className="flex flex-wrap gap-2">
                       <Badge className={`${getStatusBadgeColor(selectedResume.status)} rounded-full px-3 py-1 text-xs`}>
                         {selectedResume.status}
-                      </Badge>
-                      <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
-                        Uploaded: {selectedResume.uploadedDate}
                       </Badge>
                     </div>
                   </div>
                 </div>
 
-                {/* Right Side: Action Icons */}
-                <div className="flex flex-col gap-2">
+                {/* Right Side: All Action Icons in One Row */}
+                <div className="flex gap-1">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -555,6 +539,15 @@ export default function MasterDatabase() {
                     title="Send Email"
                   >
                     <Mail className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleCloseDrawer}
+                    className="h-8 w-8 rounded-full"
+                    data-testid="button-close-drawer"
+                  >
+                    <X className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
@@ -588,6 +581,13 @@ export default function MasterDatabase() {
                       <Download className="h-4 w-4" />
                     </Button>
                   </div>
+                </div>
+                
+                {/* Uploaded Date Badge - Moved Below Resume */}
+                <div className="flex justify-center">
+                  <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
+                    Uploaded: {selectedResume.uploadedDate}
+                  </Badge>
                 </div>
               </div>
 
