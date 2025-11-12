@@ -62,7 +62,7 @@ Preferred communication style: Simple, everyday language.
 - **Specialized Dashboards**:
     - **Candidate Dashboard**: Profile management, job preferences, resume upload.
     - **Team Leader Dashboard**: Team metrics, target tracking, performance monitoring.
-    - **Admin Dashboard**: Team oversight, target & incentives tracking, daily metrics, user management, and reporting.
+    - **Admin Dashboard**: Team oversight, target & incentives tracking, daily metrics, user management, reporting, and revenue analytics with expandable graph visualization.
 - **Daily Metrics System**: 
     - **Real-time Calculations**: API endpoint `/api/admin/daily-metrics` calculates metrics on-demand from database.
     - **Total Requirements**: Count of requirements created on target date.
