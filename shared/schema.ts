@@ -185,6 +185,7 @@ export const requirements = pgTable("requirements", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   position: text("position").notNull(),
   criticality: text("criticality").notNull(), // HIGH, MEDIUM, LOW
+  toughness: text("toughness").notNull().default("Medium"), // Easy, Medium, Tough
   company: text("company").notNull(),
   spoc: text("spoc").notNull(),
   talentAdvisor: text("talent_advisor"),
@@ -199,6 +200,7 @@ export const archivedRequirements = pgTable("archived_requirements", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   position: text("position").notNull(),
   criticality: text("criticality").notNull(),
+  toughness: text("toughness").notNull().default("Medium"), // Easy, Medium, Tough
   company: text("company").notNull(),
   spoc: text("spoc").notNull(),
   talentAdvisor: text("talent_advisor"),
