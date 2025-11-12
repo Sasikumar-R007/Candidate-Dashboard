@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Filter, Search, Pencil, Trash2, X, Share2, Download } from "lucide-react";
+import { ArrowLeft, Filter, Search, Pencil, Trash2, X, Share2, Download, Bookmark, Phone, Mail } from "lucide-react";
 
 type ProfileType = 'resume' | 'employee' | 'client';
 
@@ -323,7 +323,7 @@ export default function MasterDatabase() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 px-6 py-4">
         <div className="flex items-center gap-3 mb-6">
@@ -392,74 +392,261 @@ export default function MasterDatabase() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="p-6">
-        <div className="bg-white dark:bg-gray-800 rounded-md overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-blue-200 dark:bg-blue-900">
-                  <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Name</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Position</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Experience</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Skills</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Source</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Status</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Uploaded Date</th>
-                  <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredData.map((item, index) => (
-                  <tr 
-                    key={item.id} 
-                    onClick={() => handleRowClick(item)}
-                    className={`border-b border-gray-200 dark:border-gray-700 ${
-                      index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-blue-50 dark:bg-gray-750'
-                    } ${profileType === 'resume' ? 'cursor-pointer hover-elevate' : ''}`}
-                    data-testid={`row-${profileType}-${item.id}`}
-                  >
-                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100" data-testid={`text-name-${item.id}`}>
-                      {item.name}
-                    </td>
-                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.position}</td>
-                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.experience}</td>
-                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
-                      {item.skills.split(',')[0]}...
-                    </td>
-                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.source}</td>
-                    <td className="py-3 px-4">
-                      <Badge className={`${getStatusBadgeColor(item.status)} rounded-full px-3 py-1`}>
-                        {item.status}
-                      </Badge>
-                    </td>
-                    <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.uploadedDate}</td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
-                          data-testid={`button-edit-${item.id}`}
-                        >
-                          <Pencil size={16} />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
-                          data-testid={`button-delete-${item.id}`}
-                        >
-                          <Trash2 size={16} />
-                        </Button>
-                      </div>
-                    </td>
+      {/* Main Content Area - Side by Side Layout */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Table Section */}
+        <div className={`p-6 overflow-auto transition-all duration-300 ${
+          isResumeDrawerOpen ? 'flex-1' : 'w-full'
+        }`}>
+          <div className="bg-white dark:bg-gray-800 rounded-md overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-blue-200 dark:bg-blue-900">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Name</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Position</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Experience</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Skills</th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Source</th>
+                    {!isResumeDrawerOpen && (
+                      <>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Status</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Uploaded Date</th>
+                      </>
+                    )}
+                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredData.map((item, index) => (
+                    <tr 
+                      key={item.id} 
+                      onClick={() => handleRowClick(item)}
+                      className={`border-b border-gray-200 dark:border-gray-700 ${
+                        index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-blue-50 dark:bg-gray-750'
+                      } ${profileType === 'resume' ? 'cursor-pointer hover-elevate' : ''}`}
+                      data-testid={`row-${profileType}-${item.id}`}
+                    >
+                      <td className="py-3 px-4 text-gray-900 dark:text-gray-100" data-testid={`text-name-${item.id}`}>
+                        {item.name}
+                      </td>
+                      <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.position}</td>
+                      <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.experience}</td>
+                      <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                        {item.skills.split(',')[0]}...
+                      </td>
+                      <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.source}</td>
+                      {!isResumeDrawerOpen && (
+                        <>
+                          <td className="py-3 px-4">
+                            <Badge className={`${getStatusBadgeColor(item.status)} rounded-full px-3 py-1`}>
+                              {item.status}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.uploadedDate}</td>
+                        </>
+                      )}
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
+                            data-testid={`button-edit-${item.id}`}
+                          >
+                            <Pencil size={16} />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
+                            data-testid={`button-delete-${item.id}`}
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
+
+        {/* Resume Display Section - Side Panel */}
+        {isResumeDrawerOpen && selectedResume && (
+          <div className="w-full max-w-md border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto">
+            {/* Close Button */}
+            <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700 flex justify-end">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleCloseDrawer}
+                className="rounded-full"
+                data-testid="button-close-drawer"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              {/* Candidate Profile Header - Redesigned */}
+              <div className="flex items-start justify-between gap-4">
+                {/* Left Side: Profile Info */}
+                <div className="flex items-start gap-3">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src="" alt={selectedResume.name} />
+                    <AvatarFallback className="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300">
+                      {getInitials(selectedResume.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="space-y-2">
+                    <div>
+                      <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100" data-testid="text-candidate-name">
+                        {selectedResume.name}
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400" data-testid="text-candidate-position">
+                        {selectedResume.position}
+                      </p>
+                    </div>
+                    {/* Status and Uploaded Date Badges */}
+                    <div className="flex flex-wrap gap-2">
+                      <Badge className={`${getStatusBadgeColor(selectedResume.status)} rounded-full px-3 py-1 text-xs`}>
+                        {selectedResume.status}
+                      </Badge>
+                      <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
+                        Uploaded: {selectedResume.uploadedDate}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Side: Action Icons */}
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    data-testid="button-save-resume"
+                    title="Save Resume"
+                  >
+                    <Bookmark className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => {
+                      navigator.clipboard.writeText(selectedResume.position);
+                      alert('Phone number copied!');
+                    }}
+                    data-testid="button-call-resume"
+                    title="Copy Phone Number"
+                  >
+                    <Phone className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    data-testid="button-mail-resume"
+                    title="Send Email"
+                  >
+                    <Mail className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Resume Display Area */}
+              <div className="space-y-3">
+                <div className="bg-gray-100 dark:bg-gray-900 rounded-md p-8 min-h-[400px] flex items-center justify-center relative">
+                  <div className="text-center">
+                    <p className="text-xl font-semibold text-gray-900 dark:text-gray-100">Resume</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">Resume Not Available</p>
+                  </div>
+                  
+                  {/* Share and Download Buttons */}
+                  <div className="absolute bottom-4 right-4 flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleShareResume}
+                      className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800"
+                      data-testid="button-share-resume"
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleDownloadResume}
+                      className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800"
+                      data-testid="button-download-resume"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Comments Section */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900 dark:text-gray-100">Comments</h4>
+                
+                {/* Comments List */}
+                <div className="space-y-3">
+                  {comments.map((comment) => (
+                    <div key={comment.id} className="bg-blue-50 dark:bg-blue-950/30 rounded-md p-3 space-y-2" data-testid={`comment-${comment.id}`}>
+                      <div className="flex items-start gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-300 text-xs">
+                            {getInitials(comment.author)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{comment.author}</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
+                            {comment.text}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{comment.timestamp}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add Comment Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="new-comment">Add a comment</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="new-comment"
+                      type="text"
+                      placeholder="Type your comment..."
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleAddComment();
+                        }
+                      }}
+                      data-testid="input-new-comment"
+                    />
+                    <Button 
+                      onClick={handleAddComment}
+                      disabled={!newComment.trim()}
+                      data-testid="button-add-comment"
+                    >
+                      Add
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Advanced Filter Dialog */}
@@ -574,146 +761,6 @@ export default function MasterDatabase() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Resume Detail Drawer */}
-      {isResumeDrawerOpen && selectedResume && (
-        <div className="fixed inset-0 z-50 flex">
-          {/* Backdrop */}
-          <div 
-            className="absolute inset-0 bg-black/50"
-            onClick={handleCloseDrawer}
-            data-testid="drawer-backdrop"
-          />
-          
-          {/* Right Side Panel */}
-          <div className="ml-auto relative bg-white dark:bg-gray-800 w-full max-w-md h-full overflow-y-auto shadow-xl">
-            {/* Close Button */}
-            <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700 flex justify-end">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleCloseDrawer}
-                className="rounded-full"
-                data-testid="button-close-drawer"
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-
-            {/* Content */}
-            <div className="p-6 space-y-6">
-              {/* Candidate Profile */}
-              <div className="flex flex-col items-center text-center space-y-2">
-                <Avatar className="h-16 w-16">
-                  <AvatarImage src="" alt={selectedResume.name} />
-                  <AvatarFallback className="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300">
-                    {getInitials(selectedResume.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100" data-testid="text-candidate-name">
-                    {selectedResume.name}
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400" data-testid="text-candidate-position">
-                    {selectedResume.position}
-                  </p>
-                </div>
-              </div>
-
-              {/* Resume Display Area */}
-              <div className="space-y-3">
-                <div className="bg-gray-100 dark:bg-gray-900 rounded-md p-8 min-h-[400px] flex items-center justify-center relative">
-                  <div className="text-center">
-                    <p className="text-xl font-semibold text-gray-900 dark:text-gray-100">Resume</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">Resume Not Available</p>
-                  </div>
-                  
-                  {/* Share and Download Buttons */}
-                  <div className="absolute bottom-4 right-4 flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleShareResume}
-                      className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800"
-                      data-testid="button-share-resume"
-                    >
-                      <Share2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleDownloadResume}
-                      className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800"
-                      data-testid="button-download-resume"
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                
-                {/* Uploaded Date */}
-                <p className="text-sm text-gray-600 dark:text-gray-400 text-right" data-testid="text-upload-date">
-                  Uploaded On: {selectedResume.uploadedDate}
-                </p>
-              </div>
-
-              {/* Comments Section */}
-              <div className="space-y-4">
-                <h4 className="font-semibold text-gray-900 dark:text-gray-100">Comments</h4>
-                
-                {/* Comments List */}
-                <div className="space-y-3">
-                  {comments.map((comment) => (
-                    <div key={comment.id} className="bg-blue-50 dark:bg-blue-950/30 rounded-md p-3 space-y-2" data-testid={`comment-${comment.id}`}>
-                      <div className="flex items-start gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-300 text-xs">
-                            {getInitials(comment.author)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{comment.author}</p>
-                          <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
-                            {comment.text}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{comment.timestamp}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Add Comment Input */}
-                <div className="space-y-2">
-                  <Label htmlFor="new-comment">Add a comment</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="new-comment"
-                      type="text"
-                      placeholder="Type your comment..."
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleAddComment();
-                        }
-                      }}
-                      data-testid="input-new-comment"
-                    />
-                    <Button 
-                      onClick={handleAddComment}
-                      disabled={!newComment.trim()}
-                      data-testid="button-add-comment"
-                    >
-                      Add
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
