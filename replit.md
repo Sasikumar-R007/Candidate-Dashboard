@@ -76,6 +76,22 @@ Preferred communication style: Simple, everyday language.
     - **Security**: Session-based user identification with unique guest IDs, protected support endpoints requiring employee authentication.
     - **Storage**: All conversations and messages stored permanently in PostgreSQL database.
     - **Real-time**: Polling mechanism (conversations poll every 5 seconds, messages every 3 seconds) for real-time message updates.
+- **Master Database Resume Detail Drawer**:
+    - **Overview**: Right-side drawer panel that opens when clicking on a resume row in the Master Database (Resumes section only).
+    - **Features**:
+      - Candidate profile display with avatar (or initials fallback) and position
+      - Resume viewing area with placeholder message "Resume Not Available" (ready for future integration)
+      - Share and download resume buttons (positioned at bottom-right of resume area, frontend-only functionality)
+      - Upload date display below resume viewer
+      - Comments section with real-time state management allowing recruiters/team leaders/admin/clients to add comments
+    - **User Experience**: 
+      - Only activates for resume profile type (not employees or clients)
+      - Cursor changes to pointer on resume rows to indicate clickability
+      - Close button at top-right of drawer
+      - Semi-transparent backdrop allows quick dismissal by clicking outside drawer
+      - Comments appear immediately upon submission with "Current User" attribution
+      - Each comment shows avatar initials, author name, comment text, and timestamp
+    - **Technical Implementation**: Local component state for comment management (ready for backend integration)
 
 ## Development Tools
 - **Build System**: Vite for fast development and optimized builds.
