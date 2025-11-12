@@ -662,11 +662,11 @@ export default function RecruiterDashboard2() {
                       </div>
                       <div className="flex justify-between items-center py-2">
                         <span className="text-sm font-medium text-gray-600">Avg. Resumes per Requirement</span>
-                        <span className="text-4xl font-bold text-blue-600" data-testid="text-avg-resumes">02</span>
+                        <span className="text-4xl font-bold text-blue-600" data-testid="text-avg-resumes">2.5</span>
                       </div>
                       <div className="flex justify-between items-center py-2">
                         <span className="text-sm font-medium text-gray-600">Requirements per Recruiter</span>
-                        <span className="text-4xl font-bold text-blue-600" data-testid="text-requirements-recruiter">03</span>
+                        <span className="text-4xl font-bold text-blue-600" data-testid="text-requirements-recruiter">3.2</span>
                       </div>
                       <div className="flex justify-between items-center py-2">
                         <span className="text-sm font-medium text-gray-600">Completed Requirements</span>
@@ -867,11 +867,11 @@ export default function RecruiterDashboard2() {
   const renderRequirementsContent = () => {
     // Updated requirements data with SPOC Email field and IDs for count tracking
     const requirementsTableData = [
-      { id: 1, position: 'Frontend Developer', criticality: 'HIGH', company: 'TechCorp', spoc: 'David Wilson', spocEmail: 'david@techcorp.com' },
-      { id: 2, position: 'UI/UX Designer', criticality: 'MEDIUM', company: 'Designify', spoc: 'Tom Anderson', spocEmail: 'tom@designify.com' },
-      { id: 3, position: 'Backend Developer', criticality: 'LOW', company: 'CodeLabs', spoc: 'Robert Kim', spocEmail: 'robert@codelabs.com' },
-      { id: 4, position: 'QA Tester', criticality: 'MEDIUM', company: 'AppLogic', spoc: 'Kevin Brown', spocEmail: 'kevin@applogic.com' },
-      { id: 5, position: 'Mobile App Developer', criticality: 'HIGH', company: 'Tesco', spoc: 'Mel Gibson', spocEmail: 'mel@tesco.com' },
+      { id: 1, position: 'Frontend Developer', criticality: 'HIGH', toughness: 'Easy', company: 'TechCorp', spoc: 'David Wilson', spocEmail: 'david@techcorp.com' },
+      { id: 2, position: 'UI/UX Designer', criticality: 'MEDIUM', toughness: 'Medium', company: 'Designify', spoc: 'Tom Anderson', spocEmail: 'tom@designify.com' },
+      { id: 3, position: 'Backend Developer', criticality: 'LOW', toughness: 'Tough', company: 'CodeLabs', spoc: 'Robert Kim', spocEmail: 'robert@codelabs.com' },
+      { id: 4, position: 'QA Tester', criticality: 'MEDIUM', toughness: 'Easy', company: 'AppLogic', spoc: 'Kevin Brown', spocEmail: 'kevin@applogic.com' },
+      { id: 5, position: 'Mobile App Developer', criticality: 'HIGH', toughness: 'Tough', company: 'Tesco', spoc: 'Mel Gibson', spocEmail: 'mel@tesco.com' },
     ];
 
     // Summary boxes data
@@ -938,7 +938,7 @@ export default function RecruiterDashboard2() {
                                 req.criticality === 'MEDIUM' ? 'bg-blue-100 text-blue-800' :
                                 'bg-green-100 text-green-800'
                               }`}>
-                                • {req.criticality}
+                                • {req.criticality}-{req.toughness}
                               </span>
                             </td>
                             <td className="py-3 px-4 text-gray-900">{req.company}</td>

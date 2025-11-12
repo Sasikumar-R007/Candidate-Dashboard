@@ -17,6 +17,7 @@ export default function AddRequirementModal({ isOpen, onClose }: AddRequirementM
   const [formData, setFormData] = useState({
     position: '',
     criticality: '',
+    toughness: '',
     company: '',
     spoc: '',
     talentAdvisor: '',
@@ -65,7 +66,7 @@ export default function AddRequirementModal({ isOpen, onClose }: AddRequirementM
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.position || !formData.criticality || !formData.company || !formData.spoc) {
+    if (!formData.position || !formData.criticality || !formData.toughness || !formData.company || !formData.spoc) {
       toast({
         title: "Missing Fields",
         description: "Please fill in all required fields.",
@@ -81,6 +82,7 @@ export default function AddRequirementModal({ isOpen, onClose }: AddRequirementM
     setFormData({
       position: '',
       criticality: '',
+      toughness: '',
       company: '',
       spoc: '',
       talentAdvisor: '',
@@ -106,23 +108,23 @@ export default function AddRequirementModal({ isOpen, onClose }: AddRequirementM
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+          <div className="space-y-2">
+            <Label htmlFor="position" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Position *
+            </Label>
+            <Input
+              id="position"
+              type="text"
+              value={formData.position}
+              onChange={(e) => handleInputChange('position', e.target.value)}
+              placeholder="e.g. Frontend Developer"
+              className="input-styled"
+              required
+              data-testid="input-position"
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="position" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Position *
-              </Label>
-              <Input
-                id="position"
-                type="text"
-                value={formData.position}
-                onChange={(e) => handleInputChange('position', e.target.value)}
-                placeholder="e.g. Frontend Developer"
-                className="input-styled"
-                required
-                data-testid="input-position"
-              />
-            </div>
-            
             <div className="space-y-2">
               <Label htmlFor="criticality" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 Criticality *
@@ -139,6 +141,26 @@ export default function AddRequirementModal({ isOpen, onClose }: AddRequirementM
                   <SelectItem value="HIGH">HIGH</SelectItem>
                   <SelectItem value="MEDIUM">MEDIUM</SelectItem>
                   <SelectItem value="LOW">LOW</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="toughness" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Toughness *
+              </Label>
+              <Select 
+                value={formData.toughness} 
+                onValueChange={(value) => handleInputChange('toughness', value)}
+                required
+              >
+                <SelectTrigger className="input-styled" data-testid="select-toughness">
+                  <SelectValue placeholder="Select toughness" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Easy">Easy</SelectItem>
+                  <SelectItem value="Medium">Medium</SelectItem>
+                  <SelectItem value="Tough">Tough</SelectItem>
                 </SelectContent>
               </Select>
             </div>

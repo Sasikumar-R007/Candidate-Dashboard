@@ -362,16 +362,16 @@ export class MemStorage implements IStorage {
 
     // Sample requirements data
     const sampleRequirements = [
-      { position: "Mobile App Developer", criticality: "HIGH", company: "Tesco", spoc: "Mel Gibson", talentAdvisor: "Mel Gibson", teamLead: "Arun" },
-      { position: "Backend Developer", criticality: "LOW", company: "CodeLabs", spoc: "Robert Kim", talentAdvisor: "Robert Kim", teamLead: "Arun" },
-      { position: "Frontend Developer", criticality: "MEDIUM", company: "TechCorp", spoc: "David Wilson", talentAdvisor: "Unassigned", teamLead: "Arun" },
-      { position: "QA Tester", criticality: "HIGH", company: "AppLogic", spoc: "Kevin Brown", talentAdvisor: "Unassigned", teamLead: "Unassigned" },
-      { position: "Mobile App Developer", criticality: "MEDIUM", company: "Tesco", spoc: "Mel Gibson", talentAdvisor: "Mel Gibson", teamLead: "Arun" },
-      { position: "Backend Developer", criticality: "LOW", company: "CodeLabs", spoc: "Robert Kim", talentAdvisor: "Robert Kim", teamLead: "Arun" },
-      { position: "UI/UX Designer", criticality: "MEDIUM", company: "Designify", spoc: "Tom Anderson", talentAdvisor: "Unassigned", teamLead: "Anusha" },
-      { position: "Frontend Developer", criticality: "HIGH", company: "TechCorp", spoc: "David Wilson", talentAdvisor: "Unassigned", teamLead: "Arun" },
-      { position: "UI/UX Designer", criticality: "MEDIUM", company: "Designify", spoc: "Tom Anderson", talentAdvisor: "Unassigned", teamLead: "Anusha" },
-      { position: "QA Tester", criticality: "MEDIUM", company: "AppLogic", spoc: "Kevin Brown", talentAdvisor: "Unassigned", teamLead: "Unassigned" }
+      { position: "Mobile App Developer", criticality: "HIGH", toughness: "Tough", company: "Tesco", spoc: "Mel Gibson", talentAdvisor: "Mel Gibson", teamLead: "Arun" },
+      { position: "Backend Developer", criticality: "LOW", toughness: "Easy", company: "CodeLabs", spoc: "Robert Kim", talentAdvisor: "Robert Kim", teamLead: "Arun" },
+      { position: "Frontend Developer", criticality: "MEDIUM", toughness: "Medium", company: "TechCorp", spoc: "David Wilson", talentAdvisor: "Unassigned", teamLead: "Arun" },
+      { position: "QA Tester", criticality: "HIGH", toughness: "Easy", company: "AppLogic", spoc: "Kevin Brown", talentAdvisor: "Unassigned", teamLead: "Unassigned" },
+      { position: "Mobile App Developer", criticality: "MEDIUM", toughness: "Medium", company: "Tesco", spoc: "Mel Gibson", talentAdvisor: "Mel Gibson", teamLead: "Arun" },
+      { position: "Backend Developer", criticality: "LOW", toughness: "Tough", company: "CodeLabs", spoc: "Robert Kim", talentAdvisor: "Robert Kim", teamLead: "Arun" },
+      { position: "UI/UX Designer", criticality: "MEDIUM", toughness: "Easy", company: "Designify", spoc: "Tom Anderson", talentAdvisor: "Unassigned", teamLead: "Anusha" },
+      { position: "Frontend Developer", criticality: "HIGH", toughness: "Medium", company: "TechCorp", spoc: "David Wilson", talentAdvisor: "Unassigned", teamLead: "Arun" },
+      { position: "UI/UX Designer", criticality: "MEDIUM", toughness: "Tough", company: "Designify", spoc: "Tom Anderson", talentAdvisor: "Unassigned", teamLead: "Anusha" },
+      { position: "QA Tester", criticality: "MEDIUM", toughness: "Easy", company: "AppLogic", spoc: "Kevin Brown", talentAdvisor: "Unassigned", teamLead: "Unassigned" }
     ];
 
     sampleRequirements.forEach(req => {
@@ -379,10 +379,13 @@ export class MemStorage implements IStorage {
         id: randomUUID(),
         position: req.position,
         criticality: req.criticality,
+        toughness: req.toughness,
         company: req.company,
         spoc: req.spoc,
         talentAdvisor: req.talentAdvisor,
         teamLead: req.teamLead,
+        status: "open",
+        completedAt: null,
         isArchived: false,
         createdAt: new Date().toISOString()
       };
@@ -821,6 +824,7 @@ export class MemStorage implements IStorage {
       id: archivedId,
       position: requirement.position,
       criticality: requirement.criticality,
+      toughness: requirement.toughness,
       company: requirement.company,
       spoc: requirement.spoc,
       talentAdvisor: requirement.talentAdvisor,
