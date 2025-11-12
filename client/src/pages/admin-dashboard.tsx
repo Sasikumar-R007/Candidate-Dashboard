@@ -1606,6 +1606,10 @@ export default function AdminDashboard() {
       setCashoutForm({
         month: '', year: '', employees: '', salary: '', incentive: '', tools: '', rent: '', others: ''
       });
+      toast({
+        title: "Success",
+        description: "Cash outflow added",
+      });
     }
   };
 
