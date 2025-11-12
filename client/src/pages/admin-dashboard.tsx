@@ -1792,12 +1792,12 @@ export default function AdminDashboard() {
               <div className="border-t border-gray-200"></div>
               <div className="flex justify-between items-center py-2">
                 <span className="text-sm font-medium text-gray-700">Avg. Resumes per Requirement</span>
-                <span className="text-2xl font-bold text-blue-600">{Math.round(Number(dailyMetricsData.avgResumesPerRequirement))}</span>
+                <span className="text-2xl font-bold text-blue-600">{Number(dailyMetricsData.avgResumesPerRequirement).toFixed(2)}</span>
               </div>
               <div className="border-t border-gray-200"></div>
               <div className="flex justify-between items-center py-2">
                 <span className="text-sm font-medium text-gray-700">Requirements per Recruiter</span>
-                <span className="text-2xl font-bold text-blue-600">{Math.round(Number(dailyMetricsData.requirementsPerRecruiter))}</span>
+                <span className="text-2xl font-bold text-blue-600">{Number(dailyMetricsData.requirementsPerRecruiter).toFixed(2)}</span>
               </div>
               <div className="border-t border-gray-200"></div>
               <div className="flex justify-between items-center py-2">
