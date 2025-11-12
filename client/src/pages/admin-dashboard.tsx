@@ -4208,6 +4208,41 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+              {/* Revenue Analysis Section */}
+              <div className="bg-white dark:bg-gray-900 px-6 pb-6 pt-6 mt-6">
+                <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300">Revenue Analysis</h3>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6"
+                      onClick={() => setIsRevenueGraphModalOpen(true)}
+                      data-testid="button-expand-revenue-graph"
+                    >
+                      <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex justify-start space-x-4 mb-2">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Team Revenue</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-0.5 bg-green-500"></div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Average Benchmark (₹230K)</span>
+                  </div>
+                </div>
+                <div className="h-64 mt-2">
+                  <RevenueChart
+                    data={revenueData}
+                    height="100%"
+                    benchmarkValue={230000}
+                  />
+                </div>
+              </div>
+
             {/* Team Performance Table */}
             <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
               <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
