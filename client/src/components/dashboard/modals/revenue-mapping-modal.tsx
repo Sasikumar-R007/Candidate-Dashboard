@@ -28,7 +28,7 @@ export default function RevenueMappingModal({ isOpen, onClose }: RevenueMappingM
           </Button>
         </DialogHeader>
         
-        <div className="p-6 space-y-4">
+        <div className="px-6 py-8 space-y-4">
           {/* First Row */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -150,10 +150,12 @@ export default function RevenueMappingModal({ isOpen, onClose }: RevenueMappingM
 
           {/* Sixth Row */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-center gap-1">
-              <span className="text-red-500 text-sm">*</span>
-              <span className="text-sm text-gray-600">₹</span>
-              <Input placeholder="Revenue" className="flex-1 bg-gray-50 rounded" />
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
+                <span className="text-red-500 text-sm">*</span>
+                <span className="text-sm text-gray-600">₹</span>
+              </div>
+              <Input placeholder="Revenue" className="pl-12 bg-gray-50 rounded" />
             </div>
             <div>
               <Select>
