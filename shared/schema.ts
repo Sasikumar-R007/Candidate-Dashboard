@@ -501,11 +501,49 @@ export const supportMessages = pgTable("support_messages", {
   createdAt: text("created_at").notNull(),
 });
 
+export const bulkUploadJobs = pgTable("bulk_upload_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").notNull().unique(),
+  createdBy: text("created_by").notNull(),
+  status: text("status").notNull().default("pending"), // pending, processing, completed, failed
+  totalFiles: integer("total_files").notNull().default(0),
+  processedFiles: integer("processed_files").notNull().default(0),
+  successCount: integer("success_count").notNull().default(0),
+  failureCount: integer("failure_count").notNull().default(0),
+  errorMessage: text("error_message"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at"),
+});
+
+export const bulkUploadFiles = pgTable("bulk_upload_files", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  jobId: varchar("job_id").notNull(),
+  originalName: text("original_name").notNull(),
+  storedFileName: text("stored_file_name").notNull(),
+  path: text("path").notNull(),
+  mimeType: text("mime_type").notNull(),
+  size: integer("size").notNull(),
+  status: text("status").notNull().default("pending"), // pending, processing, completed, failed
+  error: text("error"),
+  parsedCandidateId: text("parsed_candidate_id"),
+  parsedEmail: text("parsed_email"),
+  uploadedAt: text("uploaded_at").notNull(),
+  processedAt: text("processed_at"),
+});
+
 export const insertSupportConversationSchema = createInsertSchema(supportConversations).omit({
   id: true,
 });
 
 export const insertSupportMessageSchema = createInsertSchema(supportMessages).omit({
+  id: true,
+});
+
+export const insertBulkUploadJobSchema = createInsertSchema(bulkUploadJobs).omit({
+  id: true,
+});
+
+export const insertBulkUploadFileSchema = createInsertSchema(bulkUploadFiles).omit({
   id: true,
 });
 
@@ -561,3 +599,7 @@ export type InsertSupportConversation = z.infer<typeof insertSupportConversation
 export type SupportConversation = typeof supportConversations.$inferSelect;
 export type InsertSupportMessage = z.infer<typeof insertSupportMessageSchema>;
 export type SupportMessage = typeof supportMessages.$inferSelect;
+export type InsertBulkUploadJob = z.infer<typeof insertBulkUploadJobSchema>;
+export type BulkUploadJob = typeof bulkUploadJobs.$inferSelect;
+export type InsertBulkUploadFile = z.infer<typeof insertBulkUploadFileSchema>;
+export type BulkUploadFile = typeof bulkUploadFiles.$inferSelect;
