@@ -23,10 +23,6 @@ import {
   type InsertCandidate,
   type CandidateLoginAttempts,
   type InsertCandidateLoginAttempts,
-  type BulkUploadJob,
-  type InsertBulkUploadJob,
-  type BulkUploadFile,
-  type InsertBulkUploadFile,
   type Notification,
   type InsertNotification,
   type Client,
@@ -104,17 +100,6 @@ export interface IStorage {
   storeOTP(email: string, otp: string): Promise<void>;
   verifyOTP(email: string, otp: string): Promise<boolean>;
 
-  // Bulk upload methods
-  createBulkUploadJob(job: InsertBulkUploadJob): Promise<BulkUploadJob>;
-  getBulkUploadJob(jobId: string): Promise<BulkUploadJob | undefined>;
-  updateBulkUploadJob(jobId: string, updates: Partial<BulkUploadJob>): Promise<BulkUploadJob | undefined>;
-  getAllBulkUploadJobs(): Promise<BulkUploadJob[]>;
-
-  createBulkUploadFile(file: InsertBulkUploadFile): Promise<BulkUploadFile>;
-  getBulkUploadFile(id: string): Promise<BulkUploadFile | undefined>;
-  getBulkUploadFilesByJobId(jobId: string): Promise<BulkUploadFile[]>;
-  updateBulkUploadFile(id: string, updates: Partial<BulkUploadFile>): Promise<BulkUploadFile | undefined>;
-
   // Notification methods
   createNotification(notification: InsertNotification): Promise<Notification>;
   getNotificationsByUserId(userId: string): Promise<Notification[]>;
@@ -155,8 +140,6 @@ export class MemStorage implements IStorage {
   private candidates: Map<string, Candidate>;
   private candidateLoginAttempts: Map<string, CandidateLoginAttempts>;
   private otpStorage: Map<string, { otp: string; expiry: Date; email: string }>;
-  private bulkUploadJobs: Map<string, BulkUploadJob>;
-  private bulkUploadFiles: Map<string, BulkUploadFile>;
   private notifications: Map<string, Notification>;
 
   constructor() {
@@ -173,8 +156,6 @@ export class MemStorage implements IStorage {
     this.candidates = new Map();
     this.candidateLoginAttempts = new Map();
     this.otpStorage = new Map();
-    this.bulkUploadJobs = new Map();
-    this.bulkUploadFiles = new Map();
     this.notifications = new Map();
     
     // Initialize with sample data (async)
@@ -881,7 +862,6 @@ export class MemStorage implements IStorage {
       ...insertEmployee,
       id,
       password: hashedPassword, // Store hashed password
-      age: insertEmployee.age || null,
       phone: insertEmployee.phone || null,
       department: insertEmployee.department || null,
       joiningDate: insertEmployee.joiningDate || null,
@@ -1126,84 +1106,6 @@ export class MemStorage implements IStorage {
     const updated: Candidate = { ...candidate, password: newPasswordHash };
     this.candidates.set(candidate.id, updated);
     return true;
-  }
-
-  // Bulk upload job methods
-  async createBulkUploadJob(job: InsertBulkUploadJob): Promise<BulkUploadJob> {
-    const id = randomUUID();
-    const newJob: BulkUploadJob = {
-      id,
-      jobId: job.jobId,
-      adminId: job.adminId,
-      status: job.status || "processing",
-      totalFiles: job.totalFiles,
-      processedFiles: job.processedFiles || "0",
-      successfulFiles: job.successfulFiles || "0",
-      failedFiles: job.failedFiles || "0",
-      errorReportUrl: job.errorReportUrl || null,
-      createdAt: job.createdAt,
-      completedAt: job.completedAt || null
-    };
-    this.bulkUploadJobs.set(job.jobId, newJob);
-    return newJob;
-  }
-
-  async getBulkUploadJob(jobId: string): Promise<BulkUploadJob | undefined> {
-    return this.bulkUploadJobs.get(jobId);
-  }
-
-  async updateBulkUploadJob(jobId: string, updates: Partial<BulkUploadJob>): Promise<BulkUploadJob | undefined> {
-    const existing = this.bulkUploadJobs.get(jobId);
-    if (!existing) return undefined;
-    
-    const updated: BulkUploadJob = { ...existing, ...updates };
-    this.bulkUploadJobs.set(jobId, updated);
-    return updated;
-  }
-
-  async getAllBulkUploadJobs(): Promise<BulkUploadJob[]> {
-    return Array.from(this.bulkUploadJobs.values());
-  }
-
-  // Bulk upload file methods
-  async createBulkUploadFile(file: InsertBulkUploadFile): Promise<BulkUploadFile> {
-    const id = randomUUID();
-    const newFile: BulkUploadFile = {
-      id,
-      jobId: file.jobId,
-      fileName: file.fileName,
-      originalName: file.originalName,
-      fileSize: file.fileSize,
-      fileType: file.fileType,
-      status: file.status || "pending",
-      candidateId: file.candidateId || null,
-      errorMessage: file.errorMessage || null,
-      parsedText: file.parsedText || null,
-      extractedName: file.extractedName || null,
-      extractedEmail: file.extractedEmail || null,
-      extractedPhone: file.extractedPhone || null,
-      resumeUrl: file.resumeUrl || null,
-      processedAt: file.processedAt || null
-    };
-    this.bulkUploadFiles.set(id, newFile);
-    return newFile;
-  }
-
-  async getBulkUploadFile(id: string): Promise<BulkUploadFile | undefined> {
-    return this.bulkUploadFiles.get(id);
-  }
-
-  async getBulkUploadFilesByJobId(jobId: string): Promise<BulkUploadFile[]> {
-    return Array.from(this.bulkUploadFiles.values()).filter(file => file.jobId === jobId);
-  }
-
-  async updateBulkUploadFile(id: string, updates: Partial<BulkUploadFile>): Promise<BulkUploadFile | undefined> {
-    const existing = this.bulkUploadFiles.get(id);
-    if (!existing) return undefined;
-    
-    const updated: BulkUploadFile = { ...existing, ...updates };
-    this.bulkUploadFiles.set(id, updated);
-    return updated;
   }
 
   // Notification methods
