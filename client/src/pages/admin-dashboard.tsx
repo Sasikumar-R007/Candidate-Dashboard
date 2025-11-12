@@ -380,7 +380,7 @@ function RevenueChart({ data, height = "100%", benchmarkValue = 230000 }: Revenu
           stroke="#6b7280" 
           style={{ fontSize: '12px' }}
           tick={{ fill: '#6b7280' }}
-          tickFormatter={(value) => `${value / 1000}K`}
+          tickFormatter={(value) => value != null ? `${value / 1000}K` : '0K'}
         />
         <Tooltip 
           contentStyle={{ 
@@ -388,14 +388,22 @@ function RevenueChart({ data, height = "100%", benchmarkValue = 230000 }: Revenu
             border: '1px solid #e5e7eb',
             borderRadius: '8px'
           }}
-          formatter={(value: any) => `₹${value.toLocaleString()}`}
+          formatter={(value: any) => {
+            const numValue = value != null ? Number(value) : 0;
+            return `₹${numValue.toLocaleString()}`;
+          }}
         />
         <ReferenceLine 
           y={benchmarkValue} 
           stroke="#10b981" 
           strokeWidth={2}
           strokeDasharray="5 5"
-          label={{ value: `Avg: ₹${(benchmarkValue / 1000).toFixed(0)}K`, position: 'right', fill: '#10b981', fontSize: 12 }}
+          label={{ 
+            value: benchmarkValue != null ? `Avg: ₹${(benchmarkValue / 1000).toFixed(0)}K` : 'Avg: ₹0K', 
+            position: 'right', 
+            fill: '#10b981', 
+            fontSize: 12 
+          }}
         />
         <Line 
           type="monotone" 
