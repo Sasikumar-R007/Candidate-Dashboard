@@ -305,6 +305,59 @@ const initialCeoMeetingsData = [
   { meetingType: "Board Review", date: "10-Sep-2025", time: "09:00 AM", person: "John Mathew", agenda: "Company strategy and vision", status: "Scheduled" }
 ];
 
+// Performance Chart Component
+interface PerformanceChartProps {
+  data: Array<{ member: string; requirements: number }>;
+  height?: string;
+  benchmarkValue?: number;
+}
+
+function PerformanceChart({ data, height = "100%", benchmarkValue = 10 }: PerformanceChartProps) {
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <ComposedChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+        <XAxis 
+          dataKey="member" 
+          stroke="#6b7280" 
+          style={{ fontSize: '11px' }}
+          tick={{ fill: '#6b7280' }}
+        />
+        <YAxis 
+          stroke="#6b7280" 
+          style={{ fontSize: '12px' }}
+          tick={{ fill: '#6b7280' }}
+          ticks={[3, 6, 9, 12, 15]}
+          domain={[0, 15]}
+        />
+        <Tooltip 
+          contentStyle={{ 
+            backgroundColor: '#ffffff', 
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px'
+          }}
+        />
+        <ReferenceLine 
+          y={benchmarkValue} 
+          stroke="#ef4444" 
+          strokeWidth={2}
+          strokeDasharray="5 5"
+          label={{ value: `Avg: ${benchmarkValue}`, position: 'right', fill: '#ef4444', fontSize: 12 }}
+        />
+        <Line 
+          type="monotone" 
+          dataKey="requirements" 
+          stroke="#3b82f6" 
+          strokeWidth={3} 
+          dot={{ fill: '#3b82f6', r: 5 }}
+          activeDot={{ r: 7 }}
+          name="Requirements"
+        />
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+}
+
 // Impact Metrics Editor Component
 function ImpactMetricsEditor() {
   const queryClient = useQueryClient();
@@ -828,6 +881,7 @@ export default function AdminDashboard() {
   const [isAddRecruiterModalOpen, setIsAddRecruiterModalOpen] = useState(false);
   const [isAddTeamLeaderModalNewOpen, setIsAddTeamLeaderModalNewOpen] = useState(false);
   const [isAddClientCredentialsModalOpen, setIsAddClientCredentialsModalOpen] = useState(false);
+  const [isPerformanceGraphModalOpen, setIsPerformanceGraphModalOpen] = useState(false);
   const [userList, setUserList] = useState<any[]>([]);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [editingUser, setEditingUser] = useState<any>(null);
@@ -1021,6 +1075,16 @@ export default function AdminDashboard() {
   }, isLoading: isLoadingMetrics } = useQuery({
     queryKey: ['/api/admin/daily-metrics'],
   });
+
+  // Performance chart data (memoized for reusability)
+  const performanceData = useMemo(() => [
+    { member: 'Arun', requirements: 12 },
+    { member: 'Anusha', requirements: 8 },
+    { member: 'Rajesh', requirements: 14 },
+    { member: 'Priya', requirements: 9 },
+    { member: 'Kiran', requirements: 11 },
+    { member: 'Deepa', requirements: 7 }
+  ], []);
 
   // Archive requirement mutation
   const archiveRequirementMutation = useMutation({
@@ -1856,7 +1920,18 @@ export default function AdminDashboard() {
             <div className="bg-white dark:bg-gray-900 rounded p-4">
               <div className="text-left">
                 <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Overall Performance</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Overall Performance</h3>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6"
+                      onClick={() => setIsPerformanceGraphModalOpen(true)}
+                      data-testid="button-expand-performance-graph"
+                    >
+                      <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                    </Button>
+                  </div>
                   <div className="text-4xl font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900 w-16 h-16 rounded-sm flex items-center justify-center">
                     {dailyMetricsData.overallPerformance}
                   </div>
@@ -1872,54 +1947,11 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <div className="h-48 mt-2">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={[
-                      { member: 'Arun', requirements: 12 },
-                      { member: 'Anusha', requirements: 8 },
-                      { member: 'Rajesh', requirements: 14 },
-                      { member: 'Priya', requirements: 9 },
-                      { member: 'Kiran', requirements: 11 },
-                      { member: 'Deepa', requirements: 7 }
-                    ]}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis 
-                        dataKey="member" 
-                        stroke="#6b7280" 
-                        style={{ fontSize: '11px' }}
-                        tick={{ fill: '#6b7280' }}
-                      />
-                      <YAxis 
-                        stroke="#6b7280" 
-                        style={{ fontSize: '12px' }}
-                        tick={{ fill: '#6b7280' }}
-                        ticks={[3, 6, 9, 12, 15]}
-                        domain={[0, 15]}
-                      />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: '#ffffff', 
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '8px'
-                        }}
-                      />
-                      <ReferenceLine 
-                        y={10} 
-                        stroke="#ef4444" 
-                        strokeWidth={2}
-                        strokeDasharray="5 5"
-                        label={{ value: 'Avg: 10', position: 'right', fill: '#ef4444', fontSize: 12 }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="requirements" 
-                        stroke="#3b82f6" 
-                        strokeWidth={3} 
-                        dot={{ fill: '#3b82f6', r: 5 }}
-                        activeDot={{ r: 7 }}
-                        name="Requirements"
-                      />
-                    </ComposedChart>
-                  </ResponsiveContainer>
+                  <PerformanceChart
+                    data={performanceData}
+                    height="100%"
+                    benchmarkValue={10}
+                  />
                 </div>
               </div>
             </div>
@@ -7183,6 +7215,34 @@ export default function AdminDashboard() {
       >
         <HelpCircle size={24} />
       </button>
+
+      {/* Performance Graph Modal */}
+      <Dialog open={isPerformanceGraphModalOpen} onOpenChange={setIsPerformanceGraphModalOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Overall Performance - Detailed View</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex justify-start space-x-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Team Performance</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-0.5 bg-red-500"></div>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Average Benchmark (10)</span>
+              </div>
+            </div>
+            <div className="h-[420px]">
+              <PerformanceChart
+                data={performanceData}
+                height="100%"
+                benchmarkValue={10}
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Chat Support Modal */}
       <ChatDock 
