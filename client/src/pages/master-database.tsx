@@ -5,7 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Filter, Search, Pencil, Trash2, X } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ArrowLeft, Filter, Search, Pencil, Trash2, X, Share2, Download } from "lucide-react";
 
 type ProfileType = 'resume' | 'employee' | 'client';
 
@@ -51,6 +52,23 @@ export default function MasterDatabase() {
   const [profileType, setProfileType] = useState<ProfileType>('resume');
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
+  const [isResumeDrawerOpen, setIsResumeDrawerOpen] = useState(false);
+  const [selectedResume, setSelectedResume] = useState<ResumeData | EmployeeData | ClientData | null>(null);
+  const [newComment, setNewComment] = useState("");
+  const [comments, setComments] = useState<Array<{id: string, author: string, text: string, timestamp: string}>>([
+    {
+      id: '1',
+      author: 'Team Leader1',
+      text: 'Candidate has interest — already working...',
+      timestamp: 'Last week • 5 days ago'
+    },
+    {
+      id: '2',
+      author: 'Team Leader2',
+      text: 'The candidate has confirmed availability for cross-related to financ...',
+      timestamp: 'Last week • 7 days ago'
+    }
+  ]);
   
   // Advanced filter state
   const [advancedFilters, setAdvancedFilters] = useState({
@@ -237,6 +255,73 @@ export default function MasterDatabase() {
     }
   };
 
+  // Handle row click to open resume drawer
+  const handleRowClick = (item: ResumeData | EmployeeData | ClientData) => {
+    // Only open drawer for resume profile type
+    if (profileType === 'resume') {
+      setSelectedResume(item);
+      setIsResumeDrawerOpen(true);
+      // Reset to initial comments when opening drawer
+      setComments([
+        {
+          id: '1',
+          author: 'Team Leader1',
+          text: 'Candidate has interest — already working...',
+          timestamp: 'Last week • 5 days ago'
+        },
+        {
+          id: '2',
+          author: 'Team Leader2',
+          text: 'The candidate has confirmed availability for cross-related to financ...',
+          timestamp: 'Last week • 7 days ago'
+        }
+      ]);
+    }
+  };
+
+  // Handle close drawer
+  const handleCloseDrawer = () => {
+    setIsResumeDrawerOpen(false);
+    setSelectedResume(null);
+    setNewComment("");
+  };
+
+  // Handle share resume
+  const handleShareResume = () => {
+    // Frontend only - just show a toast or alert
+    alert('Share functionality - Frontend only');
+  };
+
+  // Handle download resume
+  const handleDownloadResume = () => {
+    // Frontend only - just show a toast or alert
+    alert('Download functionality - Frontend only');
+  };
+
+  // Handle add comment
+  const handleAddComment = () => {
+    if (newComment.trim()) {
+      const newCommentObj = {
+        id: Date.now().toString(),
+        author: 'Current User',
+        text: newComment,
+        timestamp: 'Just now'
+      };
+      setComments([newCommentObj, ...comments]);
+      setNewComment("");
+    }
+  };
+
+  // Get initials for avatar fallback
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
@@ -328,9 +413,10 @@ export default function MasterDatabase() {
                 {filteredData.map((item, index) => (
                   <tr 
                     key={item.id} 
+                    onClick={() => handleRowClick(item)}
                     className={`border-b border-gray-200 dark:border-gray-700 ${
                       index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-blue-50 dark:bg-gray-750'
-                    }`}
+                    } ${profileType === 'resume' ? 'cursor-pointer hover-elevate' : ''}`}
                     data-testid={`row-${profileType}-${item.id}`}
                   >
                     <td className="py-3 px-4 text-gray-900 dark:text-gray-100" data-testid={`text-name-${item.id}`}>
@@ -488,6 +574,146 @@ export default function MasterDatabase() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Resume Detail Drawer */}
+      {isResumeDrawerOpen && selectedResume && (
+        <div className="fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/50"
+            onClick={handleCloseDrawer}
+            data-testid="drawer-backdrop"
+          />
+          
+          {/* Right Side Panel */}
+          <div className="ml-auto relative bg-white dark:bg-gray-800 w-full max-w-md h-full overflow-y-auto shadow-xl">
+            {/* Close Button */}
+            <div className="sticky top-0 z-10 bg-white dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700 flex justify-end">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleCloseDrawer}
+                className="rounded-full"
+                data-testid="button-close-drawer"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              {/* Candidate Profile */}
+              <div className="flex flex-col items-center text-center space-y-2">
+                <Avatar className="h-16 w-16">
+                  <AvatarImage src="" alt={selectedResume.name} />
+                  <AvatarFallback className="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300">
+                    {getInitials(selectedResume.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100" data-testid="text-candidate-name">
+                    {selectedResume.name}
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400" data-testid="text-candidate-position">
+                    {selectedResume.position}
+                  </p>
+                </div>
+              </div>
+
+              {/* Resume Display Area */}
+              <div className="space-y-3">
+                <div className="bg-gray-100 dark:bg-gray-900 rounded-md p-8 min-h-[400px] flex items-center justify-center relative">
+                  <div className="text-center">
+                    <p className="text-xl font-semibold text-gray-900 dark:text-gray-100">Resume</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">Resume Not Available</p>
+                  </div>
+                  
+                  {/* Share and Download Buttons */}
+                  <div className="absolute bottom-4 right-4 flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleShareResume}
+                      className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800"
+                      data-testid="button-share-resume"
+                    >
+                      <Share2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleDownloadResume}
+                      className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800"
+                      data-testid="button-download-resume"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                
+                {/* Uploaded Date */}
+                <p className="text-sm text-gray-600 dark:text-gray-400 text-right" data-testid="text-upload-date">
+                  Uploaded On: {selectedResume.uploadedDate}
+                </p>
+              </div>
+
+              {/* Comments Section */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900 dark:text-gray-100">Comments</h4>
+                
+                {/* Comments List */}
+                <div className="space-y-3">
+                  {comments.map((comment) => (
+                    <div key={comment.id} className="bg-blue-50 dark:bg-blue-950/30 rounded-md p-3 space-y-2" data-testid={`comment-${comment.id}`}>
+                      <div className="flex items-start gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-300 text-xs">
+                            {getInitials(comment.author)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{comment.author}</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
+                            {comment.text}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{comment.timestamp}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add Comment Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="new-comment">Add a comment</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="new-comment"
+                      type="text"
+                      placeholder="Type your comment..."
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleAddComment();
+                        }
+                      }}
+                      data-testid="input-new-comment"
+                    />
+                    <Button 
+                      onClick={handleAddComment}
+                      disabled={!newComment.trim()}
+                      data-testid="button-add-comment"
+                    >
+                      Add
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
