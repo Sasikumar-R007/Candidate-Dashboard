@@ -358,6 +358,59 @@ function PerformanceChart({ data, height = "100%", benchmarkValue = 10 }: Perfor
   );
 }
 
+// Revenue Chart Component
+interface RevenueChartProps {
+  data: Array<{ member: string; revenue: number }>;
+  height?: string;
+  benchmarkValue?: number;
+}
+
+function RevenueChart({ data, height = "100%", benchmarkValue = 230000 }: RevenueChartProps) {
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <ComposedChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+        <XAxis 
+          dataKey="member" 
+          stroke="#6b7280" 
+          style={{ fontSize: '11px' }}
+          tick={{ fill: '#6b7280' }}
+        />
+        <YAxis 
+          stroke="#6b7280" 
+          style={{ fontSize: '12px' }}
+          tick={{ fill: '#6b7280' }}
+          tickFormatter={(value) => `${value / 1000}K`}
+        />
+        <Tooltip 
+          contentStyle={{ 
+            backgroundColor: '#ffffff', 
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px'
+          }}
+          formatter={(value: any) => `₹${value.toLocaleString()}`}
+        />
+        <ReferenceLine 
+          y={benchmarkValue} 
+          stroke="#10b981" 
+          strokeWidth={2}
+          strokeDasharray="5 5"
+          label={{ value: `Avg: ₹${(benchmarkValue / 1000).toFixed(0)}K`, position: 'right', fill: '#10b981', fontSize: 12 }}
+        />
+        <Line 
+          type="monotone" 
+          dataKey="revenue" 
+          stroke="#8b5cf6" 
+          strokeWidth={3} 
+          dot={{ fill: '#8b5cf6', r: 5 }}
+          activeDot={{ r: 7 }}
+          name="Revenue"
+        />
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+}
+
 // Impact Metrics Editor Component
 function ImpactMetricsEditor() {
   const queryClient = useQueryClient();
@@ -882,6 +935,7 @@ export default function AdminDashboard() {
   const [isAddTeamLeaderModalNewOpen, setIsAddTeamLeaderModalNewOpen] = useState(false);
   const [isAddClientCredentialsModalOpen, setIsAddClientCredentialsModalOpen] = useState(false);
   const [isPerformanceGraphModalOpen, setIsPerformanceGraphModalOpen] = useState(false);
+  const [isRevenueGraphModalOpen, setIsRevenueGraphModalOpen] = useState(false);
   const [userList, setUserList] = useState<any[]>([]);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [editingUser, setEditingUser] = useState<any>(null);
@@ -1084,6 +1138,16 @@ export default function AdminDashboard() {
     { member: 'Priya', requirements: 9 },
     { member: 'Kiran', requirements: 11 },
     { member: 'Deepa', requirements: 7 }
+  ], []);
+
+  // Revenue chart data (memoized for reusability)
+  const revenueData = useMemo(() => [
+    { member: 'Arun', revenue: 250000 },
+    { member: 'Anusha', revenue: 180000 },
+    { member: 'Rajesh', revenue: 320000 },
+    { member: 'Priya', revenue: 210000 },
+    { member: 'Kiran', revenue: 270000 },
+    { member: 'Deepa', revenue: 150000 }
   ], []);
 
   // Archive requirement mutation
@@ -2916,6 +2980,41 @@ export default function AdminDashboard() {
                     </Button>
                   </div>
                 </div>
+
+              {/* Revenue Analysis Section */}
+              <div className="bg-white dark:bg-gray-900 px-6 pb-6 pt-6 mt-6">
+                <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300">Revenue Analysis</h3>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6"
+                      onClick={() => setIsRevenueGraphModalOpen(true)}
+                      data-testid="button-expand-revenue-graph"
+                    >
+                      <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex justify-start space-x-4 mb-2">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Team Revenue</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-0.5 bg-green-500"></div>
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Average Benchmark (₹230K)</span>
+                  </div>
+                </div>
+                <div className="h-64 mt-2">
+                  <RevenueChart
+                    data={revenueData}
+                    height="100%"
+                    benchmarkValue={230000}
+                  />
+                </div>
+              </div>
 
               {/* Team Performance Table */}
               <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
@@ -7238,6 +7337,34 @@ export default function AdminDashboard() {
                 data={performanceData}
                 height="100%"
                 benchmarkValue={10}
+              />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Revenue Graph Modal */}
+      <Dialog open={isRevenueGraphModalOpen} onOpenChange={setIsRevenueGraphModalOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Revenue Analysis - Detailed View</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex justify-start space-x-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Team Revenue</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-0.5 bg-green-500"></div>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Average Benchmark (₹230K)</span>
+              </div>
+            </div>
+            <div className="h-[420px]">
+              <RevenueChart
+                data={revenueData}
+                height="100%"
+                benchmarkValue={230000}
               />
             </div>
           </div>
