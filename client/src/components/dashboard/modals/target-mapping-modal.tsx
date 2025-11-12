@@ -3,8 +3,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { X } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -96,28 +94,18 @@ export default function TargetMappingModal({ isOpen, onClose }: TargetMappingMod
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-md mx-auto bg-white dark:bg-gray-900 rounded-lg shadow-lg">
-        <DialogHeader className="flex flex-row items-center justify-between gap-2 p-4 border-b">
+        <DialogHeader className="p-4 border-b">
           <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">
             Target Mapping
           </DialogTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClose}
-            className="p-1"
-            data-testid="button-close-target-mapping"
-          >
-            <X className="h-4 w-4" />
-          </Button>
         </DialogHeader>
         
         <div className="p-6 space-y-4">
           <div className="space-y-4">
             <div>
-              <Label className="text-sm text-gray-700 dark:text-gray-300 mb-2 block">Team Lead *</Label>
               <Select value={teamLeadId} onValueChange={setTeamLeadId}>
-                <SelectTrigger className="w-full" data-testid="select-team-lead">
-                  <SelectValue placeholder="Select Team Lead" />
+                <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-800" data-testid="select-team-lead">
+                  <SelectValue placeholder="Team Lead *" className="text-gray-400" />
                 </SelectTrigger>
                 <SelectContent>
                   {teamLeaders.map((tl) => (
@@ -130,10 +118,9 @@ export default function TargetMappingModal({ isOpen, onClose }: TargetMappingMod
             </div>
 
             <div>
-              <Label className="text-sm text-gray-700 dark:text-gray-300 mb-2 block">Team Member *</Label>
               <Select value={teamMemberId} onValueChange={setTeamMemberId}>
-                <SelectTrigger className="w-full" data-testid="select-team-member">
-                  <SelectValue placeholder="Select Team Member" />
+                <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-800" data-testid="select-team-member">
+                  <SelectValue placeholder="Team Member *" className="text-gray-400" />
                 </SelectTrigger>
                 <SelectContent>
                   {teamMembers.map((member) => (
@@ -146,10 +133,9 @@ export default function TargetMappingModal({ isOpen, onClose }: TargetMappingMod
             </div>
 
             <div>
-              <Label className="text-sm text-gray-700 dark:text-gray-300 mb-2 block">Quarter *</Label>
               <Select value={quarter} onValueChange={setQuarter}>
-                <SelectTrigger className="w-full" data-testid="select-quarter">
-                  <SelectValue placeholder="Select Quarter" />
+                <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-800" data-testid="select-quarter">
+                  <SelectValue placeholder="Quarter *" className="text-gray-400" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Q1">Q1 (Jan-Mar)</SelectItem>
@@ -161,23 +147,23 @@ export default function TargetMappingModal({ isOpen, onClose }: TargetMappingMod
             </div>
 
             <div>
-              <Label className="text-sm text-gray-700 dark:text-gray-300 mb-2 block">Year *</Label>
               <Input
                 type="number"
+                className="bg-gray-50 dark:bg-gray-800"
                 value={year}
                 onChange={(e) => setYear(e.target.value)}
-                placeholder="2025"
+                placeholder="Year * (e.g., 2025)"
                 data-testid="input-year"
               />
             </div>
 
             <div>
-              <Label className="text-sm text-gray-700 dark:text-gray-300 mb-2 block">Minimum Target (₹) *</Label>
               <Input
                 type="text"
+                className="bg-gray-50 dark:bg-gray-800"
                 value={minimumTarget}
                 onChange={(e) => setMinimumTarget(e.target.value)}
-                placeholder="15,00,000"
+                placeholder="Minimum Target (₹) * (e.g., 15,00,000)"
                 data-testid="input-minimum-target"
               />
             </div>
