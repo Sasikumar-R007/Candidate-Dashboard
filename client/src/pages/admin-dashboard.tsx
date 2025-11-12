@@ -42,7 +42,7 @@ interface Requirement {
   id: number;
   position: string;
   criticality: string;
-  toughness: string;
+  toughness?: string;
   company: string;
   spoc: string;
   talentAdvisor: string;
