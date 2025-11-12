@@ -3277,7 +3277,7 @@ export default function AdminDashboard() {
                             <td className="py-2 px-2 text-gray-900 dark:text-white font-medium text-sm">{requirement.position}</td>
                             <td className="py-2 px-2">
                               <span className={`text-sm font-medium px-2 py-1 rounded ${getCriticalityColor(requirement.criticality)}`}>
-                                {requirement.criticality}
+                                {requirement.criticality}-{requirement.toughness || 'Medium'}
                               </span>
                             </td>
                             <td className="py-2 px-2 text-gray-600 dark:text-gray-400 text-sm">{requirement.company}</td>
