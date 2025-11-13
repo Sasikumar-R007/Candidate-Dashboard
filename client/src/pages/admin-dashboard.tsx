@@ -2895,7 +2895,18 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 bg-white dark:bg-gray-900 px-6 pb-6">
                   {/* Performance Chart */}
                   <div className="xl:col-span-5">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300 mb-2">Performance</h3>
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300">Performance</h3>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6"
+                        onClick={() => setIsPerformanceGraphModalOpen(true)}
+                        data-testid="button-expand-performance-graph-page"
+                      >
+                        <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                      </Button>
+                    </div>
                     <div className="h-[260px]">
                       <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={[
