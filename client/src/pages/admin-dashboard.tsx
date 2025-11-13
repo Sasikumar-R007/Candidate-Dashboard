@@ -4109,53 +4109,89 @@ export default function AdminDashboard() {
                   </Select>
                 </div>
 
-                {/* Chart Area */}
-                <div className="bg-white dark:bg-gray-900  px-6 pb-6 flex gap-6">
-                  {/* Line Chart */}
-                  <div className="flex-1">
-                    <ResponsiveContainer width="100%" height={300}>
-                      <LineChart data={[
-                        { month: 'Jan', arunTeam: 600, anushaTeam: 500, sudharshan: 150, deepika: 140, dharshan: 120, kavya: 190 },
-                        { month: 'Feb', arunTeam: 650, anushaTeam: 520, sudharshan: 160, deepika: 150, dharshan: 130, kavya: 210 },
-                        { month: 'Mar', arunTeam: 580, anushaTeam: 540, sudharshan: 145, deepika: 135, dharshan: 125, kavya: 175 },
-                        { month: 'Apr', arunTeam: 520, anushaTeam: 580, sudharshan: 130, deepika: 145, dharshan: 115, kavya: 130 },
-                        { month: 'May', arunTeam: 680, anushaTeam: 620, sudharshan: 170, deepika: 165, dharshan: 140, kavya: 205 },
-                        { month: 'Jun', arunTeam: 720, anushaTeam: 660, sudharshan: 180, deepika: 175, dharshan: 155, kavya: 210 }
-                      ]}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        {selectedPerformanceTeam === 'all' && (
-                          <>
-                            <Line type="monotone" dataKey="arunTeam" name="Arun's Team" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
-                            <Line type="monotone" dataKey="anushaTeam" name="Anusha's Team" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444' }} />
-                          </>
-                        )}
-                        {selectedPerformanceTeam === 'arun' && (
-                          <>
-                            <Line type="monotone" dataKey="sudharshan" name="Sudharshan" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
-                            <Line type="monotone" dataKey="deepika" name="Deepika" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981' }} />
-                            <Line type="monotone" dataKey="dharshan" name="Dharshan" stroke="#F59E0B" strokeWidth={2} dot={{ fill: '#F59E0B' }} />
-                            <Line type="monotone" dataKey="kavya" name="Kavya" stroke="#8B5CF6" strokeWidth={2} dot={{ fill: '#8B5CF6' }} />
-                          </>
-                        )}
-                        {selectedPerformanceTeam === 'anusha' && (
-                          <>
-                            <Line type="monotone" dataKey="sudharshan" name="Sudharshan" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
-                            <Line type="monotone" dataKey="deepika" name="Deepika" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981' }} />
-                            <Line type="monotone" dataKey="dharshan" name="Dharshan" stroke="#F59E0B" strokeWidth={2} dot={{ fill: '#F59E0B' }} />
-                            <Line type="monotone" dataKey="kavya" name="Kavya" stroke="#8B5CF6" strokeWidth={2} dot={{ fill: '#8B5CF6' }} />
-                          </>
-                        )}
-                      </LineChart>
-                    </ResponsiveContainer>
+                {/* Chart Area - Grid Layout */}
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 bg-white dark:bg-gray-900 px-6 pb-6">
+                  {/* Performance Chart */}
+                  <div className="xl:col-span-5">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300 mb-2">Performance</h3>
+                    <div className="h-[260px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={[
+                          { month: 'Jan', arunTeam: 600, anushaTeam: 500, sudharshan: 150, deepika: 140, dharshan: 120, kavya: 190 },
+                          { month: 'Feb', arunTeam: 650, anushaTeam: 520, sudharshan: 160, deepika: 150, dharshan: 130, kavya: 210 },
+                          { month: 'Mar', arunTeam: 580, anushaTeam: 540, sudharshan: 145, deepika: 135, dharshan: 125, kavya: 175 },
+                          { month: 'Apr', arunTeam: 520, anushaTeam: 580, sudharshan: 130, deepika: 145, dharshan: 115, kavya: 130 },
+                          { month: 'May', arunTeam: 680, anushaTeam: 620, sudharshan: 170, deepika: 165, dharshan: 140, kavya: 205 },
+                          { month: 'Jun', arunTeam: 720, anushaTeam: 660, sudharshan: 180, deepika: 175, dharshan: 155, kavya: 210 }
+                        ]}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="month" />
+                          <YAxis />
+                          <Tooltip />
+                          <Legend />
+                          {selectedPerformanceTeam === 'all' && (
+                            <>
+                              <Line type="monotone" dataKey="arunTeam" name="Arun's Team" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
+                              <Line type="monotone" dataKey="anushaTeam" name="Anusha's Team" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444' }} />
+                            </>
+                          )}
+                          {selectedPerformanceTeam === 'arun' && (
+                            <>
+                              <Line type="monotone" dataKey="sudharshan" name="Sudharshan" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
+                              <Line type="monotone" dataKey="deepika" name="Deepika" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981' }} />
+                              <Line type="monotone" dataKey="dharshan" name="Dharshan" stroke="#F59E0B" strokeWidth={2} dot={{ fill: '#F59E0B' }} />
+                              <Line type="monotone" dataKey="kavya" name="Kavya" stroke="#8B5CF6" strokeWidth={2} dot={{ fill: '#8B5CF6' }} />
+                            </>
+                          )}
+                          {selectedPerformanceTeam === 'anusha' && (
+                            <>
+                              <Line type="monotone" dataKey="sudharshan" name="Sudharshan" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
+                              <Line type="monotone" dataKey="deepika" name="Deepika" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981' }} />
+                              <Line type="monotone" dataKey="dharshan" name="Dharshan" stroke="#F59E0B" strokeWidth={2} dot={{ fill: '#F59E0B' }} />
+                              <Line type="monotone" dataKey="kavya" name="Kavya" stroke="#8B5CF6" strokeWidth={2} dot={{ fill: '#8B5CF6' }} />
+                            </>
+                          )}
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Revenue Analysis Chart */}
+                  <div className="xl:col-span-4">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300">Revenue Analysis</h3>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6"
+                        onClick={() => setIsRevenueGraphModalOpen(true)}
+                        data-testid="button-expand-revenue-graph"
+                      >
+                        <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                      </Button>
+                    </div>
+                    <div className="flex justify-start space-x-4 mb-2">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Team Revenue</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-4 h-0.5 bg-green-500"></div>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Avg (₹230K)</span>
+                      </div>
+                    </div>
+                    <div className="h-[200px]">
+                      <RevenueChart
+                        data={revenueData}
+                        height="100%"
+                        benchmarkValue={230000}
+                      />
+                    </div>
                   </div>
 
                   {/* Performance Gauge */}
-                  <div className="flex flex-col items-center justify-center w-80">
-                    <div className="w-full h-64">
+                  <div className="xl:col-span-3 flex flex-col items-center justify-center">
+                    <div className="w-full max-w-sm mx-auto h-[240px]">
                       <GaugeComponent
                         id="performance-gauge-2"
                         value={77.78}
@@ -4208,41 +4244,6 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
-
-              {/* Revenue Analysis Section */}
-              <div className="bg-white dark:bg-gray-900 px-6 pb-6 pt-6 mt-6">
-                <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300">Revenue Analysis</h3>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-6 w-6"
-                      onClick={() => setIsRevenueGraphModalOpen(true)}
-                      data-testid="button-expand-revenue-graph"
-                    >
-                      <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="flex justify-start space-x-4 mb-2">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Team Revenue</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-4 h-0.5 bg-green-500"></div>
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Average Benchmark (₹230K)</span>
-                  </div>
-                </div>
-                <div className="h-64 mt-2">
-                  <RevenueChart
-                    data={revenueData}
-                    height="100%"
-                    benchmarkValue={230000}
-                  />
-                </div>
-              </div>
 
             {/* Team Performance Table */}
             <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
