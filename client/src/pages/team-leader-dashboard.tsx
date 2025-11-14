@@ -21,6 +21,7 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { ChatDock } from '@/components/chat/chat-dock';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ComposedChart } from 'recharts';
+import { SearchBar } from '@/components/ui/search-bar';
 
 // Helper function to format numbers in Indian currency format
 const formatIndianCurrency = (value: number): string => {
@@ -110,6 +111,8 @@ export default function TeamLeaderDashboard() {
   const [activeChatUser, setActiveChatUser] = useState<string | null>(null);
   const [isHelpChatOpen, setIsHelpChatOpen] = useState(false);
   const [selectedDailyMetricsFilter, setSelectedDailyMetricsFilter] = useState('overall');
+  const [targetSearch, setTargetSearch] = useState('');
+  const [requirementSearch, setRequirementSearch] = useState('');
   
   // Team members for team chat (5 members)
   const chatTeamMembers = [
@@ -381,19 +384,34 @@ export default function TeamLeaderDashboard() {
                       <Button 
                         variant="outline"
                         className="text-sm px-4 py-2 border-gray-300 hover:bg-gray-50"
+                        data-testid="button-view-all-targets"
                       >
                         View All
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-4xl">
                       <DialogHeader>
-                        <DialogTitle className="text-xl font-semibold">All Quarters Target Data</DialogTitle>
+                        <div className="flex items-center justify-between gap-4">
+                          <DialogTitle className="text-xl font-semibold">All Quarters Target Data</DialogTitle>
+                          <SearchBar
+                            value={targetSearch}
+                            onChange={setTargetSearch}
+                            placeholder="Search targets..."
+                            testId="input-search-targets"
+                          />
+                        </div>
                       </DialogHeader>
                       <div className="mt-4">
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto" style={{ maxHeight: '400px', overflowY: (aggregatedTargets?.allQuarters?.filter((quarter: any) => 
+                          `${quarter.quarter}-${quarter.year}`.toLowerCase().includes(targetSearch.toLowerCase()) ||
+                          formatIndianCurrency(quarter.minimumTarget).toLowerCase().includes(targetSearch.toLowerCase()) ||
+                          formatIndianCurrency(quarter.targetAchieved).toLowerCase().includes(targetSearch.toLowerCase()) ||
+                          formatIndianCurrency(quarter.incentiveEarned).toLowerCase().includes(targetSearch.toLowerCase()) ||
+                          quarter.status.toLowerCase().includes(targetSearch.toLowerCase())
+                        ).length || 0) > 6 ? 'auto' : 'hidden' }}>
                           <table className="w-full border-collapse border border-gray-300">
-                            <thead>
-                              <tr className="bg-gray-100">
+                            <thead className="sticky top-0 bg-gray-100 z-10">
+                              <tr>
                                 <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Quarter</th>
                                 <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Minimum Target</th>
                                 <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Target Achieved</th>
@@ -403,7 +421,15 @@ export default function TeamLeaderDashboard() {
                             </thead>
                             <tbody>
                               {aggregatedTargets?.allQuarters && aggregatedTargets.allQuarters.length > 0 ? (
-                                aggregatedTargets.allQuarters.map((quarter, index) => {
+                                aggregatedTargets.allQuarters
+                                  .filter((quarter: any) => 
+                                    `${quarter.quarter}-${quarter.year}`.toLowerCase().includes(targetSearch.toLowerCase()) ||
+                                    formatIndianCurrency(quarter.minimumTarget).toLowerCase().includes(targetSearch.toLowerCase()) ||
+                                    formatIndianCurrency(quarter.targetAchieved).toLowerCase().includes(targetSearch.toLowerCase()) ||
+                                    formatIndianCurrency(quarter.incentiveEarned).toLowerCase().includes(targetSearch.toLowerCase()) ||
+                                    quarter.status.toLowerCase().includes(targetSearch.toLowerCase())
+                                  )
+                                  .map((quarter: any, index: number) => {
                                   const statusColors = {
                                     'Completed': 'bg-green-100 text-green-800',
                                     'In Progress': 'bg-yellow-100 text-yellow-800',
@@ -426,7 +452,7 @@ export default function TeamLeaderDashboard() {
                               ) : (
                                 <tr>
                                   <td colSpan={5} className="border border-gray-300 px-4 py-3 text-center text-gray-500">
-                                    No target data available
+                                    {targetSearch ? 'No matching targets found' : 'No target data available'}
                                   </td>
                                 </tr>
                               )}
@@ -1995,8 +2021,14 @@ export default function TeamLeaderDashboard() {
 
             {/* Requirements Table */}
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between gap-4">
                 <CardTitle>Requirements</CardTitle>
+                <SearchBar
+                  value={requirementSearch}
+                  onChange={setRequirementSearch}
+                  placeholder="Search requirements..."
+                  testId="input-search-requirements"
+                />
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -2013,7 +2045,16 @@ export default function TeamLeaderDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {requirementsData.map((requirement) => (
+                      {requirementsData
+                        .filter((requirement) => 
+                          requirement.position.toLowerCase().includes(requirementSearch.toLowerCase()) ||
+                          requirement.criticality.toLowerCase().includes(requirementSearch.toLowerCase()) ||
+                          requirement.company.toLowerCase().includes(requirementSearch.toLowerCase()) ||
+                          requirement.contact.toLowerCase().includes(requirementSearch.toLowerCase()) ||
+                          requirement.talentAdvisor.toLowerCase().includes(requirementSearch.toLowerCase()) ||
+                          (requirement.recruiter && requirement.recruiter.toLowerCase().includes(requirementSearch.toLowerCase()))
+                        )
+                        .map((requirement) => (
                         <tr key={requirement.id} className="border-b border-gray-100 dark:border-gray-800">
                           <td className="py-4 px-4 text-gray-900 dark:text-white">{requirement.position}</td>
                           <td className="py-4 px-4">
