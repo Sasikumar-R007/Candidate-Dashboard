@@ -297,43 +297,128 @@ const deliveredData: Array<{ requirement: string; candidate: string; client: str
 
 const defaultedData: Array<{ requirement: string; candidate: string; client: string; expectedDate: string; status: string }> = [];
 
-// Individual member completion stats by criticality
-const memberCompletionStats = {
+// Individual member completion stats by criticality and period (month)
+// Structure: {member: {period: {criticality: {total, completed}}}}
+const memberCompletionStatsByPeriod: Record<string, Record<string, Record<string, { total: number, completed: number }>>> = {
   "Sudharshan": {
-    "HT": { total: 10, completed: 8 },  // High criticality, Tough
-    "HM": { total: 8, completed: 6 },   // High criticality, Medium
-    "MM": { total: 12, completed: 10 }, // Medium criticality, Medium
-    "ME": { total: 6, completed: 5 }    // Medium criticality, Easy
+    "2024-11": {
+      "HT": { total: 10, completed: 8 },
+      "HM": { total: 8, completed: 6 },
+      "MM": { total: 12, completed: 10 },
+      "ME": { total: 6, completed: 5 }
+    },
+    "2024-10": {
+      "HT": { total: 8, completed: 6 },
+      "HM": { total: 7, completed: 5 },
+      "MM": { total: 10, completed: 8 },
+      "ME": { total: 5, completed: 4 }
+    },
+    "2024-09": {
+      "HT": { total: 9, completed: 7 },
+      "HM": { total: 6, completed: 4 },
+      "MM": { total: 11, completed: 9 },
+      "ME": { total: 7, completed: 6 }
+    }
   },
   "Deepika": {
-    "HT": { total: 8, completed: 7 },
-    "HM": { total: 10, completed: 8 },
-    "MM": { total: 9, completed: 7 },
-    "ME": { total: 7, completed: 6 }
+    "2024-11": {
+      "HT": { total: 8, completed: 7 },
+      "HM": { total: 10, completed: 8 },
+      "MM": { total: 9, completed: 7 },
+      "ME": { total: 7, completed: 6 }
+    },
+    "2024-10": {
+      "HT": { total: 7, completed: 6 },
+      "HM": { total: 8, completed: 6 },
+      "MM": { total: 8, completed: 6 },
+      "ME": { total: 6, completed: 5 }
+    },
+    "2024-09": {
+      "HT": { total: 6, completed: 5 },
+      "HM": { total: 9, completed: 7 },
+      "MM": { total: 7, completed: 5 },
+      "ME": { total: 5, completed: 4 }
+    }
   },
   "Dharshan": {
-    "HT": { total: 6, completed: 4 },
-    "HM": { total: 9, completed: 7 },
-    "MM": { total: 11, completed: 9 },
-    "ME": { total: 8, completed: 7 }
+    "2024-11": {
+      "HT": { total: 6, completed: 4 },
+      "HM": { total: 9, completed: 7 },
+      "MM": { total: 11, completed: 9 },
+      "ME": { total: 8, completed: 7 }
+    },
+    "2024-10": {
+      "HT": { total: 5, completed: 3 },
+      "HM": { total: 7, completed: 5 },
+      "MM": { total: 9, completed: 7 },
+      "ME": { total: 6, completed: 5 }
+    },
+    "2024-09": {
+      "HT": { total: 7, completed: 5 },
+      "HM": { total: 8, completed: 6 },
+      "MM": { total: 10, completed: 8 },
+      "ME": { total: 7, completed: 6 }
+    }
   },
   "Kavya": {
-    "HT": { total: 7, completed: 6 },
-    "HM": { total: 11, completed: 9 },
-    "MM": { total: 10, completed: 8 },
-    "ME": { total: 5, completed: 4 }
+    "2024-11": {
+      "HT": { total: 7, completed: 6 },
+      "HM": { total: 11, completed: 9 },
+      "MM": { total: 10, completed: 8 },
+      "ME": { total: 5, completed: 4 }
+    },
+    "2024-10": {
+      "HT": { total: 6, completed: 5 },
+      "HM": { total: 9, completed: 7 },
+      "MM": { total: 8, completed: 6 },
+      "ME": { total: 4, completed: 3 }
+    },
+    "2024-09": {
+      "HT": { total: 5, completed: 4 },
+      "HM": { total: 10, completed: 8 },
+      "MM": { total: 9, completed: 7 },
+      "ME": { total: 6, completed: 5 }
+    }
   },
   "Thamarai Selvi": {
-    "HT": { total: 12, completed: 10 },
-    "HM": { total: 9, completed: 8 },
-    "MM": { total: 8, completed: 7 },
-    "ME": { total: 6, completed: 6 }
+    "2024-11": {
+      "HT": { total: 12, completed: 10 },
+      "HM": { total: 9, completed: 8 },
+      "MM": { total: 8, completed: 7 },
+      "ME": { total: 6, completed: 6 }
+    },
+    "2024-10": {
+      "HT": { total: 10, completed: 8 },
+      "HM": { total: 8, completed: 7 },
+      "MM": { total: 7, completed: 6 },
+      "ME": { total: 5, completed: 5 }
+    },
+    "2024-09": {
+      "HT": { total: 11, completed: 9 },
+      "HM": { total: 7, completed: 6 },
+      "MM": { total: 9, completed: 8 },
+      "ME": { total: 7, completed: 7 }
+    }
   },
   "Karthikayan": {
-    "HT": { total: 5, completed: 3 },
-    "HM": { total: 7, completed: 5 },
-    "MM": { total: 10, completed: 8 },
-    "ME": { total: 9, completed: 8 }
+    "2024-11": {
+      "HT": { total: 5, completed: 3 },
+      "HM": { total: 7, completed: 5 },
+      "MM": { total: 10, completed: 8 },
+      "ME": { total: 9, completed: 8 }
+    },
+    "2024-10": {
+      "HT": { total: 4, completed: 2 },
+      "HM": { total: 6, completed: 4 },
+      "MM": { total: 8, completed: 6 },
+      "ME": { total: 7, completed: 6 }
+    },
+    "2024-09": {
+      "HT": { total: 6, completed: 4 },
+      "HM": { total: 5, completed: 3 },
+      "MM": { total: 9, completed: 7 },
+      "ME": { total: 8, completed: 7 }
+    }
   }
 };
 
@@ -3308,21 +3393,50 @@ export default function AdminDashboard() {
 
                   {/* Stacked Bar Chart */}
                   <div className="h-[300px] bg-white dark:bg-gray-900 p-4 rounded">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={(() => {
-                          const memberStats = memberCompletionStats[selectedDefaultRateMember as keyof typeof memberCompletionStats];
-                          if (!memberStats) return [];
-                          
-                          return Object.entries(memberStats).map(([criticality, stats]) => ({
-                            criticality,
-                            completed: stats.completed,
-                            incomplete: stats.total - stats.completed,
-                            total: stats.total
-                          }));
-                        })()}
-                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                      >
+                    {(() => {
+                      // Get member data
+                      const memberData = memberCompletionStatsByPeriod[selectedDefaultRateMember];
+                      
+                      if (!memberData) {
+                        return (
+                          <div className="flex items-center justify-center h-full">
+                            <p className="text-gray-500 dark:text-gray-400">No data available for selected member</p>
+                          </div>
+                        );
+                      }
+                      
+                      // Get period from selected date (format: YYYY-MM)
+                      const selectedPeriod = selectedDefaultRateDate 
+                        ? `${selectedDefaultRateDate.getFullYear()}-${String(selectedDefaultRateDate.getMonth() + 1).padStart(2, '0')}`
+                        : "2024-11"; // Default to November 2024
+                      
+                      // Get stats for selected period
+                      const periodStats = memberData[selectedPeriod];
+                      
+                      if (!periodStats) {
+                        return (
+                          <div className="flex items-center justify-center h-full">
+                            <p className="text-gray-500 dark:text-gray-400">
+                              No data for {format(selectedDefaultRateDate || new Date(), "MMMM yyyy")}
+                            </p>
+                          </div>
+                        );
+                      }
+                      
+                      // Transform stats into chart data
+                      const chartData = Object.entries(periodStats).map(([criticality, stats]) => ({
+                        criticality,
+                        completed: stats.completed,
+                        incomplete: stats.total - stats.completed,
+                        total: stats.total
+                      }));
+                      
+                      return (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={chartData}
+                            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                          >
                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                         <XAxis 
                           dataKey="criticality" 
@@ -3370,6 +3484,8 @@ export default function AdminDashboard() {
                         <Bar dataKey="incomplete" stackId="a" fill="#ef4444" name="incomplete" />
                       </BarChart>
                     </ResponsiveContainer>
+                      );
+                    })()}
                   </div>
                 </CardContent>
               </Card>
