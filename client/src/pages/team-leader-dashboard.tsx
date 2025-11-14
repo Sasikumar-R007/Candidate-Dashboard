@@ -1545,19 +1545,35 @@ export default function TeamLeaderDashboard() {
             <div className="grid grid-cols-4 gap-0 bg-blue-50 rounded overflow-hidden">
               <div className="bg-blue-100 text-center py-6 px-4">
                 <p className="text-sm font-medium text-gray-600 mb-2">Current Quarter</p>
-                <p className="text-lg font-bold text-gray-900">{aggregatedTargets?.currentQuarter ? `${aggregatedTargets.currentQuarter.quarter}-${aggregatedTargets.currentQuarter.year}` : "N/A"}</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {aggregatedTargets?.currentQuarter 
+                    ? `${aggregatedTargets.currentQuarter.quarter}-${aggregatedTargets.currentQuarter.year}` 
+                    : "N/A"}
+                </p>
               </div>
               <div className="bg-blue-50 text-center py-6 px-4">
                 <p className="text-sm font-medium text-gray-600 mb-2">Minimum Target</p>
-                <p className="text-lg font-bold text-gray-900">{aggregatedTargets?.currentQuarter ? formatIndianCurrency(aggregatedTargets.currentQuarter.minimumTarget) : "0"}</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {aggregatedTargets?.currentQuarter 
+                    ? formatIndianCurrency(aggregatedTargets.currentQuarter.minimumTarget) 
+                    : "0"}
+                </p>
               </div>
               <div className="bg-blue-100 text-center py-6 px-4">
                 <p className="text-sm font-medium text-gray-600 mb-2">Target Achieved</p>
-                <p className="text-lg font-bold text-gray-900">{aggregatedTargets?.currentQuarter ? formatIndianCurrency(aggregatedTargets.currentQuarter.targetAchieved) : "0"}</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {aggregatedTargets?.currentQuarter 
+                    ? formatIndianCurrency(aggregatedTargets.currentQuarter.targetAchieved) 
+                    : "0"}
+                </p>
               </div>
               <div className="bg-blue-50 text-center py-6 px-4">
                 <p className="text-sm font-medium text-gray-600 mb-2">Incentive Earned</p>
-                <p className="text-lg font-bold text-gray-900">{aggregatedTargets?.currentQuarter ? formatIndianCurrency(aggregatedTargets.currentQuarter.incentiveEarned) : "0"}</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {aggregatedTargets?.currentQuarter 
+                    ? formatIndianCurrency(aggregatedTargets.currentQuarter.incentiveEarned) 
+                    : "0"}
+                </p>
               </div>
             </div>
             <div className="mt-4 flex justify-end">
@@ -1783,19 +1799,35 @@ export default function TeamLeaderDashboard() {
                 <div className="grid grid-cols-4 gap-0 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-gray-800 dark:to-gray-700 rounded overflow-hidden border border-gray-200 dark:border-gray-600">
                   <div className="bg-blue-100 dark:bg-gray-700 text-center py-6 px-4 border-r border-blue-200 dark:border-gray-600">
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Current Quarter</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-current-quarter">{aggregatedTargets?.currentQuarter ? `${aggregatedTargets.currentQuarter.quarter}-${aggregatedTargets.currentQuarter.year}` : 'N/A'}</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-current-quarter">
+                      {aggregatedTargets?.currentQuarter 
+                        ? `${aggregatedTargets.currentQuarter.quarter}-${aggregatedTargets.currentQuarter.year}` 
+                        : 'N/A'}
+                    </p>
                   </div>
                   <div className="bg-blue-50 dark:bg-gray-750 text-center py-6 px-4 border-r border-blue-200 dark:border-gray-600">
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Minimum Target</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-minimum-target">{aggregatedTargets?.currentQuarter ? formatIndianCurrency(aggregatedTargets.currentQuarter.minimumTarget) : '0'}</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-minimum-target">
+                      {aggregatedTargets?.currentQuarter 
+                        ? formatIndianCurrency(aggregatedTargets.currentQuarter.minimumTarget) 
+                        : '0'}
+                    </p>
                   </div>
                   <div className="bg-blue-100 dark:bg-gray-700 text-center py-6 px-4 border-r border-blue-200 dark:border-gray-600">
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Target Achieved</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-target-achieved">{aggregatedTargets?.currentQuarter ? formatIndianCurrency(aggregatedTargets.currentQuarter.targetAchieved) : '0'}</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-target-achieved">
+                      {aggregatedTargets?.currentQuarter 
+                        ? formatIndianCurrency(aggregatedTargets.currentQuarter.targetAchieved) 
+                        : '0'}
+                    </p>
                   </div>
                   <div className="bg-blue-50 dark:bg-gray-750 text-center py-6 px-4">
                     <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Incentive Earned</p>
-                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-incentive-earned">{aggregatedTargets?.currentQuarter ? formatIndianCurrency(aggregatedTargets.currentQuarter.incentiveEarned) : '0'}</p>
+                    <p className="text-lg font-bold text-gray-900 dark:text-white" data-testid="text-incentive-earned">
+                      {aggregatedTargets?.currentQuarter 
+                        ? formatIndianCurrency(aggregatedTargets.currentQuarter.incentiveEarned) 
+                        : '0'}
+                    </p>
                   </div>
                 </div>
               </CardContent>
