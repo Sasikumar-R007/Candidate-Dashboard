@@ -346,51 +346,34 @@ export default function TeamLeaderDashboard() {
                               </tr>
                             </thead>
                             <tbody>
-                              <tr>
-                                <td className="border border-gray-300 px-4 py-3">ASO-2025</td>
-                                <td className="border border-gray-300 px-4 py-3">15,00,000</td>
-                                <td className="border border-gray-300 px-4 py-3">10,00,000</td>
-                                <td className="border border-gray-300 px-4 py-3">50,000</td>
-                                <td className="border border-gray-300 px-4 py-3">
-                                  <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-sm">In Progress</span>
-                                </td>
-                              </tr>
-                              <tr className="bg-gray-50">
-                                <td className="border border-gray-300 px-4 py-3">JSO-2024</td>
-                                <td className="border border-gray-300 px-4 py-3">12,00,000</td>
-                                <td className="border border-gray-300 px-4 py-3">14,50,000</td>
-                                <td className="border border-gray-300 px-4 py-3">85,000</td>
-                                <td className="border border-gray-300 px-4 py-3">
-                                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">Completed</span>
-                                </td>
-                              </tr>
-                              <tr>
-                                <td className="border border-gray-300 px-4 py-3">AMJ-2024</td>
-                                <td className="border border-gray-300 px-4 py-3">13,00,000</td>
-                                <td className="border border-gray-300 px-4 py-3">11,75,000</td>
-                                <td className="border border-gray-300 px-4 py-3">35,000</td>
-                                <td className="border border-gray-300 px-4 py-3">
-                                  <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm">Below Target</span>
-                                </td>
-                              </tr>
-                              <tr className="bg-gray-50">
-                                <td className="border border-gray-300 px-4 py-3">JFM-2024</td>
-                                <td className="border border-gray-300 px-4 py-3">11,00,000</td>
-                                <td className="border border-gray-300 px-4 py-3">12,80,000</td>
-                                <td className="border border-gray-300 px-4 py-3">75,000</td>
-                                <td className="border border-gray-300 px-4 py-3">
-                                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">Completed</span>
-                                </td>
-                              </tr>
-                              <tr>
-                                <td className="border border-gray-300 px-4 py-3">OND-2023</td>
-                                <td className="border border-gray-300 px-4 py-3">10,50,000</td>
-                                <td className="border border-gray-300 px-4 py-3">13,20,000</td>
-                                <td className="border border-gray-300 px-4 py-3">90,000</td>
-                                <td className="border border-gray-300 px-4 py-3">
-                                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">Completed</span>
-                                </td>
-                              </tr>
+                              {aggregatedTargets?.allQuarters && aggregatedTargets.allQuarters.length > 0 ? (
+                                aggregatedTargets.allQuarters.map((quarter, index) => {
+                                  const statusColors = {
+                                    'Completed': 'bg-green-100 text-green-800',
+                                    'In Progress': 'bg-yellow-100 text-yellow-800',
+                                    'Pending': 'bg-gray-100 text-gray-800'
+                                  };
+                                  const statusColor = statusColors[quarter.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800';
+                                  
+                                  return (
+                                    <tr key={`${quarter.quarter}-${quarter.year}`} className={index % 2 === 1 ? 'bg-gray-50' : ''}>
+                                      <td className="border border-gray-300 px-4 py-3">{quarter.quarter}-{quarter.year}</td>
+                                      <td className="border border-gray-300 px-4 py-3">{formatIndianCurrency(quarter.minimumTarget)}</td>
+                                      <td className="border border-gray-300 px-4 py-3">{formatIndianCurrency(quarter.targetAchieved)}</td>
+                                      <td className="border border-gray-300 px-4 py-3">{formatIndianCurrency(quarter.incentiveEarned)}</td>
+                                      <td className="border border-gray-300 px-4 py-3">
+                                        <span className={`${statusColor} px-2 py-1 rounded text-sm`}>{quarter.status}</span>
+                                      </td>
+                                    </tr>
+                                  );
+                                })
+                              ) : (
+                                <tr>
+                                  <td colSpan={5} className="border border-gray-300 px-4 py-3 text-center text-gray-500">
+                                    No target data available
+                                  </td>
+                                </tr>
+                              )}
                             </tbody>
                           </table>
                         </div>
