@@ -124,6 +124,25 @@ export interface IStorage {
   // Target Mapping methods
   createTargetMapping(mapping: InsertTargetMappings): Promise<TargetMappings>;
   getAllTargetMappings(): Promise<TargetMappings[]>;
+  getTeamLeaderTargetSummary(teamLeadId: string): Promise<{
+    currentQuarter: {
+      quarter: string;
+      year: number;
+      minimumTarget: number;
+      targetAchieved: number;
+      incentiveEarned: number;
+      closures: number;
+    };
+    allQuarters: Array<{
+      quarter: string;
+      year: number;
+      minimumTarget: number;
+      targetAchieved: number;
+      incentiveEarned: number;
+      closures: number;
+      status: string;
+    }>;
+  }>;
 }
 
 export class MemStorage implements IStorage {

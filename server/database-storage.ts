@@ -625,4 +625,109 @@ export class DatabaseStorage implements IStorage {
   async getAllTargetMappings(): Promise<TargetMappings[]> {
     return await db.select().from(targetMappings).orderBy(desc(targetMappings.createdAt));
   }
+
+  async getTeamLeaderTargetSummary(teamLeadId: string): Promise<{
+    currentQuarter: {
+      quarter: string;
+      year: number;
+      minimumTarget: number;
+      targetAchieved: number;
+      incentiveEarned: number;
+      closures: number;
+    };
+    allQuarters: Array<{
+      quarter: string;
+      year: number;
+      minimumTarget: number;
+      targetAchieved: number;
+      incentiveEarned: number;
+      closures: number;
+      status: string;
+    }>;
+  }> {
+    // Fetch all target mappings for this team leader
+    const mappings = await db
+      .select()
+      .from(targetMappings)
+      .where(eq(targetMappings.teamLeadId, teamLeadId))
+      .orderBy(desc(targetMappings.year), desc(targetMappings.quarter));
+
+    // Determine current quarter based on current date
+    const now = new Date();
+    const month = now.getMonth(); // 0-11
+    const year = now.getFullYear();
+    let currentQuarterLabel = "";
+    
+    if (month >= 0 && month <= 2) {
+      currentQuarterLabel = "JFM"; // Q1
+    } else if (month >= 3 && month <= 5) {
+      currentQuarterLabel = "AMJ"; // Q2
+    } else if (month >= 6 && month <= 8) {
+      currentQuarterLabel = "JAS"; // Q3
+    } else {
+      currentQuarterLabel = "OND"; // Q4
+    }
+
+    // Group by quarter+year and aggregate
+    const quarterMap = new Map<string, {
+      quarter: string;
+      year: number;
+      minimumTarget: number;
+      targetAchieved: number;
+      incentiveEarned: number;
+      closures: number;
+    }>();
+
+    for (const mapping of mappings) {
+      const key = `${mapping.quarter}-${mapping.year}`;
+      if (!quarterMap.has(key)) {
+        quarterMap.set(key, {
+          quarter: mapping.quarter,
+          year: mapping.year,
+          minimumTarget: 0,
+          targetAchieved: 0,
+          incentiveEarned: 0,
+          closures: 0
+        });
+      }
+      const entry = quarterMap.get(key)!;
+      entry.minimumTarget += mapping.minimumTarget;
+      entry.targetAchieved += mapping.targetAchieved || 0;
+      entry.incentiveEarned += mapping.incentives || 0;
+      entry.closures += mapping.closures || 0;
+    }
+
+    // Find current quarter data
+    const currentKey = `${currentQuarterLabel}-${year}`;
+    const currentQuarter = quarterMap.get(currentKey) || {
+      quarter: currentQuarterLabel,
+      year: year,
+      minimumTarget: 0,
+      targetAchieved: 0,
+      incentiveEarned: 0,
+      closures: 0
+    };
+
+    // Build allQuarters array with status
+    const allQuarters = Array.from(quarterMap.values()).map(q => {
+      let status = "Pending";
+      if (q.targetAchieved >= q.minimumTarget && q.minimumTarget > 0) {
+        status = "Completed";
+      } else if (q.targetAchieved > 0 && q.targetAchieved < q.minimumTarget) {
+        status = "In Progress";
+      } else if (`${q.quarter}-${q.year}` === currentKey && q.minimumTarget > 0) {
+        status = "In Progress";
+      }
+      
+      return {
+        ...q,
+        status
+      };
+    });
+
+    return {
+      currentQuarter,
+      allQuarters
+    };
+  }
 }
