@@ -308,28 +308,43 @@ const initialCeoMeetingsData = [
 
 // Performance Chart Component
 interface PerformanceChartProps {
-  data: Array<{ member: string; requirements: number }>;
+  data: Array<{ member: string; requirements?: number; resumesA?: number; resumesB?: number; memberIndex?: number }>;
   height?: string;
   benchmarkValue?: number;
+  showDualLines?: boolean;
 }
 
-function PerformanceChart({ data, height = "100%", benchmarkValue = 10 }: PerformanceChartProps) {
+function PerformanceChart({ data, height = "100%", benchmarkValue = 10, showDualLines = false }: PerformanceChartProps) {
+  const maxResumes = showDualLines 
+    ? Math.max(...data.map(d => Math.max(d.resumesA || 0, d.resumesB || 0)))
+    : 15;
+  const roundedMax = Math.ceil(maxResumes / 2) * 2 + 2;
+  const ticks = showDualLines 
+    ? Array.from({ length: Math.ceil(roundedMax / 2) + 1 }, (_, i) => i * 2)
+    : [3, 6, 9, 12, 15];
+
   return (
     <ResponsiveContainer width="100%" height={height}>
       <ComposedChart data={data}>
         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
         <XAxis 
-          dataKey="member" 
+          dataKey="member"
           stroke="#6b7280" 
           style={{ fontSize: '11px' }}
           tick={{ fill: '#6b7280' }}
+          tickFormatter={(value, index) => {
+            if (showDualLines && data[index]?.memberIndex !== undefined) {
+              return `${data[index].memberIndex}. ${value}`;
+            }
+            return value;
+          }}
         />
         <YAxis 
           stroke="#6b7280" 
           style={{ fontSize: '12px' }}
           tick={{ fill: '#6b7280' }}
-          ticks={[3, 6, 9, 12, 15]}
-          domain={[0, 15]}
+          ticks={ticks}
+          domain={[0, showDualLines ? roundedMax : 15]}
         />
         <Tooltip 
           contentStyle={{ 
@@ -338,22 +353,50 @@ function PerformanceChart({ data, height = "100%", benchmarkValue = 10 }: Perfor
             borderRadius: '8px'
           }}
         />
-        <ReferenceLine 
-          y={benchmarkValue} 
-          stroke="#ef4444" 
-          strokeWidth={2}
-          strokeDasharray="5 5"
-          label={{ value: `Avg: ${benchmarkValue}`, position: 'right', fill: '#ef4444', fontSize: 12 }}
-        />
-        <Line 
-          type="monotone" 
-          dataKey="requirements" 
-          stroke="#3b82f6" 
-          strokeWidth={3} 
-          dot={{ fill: '#3b82f6', r: 5 }}
-          activeDot={{ r: 7 }}
-          name="Requirements"
-        />
+        <Legend />
+        {!showDualLines && (
+          <>
+            <ReferenceLine 
+              y={benchmarkValue} 
+              stroke="#ef4444" 
+              strokeWidth={2}
+              strokeDasharray="5 5"
+              label={{ value: `Avg: ${benchmarkValue}`, position: 'right', fill: '#ef4444', fontSize: 12 }}
+            />
+            <Line 
+              type="monotone" 
+              dataKey="requirements" 
+              stroke="#3b82f6" 
+              strokeWidth={3} 
+              dot={{ fill: '#3b82f6', r: 5 }}
+              activeDot={{ r: 7 }}
+              name="Requirements"
+            />
+          </>
+        )}
+        {showDualLines && (
+          <>
+            <Line 
+              type="monotone" 
+              dataKey="resumesA" 
+              stroke="#ef4444" 
+              strokeWidth={2} 
+              strokeDasharray="4 4"
+              dot={{ fill: '#ef4444', r: 5 }}
+              activeDot={{ r: 7 }}
+              name="Resume Count A"
+            />
+            <Line 
+              type="monotone" 
+              dataKey="resumesB" 
+              stroke="#3b82f6" 
+              strokeWidth={2} 
+              dot={{ fill: '#3b82f6', r: 5 }}
+              activeDot={{ r: 7 }}
+              name="Resume Count B"
+            />
+          </>
+        )}
       </ComposedChart>
     </ResponsiveContainer>
   );
@@ -3039,15 +3082,16 @@ export default function AdminDashboard() {
 
               {/* Team Performance Table */}
               <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
-                <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
+                <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between gap-2">
                   <CardTitle className="text-lg text-gray-900 dark:text-white">Team Performance</CardTitle>
                   <Button 
-                    variant="link" 
-                    size="sm" 
-                    className="text-blue-600 text-sm"
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6"
                     onClick={() => setIsTeamPerformanceModalOpen(true)}
+                    data-testid="button-expand-team-performance"
                   >
-                    view list
+                    <HelpCircle className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                   </Button>
                 </CardHeader>
                 <CardContent className="p-3">
