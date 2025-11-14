@@ -212,7 +212,7 @@ export default function RecruiterActiveJobs() {
               if (window.history.length > 1) {
                 window.history.back();
               } else {
-                setLocation('/recruiter');
+                setLocation('/recruiter-login-2');
               }
             }}
             variant="outline"

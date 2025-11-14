@@ -13,7 +13,6 @@ import DashboardSelection from "@/pages/dashboard-selection";
 import Dashboard from "@/pages/dashboard";
 import TeamLeaderDashboard from "@/pages/team-leader-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
-import RecruiterDashboard from "@/pages/recruiter-dashboard";
 import RecruiterDashboard2 from "@/pages/recruiter-dashboard-2";
 import ClientDashboard from "@/pages/client-dashboard";
 import SourceResume from "@/pages/source-resume";
@@ -42,7 +41,6 @@ function Router() {
       <Route path="/candidate" component={Dashboard} />
       <Route path="/team-leader" component={TeamLeaderDashboard} />
       <Route path="/admin" component={AdminDashboard} />
-      <Route path="/recruiter" component={RecruiterDashboard} />
       <Route path="/recruiter-login-2" component={RecruiterDashboard2} />
       <Route path="/client" component={ClientDashboard} />
       <Route path="/chat" component={ChatPage} />

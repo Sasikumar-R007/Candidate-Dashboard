@@ -1079,7 +1079,7 @@ const SourceResume = () => {
                   if (window.history.length > 1) {
                     window.history.back();
                   } else {
-                    setLocation('/recruiter');
+                    setLocation('/recruiter-login-2');
                   }
                 }}
                 className="flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50"

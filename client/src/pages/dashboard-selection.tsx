@@ -115,30 +115,6 @@ export default function DashboardSelection() {
               </CardContent>
             </Card>
 
-            {/* Recruiter Dashboard Card */}
-            <Card className="bg-white/10 dark:bg-black/10 backdrop-blur-sm border border-white/20 dark:border-gray-700 hover:bg-white/20 dark:hover:bg-black/20 transition-all duration-300 hover:-translate-y-1 shadow-xl hover:shadow-2xl">
-              <CardHeader className="text-center pb-4">
-                <div className="mx-auto mb-4 p-4 bg-gradient-to-br from-orange-400/20 to-orange-600/20 backdrop-blur-sm rounded-full w-16 h-16 flex items-center justify-center border border-orange-300/30">
-                  <UserSearchIcon className="h-8 w-8 text-orange-600 dark:text-orange-400" />
-                </div>
-                <CardTitle className="text-xl text-gray-900 dark:text-white">Recruiter Dashboard</CardTitle>
-                <CardDescription className="text-gray-700 dark:text-gray-300">
-                  Manage candidates, schedule interviews, and track recruitment pipeline
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Link href="/recruiter" data-testid="link-recruiter-dashboard">
-                  <Button 
-                    className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white border-0" 
-                    size="lg"
-                    data-testid="button-recruiter-dashboard"
-                  >
-                    Enter Recruiter Dashboard
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-
             {/* Recruiter Login 2 Card */}
             <Card className="bg-white/10 dark:bg-black/10 backdrop-blur-sm border-2 border-orange-300/40 dark:border-orange-600/40 hover:bg-white/20 dark:hover:bg-black/20 transition-all duration-300 hover:-translate-y-1 shadow-xl hover:shadow-2xl">
               <CardHeader className="text-center pb-4">
