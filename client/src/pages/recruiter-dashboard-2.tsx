@@ -7,6 +7,7 @@ import TeamLeaderSidebar from '@/components/dashboard/team-leader-sidebar';
 import AddRequirementModal from '@/components/dashboard/modals/add-requirement-modal';
 import PostJobModal from '@/components/dashboard/modals/PostJobModal';
 import UploadResumeModal from '@/components/dashboard/modals/UploadResumeModal';
+import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-modal';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -1654,74 +1655,46 @@ export default function RecruiterDashboard2() {
       </Dialog>
 
       {/* Delivered Modal */}
-      <Dialog open={isDeliveredModalOpen} onOpenChange={setIsDeliveredModalOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Delivered Candidates</DialogTitle>
-          </DialogHeader>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2 px-4">Candidate</th>
-                  <th className="text-left py-2 px-4">Position</th>
-                  <th className="text-left py-2 px-4">Client</th>
-                  <th className="text-left py-2 px-4">Delivered Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b">
-                  <td className="py-2 px-4">Aarav</td>
-                  <td className="py-2 px-4">Frontend Developer</td>
-                  <td className="py-2 px-4">TechCorp</td>
-                  <td className="py-2 px-4">12-Aug-2025</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-2 px-4">Arjun</td>
-                  <td className="py-2 px-4">UI/UX Designer</td>
-                  <td className="py-2 px-4">Designify</td>
-                  <td className="py-2 px-4">11-Aug-2025</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="py-2 px-4">Shaurya</td>
-                  <td className="py-2 px-4">Backend Developer</td>
-                  <td className="py-2 px-4">CodeLabs</td>
-                  <td className="py-2 px-4">10-Aug-2025</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <DailyDeliveryModal
+        open={isDeliveredModalOpen}
+        onOpenChange={setIsDeliveredModalOpen}
+        title="Delivered Candidates"
+        rows={[
+          { candidate: "Aarav", position: "Frontend Developer", client: "TechCorp", deliveredDate: "12-Aug-2025", status: "Delivered" },
+          { candidate: "Arjun", position: "UI/UX Designer", client: "Designify", deliveredDate: "11-Aug-2025", status: "Delivered" },
+          { candidate: "Shaurya", position: "Backend Developer", client: "CodeLabs", deliveredDate: "10-Aug-2025", status: "Delivered" }
+        ]}
+        columns={[
+          { key: 'candidate', label: 'Candidate' },
+          { key: 'position', label: 'Position' },
+          { key: 'client', label: 'Client' },
+          { key: 'deliveredDate', label: 'Delivered Date' },
+          { key: 'status', label: 'Status' }
+        ]}
+        emptyMessage="No delivered candidates today"
+        statusClassName={(status) => "px-2 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"}
+        testIdPrefix="delivered"
+      />
 
       {/* Defaulted Modal */}
-      <Dialog open={isDefaultedModalOpen} onOpenChange={setIsDefaultedModalOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Defaulted Candidates</DialogTitle>
-          </DialogHeader>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2 px-4">Candidate</th>
-                  <th className="text-left py-2 px-4">Position</th>
-                  <th className="text-left py-2 px-4">Client</th>
-                  <th className="text-left py-2 px-4">Reason</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b">
-                  <td className="py-2 px-4">Vihaan</td>
-                  <td className="py-2 px-4">QA Tester</td>
-                  <td className="py-2 px-4">AppLogic</td>
-                  <td className="py-2 px-4">No response</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <DailyDeliveryModal
+        open={isDefaultedModalOpen}
+        onOpenChange={setIsDefaultedModalOpen}
+        title="Defaulted Candidates"
+        rows={[
+          { candidate: "Vihaan", position: "QA Tester", client: "AppLogic", reason: "No response", status: "Defaulted" }
+        ]}
+        columns={[
+          { key: 'candidate', label: 'Candidate' },
+          { key: 'position', label: 'Position' },
+          { key: 'client', label: 'Client' },
+          { key: 'reason', label: 'Reason' },
+          { key: 'status', label: 'Status' }
+        ]}
+        emptyMessage="No defaulted candidates today"
+        statusClassName={(status) => "px-2 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"}
+        testIdPrefix="defaulted"
+      />
 
       {/* Performance Modal */}
       <Dialog open={isPerformanceModalOpen} onOpenChange={setIsPerformanceModalOpen}>

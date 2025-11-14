@@ -5,6 +5,7 @@ import AdminTopHeader from '@/components/dashboard/admin-top-header';
 import TeamLeaderTeamBoxes from '@/components/dashboard/team-leader-team-boxes';
 import TeamLeaderSidebar from '@/components/dashboard/team-leader-sidebar';
 import AddRequirementModal from '@/components/dashboard/modals/add-requirement-modal';
+import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-modal';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -2855,117 +2856,39 @@ export default function TeamLeaderDashboard() {
       </Dialog>
 
       {/* Daily Delivery Modals */}
-      {/* Delivered Items Modal */}
-      <Dialog open={isDeliveredModalOpen} onOpenChange={setIsDeliveredModalOpen}>
-        <DialogContent className="max-w-4xl mx-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
-              Delivered Items
-            </DialogTitle>
-          </DialogHeader>
-          <div className="p-4">
-            {!dailyMetrics?.deliveredItems || (dailyMetrics.deliveredItems as any[]).length === 0 ? (
-              <div className="text-center py-12" data-testid="text-no-delivered-items">
-                <p className="text-gray-500 dark:text-gray-400 text-lg">No delivered items today</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
-                  <thead>
-                    <tr className="bg-gray-200 dark:bg-gray-700">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Requirement</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Candidate</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Client</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Delivered Date</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(dailyMetrics.deliveredItems as any[]).map((item: any, index: number) => (
-                      <tr key={index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"} data-testid={`row-delivered-item-${index}`}>
-                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{item.requirement}</td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.candidate}</td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.client}</td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.deliveredDate}</td>
-                        <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
-                          <span className="px-2 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
-                            {item.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            <div className="mt-4 flex justify-end">
-              <Button 
-                onClick={() => setIsDeliveredModalOpen(false)}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded"
-                data-testid="button-close-delivered-modal"
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <DailyDeliveryModal
+        open={isDeliveredModalOpen}
+        onOpenChange={setIsDeliveredModalOpen}
+        title="Delivered Items"
+        rows={dailyMetrics?.deliveredItems as any[] || []}
+        columns={[
+          { key: 'requirement', label: 'Requirement' },
+          { key: 'candidate', label: 'Candidate' },
+          { key: 'client', label: 'Client' },
+          { key: 'deliveredDate', label: 'Delivered Date' },
+          { key: 'status', label: 'Status' }
+        ]}
+        emptyMessage="No delivered items today"
+        statusClassName={(status) => "px-2 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"}
+        testIdPrefix="delivered"
+      />
 
-      {/* Defaulted Items Modal */}
-      <Dialog open={isDefaultedModalOpen} onOpenChange={setIsDefaultedModalOpen}>
-        <DialogContent className="max-w-4xl mx-auto">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
-              Defaulted Items
-            </DialogTitle>
-          </DialogHeader>
-          <div className="p-4">
-            {!dailyMetrics?.defaultedItems || (dailyMetrics.defaultedItems as any[]).length === 0 ? (
-              <div className="text-center py-12" data-testid="text-no-defaulted-items">
-                <p className="text-gray-500 dark:text-gray-400 text-lg">No defaulted items today</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
-                  <thead>
-                    <tr className="bg-gray-200 dark:bg-gray-700">
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Requirement</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Candidate</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Client</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Expected Date</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(dailyMetrics.defaultedItems as any[]).map((item: any, index: number) => (
-                      <tr key={index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"} data-testid={`row-defaulted-item-${index}`}>
-                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{item.requirement}</td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.candidate}</td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.client}</td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.expectedDate}</td>
-                        <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
-                          <span className="px-2 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
-                            {item.status}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-            <div className="mt-4 flex justify-end">
-              <Button 
-                onClick={() => setIsDefaultedModalOpen(false)}
-                className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded"
-                data-testid="button-close-defaulted-modal"
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <DailyDeliveryModal
+        open={isDefaultedModalOpen}
+        onOpenChange={setIsDefaultedModalOpen}
+        title="Defaulted Items"
+        rows={dailyMetrics?.defaultedItems as any[] || []}
+        columns={[
+          { key: 'requirement', label: 'Requirement' },
+          { key: 'candidate', label: 'Candidate' },
+          { key: 'client', label: 'Client' },
+          { key: 'expectedDate', label: 'Expected Date' },
+          { key: 'status', label: 'Status' }
+        ]}
+        emptyMessage="No defaulted items today"
+        statusClassName={(status) => "px-2 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"}
+        testIdPrefix="defaulted"
+      />
 
       {/* Meetings Modal */}
       <Dialog open={isMeetingsModalOpen} onOpenChange={setIsMeetingsModalOpen}>
