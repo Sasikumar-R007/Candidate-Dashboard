@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import TeamLeaderMainSidebar from '@/components/dashboard/team-leader-main-sidebar';
 import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
 import AdminTopHeader from '@/components/dashboard/admin-top-header';
@@ -329,6 +329,18 @@ export default function TeamLeaderDashboard() {
     queryKey: ['/api/team-leader/meetings'],
   });
 
+  // Memoized filtered targets for the modal
+  const filteredTargets = useMemo(() => {
+    if (!aggregatedTargets?.allQuarters) return [];
+    return aggregatedTargets.allQuarters.filter((quarter: any) => 
+      `${quarter.quarter}-${quarter.year}`.toLowerCase().includes(targetSearch.toLowerCase()) ||
+      formatIndianCurrency(quarter.minimumTarget).toLowerCase().includes(targetSearch.toLowerCase()) ||
+      formatIndianCurrency(quarter.targetAchieved).toLowerCase().includes(targetSearch.toLowerCase()) ||
+      formatIndianCurrency(quarter.incentiveEarned).toLowerCase().includes(targetSearch.toLowerCase()) ||
+      quarter.status.toLowerCase().includes(targetSearch.toLowerCase())
+    );
+  }, [aggregatedTargets, targetSearch]);
+
   const { data: ceoComments } = useQuery({
     queryKey: ['/api/team-leader/ceo-comments'],
   });
@@ -402,13 +414,7 @@ export default function TeamLeaderDashboard() {
                         </div>
                       </DialogHeader>
                       <div className="mt-4">
-                        <div className="overflow-x-auto" style={{ maxHeight: '400px', overflowY: (aggregatedTargets?.allQuarters?.filter((quarter: any) => 
-                          `${quarter.quarter}-${quarter.year}`.toLowerCase().includes(targetSearch.toLowerCase()) ||
-                          formatIndianCurrency(quarter.minimumTarget).toLowerCase().includes(targetSearch.toLowerCase()) ||
-                          formatIndianCurrency(quarter.targetAchieved).toLowerCase().includes(targetSearch.toLowerCase()) ||
-                          formatIndianCurrency(quarter.incentiveEarned).toLowerCase().includes(targetSearch.toLowerCase()) ||
-                          quarter.status.toLowerCase().includes(targetSearch.toLowerCase())
-                        ).length || 0) > 6 ? 'auto' : 'hidden' }}>
+                        <div className="overflow-x-auto" style={{ maxHeight: '400px', overflowY: filteredTargets.length > 6 ? 'auto' : 'hidden' }}>
                           <table className="w-full border-collapse border border-gray-300">
                             <thead className="sticky top-0 bg-gray-100 z-10">
                               <tr>
@@ -420,16 +426,8 @@ export default function TeamLeaderDashboard() {
                               </tr>
                             </thead>
                             <tbody>
-                              {aggregatedTargets?.allQuarters && aggregatedTargets.allQuarters.length > 0 ? (
-                                aggregatedTargets.allQuarters
-                                  .filter((quarter: any) => 
-                                    `${quarter.quarter}-${quarter.year}`.toLowerCase().includes(targetSearch.toLowerCase()) ||
-                                    formatIndianCurrency(quarter.minimumTarget).toLowerCase().includes(targetSearch.toLowerCase()) ||
-                                    formatIndianCurrency(quarter.targetAchieved).toLowerCase().includes(targetSearch.toLowerCase()) ||
-                                    formatIndianCurrency(quarter.incentiveEarned).toLowerCase().includes(targetSearch.toLowerCase()) ||
-                                    quarter.status.toLowerCase().includes(targetSearch.toLowerCase())
-                                  )
-                                  .map((quarter: any, index: number) => {
+                              {filteredTargets.length > 0 ? (
+                                filteredTargets.map((quarter: any, index: number) => {
                                   const statusColors = {
                                     'Completed': 'bg-green-100 text-green-800',
                                     'In Progress': 'bg-yellow-100 text-yellow-800',
