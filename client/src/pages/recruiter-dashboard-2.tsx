@@ -659,19 +659,34 @@ export default function RecruiterDashboard2() {
                     <div className="space-y-4">
                       <div className="flex justify-between items-center py-2">
                         <span className="text-sm font-medium text-gray-600">Total Requirements</span>
-                        <span className="text-4xl font-bold text-blue-600" data-testid="text-total-requirements">20</span>
+                        <span className="text-4xl font-bold text-blue-600" data-testid="text-total-requirements">{dailyMetrics?.totalRequirements ?? 0}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-sm font-medium text-gray-600">Total Resumes</span>
+                        <span className="text-2xl font-bold" data-testid="text-total-resumes">
+                          {(dailyMetrics?.totalResumesDelivered ?? 0) === (dailyMetrics?.totalResumesRequired ?? 0) ? (
+                            <span className="text-green-600">
+                              {dailyMetrics?.totalResumesDelivered ?? 0}/{dailyMetrics?.totalResumesRequired ?? 0}
+                            </span>
+                          ) : (
+                            <>
+                              <span className="text-red-600">{dailyMetrics?.totalResumesDelivered ?? 0}</span>
+                              <span className="text-green-600">/{dailyMetrics?.totalResumesRequired ?? 0}</span>
+                            </>
+                          )}
+                        </span>
                       </div>
                       <div className="flex justify-between items-center py-2">
                         <span className="text-sm font-medium text-gray-600">Avg. Resumes per Requirement</span>
-                        <span className="text-4xl font-bold text-blue-600" data-testid="text-avg-resumes">2.5</span>
+                        <span className="text-4xl font-bold text-blue-600" data-testid="text-avg-resumes">{Number(dailyMetrics?.avgResumesPerRequirement ?? 0).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between items-center py-2">
                         <span className="text-sm font-medium text-gray-600">Requirements per Recruiter</span>
-                        <span className="text-4xl font-bold text-blue-600" data-testid="text-requirements-recruiter">3.2</span>
+                        <span className="text-4xl font-bold text-blue-600" data-testid="text-requirements-recruiter">{Number(dailyMetrics?.requirementsPerRecruiter ?? 0).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between items-center py-2">
                         <span className="text-sm font-medium text-gray-600">Completed Requirements</span>
-                        <span className="text-4xl font-bold text-blue-600" data-testid="text-completed-requirements">12</span>
+                        <span className="text-4xl font-bold text-blue-600" data-testid="text-completed-requirements">{dailyMetrics?.completedRequirements ?? 0}</span>
                       </div>
                     </div>
 

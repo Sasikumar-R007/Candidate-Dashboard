@@ -1299,6 +1299,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       avgResumesPerRequirement: "0.00",
       requirementsPerRecruiter: "0.00",
       totalResumes: 0,
+      totalResumesDelivered: 0,
+      totalResumesRequired: 0,
       dailyDeliveryDelivered: 0,
       dailyDeliveryDefaulted: 0,
       overallPerformance: "G",
@@ -1599,12 +1601,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const dailyMetrics = {
       id: "daily-rec-001",
       date: "21-Aug-2025",
-      totalRequirements: "15",
-      completedRequirements: "8",
-      avgResumesPerRequirement: "03",
-      requirementsPerRecruiter: "02",
-      dailyDeliveryDelivered: "2",
-      dailyDeliveryDefaulted: "1"
+      totalRequirements: 15,
+      completedRequirements: 8,
+      avgResumesPerRequirement: "3.00",
+      requirementsPerRecruiter: "2.00",
+      totalResumes: 27,
+      totalResumesDelivered: 27,
+      totalResumesRequired: 30,
+      dailyDeliveryDelivered: 2,
+      dailyDeliveryDefaulted: 1,
+      overallPerformance: "G"
     };
     res.json(dailyMetrics);
   });
@@ -1875,6 +1881,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requirementsPerRecruiter,
         completedRequirements,
         totalResumes,
+        totalResumesDelivered: totalResumes,
+        totalResumesRequired: totalExpectedResumes,
         // These would come from other sources - for now returning 0
         dailyDeliveryDelivered: 0,
         dailyDeliveryDefaulted: 0,

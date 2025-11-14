@@ -530,6 +530,22 @@ export default function TeamLeaderDashboard() {
                       </div>
                       <div className="border-t border-gray-200"></div>
                       <div className="flex justify-between items-center py-1">
+                        <span className="text-sm font-medium text-gray-700">Total Resumes</span>
+                        <span className="text-2xl font-bold" data-testid="text-total-resumes">
+                          {(dailyMetrics?.totalResumesDelivered ?? 0) === (dailyMetrics?.totalResumesRequired ?? 0) ? (
+                            <span className="text-green-600">
+                              {dailyMetrics?.totalResumesDelivered ?? 0}/{dailyMetrics?.totalResumesRequired ?? 0}
+                            </span>
+                          ) : (
+                            <>
+                              <span className="text-red-600">{dailyMetrics?.totalResumesDelivered ?? 0}</span>
+                              <span className="text-green-600">/{dailyMetrics?.totalResumesRequired ?? 0}</span>
+                            </>
+                          )}
+                        </span>
+                      </div>
+                      <div className="border-t border-gray-200"></div>
+                      <div className="flex justify-between items-center py-1">
                         <span className="text-sm font-medium text-gray-700">Avg. Resumes per Requirement</span>
                         <span className="text-2xl font-bold text-blue-600">{Number(dailyMetrics?.avgResumesPerRequirement ?? 0).toFixed(2)}</span>
                       </div>
@@ -542,11 +558,6 @@ export default function TeamLeaderDashboard() {
                       <div className="flex justify-between items-center py-1">
                         <span className="text-sm font-medium text-gray-700">Completed Requirements</span>
                         <span className="text-2xl font-bold text-blue-600">{dailyMetrics?.completedRequirements ?? 0}</span>
-                      </div>
-                      <div className="border-t border-gray-200"></div>
-                      <div className="flex justify-between items-center py-1">
-                        <span className="text-sm font-medium text-gray-700">Total Resumes</span>
-                        <span className="text-2xl font-bold text-blue-600">{dailyMetrics?.totalResumes ?? 0}</span>
                       </div>
                     </div>
 
