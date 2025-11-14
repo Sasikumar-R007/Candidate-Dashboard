@@ -98,7 +98,6 @@ export default function TeamLeaderDashboard() {
   const [selectedAssignee, setSelectedAssignee] = useState<string>('');
   const [isAddRequirementModalOpen, setIsAddRequirementModalOpen] = useState(false);
   const [isViewMoreRequirementsModalOpen, setIsViewMoreRequirementsModalOpen] = useState(false);
-  const [isViewTeamPerformanceModalOpen, setIsViewTeamPerformanceModalOpen] = useState(false);
   const [isViewClosuresModalOpen, setIsViewClosuresModalOpen] = useState(false);
   const [isDeliveredModalOpen, setIsDeliveredModalOpen] = useState(false);
   const [isDefaultedModalOpen, setIsDefaultedModalOpen] = useState(false);
@@ -466,11 +465,11 @@ export default function TeamLeaderDashboard() {
                   <div className="flex items-center space-x-2">
                     <Select value={selectedDailyMetricsFilter} onValueChange={setSelectedDailyMetricsFilter}>
                       <SelectTrigger className="w-32 h-8 text-sm" data-testid="select-daily-metrics-filter">
-                        <SelectValue />
+                        <SelectValue placeholder="Overall" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="overall">Overall</SelectItem>
-                        {((teamMembers as any) || []).map((member: any) => (
+                        {Array.isArray(teamMembers) && teamMembers.map((member: any) => (
                           <SelectItem key={member.id} value={member.name}>{member.name}</SelectItem>
                         ))}
                       </SelectContent>
@@ -1304,48 +1303,6 @@ export default function TeamLeaderDashboard() {
           />
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
             
-            {/* Team Performance Section */}
-            <Card className="bg-gray-50">
-              <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
-                <CardTitle className="text-lg text-gray-900">Team Performance</CardTitle>
-                <Button 
-                  size="sm" 
-                  onClick={() => setIsViewTeamPerformanceModalOpen(true)}
-                  data-testid="button-view-team-performance"
-                >
-                  View More
-                </Button>
-              </CardHeader>
-              <CardContent className="p-3">
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse bg-white rounded">
-                    <thead>
-                      <tr className="bg-gray-200">
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Talent Advisor</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Joining Date</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Tenure</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Closures</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Last Closure</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Qtrs Achieved</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {teamPerformanceData.slice(0, 5).map((member, index) => (
-                        <tr key={member.name} className={index % 2 === 0 ? "bg-blue-50" : "bg-white"}>
-                          <td className="py-3 px-4 text-gray-900 font-medium">{member.name}</td>
-                          <td className="py-3 px-4 text-gray-600">{member.joiningDate}</td>
-                          <td className="py-3 px-4 text-gray-600">{member.tenure}</td>
-                          <td className="py-3 px-4 text-gray-600">{member.closures}</td>
-                          <td className="py-3 px-4 text-gray-600">{member.lastClosure}</td>
-                          <td className="py-3 px-4 text-gray-600">{member.qtrsAchieved}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* List of Closures Section */}
             <Card className="bg-gray-50">
               <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
