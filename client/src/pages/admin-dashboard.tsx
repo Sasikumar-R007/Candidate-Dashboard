@@ -32,7 +32,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from "@/components/ui/input";
 import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users, ExternalLink, HelpCircle, MoreVertical } from "lucide-react";
 import { format } from "date-fns";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ComposedChart } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ComposedChart, BarChart, Bar, Cell } from 'recharts';
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
@@ -296,6 +296,46 @@ const initialMessagesData = [
 const deliveredData: Array<{ requirement: string; candidate: string; client: string; deliveredDate: string; status: string }> = [];
 
 const defaultedData: Array<{ requirement: string; candidate: string; client: string; expectedDate: string; status: string }> = [];
+
+// Individual member completion stats by criticality
+const memberCompletionStats = {
+  "Sudharshan": {
+    "HT": { total: 10, completed: 8 },  // High criticality, Tough
+    "HM": { total: 8, completed: 6 },   // High criticality, Medium
+    "MM": { total: 12, completed: 10 }, // Medium criticality, Medium
+    "ME": { total: 6, completed: 5 }    // Medium criticality, Easy
+  },
+  "Deepika": {
+    "HT": { total: 8, completed: 7 },
+    "HM": { total: 10, completed: 8 },
+    "MM": { total: 9, completed: 7 },
+    "ME": { total: 7, completed: 6 }
+  },
+  "Dharshan": {
+    "HT": { total: 6, completed: 4 },
+    "HM": { total: 9, completed: 7 },
+    "MM": { total: 11, completed: 9 },
+    "ME": { total: 8, completed: 7 }
+  },
+  "Kavya": {
+    "HT": { total: 7, completed: 6 },
+    "HM": { total: 11, completed: 9 },
+    "MM": { total: 10, completed: 8 },
+    "ME": { total: 5, completed: 4 }
+  },
+  "Thamarai Selvi": {
+    "HT": { total: 12, completed: 10 },
+    "HM": { total: 9, completed: 8 },
+    "MM": { total: 8, completed: 7 },
+    "ME": { total: 6, completed: 6 }
+  },
+  "Karthikayan": {
+    "HT": { total: 5, completed: 3 },
+    "HM": { total: 7, completed: 5 },
+    "MM": { total: 10, completed: 8 },
+    "ME": { total: 9, completed: 8 }
+  }
+};
 
 const initialTlMeetingsData = [
   { meetingType: "Performance Review", date: "05-Sep-2025", time: "10:00 AM", person: "Arun KS", agenda: "Quarterly performance discussion", status: "Scheduled" },
@@ -1000,6 +1040,10 @@ export default function AdminDashboard() {
   const [selectedPerformanceTeam, setSelectedPerformanceTeam] = useState<string>("all");
   const [isResumeDatabaseModalOpen, setIsResumeDatabaseModalOpen] = useState(false);
   const [isPerformanceDataModalOpen, setIsPerformanceDataModalOpen] = useState(false);
+  
+  // Default Rate (Individually) section states
+  const [selectedDefaultRateMember, setSelectedDefaultRateMember] = useState<string>("Sudharshan");
+  const [selectedDefaultRateDate, setSelectedDefaultRateDate] = useState<Date | undefined>(undefined);
   
   // Search term states for modals and tables
   const [targetSearch, setTargetSearch] = useState('');
@@ -3214,6 +3258,118 @@ export default function AdminDashboard() {
                         </tr>
                       </tbody>
                     </table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Default Rate (Individually) */}
+              <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
+                <CardHeader className="pb-2 pt-3">
+                  <CardTitle className="text-lg text-gray-900 dark:text-white">Default Rate (Individually)</CardTitle>
+                </CardHeader>
+                <CardContent className="p-3">
+                  {/* Filters */}
+                  <div className="flex gap-4 mb-4">
+                    <Select value={selectedDefaultRateMember} onValueChange={setSelectedDefaultRateMember}>
+                      <SelectTrigger className="w-48 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" data-testid="select-default-rate-member">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Sudharshan">Sudharshan</SelectItem>
+                        <SelectItem value="Deepika">Deepika</SelectItem>
+                        <SelectItem value="Dharshan">Dharshan</SelectItem>
+                        <SelectItem value="Kavya">Kavya</SelectItem>
+                        <SelectItem value="Thamarai Selvi">Thamarai Selvi</SelectItem>
+                        <SelectItem value="Karthikayan">Karthikayan</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={`w-48 justify-start text-left font-normal ${!selectedDefaultRateDate && "text-gray-500 dark:text-gray-400"}`}
+                          data-testid="button-select-default-rate-date"
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {selectedDefaultRateDate ? format(selectedDefaultRateDate, "PPP") : <span>Pick a date</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDefaultRateDate}
+                          onSelect={setSelectedDefaultRateDate}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Stacked Bar Chart */}
+                  <div className="h-[300px] bg-white dark:bg-gray-900 p-4 rounded">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={(() => {
+                          const memberStats = memberCompletionStats[selectedDefaultRateMember as keyof typeof memberCompletionStats];
+                          if (!memberStats) return [];
+                          
+                          return Object.entries(memberStats).map(([criticality, stats]) => ({
+                            criticality,
+                            completed: stats.completed,
+                            incomplete: stats.total - stats.completed,
+                            total: stats.total
+                          }));
+                        })()}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis 
+                          dataKey="criticality" 
+                          stroke="#6b7280"
+                          style={{ fontSize: '12px' }}
+                          tick={{ fill: '#6b7280' }}
+                        />
+                        <YAxis 
+                          stroke="#6b7280"
+                          style={{ fontSize: '12px' }}
+                          tick={{ fill: '#6b7280' }}
+                          label={{ value: 'Number of Requirements', angle: -90, position: 'insideLeft', style: { fill: '#6b7280' } }}
+                        />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: '#ffffff', 
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px'
+                          }}
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              return (
+                                <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg">
+                                  <p className="font-semibold text-gray-900 dark:text-white mb-2">{data.criticality}</p>
+                                  <p className="text-sm text-green-600 dark:text-green-400">Completed: {data.completed}</p>
+                                  <p className="text-sm text-red-600 dark:text-red-400">Incomplete: {data.incomplete}</p>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Total: {data.total}</p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Legend 
+                          verticalAlign="top"
+                          height={36}
+                          formatter={(value) => {
+                            if (value === 'completed') return 'Completed';
+                            if (value === 'incomplete') return 'Incomplete';
+                            return value;
+                          }}
+                        />
+                        <Bar dataKey="completed" stackId="a" fill="#22c55e" name="completed" />
+                        <Bar dataKey="incomplete" stackId="a" fill="#ef4444" name="incomplete" />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                 </CardContent>
               </Card>
