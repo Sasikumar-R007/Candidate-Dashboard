@@ -8,7 +8,8 @@ import TeamMembersSidebar from '@/components/dashboard/team-members-sidebar';
 import AddRequirementModal from '@/components/dashboard/modals/add-requirement-modal';
 import TargetMappingModal from '@/components/dashboard/modals/target-mapping-modal';
 import RevenueMappingModal from '@/components/dashboard/modals/revenue-mapping-modal';
-import TeamPerformanceModal from '@/components/dashboard/modals/team-performance-modal';
+import TeamPerformanceTableModal from '@/components/dashboard/modals/team-performance-modal';
+import PerformanceChartModal from '@/components/dashboard/modals/performance-chart-modal';
 import ClosureModal from '@/components/dashboard/modals/closure-modal';
 import AddTeamLeaderModal from '@/components/dashboard/modals/add-team-leader-modal';
 import AddTalentAdvisorModal from '@/components/dashboard/modals/add-talent-advisor-modal';
@@ -978,7 +979,8 @@ export default function AdminDashboard() {
   const [isAllRequirementsModalOpen, setIsAllRequirementsModalOpen] = useState(false);
   const [isTargetMappingModalOpen, setIsTargetMappingModalOpen] = useState(false);
   const [isRevenueMappingModalOpen, setIsRevenueMappingModalOpen] = useState(false);
-  const [isTeamPerformanceModalOpen, setIsTeamPerformanceModalOpen] = useState(false);
+  const [isPerformanceChartModalOpen, setIsPerformanceChartModalOpen] = useState(false);
+  const [isTeamPerformanceTableModalOpen, setIsTeamPerformanceTableModalOpen] = useState(false);
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
   const [isClosureReportsModalOpen, setIsClosureReportsModalOpen] = useState(false);
   const [isAddTeamLeaderModalOpen, setIsAddTeamLeaderModalOpen] = useState(false);
@@ -2945,8 +2947,8 @@ export default function AdminDashboard() {
                         size="icon"
                         variant="ghost"
                         className="h-6 w-6"
-                        onClick={() => setIsTeamPerformanceModalOpen(true)}
-                        data-testid="button-expand-team-performance"
+                        onClick={() => setIsPerformanceChartModalOpen(true)}
+                        data-testid="button-expand-performance-chart"
                       >
                         <HelpCircle className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                       </Button>
@@ -3085,13 +3087,13 @@ export default function AdminDashboard() {
                 <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between gap-2">
                   <CardTitle className="text-lg text-gray-900 dark:text-white">Team Performance</CardTitle>
                   <Button 
-                    size="icon"
-                    variant="ghost"
-                    className="h-6 w-6"
-                    onClick={() => setIsTeamPerformanceModalOpen(true)}
-                    data-testid="button-expand-team-performance"
+                    variant="link" 
+                    size="sm" 
+                    className="text-blue-600 text-sm"
+                    onClick={() => setIsTeamPerformanceTableModalOpen(true)}
+                    data-testid="button-view-team-performance-table"
                   >
-                    <HelpCircle className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                    view list
                   </Button>
                 </CardHeader>
                 <CardContent className="p-3">
@@ -4175,8 +4177,8 @@ export default function AdminDashboard() {
                         size="icon"
                         variant="ghost"
                         className="h-6 w-6"
-                        onClick={() => setIsTeamPerformanceModalOpen(true)}
-                        data-testid="button-expand-team-performance-alt"
+                        onClick={() => setIsPerformanceChartModalOpen(true)}
+                        data-testid="button-expand-performance-chart-alt"
                       >
                         <HelpCircle className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                       </Button>
@@ -4320,7 +4322,8 @@ export default function AdminDashboard() {
                   variant="link" 
                   size="sm" 
                   className="text-blue-600 text-sm"
-                  onClick={() => setIsTeamPerformanceModalOpen(true)}
+                  onClick={() => setIsTeamPerformanceTableModalOpen(true)}
+                  data-testid="button-view-team-performance-table-alt"
                 >
                   view list
                 </Button>
@@ -5988,10 +5991,16 @@ export default function AdminDashboard() {
         onClose={() => setIsRevenueMappingModalOpen(false)}
       />
 
-      {/* Team Performance Modal */}
-      <TeamPerformanceModal
-        isOpen={isTeamPerformanceModalOpen}
-        onClose={() => setIsTeamPerformanceModalOpen(false)}
+      {/* Performance Chart Modal */}
+      <PerformanceChartModal
+        isOpen={isPerformanceChartModalOpen}
+        onClose={() => setIsPerformanceChartModalOpen(false)}
+      />
+
+      {/* Team Performance Table Modal */}
+      <TeamPerformanceTableModal
+        isOpen={isTeamPerformanceTableModalOpen}
+        onClose={() => setIsTeamPerformanceTableModalOpen(false)}
       />
 
       {/* Closure Modal */}
