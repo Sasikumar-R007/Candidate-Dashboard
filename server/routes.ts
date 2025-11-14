@@ -1269,6 +1269,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(targetMetrics);
   });
 
+  // Get aggregated target data for team leader
+  app.get("/api/team-leader/aggregated-targets", async (req, res) => {
+    try {
+      const session = req.session as any;
+      if (!session?.user?.id) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const employee = await storage.getEmployeeById(session.user.id);
+      if (!employee || employee.role !== "Team Leader") {
+        return res.status(403).json({ message: "Access denied - Team Leaders only" });
+      }
+
+      const targetSummary = await storage.getTeamLeaderTargetSummary(employee.id);
+      res.json(targetSummary);
+    } catch (error) {
+      console.error('Get aggregated targets error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.get("/api/team-leader/daily-metrics", (req, res) => {
     const dailyMetrics = {
       id: "daily-001",
