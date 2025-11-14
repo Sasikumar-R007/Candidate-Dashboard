@@ -464,14 +464,15 @@ export default function TeamLeaderDashboard() {
                 <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4">
                   <CardTitle className="text-lg font-semibold text-gray-900">Daily Metrics</CardTitle>
                   <div className="flex items-center space-x-2">
-                    <Select defaultValue="overall">
-                      <SelectTrigger className="w-24 h-8 text-sm">
+                    <Select value={selectedDailyMetricsFilter} onValueChange={setSelectedDailyMetricsFilter}>
+                      <SelectTrigger className="w-32 h-8 text-sm" data-testid="select-daily-metrics-filter">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="overall">Overall</SelectItem>
-                        <SelectItem value="team1">Team 1</SelectItem>
-                        <SelectItem value="team2">Team 2</SelectItem>
+                        {((teamMembers as any) || []).map((member: any) => (
+                          <SelectItem key={member.id} value={member.name}>{member.name}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     
@@ -531,7 +532,9 @@ export default function TeamLeaderDashboard() {
                       <div className="grid grid-cols-2 gap-6">
                         <div className="text-center">
                           <h5 className="text-sm font-medium text-cyan-300 mb-3">Delivered</h5>
-                          <div className="text-4xl font-bold text-white mb-4">3</div>
+                          <div className="text-4xl font-bold text-white mb-4" data-testid="text-delivered-count">
+                            {dailyMetrics?.dailyDeliveryDelivered ?? 0}
+                          </div>
                           <Button 
                             size="sm" 
                             className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded text-sm font-medium"
@@ -543,7 +546,9 @@ export default function TeamLeaderDashboard() {
                         </div>
                         <div className="text-center">
                           <h5 className="text-sm font-medium text-cyan-300 mb-3">Defaulted</h5>
-                          <div className="text-4xl font-bold text-white mb-4">1</div>
+                          <div className="text-4xl font-bold text-white mb-4" data-testid="text-defaulted-count">
+                            {dailyMetrics?.dailyDeliveryDefaulted ?? 0}
+                          </div>
                           <Button 
                             size="sm" 
                             className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded text-sm font-medium"
@@ -556,86 +561,41 @@ export default function TeamLeaderDashboard() {
                       </div>
                     </div>
 
-                    {/* Right section - Team Performance Graph */}
+                    {/* Right section - Overall Performance */}
                     <div className="bg-white border border-gray-200 rounded-lg p-6">
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-sm font-medium text-gray-700">Team Performance</h4>
-                        <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                          <span className="text-white text-xl font-bold">G</span>
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-sm font-medium text-gray-700">Overall Performance</h4>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={() => setIsPerformanceGraphModalOpen(true)}
+                            data-testid="button-expand-performance-graph"
+                          >
+                            <ExternalLink className="h-4 w-4 text-gray-600" />
+                          </Button>
+                        </div>
+                        <div className="text-4xl font-bold text-green-600 bg-green-100 w-16 h-16 rounded-sm flex items-center justify-center">
+                          {dailyMetrics?.overallPerformance ?? 'G'}
                         </div>
                       </div>
-                      <div className="h-32 relative">
-                        <svg viewBox="0 0 300 120" className="w-full h-full">
-                          {/* Grid lines */}
-                          <defs>
-                            <pattern id="grid" width="30" height="20" patternUnits="userSpaceOnUse">
-                              <path d="M 30 0 L 0 0 0 20" fill="none" stroke="#e5e7eb" strokeWidth="1"/>
-                            </pattern>
-                          </defs>
-                          <rect width="100%" height="110" fill="url(#grid)" />
-                          
-                          {/* Performance line 1 - Sudharshanan (Blue) */}
-                          <polyline
-                            fill="none"
-                            stroke="#3b82f6"
-                            strokeWidth="2"
-                            points="30,75 60,65 90,55 120,50 150,45 180,42 210,38 240,35 270,32"
-                          />
-                          
-                          {/* Performance line 2 - Muthu (Green) */}
-                          <polyline
-                            fill="none"
-                            stroke="#22c55e"
-                            strokeWidth="2"
-                            points="30,80 60,72 90,65 120,58 150,53 180,50 210,46 240,43 270,40"
-                          />
-                          
-                          {/* Performance line 3 - Parthiban (Orange) */}
-                          <polyline
-                            fill="none"
-                            stroke="#f59e0b"
-                            strokeWidth="2"
-                            points="30,85 60,78 90,72 120,67 150,63 180,60 210,57 240,54 270,52"
-                          />
-                          
-                          {/* Performance line 4 - Manikandan (Purple) */}
-                          <polyline
-                            fill="none"
-                            stroke="#a855f7"
-                            strokeWidth="2"
-                            points="30,90 60,85 90,82 120,78 150,75 180,73 210,70 240,68 270,66"
-                          />
-                          
-                          {/* Data points for Sudharshanan (Blue) */}
-                          <circle cx="270" cy="32" r="3" fill="#3b82f6"/>
-                          
-                          {/* Data points for Muthu (Green) */}
-                          <circle cx="270" cy="40" r="3" fill="#22c55e"/>
-                          
-                          {/* Data points for Parthiban (Orange) */}
-                          <circle cx="270" cy="52" r="3" fill="#f59e0b"/>
-                          
-                          {/* Data points for Manikandan (Purple) */}
-                          <circle cx="270" cy="66" r="3" fill="#a855f7"/>
-                        </svg>
+                      <div className="flex justify-start space-x-2 mb-2">
+                        <div className="flex items-center space-x-1">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                          <span className="text-sm text-gray-600">Team Performance</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <div className="w-3 h-0.5 bg-red-500"></div>
+                          <span className="text-sm text-gray-600">Average Benchmark (10)</span>
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between mt-3 text-xs">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                          <span className="text-gray-600">Sudharshanan</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                          <span className="text-gray-600">Muthu</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <div className="w-3 h-3 rounded-full bg-orange-500"></div>
-                          <span className="text-gray-600">Parthiban</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <div className="w-3 h-3 rounded-full bg-purple-500"></div>
-                          <span className="text-gray-600">Manikandan</span>
-                        </div>
+                      <div className="h-48 mt-2">
+                        <PerformanceChart
+                          data={(dailyMetrics?.performanceData as any) || []}
+                          height="100%"
+                          benchmarkValue={10}
+                        />
                       </div>
                     </div>
                   </div>
@@ -1963,7 +1923,7 @@ export default function TeamLeaderDashboard() {
                       <div className="text-center">
                         <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Delivered</p>
                         <p className="text-3xl font-bold text-gray-900 dark:text-white mb-3" data-testid="text-daily-delivered">
-                          {(dailyMetrics as any)?.dailyDeliveryDelivered || "3"}
+                          {dailyMetrics?.dailyDeliveryDelivered ?? 0}
                         </p>
                         <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 text-white px-4" data-testid="button-view-delivered">
                           View
@@ -1972,7 +1932,7 @@ export default function TeamLeaderDashboard() {
                       <div className="text-center">
                         <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Defaulted</p>
                         <p className="text-3xl font-bold text-gray-900 dark:text-white mb-3" data-testid="text-daily-defaulted">
-                          {(dailyMetrics as any)?.dailyDeliveryDefaulted || "1"}
+                          {dailyMetrics?.dailyDeliveryDefaulted ?? 0}
                         </p>
                         <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 text-white px-4" data-testid="button-view-defaulted">
                           View
@@ -2849,57 +2809,31 @@ export default function TeamLeaderDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Team Performance Modal */}
-      <Dialog open={isViewTeamPerformanceModalOpen} onOpenChange={setIsViewTeamPerformanceModalOpen}>
-        <DialogContent className="max-w-6xl max-h-[80vh] overflow-y-auto">
+      {/* Performance Graph Modal */}
+      <Dialog open={isPerformanceGraphModalOpen} onOpenChange={setIsPerformanceGraphModalOpen}>
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">Team Performance - Complete List</DialogTitle>
+            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+              Overall Performance - Detailed View
+            </DialogTitle>
           </DialogHeader>
-          <div className="mt-4">
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse border border-gray-300">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Talent Advisor</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Joining Date</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Tenure</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Closures</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Last Closure</th>
-                    <th className="text-left p-3 font-semibold text-gray-700 border border-gray-300">Qtrs Achieved</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { name: "Kavitha", joiningDate: "Jan 2022", tenure: "2y 11m", closures: 15, lastClosure: "15-Dec-24", qtrsAchieved: 3 },
-                    { name: "Rajesh", joiningDate: "Mar 2021", tenure: "3y 9m", closures: 23, lastClosure: "20-Dec-24", qtrsAchieved: 4 },
-                    { name: "Sowmiya", joiningDate: "Aug 2023", tenure: "1y 4m", closures: 8, lastClosure: "12-Dec-24", qtrsAchieved: 2 },
-                    { name: "Kalaiselvi", joiningDate: "Nov 2022", tenure: "2y 1m", closures: 12, lastClosure: "18-Dec-24", qtrsAchieved: 3 },
-                    { name: "Malathi", joiningDate: "Feb 2024", tenure: "11m", closures: 5, lastClosure: "22-Dec-24", qtrsAchieved: 1 },
-                    { name: "Priya", joiningDate: "Jun 2023", tenure: "1y 6m", closures: 9, lastClosure: "10-Dec-24", qtrsAchieved: 2 },
-                    { name: "Arun", joiningDate: "Sep 2022", tenure: "2y 3m", closures: 14, lastClosure: "25-Dec-24", qtrsAchieved: 3 },
-                    { name: "Divya", joiningDate: "Apr 2024", tenure: "8m", closures: 3, lastClosure: "05-Dec-24", qtrsAchieved: 1 },
-                    { name: "Venkat", joiningDate: "Dec 2021", tenure: "3y", closures: 19, lastClosure: "28-Dec-24", qtrsAchieved: 4 },
-                    { name: "Deepika", joiningDate: "Jul 2023", tenure: "1y 5m", closures: 7, lastClosure: "14-Dec-24", qtrsAchieved: 2 }
-                  ].map((member, index) => (
-                    <tr key={member.name} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-                      <td className="p-3 text-gray-900 border border-gray-300 font-medium">{member.name}</td>
-                      <td className="p-3 text-gray-600 border border-gray-300">{member.joiningDate}</td>
-                      <td className="p-3 text-gray-600 border border-gray-300">{member.tenure}</td>
-                      <td className="p-3 text-gray-600 border border-gray-300">{member.closures}</td>
-                      <td className="p-3 text-gray-600 border border-gray-300">{member.lastClosure}</td>
-                      <td className="p-3 text-gray-600 border border-gray-300">{member.qtrsAchieved}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div className="space-y-4">
+            <div className="flex justify-start space-x-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Team Performance</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-0.5 bg-red-500"></div>
+                <span className="text-sm text-gray-600 dark:text-gray-400">Average Benchmark (10)</span>
+              </div>
             </div>
-            <div className="flex justify-end mt-4 pt-4 border-t border-gray-200">
-              <Button 
-                onClick={() => setIsViewTeamPerformanceModalOpen(false)}
-                className="px-6 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded"
-              >
-                Close
-              </Button>
+            <div className="h-[420px]">
+              <PerformanceChart
+                data={(dailyMetrics?.performanceData as any) || []}
+                height="100%"
+                benchmarkValue={10}
+              />
             </div>
           </div>
         </DialogContent>
@@ -2973,38 +2907,40 @@ export default function TeamLeaderDashboard() {
             </DialogTitle>
           </DialogHeader>
           <div className="p-4">
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
-                <thead>
-                  <tr className="bg-gray-200 dark:bg-gray-700">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Requirement</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Candidate</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Client</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Delivered Date</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { requirement: "Frontend Developer", candidate: "Sarah Johnson", client: "TechCorp", deliveredDate: "12-Aug-2025", status: "Interview Scheduled" },
-                    { requirement: "UI/UX Designer", candidate: "Mike Wilson", client: "Designify", deliveredDate: "12-Aug-2025", status: "Under Review" },
-                    { requirement: "Backend Developer", candidate: "Lisa Chen", client: "CodeLabs", deliveredDate: "12-Aug-2025", status: "Approved" }
-                  ].map((item, index) => (
-                    <tr key={index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
-                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{item.requirement}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.candidate}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.client}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.deliveredDate}</td>
-                      <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
-                        <span className="px-2 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
-                          {item.status}
-                        </span>
-                      </td>
+            {!dailyMetrics?.deliveredItems || (dailyMetrics.deliveredItems as any[]).length === 0 ? (
+              <div className="text-center py-12" data-testid="text-no-delivered-items">
+                <p className="text-gray-500 dark:text-gray-400 text-lg">No delivered items today</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
+                  <thead>
+                    <tr className="bg-gray-200 dark:bg-gray-700">
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Requirement</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Candidate</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Client</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Delivered Date</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {(dailyMetrics.deliveredItems as any[]).map((item: any, index: number) => (
+                      <tr key={index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"} data-testid={`row-delivered-item-${index}`}>
+                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{item.requirement}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.candidate}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.client}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.deliveredDate}</td>
+                        <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
+                          <span className="px-2 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                            {item.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
             <div className="mt-4 flex justify-end">
               <Button 
                 onClick={() => setIsDeliveredModalOpen(false)}
@@ -3027,36 +2963,40 @@ export default function TeamLeaderDashboard() {
             </DialogTitle>
           </DialogHeader>
           <div className="p-4">
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
-                <thead>
-                  <tr className="bg-gray-200 dark:bg-gray-700">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Requirement</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Candidate</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Client</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Expected Date</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { requirement: "QA Tester", candidate: "Robert Brown", client: "AppLogic", expectedDate: "10-Aug-2025", status: "Candidate Unavailable" }
-                  ].map((item, index) => (
-                    <tr key={index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
-                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{item.requirement}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.candidate}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.client}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.expectedDate}</td>
-                      <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
-                        <span className="px-2 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
-                          {item.status}
-                        </span>
-                      </td>
+            {!dailyMetrics?.defaultedItems || (dailyMetrics.defaultedItems as any[]).length === 0 ? (
+              <div className="text-center py-12" data-testid="text-no-defaulted-items">
+                <p className="text-gray-500 dark:text-gray-400 text-lg">No defaulted items today</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
+                  <thead>
+                    <tr className="bg-gray-200 dark:bg-gray-700">
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Requirement</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Candidate</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Client</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Expected Date</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {(dailyMetrics.defaultedItems as any[]).map((item: any, index: number) => (
+                      <tr key={index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"} data-testid={`row-defaulted-item-${index}`}>
+                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{item.requirement}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.candidate}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.client}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{item.expectedDate}</td>
+                        <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
+                          <span className="px-2 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
+                            {item.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
             <div className="mt-4 flex justify-end">
               <Button 
                 onClick={() => setIsDefaultedModalOpen(false)}
