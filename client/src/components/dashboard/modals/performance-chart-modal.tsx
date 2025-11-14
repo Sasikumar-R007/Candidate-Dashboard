@@ -19,11 +19,7 @@ const performanceChartData = [
   { memberIndex: 3, member: "Robert Kim", resumesA: 10, resumesB: 9 },
   { memberIndex: 4, member: "Kevin Brown", resumesA: 7, resumesB: 12 },
   { memberIndex: 5, member: "Sarah Johnson", resumesA: 5, resumesB: 7 },
-  { memberIndex: 6, member: "Michael Davis", resumesA: 11, resumesB: 10 },
-  { memberIndex: 7, member: "Emily Chen", resumesA: 4, resumesB: 6 },
-  { memberIndex: 8, member: "James Wilson", resumesA: 9, resumesB: 11 },
-  { memberIndex: 9, member: "Lisa Martinez", resumesA: 3, resumesB: 5 },
-  { memberIndex: 10, member: "Alex Thompson", resumesA: 10, resumesB: 8 }
+  { memberIndex: 6, member: "Michael Davis", resumesA: 11, resumesB: 10 }
 ];
 
 const memberCompletionStatsByPeriod: Record<string, Record<string, Record<string, { total: number, completed: number }>>> = {
@@ -159,8 +155,8 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg">
-        <DialogHeader className="flex flex-row items-center justify-between p-4 border-b dark:border-gray-700">
+      <DialogContent className="max-w-5xl max-h-[90vh] mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
+        <DialogHeader className="flex flex-row items-center justify-between p-4 border-b dark:border-gray-700 flex-shrink-0">
           <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">
             Performance Graph
           </DialogTitle>
@@ -175,7 +171,7 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
           </Button>
         </DialogHeader>
         
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto flex-1">
           <div className="bg-gray-50 dark:bg-gray-900 rounded-md p-4" data-testid="chart-performance">
             <div className="flex justify-start space-x-4 mb-2">
               <div className="flex items-center space-x-2">
@@ -241,10 +237,9 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
               </ResponsiveContainer>
             </div>
           </div>
-        </div>
 
-        {/* Default Rate (Individually) Section */}
-        <div className="p-6 border-t dark:border-gray-700">
+          {/* Default Rate (Individually) Section */}
+          <div className="mt-6 pt-6 border-t dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Default Rate (Individually)</h3>
           
           {/* Filters */}
@@ -370,16 +365,17 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
                         return value;
                       }}
                     />
-                    <Bar dataKey="completed" stackId="a" fill="#22c55e" name="completed" />
-                    <Bar dataKey="incomplete" stackId="a" fill="#ef4444" name="incomplete" />
+                    <Bar dataKey="completed" stackId="a" fill="#22c55e" name="completed" barSize={40} />
+                    <Bar dataKey="incomplete" stackId="a" fill="#ef4444" name="incomplete" barSize={40} />
                   </BarChart>
                 </ResponsiveContainer>
               );
             })()}
           </div>
+          </div>
         </div>
         
-        <div className="flex justify-end p-4 border-t dark:border-gray-700">
+        <div className="flex justify-end p-4 border-t dark:border-gray-700 flex-shrink-0">
           <Button 
             className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded"
             onClick={onClose}
