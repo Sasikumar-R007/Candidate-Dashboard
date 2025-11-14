@@ -1294,10 +1294,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const dailyMetrics = {
       id: "daily-001",
       date: "12-Aug-2025",
-      totalRequirements: "20",
-      completedRequirements: "12",
-      avgResumesPerRequirement: "02",
-      requirementsPerRecruiter: "03",
+      totalRequirements: 0,
+      completedRequirements: 0,
+      avgResumesPerRequirement: "0.00",
+      requirementsPerRecruiter: "0.00",
+      totalResumes: 0,
       dailyDeliveryDelivered: "3",
       dailyDeliveryDefaulted: "1"
     };
