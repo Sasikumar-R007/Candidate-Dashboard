@@ -13,12 +13,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, HelpCircle } from "lucide-react";
+import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, HelpCircle, ExternalLink } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { ChatDock } from '@/components/chat/chat-dock';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ComposedChart } from 'recharts';
 
 // Helper function to format numbers in Indian currency format
 const formatIndianCurrency = (value: number): string => {
@@ -28,6 +29,59 @@ const formatIndianCurrency = (value: number): string => {
     maximumFractionDigits: 0,
   }).format(value).replace('₹', '').trim();
 };
+
+// Performance Chart Component (separate from Admin page)
+interface PerformanceChartProps {
+  data: Array<{ member: string; requirements: number }>;
+  height?: string;
+  benchmarkValue?: number;
+}
+
+function PerformanceChart({ data, height = "100%", benchmarkValue = 10 }: PerformanceChartProps) {
+  return (
+    <ResponsiveContainer width="100%" height={height}>
+      <ComposedChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+        <XAxis 
+          dataKey="member" 
+          stroke="#6b7280" 
+          style={{ fontSize: '11px' }}
+          tick={{ fill: '#6b7280' }}
+        />
+        <YAxis 
+          stroke="#6b7280" 
+          style={{ fontSize: '12px' }}
+          tick={{ fill: '#6b7280' }}
+          ticks={[3, 6, 9, 12, 15]}
+          domain={[0, 15]}
+        />
+        <Tooltip 
+          contentStyle={{ 
+            backgroundColor: '#ffffff', 
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px'
+          }}
+        />
+        <ReferenceLine 
+          y={benchmarkValue} 
+          stroke="#ef4444" 
+          strokeWidth={2}
+          strokeDasharray="5 5"
+          label={{ value: `Avg: ${benchmarkValue}`, position: 'right', fill: '#ef4444', fontSize: 12 }}
+        />
+        <Line 
+          type="monotone" 
+          dataKey="requirements" 
+          stroke="#3b82f6" 
+          strokeWidth={3} 
+          dot={{ fill: '#3b82f6', r: 5 }}
+          activeDot={{ r: 7 }}
+          name="Requirements"
+        />
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+}
 
 export default function TeamLeaderDashboard() {
   const [, navigate] = useLocation();
@@ -50,10 +104,12 @@ export default function TeamLeaderDashboard() {
   const [isDefaultedModalOpen, setIsDefaultedModalOpen] = useState(false);
   const [isMeetingsModalOpen, setIsMeetingsModalOpen] = useState(false);
   const [isCeoCommentsModalOpen, setIsCeoCommentsModalOpen] = useState(false);
+  const [isPerformanceGraphModalOpen, setIsPerformanceGraphModalOpen] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [chatType, setChatType] = useState<'team' | 'private'>('team');
   const [activeChatUser, setActiveChatUser] = useState<string | null>(null);
   const [isHelpChatOpen, setIsHelpChatOpen] = useState(false);
+  const [selectedDailyMetricsFilter, setSelectedDailyMetricsFilter] = useState('overall');
   
   // Team members for team chat (5 members)
   const chatTeamMembers = [

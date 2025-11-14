@@ -1299,8 +1299,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       avgResumesPerRequirement: "0.00",
       requirementsPerRecruiter: "0.00",
       totalResumes: 0,
-      dailyDeliveryDelivered: "3",
-      dailyDeliveryDefaulted: "1"
+      dailyDeliveryDelivered: 0,
+      dailyDeliveryDefaulted: 0,
+      overallPerformance: "G",
+      deliveredItems: [],
+      defaultedItems: [],
+      performanceData: [
+        { member: "Sudharshan", requirements: 0 },
+        { member: "Deepika", requirements: 0 },
+        { member: "Dharshan", requirements: 0 },
+        { member: "Kavya", requirements: 0 }
+      ]
     };
     res.json(dailyMetrics);
   });
