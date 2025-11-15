@@ -51,6 +51,9 @@ export default function RecruiterDashboard2() {
   const [isInterviewModalOpen, setIsInterviewModalOpen] = useState(false);
   const [isTodayInterviewsModalOpen, setIsTodayInterviewsModalOpen] = useState(false);
   const [isPendingCasesModalOpen, setIsPendingCasesModalOpen] = useState(false);
+  const [pipelineDate, setPipelineDate] = useState<Date>(new Date());
+  const [isViewAllClosuresModalOpen, setIsViewAllClosuresModalOpen] = useState(false);
+  const [closureSearchQuery, setClosureSearchQuery] = useState('');
   
   // Interview tracker state with initial empty interviews array
   const [interviewTrackerData, setInterviewTrackerData] = useState({
@@ -870,12 +873,48 @@ export default function RecruiterDashboard2() {
 
   const renderRequirementsContent = () => {
     // Updated requirements data with SPOC Email field and IDs for count tracking
+    // Data structured to match Priority Distribution: HIGH(6,4,2), MED(5,3,2), LOW(4,3,2)
     const requirementsTableData = [
+      // HIGH Priority - Easy: 6
       { id: 1, position: 'Frontend Developer', criticality: 'HIGH', toughness: 'Easy', company: 'TechCorp', spoc: 'David Wilson', spocEmail: 'david@techcorp.com' },
-      { id: 2, position: 'UI/UX Designer', criticality: 'MEDIUM', toughness: 'Medium', company: 'Designify', spoc: 'Tom Anderson', spocEmail: 'tom@designify.com' },
-      { id: 3, position: 'Backend Developer', criticality: 'LOW', toughness: 'Tough', company: 'CodeLabs', spoc: 'Robert Kim', spocEmail: 'robert@codelabs.com' },
-      { id: 4, position: 'QA Tester', criticality: 'MEDIUM', toughness: 'Easy', company: 'AppLogic', spoc: 'Kevin Brown', spocEmail: 'kevin@applogic.com' },
-      { id: 5, position: 'Mobile App Developer', criticality: 'HIGH', toughness: 'Tough', company: 'Tesco', spoc: 'Mel Gibson', spocEmail: 'mel@tesco.com' },
+      { id: 2, position: 'React Developer', criticality: 'HIGH', toughness: 'Easy', company: 'WebTech', spoc: 'Sarah Johnson', spocEmail: 'sarah@webtech.com' },
+      { id: 3, position: 'UI Developer', criticality: 'HIGH', toughness: 'Easy', company: 'DesignCo', spoc: 'Mike Smith', spocEmail: 'mike@designco.com' },
+      { id: 4, position: 'HTML/CSS Specialist', criticality: 'HIGH', toughness: 'Easy', company: 'StyleHub', spoc: 'Emily Chen', spocEmail: 'emily@stylehub.com' },
+      { id: 5, position: 'Web Developer', criticality: 'HIGH', toughness: 'Easy', company: 'NetSoft', spoc: 'John Davis', spocEmail: 'john@netsoft.com' },
+      { id: 6, position: 'Junior Developer', criticality: 'HIGH', toughness: 'Easy', company: 'StartupX', spoc: 'Lisa Brown', spocEmail: 'lisa@startupx.com' },
+      // HIGH Priority - Medium: 4
+      { id: 7, position: 'Full Stack Developer', criticality: 'HIGH', toughness: 'Medium', company: 'TechStack', spoc: 'Robert Lee', spocEmail: 'robert@techstack.com' },
+      { id: 8, position: 'NodeJS Developer', criticality: 'HIGH', toughness: 'Medium', company: 'BackendPro', spoc: 'Anna White', spocEmail: 'anna@backendpro.com' },
+      { id: 9, position: 'Python Developer', criticality: 'HIGH', toughness: 'Medium', company: 'DataFlow', spoc: 'Chris Martin', spocEmail: 'chris@dataflow.com' },
+      { id: 10, position: 'Java Developer', criticality: 'HIGH', toughness: 'Medium', company: 'Enterprise', spoc: 'Diana Ross', spocEmail: 'diana@enterprise.com' },
+      // HIGH Priority - Tough: 2
+      { id: 11, position: 'Solution Architect', criticality: 'HIGH', toughness: 'Tough', company: 'ArchTech', spoc: 'Tom Wilson', spocEmail: 'tom@archtech.com' },
+      { id: 12, position: 'Mobile App Developer', criticality: 'HIGH', toughness: 'Tough', company: 'Tesco', spoc: 'Mel Gibson', spocEmail: 'mel@tesco.com' },
+      // MEDIUM Priority - Easy: 5
+      { id: 13, position: 'QA Tester', criticality: 'MEDIUM', toughness: 'Easy', company: 'AppLogic', spoc: 'Kevin Brown', spocEmail: 'kevin@applogic.com' },
+      { id: 14, position: 'Manual Tester', criticality: 'MEDIUM', toughness: 'Easy', company: 'TestLab', spoc: 'Grace Taylor', spocEmail: 'grace@testlab.com' },
+      { id: 15, position: 'Support Engineer', criticality: 'MEDIUM', toughness: 'Easy', company: 'HelpDesk', spoc: 'Frank Moore', spocEmail: 'frank@helpdesk.com' },
+      { id: 16, position: 'Content Writer', criticality: 'MEDIUM', toughness: 'Easy', company: 'MediaCorp', spoc: 'Helen Clark', spocEmail: 'helen@mediacorp.com' },
+      { id: 17, position: 'Documentation Specialist', criticality: 'MEDIUM', toughness: 'Easy', company: 'DocuPro', spoc: 'Ian Cooper', spocEmail: 'ian@docupro.com' },
+      // MEDIUM Priority - Medium: 3
+      { id: 18, position: 'UI/UX Designer', criticality: 'MEDIUM', toughness: 'Medium', company: 'Designify', spoc: 'Tom Anderson', spocEmail: 'tom@designify.com' },
+      { id: 19, position: 'Product Designer', criticality: 'MEDIUM', toughness: 'Medium', company: 'ProductLab', spoc: 'Julia King', spocEmail: 'julia@productlab.com' },
+      { id: 20, position: 'Business Analyst', criticality: 'MEDIUM', toughness: 'Medium', company: 'BizTech', spoc: 'Kevin Wright', spocEmail: 'kevin@biztech.com' },
+      // MEDIUM Priority - Tough: 2
+      { id: 21, position: 'DevOps Engineer', criticality: 'MEDIUM', toughness: 'Tough', company: 'CloudOps', spoc: 'Laura Green', spocEmail: 'laura@cloudops.com' },
+      { id: 22, position: 'Security Engineer', criticality: 'MEDIUM', toughness: 'Tough', company: 'SecureNet', spoc: 'Mark Adams', spocEmail: 'mark@securenet.com' },
+      // LOW Priority - Easy: 4
+      { id: 23, position: 'Office Admin', criticality: 'LOW', toughness: 'Easy', company: 'AdminCo', spoc: 'Nancy Hill', spocEmail: 'nancy@adminco.com' },
+      { id: 24, position: 'Receptionist', criticality: 'LOW', toughness: 'Easy', company: 'FrontDesk', spoc: 'Oliver Scott', spocEmail: 'oliver@frontdesk.com' },
+      { id: 25, position: 'Data Entry', criticality: 'LOW', toughness: 'Easy', company: 'DataEntry', spoc: 'Paula Young', spocEmail: 'paula@dataentry.com' },
+      { id: 26, position: 'HR Assistant', criticality: 'LOW', toughness: 'Easy', company: 'HRPro', spoc: 'Quinn Baker', spocEmail: 'quinn@hrpro.com' },
+      // LOW Priority - Medium: 3
+      { id: 27, position: 'Marketing Executive', criticality: 'LOW', toughness: 'Medium', company: 'MarketHub', spoc: 'Rachel Turner', spocEmail: 'rachel@markethub.com' },
+      { id: 28, position: 'Sales Manager', criticality: 'LOW', toughness: 'Medium', company: 'SalesPro', spoc: 'Steven Hall', spocEmail: 'steven@salespro.com' },
+      { id: 29, position: 'Account Manager', criticality: 'LOW', toughness: 'Medium', company: 'AccountCorp', spoc: 'Tina Lewis', spocEmail: 'tina@accountcorp.com' },
+      // LOW Priority - Tough: 2
+      { id: 30, position: 'Backend Developer', criticality: 'LOW', toughness: 'Tough', company: 'CodeLabs', spoc: 'Robert Kim', spocEmail: 'robert@codelabs.com' },
+      { id: 31, position: 'System Architect', criticality: 'LOW', toughness: 'Tough', company: 'SysArch', spoc: 'Uma Patel', spocEmail: 'uma@sysarch.com' },
     ];
 
     // Calculate priority distribution from requirements data
@@ -1291,6 +1330,25 @@ export default function RecruiterDashboard2() {
   };
 
   const renderPipelineContent = () => {
+    // Extended closure report data
+    const closureReportData = [
+      { id: 1, candidate: 'David Wilson', position: 'Frontend Developer', client: 'TechCorp', revenue: '1,12,455' },
+      { id: 2, candidate: 'Tom Anderson', position: 'UI/UX Designer', client: 'Designify', revenue: '1,87,425' },
+      { id: 3, candidate: 'Robert Kim', position: 'Backend Developer', client: 'CodeLabs', revenue: '1,34,946' },
+      { id: 4, candidate: 'Kevin Brown', position: 'QA Tester', client: 'AppLogic', revenue: '2,24,910' },
+      { id: 5, candidate: 'Mel Gibson', position: 'Mobile App Developer', client: 'Tesco', revenue: '4,49,820' },
+      { id: 6, candidate: 'Sarah Johnson', position: 'React Developer', client: 'WebTech', revenue: '1,95,000' },
+      { id: 7, candidate: 'Mike Smith', position: 'UI Developer', client: 'DesignCo', revenue: '1,75,500' },
+      { id: 8, candidate: 'Emily Chen', position: 'HTML/CSS Specialist', client: 'StyleHub', revenue: '1,45,000' },
+      { id: 9, candidate: 'John Davis', position: 'Web Developer', client: 'NetSoft', revenue: '2,10,000' },
+      { id: 10, candidate: 'Lisa Brown', position: 'Junior Developer', client: 'StartupX', revenue: '1,25,000' },
+      { id: 11, candidate: 'Robert Lee', position: 'Full Stack Developer', client: 'TechStack', revenue: '2,85,000' },
+      { id: 12, candidate: 'Anna White', position: 'NodeJS Developer', client: 'BackendPro', revenue: '2,55,000' },
+      { id: 13, candidate: 'Chris Martin', position: 'Python Developer', client: 'DataFlow', revenue: '2,95,000' },
+      { id: 14, candidate: 'Diana Ross', position: 'Java Developer', client: 'Enterprise', revenue: '3,15,000' },
+      { id: 15, candidate: 'Tom Wilson', position: 'Solution Architect', client: 'ArchTech', revenue: '4,25,000' },
+    ];
+
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
@@ -1302,18 +1360,26 @@ export default function RecruiterDashboard2() {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-900">Pipeline</h2>
                 <div className="flex items-center gap-4">
-                  <Select defaultValue="arun-anusha">
-                    <SelectTrigger className="w-48">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="arun-anusha">Arun/Anusha /All</SelectItem>
-                      <SelectItem value="arun">Arun</SelectItem>
-                      <SelectItem value="anusha">Anusha</SelectItem>
-                      <SelectItem value="all">All</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <span className="text-sm text-gray-600">12-Aug-2025</span>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-60 justify-start text-left font-normal"
+                        data-testid="button-pipeline-date-picker"
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {pipelineDate ? format(pipelineDate, "dd-MMM-yyyy") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={pipelineDate}
+                        onSelect={(date) => date && setPipelineDate(date)}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
 
@@ -1419,36 +1485,14 @@ export default function RecruiterDashboard2() {
                         </tr>
                       </thead>
                       <tbody>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="py-3 px-4 text-gray-900">David Wilson</td>
-                          <td className="py-3 px-4 text-gray-900">Frontend Developer</td>
-                          <td className="py-3 px-4 text-gray-900">TechCorp</td>
-                          <td className="py-3 px-4 text-gray-900">1,12,455</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="py-3 px-4 text-gray-900">Tom Anderson</td>
-                          <td className="py-3 px-4 text-gray-900">UI/UX Designer</td>
-                          <td className="py-3 px-4 text-gray-900">Designify</td>
-                          <td className="py-3 px-4 text-gray-900">1,87,425</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="py-3 px-4 text-gray-900">Robert Kim</td>
-                          <td className="py-3 px-4 text-gray-900">Backend Developer</td>
-                          <td className="py-3 px-4 text-gray-900">CodeLabs</td>
-                          <td className="py-3 px-4 text-gray-900">1,34,946</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="py-3 px-4 text-gray-900">Kevin Brown</td>
-                          <td className="py-3 px-4 text-gray-900">QA Tester</td>
-                          <td className="py-3 px-4 text-gray-900">AppLogic</td>
-                          <td className="py-3 px-4 text-gray-900">2,24,910</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 hover:bg-gray-50">
-                          <td className="py-3 px-4 text-gray-900">Mel Gibson</td>
-                          <td className="py-3 px-4 text-gray-900">Mobile App Developer</td>
-                          <td className="py-3 px-4 text-gray-900">Tesco</td>
-                          <td className="py-3 px-4 text-gray-900">4,49,820</td>
-                        </tr>
+                        {closureReportData.slice(0, 5).map((item) => (
+                          <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
+                            <td className="py-3 px-4 text-gray-900">{item.candidate}</td>
+                            <td className="py-3 px-4 text-gray-900">{item.position}</td>
+                            <td className="py-3 px-4 text-gray-900">{item.client}</td>
+                            <td className="py-3 px-4 text-gray-900">{item.revenue}</td>
+                          </tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>
@@ -1457,6 +1501,7 @@ export default function RecruiterDashboard2() {
                   <div className="flex justify-end p-4 border-t border-gray-100">
                     <Button 
                       className="bg-blue-500 hover:bg-blue-600 text-white rounded px-6"
+                      onClick={() => setIsViewAllClosuresModalOpen(true)}
                       data-testid="button-view-all-closures"
                     >
                       View All
@@ -1464,6 +1509,73 @@ export default function RecruiterDashboard2() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* View All Closures Modal */}
+              {isViewAllClosuresModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+                  <div className="bg-white rounded-lg max-w-6xl w-full mx-4 max-h-[90vh] flex flex-col">
+                    <div className="flex justify-between items-center p-6 border-b border-gray-200">
+                      <h2 className="text-2xl font-bold text-gray-900">
+                        All Closure Reports
+                      </h2>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="text"
+                          value={closureSearchQuery}
+                          onChange={(e) => setClosureSearchQuery(e.target.value)}
+                          placeholder="Search closures..."
+                          className="border border-gray-300 px-4 py-2 rounded bg-white text-gray-900 w-64"
+                          data-testid="input-search-closures"
+                        />
+                        <button
+                          onClick={() => {
+                            setIsViewAllClosuresModalOpen(false);
+                            setClosureSearchQuery('');
+                          }}
+                          className="text-red-500 hover:text-red-700 font-bold text-2xl"
+                          data-testid="button-close-closures-modal"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="overflow-auto flex-1 p-6">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-gray-50 border-b border-gray-200 sticky top-0">
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">Candidate</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">Position</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">Client</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">Revenue</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {closureReportData
+                            .filter((item) => {
+                              if (!closureSearchQuery) return true;
+                              const query = closureSearchQuery.toLowerCase();
+                              return (
+                                item.candidate.toLowerCase().includes(query) ||
+                                item.position.toLowerCase().includes(query) ||
+                                item.client.toLowerCase().includes(query) ||
+                                item.revenue.toLowerCase().includes(query)
+                              );
+                            })
+                            .map((item) => (
+                              <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
+                                <td className="py-3 px-4 text-gray-900">{item.candidate}</td>
+                                <td className="py-3 px-4 text-gray-900">{item.position}</td>
+                                <td className="py-3 px-4 text-gray-900">{item.client}</td>
+                                <td className="py-3 px-4 text-gray-900">{item.revenue}</td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Pipeline Stages Sidebar */}
