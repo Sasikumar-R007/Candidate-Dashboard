@@ -582,18 +582,16 @@ export default function RecruiterDashboard2() {
 
               {/* Target Section */}
               <Card className="bg-white border border-gray-200">
-                <CardHeader className="pb-4 pt-6">
+                <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4 pt-6">
                   <CardTitle className="text-lg font-semibold text-gray-900">Target</CardTitle>
-                  <div className="text-right">
-                    <Button 
-                      variant="link"
-                      className="text-sm text-blue-600 hover:text-blue-800 p-0"
-                      onClick={() => setIsTargetModalOpen(true)}
-                      data-testid="button-view-all-targets"
-                    >
-                      View All
-                    </Button>
-                  </div>
+                  <Button 
+                    variant="link"
+                    className="text-sm text-blue-600 hover:text-blue-800 p-0"
+                    onClick={() => setIsTargetModalOpen(true)}
+                    data-testid="button-view-all-targets"
+                  >
+                    View All
+                  </Button>
                 </CardHeader>
                 <CardContent className="p-6 pt-0">
                   <div className="grid grid-cols-4 gap-0 bg-blue-50 rounded-lg overflow-hidden">
@@ -696,14 +694,14 @@ export default function RecruiterDashboard2() {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="text-center">
                           <div className="text-sm text-gray-300 mb-2">Delivered</div>
-                          <div className="text-4xl font-bold text-white mb-3">3</div>
+                          <div className="text-4xl font-bold text-white mb-3">0</div>
                           <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white" onClick={() => setIsDeliveredModalOpen(true)} data-testid="button-view-delivered">
                             View
                           </Button>
                         </div>
                         <div className="text-center">
                           <div className="text-sm text-gray-300 mb-2">Defaulted</div>
-                          <div className="text-4xl font-bold text-white mb-3">1</div>
+                          <div className="text-4xl font-bold text-white mb-3">0</div>
                           <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white" onClick={() => setIsDefaultedModalOpen(true)} data-testid="button-view-defaulted">
                             View
                           </Button>
@@ -1674,11 +1672,7 @@ export default function RecruiterDashboard2() {
         open={isDeliveredModalOpen}
         onOpenChange={setIsDeliveredModalOpen}
         title="Delivered Candidates"
-        rows={[
-          { candidate: "Aarav", position: "Frontend Developer", client: "TechCorp", deliveredDate: "12-Aug-2025", status: "Delivered" },
-          { candidate: "Arjun", position: "UI/UX Designer", client: "Designify", deliveredDate: "11-Aug-2025", status: "Delivered" },
-          { candidate: "Shaurya", position: "Backend Developer", client: "CodeLabs", deliveredDate: "10-Aug-2025", status: "Delivered" }
-        ]}
+        rows={[]}
         columns={[
           { key: 'candidate', label: 'Candidate' },
           { key: 'position', label: 'Position' },
@@ -1696,9 +1690,7 @@ export default function RecruiterDashboard2() {
         open={isDefaultedModalOpen}
         onOpenChange={setIsDefaultedModalOpen}
         title="Defaulted Candidates"
-        rows={[
-          { candidate: "Vihaan", position: "QA Tester", client: "AppLogic", reason: "No response", status: "Defaulted" }
-        ]}
+        rows={[]}
         columns={[
           { key: 'candidate', label: 'Candidate' },
           { key: 'position', label: 'Position' },
