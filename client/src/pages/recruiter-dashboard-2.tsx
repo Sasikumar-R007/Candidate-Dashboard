@@ -878,6 +878,27 @@ export default function RecruiterDashboard2() {
       { id: 5, position: 'Mobile App Developer', criticality: 'HIGH', toughness: 'Tough', company: 'Tesco', spoc: 'Mel Gibson', spocEmail: 'mel@tesco.com' },
     ];
 
+    // Calculate priority distribution from requirements data
+    const calculatePriorityDistribution = () => {
+      const distribution: Record<string, Record<string, number>> = {
+        HIGH: { Easy: 0, Medium: 0, Tough: 0 },
+        MEDIUM: { Easy: 0, Medium: 0, Tough: 0 },
+        LOW: { Easy: 0, Medium: 0, Tough: 0 },
+      };
+
+      requirementsTableData.forEach((req) => {
+        const criticality = req.criticality;
+        const toughness = req.toughness;
+        if (distribution[criticality] && distribution[criticality][toughness] !== undefined) {
+          distribution[criticality][toughness]++;
+        }
+      });
+
+      return distribution;
+    };
+
+    const priorityDistribution = calculatePriorityDistribution();
+
     // Summary boxes data
     const summaryBoxes = [
       { title: 'Total', count: '20', color: 'text-gray-900' },
@@ -1186,63 +1207,78 @@ export default function RecruiterDashboard2() {
               )}
             </div>
 
-            {/* Productivity Table Sidebar */}
+            {/* Priority Distribution Sidebar */}
             <div className="w-80 bg-white border-l border-gray-200 px-6 py-6">
-              <div className="space-y-6">
-                {/* Productivity Table */}
+              <div className="space-y-4">
+                {/* Priority Distribution Title */}
+                <h3 className="text-lg font-semibold text-gray-900">Priority Distribution</h3>
+                
+                {/* Priority Distribution Table */}
                 <Card className="bg-white border border-gray-200">
-                  <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="bg-gray-900 text-white">
-                            <th className="text-left py-3 px-4 font-semibold border-r border-gray-700">Priority</th>
-                            <th className="text-left py-3 px-4 font-semibold border-r border-gray-700">Toughs</th>
-                            <th className="text-left py-3 px-4 font-semibold">Productivity</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-gray-900 text-white">
-                          <tr className="border-b border-gray-700">
-                            <td className="py-3 px-4 font-semibold border-r border-gray-700" rowSpan={3}>HIGH</td>
-                            <td className="py-3 px-4 border-r border-gray-700">Easy</td>
-                            <td className="py-3 px-4">6</td>
-                          </tr>
-                          <tr className="border-b border-gray-700">
-                            <td className="py-3 px-4 border-r border-gray-700">Med</td>
-                            <td className="py-3 px-4">4</td>
-                          </tr>
-                          <tr className="border-b border-gray-700">
-                            <td className="py-3 px-4 border-r border-gray-700">Tough</td>
-                            <td className="py-3 px-4">2</td>
-                          </tr>
-                          <tr className="border-b border-gray-700">
-                            <td className="py-3 px-4 font-semibold border-r border-gray-700" rowSpan={3}>MED</td>
-                            <td className="py-3 px-4 border-r border-gray-700">Easy</td>
-                            <td className="py-3 px-4">5</td>
-                          </tr>
-                          <tr className="border-b border-gray-700">
-                            <td className="py-3 px-4 border-r border-gray-700">Med</td>
-                            <td className="py-3 px-4">3</td>
-                          </tr>
-                          <tr className="border-b border-gray-700">
-                            <td className="py-3 px-4 border-r border-gray-700">Tough</td>
-                            <td className="py-3 px-4">2</td>
-                          </tr>
-                          <tr className="border-b border-gray-700">
-                            <td className="py-3 px-4 font-semibold border-r border-gray-700" rowSpan={3}>LOW</td>
-                            <td className="py-3 px-4 border-r border-gray-700">Easy</td>
-                            <td className="py-3 px-4">4</td>
-                          </tr>
-                          <tr className="border-b border-gray-700">
-                            <td className="py-3 px-4 border-r border-gray-700">Med</td>
-                            <td className="py-3 px-4">3</td>
-                          </tr>
-                          <tr>
-                            <td className="py-3 px-4 border-r border-gray-700">Tough</td>
-                            <td className="py-3 px-4">2</td>
-                          </tr>
-                        </tbody>
-                      </table>
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      {/* HIGH Priority Group */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between bg-red-50 px-3 py-2 rounded">
+                          <span className="text-sm font-semibold text-red-800">HIGH</span>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                            <span className="text-xs text-gray-600">Easy</span>
+                            <span className="text-sm font-semibold text-red-600">{priorityDistribution.HIGH.Easy}</span>
+                          </div>
+                          <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                            <span className="text-xs text-gray-600">Med</span>
+                            <span className="text-sm font-semibold text-red-600">{priorityDistribution.HIGH.Medium}</span>
+                          </div>
+                          <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                            <span className="text-xs text-gray-600">Tough</span>
+                            <span className="text-sm font-semibold text-red-600">{priorityDistribution.HIGH.Tough}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* MED Priority Group */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between bg-yellow-50 px-3 py-2 rounded">
+                          <span className="text-sm font-semibold text-yellow-800">MED</span>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                            <span className="text-xs text-gray-600">Easy</span>
+                            <span className="text-sm font-semibold text-yellow-600">{priorityDistribution.MEDIUM.Easy}</span>
+                          </div>
+                          <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                            <span className="text-xs text-gray-600">Med</span>
+                            <span className="text-sm font-semibold text-yellow-600">{priorityDistribution.MEDIUM.Medium}</span>
+                          </div>
+                          <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                            <span className="text-xs text-gray-600">Tough</span>
+                            <span className="text-sm font-semibold text-yellow-600">{priorityDistribution.MEDIUM.Tough}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* LOW Priority Group */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between bg-green-50 px-3 py-2 rounded">
+                          <span className="text-sm font-semibold text-green-800">LOW</span>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                            <span className="text-xs text-gray-600">Easy</span>
+                            <span className="text-sm font-semibold text-green-600">{priorityDistribution.LOW.Easy}</span>
+                          </div>
+                          <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                            <span className="text-xs text-gray-600">Med</span>
+                            <span className="text-sm font-semibold text-green-600">{priorityDistribution.LOW.Medium}</span>
+                          </div>
+                          <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                            <span className="text-xs text-gray-600">Tough</span>
+                            <span className="text-sm font-semibold text-green-600">{priorityDistribution.LOW.Tough}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
