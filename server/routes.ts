@@ -1601,15 +1601,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const dailyMetrics = {
       id: "daily-rec-001",
       date: "21-Aug-2025",
-      totalRequirements: 15,
-      completedRequirements: 8,
-      avgResumesPerRequirement: "3.00",
-      requirementsPerRecruiter: "2.00",
-      totalResumes: 27,
-      totalResumesDelivered: 27,
-      totalResumesRequired: 30,
-      dailyDeliveryDelivered: 2,
-      dailyDeliveryDefaulted: 1,
+      totalRequirements: 0,
+      completedRequirements: 0,
+      avgResumesPerRequirement: "0.00",
+      requirementsPerRecruiter: "0.00",
+      totalResumes: 0,
+      totalResumesDelivered: 0,
+      totalResumesRequired: 0,
+      dailyDeliveryDelivered: 0,
+      dailyDeliveryDefaulted: 0,
       overallPerformance: "G"
     };
     res.json(dailyMetrics);
