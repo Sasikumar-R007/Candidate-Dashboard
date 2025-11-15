@@ -41,6 +41,8 @@ export default function RecruiterDashboard2() {
   const [isViewMoreRequirementsModalOpen, setIsViewMoreRequirementsModalOpen] = useState(false);
   const [isViewTeamPerformanceModalOpen, setIsViewTeamPerformanceModalOpen] = useState(false);
   const [isViewClosuresModalOpen, setIsViewClosuresModalOpen] = useState(false);
+  const [isAllRequirementsModalOpen, setIsAllRequirementsModalOpen] = useState(false);
+  const [requirementsSearchQuery, setRequirementsSearchQuery] = useState('');
   const [newMessage, setNewMessage] = useState("");
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [isDeliveredModalOpen, setIsDeliveredModalOpen] = useState(false);
@@ -620,17 +622,6 @@ export default function RecruiterDashboard2() {
                 <CardHeader className="flex flex-row items-center justify-between pb-4 pt-6">
                   <CardTitle className="text-lg font-semibold text-gray-900">Daily Metrics</CardTitle>
                   <div className="flex items-center space-x-2">
-                    <Select defaultValue="overall">
-                      <SelectTrigger className="w-32 h-8 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="overall">Overall</SelectItem>
-                        <SelectItem value="personal">Personal</SelectItem>
-                        <SelectItem value="team">Team</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    
                     <Popover>
                       <PopoverTrigger asChild>
                         <Button variant="outline" size="sm" className="flex items-center space-x-1 h-8 px-3" data-testid="button-date-picker">
@@ -709,18 +700,17 @@ export default function RecruiterDashboard2() {
                       </div>
                     </div>
 
-                    {/* Right section - Overall Performance */}
+                    {/* Right section - Performance */}
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold text-gray-900">Overall Performance</h3>
                         <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                           <span className="text-green-700 font-bold text-lg">G</span>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <Button size="sm" variant="link" className="text-blue-600 p-0" onClick={() => setIsPerformanceModalOpen(true)} data-testid="button-view-more-performance">
-                          View More
-                        </Button>
+                        <div className="text-right">
+                          <Button size="sm" variant="link" className="text-blue-600 p-0" onClick={() => setIsPerformanceModalOpen(true)} data-testid="button-view-more-performance">
+                            View More
+                          </Button>
+                        </div>
                       </div>
                       <div className="h-48 flex items-center justify-center bg-white rounded-lg p-4 border border-gray-200">
                         <ResponsiveContainer width="100%" height="100%">
@@ -993,6 +983,7 @@ export default function RecruiterDashboard2() {
                     <Button 
                       variant="outline" 
                       className="bg-blue-500 hover:bg-blue-600 text-white hover:text-white border-blue-500 hover:border-blue-600 rounded px-6"
+                      onClick={() => setIsAllRequirementsModalOpen(true)}
                       data-testid="button-view-more"
                     >
                       View More
@@ -1110,65 +1101,148 @@ export default function RecruiterDashboard2() {
                   </div>
                 </div>
               )}
+
+              {/* All Requirements Modal */}
+              {isAllRequirementsModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+                  <div className="bg-white rounded-lg max-w-6xl w-full mx-4 max-h-[90vh] flex flex-col">
+                    <div className="flex justify-between items-center p-6 border-b border-gray-200">
+                      <h2 className="text-2xl font-bold text-gray-900">
+                        All Requirements
+                      </h2>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="text"
+                          value={requirementsSearchQuery}
+                          onChange={(e) => setRequirementsSearchQuery(e.target.value)}
+                          placeholder="Search requirements..."
+                          className="border border-gray-300 px-4 py-2 rounded bg-white text-gray-900 w-64"
+                          data-testid="input-search-requirements"
+                        />
+                        <button
+                          onClick={() => {
+                            setIsAllRequirementsModalOpen(false);
+                            setRequirementsSearchQuery('');
+                          }}
+                          className="text-red-500 hover:text-red-700 font-bold text-2xl"
+                          data-testid="button-close-requirements-modal"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="overflow-auto flex-1 p-6">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-gray-50 border-b border-gray-200 sticky top-0">
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">Positions</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">Criticality</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">Company</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">SPOC</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">SPOC Email</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">Count</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {requirementsTableData
+                            .filter((req) => {
+                              if (!requirementsSearchQuery) return true;
+                              const query = requirementsSearchQuery.toLowerCase();
+                              return (
+                                req.position.toLowerCase().includes(query) ||
+                                req.criticality.toLowerCase().includes(query) ||
+                                req.toughness.toLowerCase().includes(query) ||
+                                req.company.toLowerCase().includes(query) ||
+                                req.spoc.toLowerCase().includes(query) ||
+                                req.spocEmail.toLowerCase().includes(query)
+                              );
+                            })
+                            .map((req, index) => (
+                              <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                                <td className="py-3 px-4 text-gray-900">{req.position}</td>
+                                <td className="py-3 px-4">
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    req.criticality === 'HIGH' ? 'bg-red-100 text-red-800' :
+                                    req.criticality === 'MEDIUM' ? 'bg-blue-100 text-blue-800' :
+                                    'bg-green-100 text-green-800'
+                                  }`}>
+                                    • {req.criticality}-{req.toughness}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-gray-900">{req.company}</td>
+                                <td className="py-3 px-4 text-gray-900">{req.spoc}</td>
+                                <td className="py-3 px-4 text-gray-900">{req.spocEmail}</td>
+                                <td className="py-3 px-4 text-gray-900">
+                                  {getTotalCountForReq(req.id.toString()) || 0}
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Priority Distribution Sidebar */}
+            {/* Productivity Table Sidebar */}
             <div className="w-80 bg-white border-l border-gray-200 px-6 py-6">
               <div className="space-y-6">
-                {/* Priority Distribution */}
-                <Card className="bg-gray-50 border border-gray-200">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg font-semibold text-gray-900">Priority Distribution</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Idle Requirement */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="text-4xl font-bold text-blue-500">9</div>
-                        <span className="text-gray-700 font-medium">Idle Requirement</span>
-                      </div>
-                    </div>
-
-                    {/* Delivery Pending */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="text-4xl font-bold text-red-400">3</div>
-                        <span className="text-gray-700 font-medium">Delivery Pending</span>
-                      </div>
-                    </div>
-
-                    {/* Robust Requirement */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="text-4xl font-bold text-green-500">7</div>
-                        <span className="text-gray-700 font-medium">Robust Requirement</span>
-                      </div>
-                    </div>
-
-                    {/* Easy Requirement */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="text-4xl font-bold text-green-600">2</div>
-                        <span className="text-gray-700 font-medium">Easy Requirement</span>
-                      </div>
-                    </div>
-
-                    {/* High Priority */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="text-4xl font-bold text-orange-500">6</div>
-                        <span className="text-gray-700 font-medium">High Priority</span>
-                      </div>
-                    </div>
-
-                    {/* Total Requirement */}
-                    <div className="flex items-center justify-between border-t border-gray-300 pt-4">
-                      <div className="flex items-center space-x-3">
-                        <div>
-                          <div className="text-sm text-gray-600 font-medium">Total Requirement</div>
-                          <div className="text-3xl font-bold text-gray-900">20</div>
-                        </div>
-                      </div>
+                {/* Productivity Table */}
+                <Card className="bg-white border border-gray-200">
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-gray-900 text-white">
+                            <th className="text-left py-3 px-4 font-semibold border-r border-gray-700">Priority</th>
+                            <th className="text-left py-3 px-4 font-semibold border-r border-gray-700">Toughs</th>
+                            <th className="text-left py-3 px-4 font-semibold">Productivity</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-gray-900 text-white">
+                          <tr className="border-b border-gray-700">
+                            <td className="py-3 px-4 font-semibold border-r border-gray-700" rowSpan={3}>HIGH</td>
+                            <td className="py-3 px-4 border-r border-gray-700">Easy</td>
+                            <td className="py-3 px-4">6</td>
+                          </tr>
+                          <tr className="border-b border-gray-700">
+                            <td className="py-3 px-4 border-r border-gray-700">Med</td>
+                            <td className="py-3 px-4">4</td>
+                          </tr>
+                          <tr className="border-b border-gray-700">
+                            <td className="py-3 px-4 border-r border-gray-700">Tough</td>
+                            <td className="py-3 px-4">2</td>
+                          </tr>
+                          <tr className="border-b border-gray-700">
+                            <td className="py-3 px-4 font-semibold border-r border-gray-700" rowSpan={3}>MED</td>
+                            <td className="py-3 px-4 border-r border-gray-700">Easy</td>
+                            <td className="py-3 px-4">5</td>
+                          </tr>
+                          <tr className="border-b border-gray-700">
+                            <td className="py-3 px-4 border-r border-gray-700">Med</td>
+                            <td className="py-3 px-4">3</td>
+                          </tr>
+                          <tr className="border-b border-gray-700">
+                            <td className="py-3 px-4 border-r border-gray-700">Tough</td>
+                            <td className="py-3 px-4">2</td>
+                          </tr>
+                          <tr className="border-b border-gray-700">
+                            <td className="py-3 px-4 font-semibold border-r border-gray-700" rowSpan={3}>LOW</td>
+                            <td className="py-3 px-4 border-r border-gray-700">Easy</td>
+                            <td className="py-3 px-4">4</td>
+                          </tr>
+                          <tr className="border-b border-gray-700">
+                            <td className="py-3 px-4 border-r border-gray-700">Med</td>
+                            <td className="py-3 px-4">3</td>
+                          </tr>
+                          <tr>
+                            <td className="py-3 px-4 border-r border-gray-700">Tough</td>
+                            <td className="py-3 px-4">2</td>
+                          </tr>
+                        </tbody>
+                      </table>
                     </div>
                   </CardContent>
                 </Card>
