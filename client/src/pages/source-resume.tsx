@@ -14,8 +14,24 @@ import {
   Phone,
   Mail,
   ChevronDown,
+  Send,
+  X,
+  DollarSign,
+  Calendar,
+  Building,
 } from "lucide-react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const mockCandidates = [
   {
@@ -45,6 +61,7 @@ const mockCandidates = [
     productCategory: "B2B",
     productDomain: "Web Development",
     employmentType: "Full-time",
+    availability: "Immediate",
   },
   {
     id: 2,
@@ -73,6 +90,7 @@ const mockCandidates = [
     productCategory: "B2B",
     productDomain: "Cloud Computing",
     employmentType: "Full-time",
+    availability: "Immediate",
   },
   {
     id: 3,
@@ -101,6 +119,7 @@ const mockCandidates = [
     productCategory: "B2C",
     productDomain: "Web Development",
     employmentType: "Full-time",
+    availability: "15 days",
   },
   {
     id: 4,
@@ -128,6 +147,7 @@ const mockCandidates = [
     productCategory: "B2C",
     productDomain: "Cloud Computing",
     employmentType: "Full-time",
+    availability: "60 days",
   },
   {
     id: 5,
@@ -155,6 +175,7 @@ const mockCandidates = [
     productCategory: "B2B",
     productDomain: "AI/ML",
     employmentType: "Full-time",
+    availability: "Immediate",
   },
   {
     id: 6,
@@ -182,6 +203,7 @@ const mockCandidates = [
     productCategory: "B2B2C",
     productDomain: "Web Development",
     employmentType: "Contract",
+    availability: "30 days",
   },
 ];
 
@@ -194,14 +216,17 @@ const allSkills = [
   "Express",
   "Docker",
   "Redis",
+  "TypeScript",
+  "Kubernetes",
 ];
 const allRoles = [
   "Full Stack Developer",
   "Backend Developer",
   "Frontend Engineer",
+  "DevOps Engineer",
 ];
 const allCompanies = ["Tech Solutions Inc.", "Freshworks", "Google", "Amazon"];
-const allLocations = ["Mumbai, Maharashtra", "Remote", "Bangalore, India"];
+const allLocations = ["Mumbai, Maharashtra", "Remote", "Bangalore, India", "Chennai, India"];
 const allPedigreeLevels = ["Tier 1", "Tier 2", "Tier 3", "Others"];
 const allCompanyLevels = ["Startup", "Mid-size", "Enterprise", "MNC"];
 const allCompanySectors = ["Technology", "Finance", "Healthcare", "E-commerce", "Consulting"];
@@ -209,6 +234,8 @@ const allProductServices = ["SaaS", "Product", "Service", "Hybrid"];
 const allProductCategories = ["B2B", "B2C", "B2B2C"];
 const allProductDomains = ["Web Development", "Mobile Apps", "Cloud Computing", "AI/ML", "Data Analytics"];
 const allEmploymentTypes = ["Full-time", "Part-time", "Contract", "Freelance", "Internship"];
+const allNoticePeriods = ["Immediate", "15 days", "30 days", "60 days", "90 days"];
+const allAvailability = ["Immediate", "15 days", "30 days", "60 days", "90 days"];
 
 const initialFilters = {
   location: "",
@@ -223,6 +250,10 @@ const initialFilters = {
   productCategory: "",
   productDomain: "",
   employmentType: "",
+  noticePeriod: "",
+  ctcMin: "",
+  ctcMax: "",
+  availability: "",
 };
 
 function exportToCSV(data: any[]) {
@@ -265,18 +296,39 @@ function exportToCSV(data: any[]) {
 
 const SourceResume = () => {
   const [step, setStep] = useState(1);
-  const [showDownloadDropdown, setShowDownloadDropdown] = useState(false); // 1: filter, 2: results
+  const [showDownloadDropdown, setShowDownloadDropdown] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [booleanMode, setBooleanMode] = useState(false);
   const [filters, setFilters] = useState(initialFilters);
   const [candidates, setCandidates] = useState(mockCandidates);
   const [selectedCandidate, setSelectedCandidate] = useState(mockCandidates[0]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [sidebarView, setSidebarView] = useState("all"); // 'all' or 'saved'
-  const [selectedIds, setSelectedIds] = useState<number[]>([]); // for bulk actions
+  const [sidebarView, setSidebarView] = useState("all");
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [showBulkDropdown, setShowBulkDropdown] = useState(false);
+  const [showDeliverModal, setShowDeliverModal] = useState(false);
+  const [selectedRequirement, setSelectedRequirement] = useState("");
+  const [candidateToDeliver, setCandidateToDeliver] = useState<any>(null);
   const resultsPerPage = 6;
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
+
+  // Fetch requirements from API
+  const { data: requirements = [], isLoading: isLoadingRequirements, isError: isErrorRequirements } = useQuery({
+    queryKey: ['/api/admin/requirements'],
+    enabled: step === 2,
+  });
+
+  // Show error toast if requirements fetch fails
+  React.useEffect(() => {
+    if (isErrorRequirements && step === 2) {
+      toast({
+        title: "Error",
+        description: "Failed to load requirements. Please try again later.",
+        variant: "destructive",
+      });
+    }
+  }, [isErrorRequirements, step, toast]);
 
   const resetFilters = () => {
     setFilters(initialFilters);
@@ -350,6 +402,10 @@ const SourceResume = () => {
       if (filters.productCategory && c.productCategory !== filters.productCategory) return false;
       if (filters.productDomain && c.productDomain !== filters.productDomain) return false;
       if (filters.employmentType && c.employmentType !== filters.employmentType) return false;
+      if (filters.noticePeriod && c.noticePeriod !== filters.noticePeriod) return false;
+      if (filters.availability && c.availability !== filters.availability) return false;
+      if (filters.ctcMin && parseInt(c.ctc.replace(/[^\d]/g, '')) < parseInt(filters.ctcMin)) return false;
+      if (filters.ctcMax && parseInt(c.ctc.replace(/[^\d]/g, '')) > parseInt(filters.ctcMax)) return false;
       return true;
     });
   };
@@ -415,59 +471,93 @@ const SourceResume = () => {
     setSelectedIds([]);
   };
 
+  const handleDeliverToRequirement = (candidate: any) => {
+    setCandidateToDeliver(candidate);
+    setShowDeliverModal(true);
+  };
+
+  const handleConfirmDelivery = () => {
+    if (selectedRequirement) {
+      toast({
+        title: "Success!",
+        description: `${candidateToDeliver.name} has been delivered to the requirement successfully.`,
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+      setShowDeliverModal(false);
+      setSelectedRequirement("");
+      setCandidateToDeliver(null);
+    }
+  };
+
   // UI
   if (step === 1) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-2xl">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-5xl">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-blue-600">
-              Source Resume
-            </h2>
+            <div>
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                Source Resume
+              </h2>
+              <p className="text-gray-600 mt-1">Find the perfect candidates for your requirements</p>
+            </div>
             <button
               onClick={resetFilters}
-              className="p-2 rounded-full hover:bg-gray-100"
+              className="p-2.5 rounded-full hover:bg-gray-100 transition-colors"
+              data-testid="button-reset-filters"
             >
               <RotateCw className="w-5 h-5 text-gray-600" />
             </button>
           </div>
-          <div className="mb-4 flex items-center gap-4">
-            <div className="flex-1 relative">
-              <input
-                type="text"
-                className="w-full border rounded px-4 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                placeholder={
-                  booleanMode
-                    ? "Boolean search (e.g. React AND Node.js)"
-                    : "Search by name, skill, company..."
-                }
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <button
-                className={`absolute right-2 top-2 px-2 py-1 rounded text-xs ${
-                  booleanMode
-                    ? "bg-purple-600 text-white"
-                    : "bg-gray-200 text-gray-700"
-                }`}
-                onClick={() => setBooleanMode((v) => !v)}
-                type="button"
-              >
-                Boolean
-              </button>
+
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Quick Search</label>
+            <div className="flex items-center gap-4">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                  placeholder={
+                    booleanMode
+                      ? "Boolean search (e.g. React AND Node.js)"
+                      : "Search by name, skill, company..."
+                  }
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  data-testid="input-search-filter"
+                />
+                <button
+                  className={`absolute right-3 top-3 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                    booleanMode
+                      ? "bg-purple-600 text-white shadow-md"
+                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  }`}
+                  onClick={() => setBooleanMode((v) => !v)}
+                  type="button"
+                  data-testid="button-boolean-toggle"
+                >
+                  Boolean
+                </button>
+              </div>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Location</label>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            {/* Location */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <MapPin size={16} className="text-purple-600" />
+                Location
+              </label>
               <select
-                className="w-full border rounded px-2 py-2"
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
                 value={filters.location}
                 onChange={(e) =>
                   setFilters({ ...filters, location: e.target.value })
                 }
+                data-testid="select-location"
               >
-                <option value="">Any</option>
+                <option value="">All Locations</option>
                 {allLocations.map((loc) => (
                   <option key={loc} value={loc}>
                     {loc}
@@ -475,8 +565,57 @@ const SourceResume = () => {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">
+
+            {/* Role */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Briefcase size={16} className="text-purple-600" />
+                Role
+              </label>
+              <select
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                value={filters.role}
+                onChange={(e) =>
+                  setFilters({ ...filters, role: e.target.value })
+                }
+                data-testid="select-role"
+              >
+                <option value="">All Roles</option>
+                {allRoles.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Notice Period */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Calendar size={16} className="text-purple-600" />
+                Notice Period
+              </label>
+              <select
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                value={filters.noticePeriod}
+                onChange={(e) =>
+                  setFilters({ ...filters, noticePeriod: e.target.value })
+                }
+                data-testid="select-notice-period"
+              >
+                <option value="">Any</option>
+                {allNoticePeriods.map((period) => (
+                  <option key={period} value={period}>
+                    {period}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Experience Range */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Briefcase size={16} className="text-purple-600" />
                 Experience (years)
               </label>
               <div className="flex gap-2 items-center">
@@ -494,9 +633,10 @@ const SourceResume = () => {
                       ],
                     })
                   }
-                  className="w-16 border rounded px-2 py-1"
+                  className="w-20 border-2 border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  data-testid="input-exp-min"
                 />
-                <span>-</span>
+                <span className="text-gray-500">to</span>
                 <input
                   type="number"
                   min={filters.experience[0]}
@@ -511,23 +651,83 @@ const SourceResume = () => {
                       ],
                     })
                   }
-                  className="w-16 border rounded px-2 py-1"
+                  className="w-20 border-2 border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  data-testid="input-exp-max"
                 />
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Skills</label>
+
+            {/* CTC Range */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <DollarSign size={16} className="text-purple-600" />
+                CTC Range (Lakhs)
+              </label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={filters.ctcMin}
+                  onChange={(e) =>
+                    setFilters({ ...filters, ctcMin: e.target.value })
+                  }
+                  className="w-20 border-2 border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  data-testid="input-ctc-min"
+                />
+                <span className="text-gray-500">to</span>
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={filters.ctcMax}
+                  onChange={(e) =>
+                    setFilters({ ...filters, ctcMax: e.target.value })
+                  }
+                  className="w-20 border-2 border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  data-testid="input-ctc-max"
+                />
+              </div>
+            </div>
+
+            {/* Availability */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Clock size={16} className="text-purple-600" />
+                Availability
+              </label>
+              <select
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                value={filters.availability}
+                onChange={(e) =>
+                  setFilters({ ...filters, availability: e.target.value })
+                }
+                data-testid="select-availability"
+              >
+                <option value="">Any</option>
+                {allAvailability.map((avail) => (
+                  <option key={avail} value={avail}>
+                    {avail}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Skills */}
+            <div className="md:col-span-3 space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <GraduationCap size={16} className="text-purple-600" />
+                Skills
+              </label>
               <div className="flex flex-wrap gap-2 mb-2">
                 {filters.skills.map((skill) => (
                   <span
                     key={skill}
-                    className="inline-flex items-center rounded-full bg-purple-100 px-2 py-1 text-sm text-purple-800"
+                    className="inline-flex items-center rounded-full bg-purple-100 px-3 py-1.5 text-sm text-purple-800 font-medium"
                   >
                     {skill}
                     <button
                       type="button"
                       onClick={() => handleSkillRemove(skill)}
-                      className="ml-1 rounded-full bg-purple-200 px-1 text-xs text-purple-800 hover:bg-purple-300"
+                      className="ml-2 rounded-full bg-purple-200 px-1.5 text-xs text-purple-800 hover:bg-purple-300 transition-colors"
                     >
                       &times;
                     </button>
@@ -536,57 +736,46 @@ const SourceResume = () => {
               </div>
               <input
                 type="text"
-                className="w-full border rounded px-2 py-1"
-                placeholder="Add a skill and press Enter"
+                className="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                placeholder="Type a skill and press Enter"
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && (e.target as HTMLInputElement).value) {
                     handleSkillAdd((e.target as HTMLInputElement).value);
                     (e.target as HTMLInputElement).value = "";
                   }
                 }}
+                data-testid="input-skill-add"
               />
-              <div className="flex flex-wrap gap-2 mt-2">
+              <div className="flex flex-wrap gap-2 mt-3">
                 {allSkills.map((skill) => (
                   <button
                     key={skill}
                     type="button"
-                    className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded hover:bg-purple-100"
+                    className="text-sm bg-gradient-to-r from-gray-100 to-gray-50 text-gray-800 px-3 py-1.5 rounded-lg hover:from-purple-100 hover:to-purple-50 hover:text-purple-700 transition-all font-medium border border-gray-200"
                     onClick={() => handleSkillAdd(skill)}
+                    data-testid={`button-skill-${skill.toLowerCase()}`}
                   >
-                    {skill}
+                    + {skill}
                   </button>
                 ))}
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Role</label>
-              <select
-                className="w-full border rounded px-2 py-2"
-                value={filters.role}
-                onChange={(e) =>
-                  setFilters({ ...filters, role: e.target.value })
-                }
-              >
-                <option value="">Any</option>
-                {allRoles.map((role) => (
-                  <option key={role} value={role}>
-                    {role}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1">
-                Current Company
+
+            {/* Advanced Filters */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Building size={16} className="text-purple-600" />
+                Company
               </label>
               <select
-                className="w-full border rounded px-2 py-2"
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 value={filters.company}
                 onChange={(e) =>
                   setFilters({ ...filters, company: e.target.value })
                 }
+                data-testid="select-company"
               >
-                <option value="">Any</option>
+                <option value="">Any Company</option>
                 {allCompanies.map((company) => (
                   <option key={company} value={company}>
                     {company}
@@ -594,14 +783,16 @@ const SourceResume = () => {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Pedigree Level</label>
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700">Pedigree Level</label>
               <select
-                className="w-full border rounded px-2 py-2"
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 value={filters.pedigreeLevel}
                 onChange={(e) =>
                   setFilters({ ...filters, pedigreeLevel: e.target.value })
                 }
+                data-testid="select-pedigree"
               >
                 <option value="">Any</option>
                 {allPedigreeLevels.map((level) => (
@@ -611,14 +802,16 @@ const SourceResume = () => {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Company Level</label>
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700">Company Level</label>
               <select
-                className="w-full border rounded px-2 py-2"
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 value={filters.companyLevel}
                 onChange={(e) =>
                   setFilters({ ...filters, companyLevel: e.target.value })
                 }
+                data-testid="select-company-level"
               >
                 <option value="">Any</option>
                 {allCompanyLevels.map((level) => (
@@ -628,14 +821,16 @@ const SourceResume = () => {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Company Sector</label>
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700">Company Sector</label>
               <select
-                className="w-full border rounded px-2 py-2"
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 value={filters.companySector}
                 onChange={(e) =>
                   setFilters({ ...filters, companySector: e.target.value })
                 }
+                data-testid="select-company-sector"
               >
                 <option value="">Any</option>
                 {allCompanySectors.map((sector) => (
@@ -645,14 +840,16 @@ const SourceResume = () => {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Product/Service</label>
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700">Product/Service</label>
               <select
-                className="w-full border rounded px-2 py-2"
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 value={filters.productService}
                 onChange={(e) =>
                   setFilters({ ...filters, productService: e.target.value })
                 }
+                data-testid="select-product-service"
               >
                 <option value="">Any</option>
                 {allProductServices.map((service) => (
@@ -662,14 +859,16 @@ const SourceResume = () => {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Product Category</label>
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700">Product Category</label>
               <select
-                className="w-full border rounded px-2 py-2"
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 value={filters.productCategory}
                 onChange={(e) =>
                   setFilters({ ...filters, productCategory: e.target.value })
                 }
+                data-testid="select-product-category"
               >
                 <option value="">Any</option>
                 {allProductCategories.map((category) => (
@@ -679,14 +878,16 @@ const SourceResume = () => {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Product Domain</label>
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700">Product Domain</label>
               <select
-                className="w-full border rounded px-2 py-2"
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 value={filters.productDomain}
                 onChange={(e) =>
                   setFilters({ ...filters, productDomain: e.target.value })
                 }
+                data-testid="select-product-domain"
               >
                 <option value="">Any</option>
                 {allProductDomains.map((domain) => (
@@ -696,14 +897,16 @@ const SourceResume = () => {
                 ))}
               </select>
             </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1">Employment Type</label>
+
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700">Employment Type</label>
               <select
-                className="w-full border rounded px-2 py-2"
+                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 value={filters.employmentType}
                 onChange={(e) =>
                   setFilters({ ...filters, employmentType: e.target.value })
                 }
+                data-testid="select-employment-type"
               >
                 <option value="">Any</option>
                 {allEmploymentTypes.map((type) => (
@@ -714,14 +917,17 @@ const SourceResume = () => {
               </select>
             </div>
           </div>
-          <button
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold text-lg mt-6 hover:bg-blue-700 transition"
-            onClick={() => setStep(2)}
-            data-testid="button-source-resume"
-          >
-            Source Resume
-          </button>
         </div>
+
+        {/* Floating Source Resume Button */}
+        <button
+          className="fixed bottom-8 right-8 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-full font-semibold text-lg shadow-2xl hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-3 z-50"
+          onClick={() => setStep(2)}
+          data-testid="button-source-resume"
+        >
+          <span>Source Resume</span>
+          <ArrowLeft className="rotate-180" size={20} />
+        </button>
       </div>
     );
   }
@@ -737,6 +943,7 @@ const SourceResume = () => {
           <button
             onClick={resetFilters}
             className="p-1.5 rounded-full hover:bg-gray-100"
+            data-testid="button-reset-filters-results"
           >
             <RotateCw className="w-5 h-5 text-gray-600" />
           </button>
@@ -763,7 +970,7 @@ const SourceResume = () => {
             onClick={() => setSidebarView("saved")}
             data-testid="button-saved-candidates"
           >
-            Saved Candidates
+            Saved
           </button>
         </div>
 
@@ -776,6 +983,7 @@ const SourceResume = () => {
               placeholder="Search by name, skill, company..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              data-testid="input-search-sidebar"
             />
             <button
               className={`mt-1 px-2 py-1 rounded text-sm ${
@@ -785,6 +993,7 @@ const SourceResume = () => {
               }`}
               onClick={() => setBooleanMode((v) => !v)}
               type="button"
+              data-testid="button-boolean-sidebar"
             >
               Boolean
             </button>
@@ -798,6 +1007,7 @@ const SourceResume = () => {
               onChange={(e) =>
                 setFilters({ ...filters, location: e.target.value })
               }
+              data-testid="select-location-sidebar"
             >
               <option value="">Any</option>
               {allLocations.map((loc) => (
@@ -845,6 +1055,69 @@ const SourceResume = () => {
                 className="w-16 border rounded-lg px-2 py-1 text-base"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-base font-medium mb-1">Notice Period</label>
+            <select
+              className="w-full border rounded-lg px-3 py-2 text-base"
+              value={filters.noticePeriod}
+              onChange={(e) =>
+                setFilters({ ...filters, noticePeriod: e.target.value })
+              }
+              data-testid="select-notice-sidebar"
+            >
+              <option value="">Any</option>
+              {allNoticePeriods.map((period) => (
+                <option key={period} value={period}>
+                  {period}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-base font-medium mb-1">CTC Range (₹L)</label>
+            <div className="flex gap-2 items-center">
+              <input
+                type="number"
+                placeholder="Min"
+                value={filters.ctcMin}
+                onChange={(e) =>
+                  setFilters({ ...filters, ctcMin: e.target.value })
+                }
+                className="w-20 border rounded-lg px-2 py-1 text-sm"
+              />
+              <span>-</span>
+              <input
+                type="number"
+                placeholder="Max"
+                value={filters.ctcMax}
+                onChange={(e) =>
+                  setFilters({ ...filters, ctcMax: e.target.value })
+                }
+                className="w-20 border rounded-lg px-2 py-1 text-sm"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-base font-medium mb-1">Availability</label>
+            <select
+              className="w-full border rounded-lg px-3 py-2 text-base"
+              value={filters.availability}
+              onChange={(e) =>
+                setFilters({ ...filters, availability: e.target.value })
+              }
+              data-testid="select-availability-sidebar"
+            >
+              <option value="">Any</option>
+              {allAvailability.map((avail) => (
+                <option key={avail} value={avail}>
+                  {avail}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -1049,6 +1322,7 @@ const SourceResume = () => {
                 placeholder="Search by name, skill, company..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                data-testid="input-search-main"
               />
               <button
                 className={`absolute right-2 top-2 px-2 py-1 rounded text-xs ${
@@ -1058,6 +1332,7 @@ const SourceResume = () => {
                 }`}
                 onClick={() => setBooleanMode((v) => !v)}
                 type="button"
+                data-testid="button-boolean-main"
               >
                 Boolean
               </button>
@@ -1065,12 +1340,14 @@ const SourceResume = () => {
             <div className="flex items-center gap-2 ml-4">
               <button
                 className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded text-sm hover:bg-purple-700"
+                data-testid="button-bulk-actions"
               >
                 Bulk Actions
               </button>
               <button 
                 onClick={() => exportToCSV(filteredCandidates)}
                 className="flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50"
+                data-testid="button-export"
               >
                 Export
               </button>
@@ -1083,6 +1360,7 @@ const SourceResume = () => {
                   }
                 }}
                 className="flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50"
+                data-testid="button-back"
               >
                 <ArrowLeft size={16} />
                 Back
@@ -1094,7 +1372,7 @@ const SourceResume = () => {
         {/* Profiles List - Scrollable */}
         <div className="flex-1 overflow-y-auto p-4">
           <div className="space-y-4">
-            {filteredCandidates.map((candidate) => (
+            {paginatedCandidates.map((candidate) => (
               <div
                 key={candidate.id}
                 className={`border-2 rounded-2xl p-4 cursor-pointer transition-all ${
@@ -1103,6 +1381,7 @@ const SourceResume = () => {
                     : "border-purple-200 hover:border-purple-300 bg-white"
                 }`}
                 onClick={() => setSelectedCandidate(candidate)}
+                data-testid={`card-candidate-${candidate.id}`}
               >
                 <div className="flex items-start gap-4">
                   <input
@@ -1113,29 +1392,18 @@ const SourceResume = () => {
                       handleSelectCandidate(candidate.id);
                     }}
                     className="mt-2"
+                    data-testid={`checkbox-candidate-${candidate.id}`}
                   />
-                  <div className="flex-shrink-0 flex flex-col items-center">
-                    {candidate.profilePic ? (
-                      <img
-                        src={candidate.profilePic}
-                        alt={candidate.name}
-                        className="w-16 h-16 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-16 h-16 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-semibold text-xl">
-                        {candidate.name.split(' ').map(n => n[0]).join('')}
-                      </div>
-                    )}
-                  </div>
+                  
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between">
+                    <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-lg text-gray-900">{candidate.name}</h3>
                         <p className="text-blue-600 font-medium">{candidate.title}</p>
                         <div className="flex items-center gap-6 mt-1 text-sm text-gray-500">
                           <span className="flex items-center gap-1">
                             <Briefcase size={16} />
-                            {candidate.experience} years experience
+                            {candidate.experience} years
                           </span>
                           <span className="flex items-center gap-1">
                             <MapPin size={16} />
@@ -1165,24 +1433,57 @@ const SourceResume = () => {
                           <Clock size={12} />
                           Last active: {candidate.lastActive}
                         </div>
+
+                        {/* Buttons at Bottom */}
+                        <div className="flex items-center gap-2 mt-3">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSaveCandidate(candidate.id);
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                              candidate.saved
+                                ? "bg-purple-100 text-purple-700 border border-purple-300"
+                                : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                            }`}
+                            data-testid={`button-save-${candidate.id}`}
+                          >
+                            {candidate.saved ? "Saved" : "Save"}
+                          </button>
+                          <button 
+                            onClick={(e) => e.stopPropagation()}
+                            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                            data-testid={`button-view-resume-${candidate.id}`}
+                          >
+                            View Resume
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeliverToRequirement(candidate);
+                            }}
+                            className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 flex items-center gap-1"
+                            data-testid={`button-deliver-${candidate.id}`}
+                          >
+                            <Send size={14} />
+                            Deliver to Requirement
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 ml-4">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSaveCandidate(candidate.id);
-                          }}
-                          className={`px-3 py-1 rounded-lg text-sm font-medium ${
-                            candidate.saved
-                              ? "bg-purple-100 text-purple-700 border border-purple-300"
-                              : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                          }`}
-                        >
-                          {candidate.saved ? "Saved" : "Save Candidate"}
-                        </button>
-                        <button className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
-                          View Resume
-                        </button>
+
+                      {/* Profile Pic on Right */}
+                      <div className="flex-shrink-0">
+                        {candidate.profilePic ? (
+                          <img
+                            src={candidate.profilePic}
+                            alt={candidate.name}
+                            className="w-20 h-20 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-400 to-blue-400 text-white flex items-center justify-center font-semibold text-xl shadow-md">
+                            {candidate.name.split(' ').map(n => n[0]).join('')}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1204,7 +1505,7 @@ const SourceResume = () => {
                 className="w-20 h-20 rounded-full object-cover mb-3"
               />
             ) : (
-              <div className="w-20 h-20 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center font-semibold text-2xl mb-3">
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-400 to-blue-400 text-white flex items-center justify-center font-semibold text-2xl mb-3 shadow-md">
                 {selectedCandidate.name.split(' ').map(n => n[0]).join('')}
               </div>
             )}
@@ -1310,6 +1611,7 @@ const SourceResume = () => {
             <button 
               onClick={() => setShowDownloadDropdown(!showDownloadDropdown)}
               className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors shadow-lg"
+              data-testid="button-download-dropdown"
             >
               <Download size={20} />
               Download
@@ -1320,30 +1622,30 @@ const SourceResume = () => {
               <div className="absolute bottom-full right-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-xl py-2 min-w-48">
                 <button 
                   onClick={() => {
-                    // Handle resume download
                     setShowDownloadDropdown(false);
                   }}
                   className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
+                  data-testid="button-download-resume"
                 >
                   <Download size={16} />
                   Resume (PDF)
                 </button>
                 <button 
                   onClick={() => {
-                    // Handle profile download
                     setShowDownloadDropdown(false);
                   }}
                   className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
+                  data-testid="button-download-profile"
                 >
                   <Download size={16} />
                   Profile Summary
                 </button>
                 <button 
                   onClick={() => {
-                    // Handle contact details download
                     setShowDownloadDropdown(false);
                   }}
                   className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
+                  data-testid="button-download-contact"
                 >
                   <Download size={16} />
                   Contact Details
@@ -1354,6 +1656,96 @@ const SourceResume = () => {
         </div>
       )}
       </div>
+
+      {/* Deliver to Requirement Modal */}
+      <Dialog open={showDeliverModal} onOpenChange={setShowDeliverModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Deliver Candidate to Requirement</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <p className="text-sm text-gray-600">
+                Delivering: <span className="font-semibold text-gray-900">{candidateToDeliver?.name}</span>
+              </p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Select Requirement</label>
+              {isLoadingRequirements ? (
+                <div 
+                  className="flex h-10 w-full items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500 cursor-not-allowed"
+                  data-testid="select-requirement-loading"
+                >
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Loading requirements...
+                  </span>
+                </div>
+              ) : isErrorRequirements ? (
+                <div 
+                  className="flex h-10 w-full items-center justify-between rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 cursor-not-allowed"
+                  data-testid="select-requirement-error"
+                >
+                  <span className="flex items-center gap-2">
+                    <X className="h-4 w-4" />
+                    Error loading requirements
+                  </span>
+                </div>
+              ) : (
+                <Select value={selectedRequirement} onValueChange={setSelectedRequirement}>
+                  <SelectTrigger data-testid="select-requirement">
+                    <SelectValue placeholder="Choose a requirement" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(requirements as any[]).length === 0 ? (
+                      <div className="p-4 text-sm text-gray-500 text-center">
+                        No requirements available
+                      </div>
+                    ) : (
+                      (requirements as any[])
+                        .filter((req: any) => !req.isArchived && req.status !== 'completed')
+                        .map((req: any) => (
+                          <SelectItem key={req.id} value={req.id} data-testid={`option-req-${req.id}`}>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{req.position}</span>
+                              <span className="text-xs text-gray-500">
+                                {req.company} - {req.criticality}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeliverModal(false);
+                setSelectedRequirement("");
+                setCandidateToDeliver(null);
+              }}
+              data-testid="button-cancel-deliver"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmDelivery}
+              disabled={!selectedRequirement}
+              className="bg-green-600 hover:bg-green-700"
+              data-testid="button-confirm-deliver"
+            >
+              Confirm Delivery
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
