@@ -377,6 +377,45 @@ export const clients = pgTable("clients", {
   createdAt: text("created_at").notNull(),
 });
 
+export const chatRooms = pgTable("chat_rooms", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  type: text("type").notNull(), // direct, group
+  isPinned: boolean("is_pinned").default(false),
+  createdBy: text("created_by").notNull(), // employee ID
+  lastMessageAt: text("last_message_at"),
+  createdAt: text("created_at").notNull(),
+});
+
+export const chatParticipants = pgTable("chat_participants", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  roomId: varchar("room_id").notNull(),
+  participantId: text("participant_id").notNull(), // employee ID
+  participantName: text("participant_name").notNull(),
+  participantRole: text("participant_role").notNull(),
+  joinedAt: text("joined_at").notNull(),
+});
+
+export const chatMessages = pgTable("chat_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  roomId: varchar("room_id").notNull(),
+  senderId: text("sender_id").notNull(), // employee ID
+  senderName: text("sender_name").notNull(),
+  messageType: text("message_type").notNull(), // text, image, file, link
+  content: text("content").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+export const chatAttachments = pgTable("chat_attachments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  messageId: varchar("message_id").notNull(),
+  fileName: text("file_name").notNull(),
+  fileUrl: text("file_url").notNull(),
+  fileType: text("file_type").notNull(), // image, pdf, doc, etc
+  fileSize: integer("file_size").notNull(),
+  uploadedAt: text("uploaded_at").notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
 });
@@ -549,6 +588,22 @@ export const insertBulkUploadFileSchema = createInsertSchema(bulkUploadFiles).om
   id: true,
 });
 
+export const insertChatRoomSchema = createInsertSchema(chatRooms).omit({
+  id: true,
+});
+
+export const insertChatParticipantSchema = createInsertSchema(chatParticipants).omit({
+  id: true,
+});
+
+export const insertChatMessageSchema = createInsertSchema(chatMessages).omit({
+  id: true,
+});
+
+export const insertChatAttachmentSchema = createInsertSchema(chatAttachments).omit({
+  id: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
@@ -605,3 +660,11 @@ export type InsertBulkUploadJob = z.infer<typeof insertBulkUploadJobSchema>;
 export type BulkUploadJob = typeof bulkUploadJobs.$inferSelect;
 export type InsertBulkUploadFile = z.infer<typeof insertBulkUploadFileSchema>;
 export type BulkUploadFile = typeof bulkUploadFiles.$inferSelect;
+export type InsertChatRoom = z.infer<typeof insertChatRoomSchema>;
+export type ChatRoom = typeof chatRooms.$inferSelect;
+export type InsertChatParticipant = z.infer<typeof insertChatParticipantSchema>;
+export type ChatParticipant = typeof chatParticipants.$inferSelect;
+export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type InsertChatAttachment = z.infer<typeof insertChatAttachmentSchema>;
+export type ChatAttachment = typeof chatAttachments.$inferSelect;

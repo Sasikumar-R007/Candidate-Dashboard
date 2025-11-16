@@ -69,7 +69,14 @@ Preferred communication style: Simple, everyday language.
     - **Avg. Resumes per Requirement**: Weighted average based on criticality (HIGH=1, MEDIUM=3, LOW/EASY=5).
     - **Requirements per Recruiter**: Total requirements divided by active recruiters (role="recruiter", isActive=true).
     - **Completed Requirements**: Count of requirements with status="completed" and completedAt matching target date (counts requirements completed today regardless of creation date).
-- **Chat System**: Standalone WhatsApp-style chat page with three-column layout (user profiles, conversation list, chat area, group details).
+- **Team Chat System**: Internal office chat application at `/chat` with WhatsApp-style interface for team communication.
+  - **Direct Chats**: One-on-one messaging between team members and team leaders.
+  - **Group Chats**: Multi-participant group conversations.
+  - **Team Chat**: Pinned group chat for all team members (appears at top of chat list).
+  - **File Sharing**: Support for images, PDFs, and Word documents (up to 10MB).
+  - **Real-time Messaging**: WebSocket-based live updates for instant message delivery.
+  - **Security**: Session-based WebSocket authentication - employee identity derived from HTTP session, preventing impersonation.
+  - **UI**: Three-section layout (chat list sidebar, message area, file attachment support).
 - **Support Chat System**: 
     - **User Side**: Floating chat dock available on all public pages for users to contact support.
     - **Support Team Side**: Dedicated dashboard at `/support-dashboard` for viewing and replying to user queries.

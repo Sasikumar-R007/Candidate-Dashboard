@@ -1,20 +1,27 @@
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer, WebSocket } from "ws";
+import session from "express-session";
 import fs from "fs";
 import { storage } from "./storage";
-import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema } from "@shared/schema";
+import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, chatRooms, chatMessages, chatParticipants, chatAttachments, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
 import "./types"; // Import session types
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
 // Ensure uploads directory exists
 const uploadsDir = 'uploads';
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const chatUploadsDir = 'uploads/chat';
+if (!fs.existsSync(chatUploadsDir)) {
+  fs.mkdirSync(chatUploadsDir, { recursive: true });
 }
 
 const upload = multer({
@@ -47,6 +54,41 @@ const upload = multer({
       return cb(null, true);
     } else {
       cb(new Error('Only images (JPEG, PNG, GIF, WebP, AVIF), PDFs, and Word documents are allowed!'));
+    }
+  }
+});
+
+const chatUpload = multer({
+  storage: multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, chatUploadsDir);
+    },
+    filename: function (req, file, cb) {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    }
+  }),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit for chat files
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow images, PDFs, and document files
+    const allowedExtensions = /\.(jpeg|jpg|png|gif|webp|avif|pdf|doc|docx)$/i;
+    const extname = allowedExtensions.test(file.originalname.toLowerCase());
+    
+    const allowedMimeTypes = [
+      'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
+      'image/webp', 'image/avif',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    const mimetype = allowedMimeTypes.includes(file.mimetype);
+    
+    if (extname && mimetype) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only images, PDFs, and Word documents are allowed!'));
     }
   }
 });
@@ -3122,6 +3164,382 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Chat API Routes
+  app.get("/api/chat/rooms", requireEmployeeAuth, async (req, res) => {
+    try {
+      const employeeId = req.session.employeeId!;
+
+      const participations = await db.select()
+        .from(chatParticipants)
+        .where(eq(chatParticipants.participantId, employeeId));
+
+      const roomIds = participations.map(p => p.roomId);
+
+      if (roomIds.length === 0) {
+        return res.json({ rooms: [] });
+      }
+
+      const rooms = await db.select()
+        .from(chatRooms)
+        .where(sql`${chatRooms.id} IN (${sql.join(roomIds.map(id => sql`${id}`), sql`, `)})`);
+
+      const roomsWithParticipants = await Promise.all(rooms.map(async (room) => {
+        const participants = await db.select()
+          .from(chatParticipants)
+          .where(eq(chatParticipants.roomId, room.id));
+
+        return {
+          ...room,
+          participants: participants
+        };
+      }));
+
+      res.json({ rooms: roomsWithParticipants.sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        const aTime = a.lastMessageAt || a.createdAt;
+        const bTime = b.lastMessageAt || b.createdAt;
+        return new Date(bTime).getTime() - new Date(aTime).getTime();
+      }) });
+    } catch (error) {
+      console.error('Error fetching chat rooms:', error);
+      res.status(500).json({ error: "Failed to fetch chat rooms" });
+    }
+  });
+
+  app.get("/api/chat/rooms/:roomId/messages", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { roomId } = req.params;
+
+      const messages = await db.select()
+        .from(chatMessages)
+        .where(eq(chatMessages.roomId, roomId))
+        .orderBy(chatMessages.createdAt);
+
+      const messagesWithAttachments = await Promise.all(messages.map(async (message) => {
+        const attachments = await db.select()
+          .from(chatAttachments)
+          .where(eq(chatAttachments.messageId, message.id));
+
+        return {
+          ...message,
+          attachments: attachments
+        };
+      }));
+
+      res.json({ messages: messagesWithAttachments });
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      res.status(500).json({ error: "Failed to fetch messages" });
+    }
+  });
+
+  app.post("/api/chat/rooms/:roomId/messages", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { roomId } = req.params;
+      const { content, messageType = 'text' } = req.body;
+      const employeeId = req.session.employeeId!;
+
+      const employee = await storage.getEmployeeById(employeeId);
+      if (!employee) {
+        return res.status(404).json({ error: "Employee not found" });
+      }
+
+      const newMessage = await db.insert(chatMessages)
+        .values({
+          roomId,
+          senderId: employeeId,
+          senderName: employee.name,
+          messageType,
+          content,
+          createdAt: new Date().toISOString()
+        })
+        .returning();
+
+      await db.update(chatRooms)
+        .set({ lastMessageAt: new Date().toISOString() })
+        .where(eq(chatRooms.id, roomId));
+
+      // Server-side broadcast to all participants in the room
+      if ((app as any).broadcastToRoom) {
+        await (app as any).broadcastToRoom(roomId, {
+          type: 'new_message',
+          roomId,
+          message: newMessage[0]
+        }, employeeId);
+      }
+
+      res.json({ message: newMessage[0] });
+    } catch (error) {
+      console.error('Error sending message:', error);
+      res.status(500).json({ error: "Failed to send message" });
+    }
+  });
+
+  app.post("/api/chat/upload", requireEmployeeAuth, chatUpload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+
+      const fileUrl = `/uploads/chat/${req.file.filename}`;
+      
+      let fileType = 'file';
+      if (req.file.mimetype.startsWith('image/')) {
+        fileType = 'image';
+      } else if (req.file.mimetype === 'application/pdf') {
+        fileType = 'pdf';
+      } else if (req.file.mimetype.includes('word')) {
+        fileType = 'doc';
+      }
+
+      res.json({
+        fileUrl,
+        fileName: req.file.originalname,
+        fileType,
+        fileSize: req.file.size
+      });
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      res.status(500).json({ error: "Failed to upload file" });
+    }
+  });
+
+  app.post("/api/chat/rooms/:roomId/messages/attachment", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { roomId } = req.params;
+      const { fileUrl, fileName, fileType, fileSize } = req.body;
+      const employeeId = req.session.employeeId!;
+
+      const employee = await storage.getEmployeeById(employeeId);
+      if (!employee) {
+        return res.status(404).json({ error: "Employee not found" });
+      }
+
+      const newMessage = await db.insert(chatMessages)
+        .values({
+          roomId,
+          senderId: employeeId,
+          senderName: employee.name,
+          messageType: fileType,
+          content: fileName,
+          createdAt: new Date().toISOString()
+        })
+        .returning();
+
+      const newAttachment = await db.insert(chatAttachments)
+        .values({
+          messageId: newMessage[0].id,
+          fileName,
+          fileUrl,
+          fileType,
+          fileSize,
+          uploadedAt: new Date().toISOString()
+        })
+        .returning();
+
+      await db.update(chatRooms)
+        .set({ lastMessageAt: new Date().toISOString() })
+        .where(eq(chatRooms.id, roomId));
+
+      // Server-side broadcast to all participants in the room
+      if ((app as any).broadcastToRoom) {
+        await (app as any).broadcastToRoom(roomId, {
+          type: 'new_message',
+          roomId,
+          message: {
+            ...newMessage[0],
+            attachments: [newAttachment[0]]
+          }
+        }, employeeId);
+      }
+
+      res.json({ message: newMessage[0] });
+    } catch (error) {
+      console.error('Error sending attachment:', error);
+      res.status(500).json({ error: "Failed to send attachment" });
+    }
+  });
+
+  app.get("/api/chat/employees", requireEmployeeAuth, async (req, res) => {
+    try {
+      const employees = await storage.getAllEmployees();
+      const activeEmployees = employees.filter(emp => emp.isActive);
+      
+      const employeeList = activeEmployees.map(emp => ({
+        id: emp.id,
+        name: emp.name,
+        email: emp.email,
+        role: emp.role,
+        employeeId: emp.employeeId
+      }));
+
+      res.json({ employees: employeeList });
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+      res.status(500).json({ error: "Failed to fetch employees" });
+    }
+  });
+
+  app.post("/api/chat/rooms", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { name, type, participantIds } = req.body;
+      const employeeId = req.session.employeeId!;
+      const employee = await storage.getEmployeeById(employeeId);
+
+      if (!employee) {
+        return res.status(404).json({ error: "Employee not found" });
+      }
+
+      const newRoom = await db.insert(chatRooms)
+        .values({
+          name,
+          type,
+          isPinned: type === 'group' && name === 'Team Chat',
+          createdBy: employeeId,
+          createdAt: new Date().toISOString()
+        })
+        .returning();
+
+      const allParticipantIds = [employeeId, ...participantIds];
+      for (const participantId of allParticipantIds) {
+        const participant = await storage.getEmployeeById(participantId);
+        if (participant) {
+          await db.insert(chatParticipants)
+            .values({
+              roomId: newRoom[0].id,
+              participantId,
+              participantName: participant.name,
+              participantRole: participant.role,
+              joinedAt: new Date().toISOString()
+            });
+        }
+      }
+
+      res.json({ room: newRoom[0] });
+    } catch (error) {
+      console.error('Error creating chat room:', error);
+      res.status(500).json({ error: "Failed to create chat room" });
+    }
+  });
+
   const httpServer = createServer(app);
+
+  // Set up WebSocket server for real-time chat  
+  const wss = new WebSocketServer({ noServer: true });
+
+  interface ChatWebSocket extends WebSocket {
+    employeeId?: string;
+    employeeName?: string;
+  }
+
+  // Session parser for WebSocket upgrade
+  const sessionParser = session({
+    secret: process.env.SESSION_SECRET || 'staffos-secret-key-change-in-production',
+    resave: false,
+    saveUninitialized: false
+  });
+
+  // Handle WebSocket upgrade using session authentication
+  httpServer.on('upgrade', (request: any, socket, head) => {
+    if (request.url !== '/ws/chat') {
+      socket.destroy();
+      return;
+    }
+
+    // Parse session using express-session middleware
+    sessionParser(request, {} as any, async () => {
+      try {
+        // Validate session and get employee ID
+        if (!request.session || !request.session.employeeId) {
+          socket.write('HTTP/1.1 401 Unauthorized\r\nContent-Type: text/plain\r\n\r\nNo valid employee session\r\n');
+          socket.destroy();
+          return;
+        }
+
+        // Get employee details from database using session employee ID
+        const employee = await storage.getEmployeeById(request.session.employeeId);
+        if (!employee || !employee.isActive) {
+          socket.write('HTTP/1.1 401 Unauthorized\r\nContent-Type: text/plain\r\n\r\nEmployee not found or inactive\r\n');
+          socket.destroy();
+          return;
+        }
+
+        // Upgrade the connection and attach verified employee identity
+        wss.handleUpgrade(request, socket, head, (ws: ChatWebSocket) => {
+          ws.employeeId = employee.id;
+          ws.employeeName = employee.name;
+          wss.emit('connection', ws, request);
+        });
+      } catch (error) {
+        console.error('WebSocket upgrade error:', error);
+        socket.write('HTTP/1.1 500 Internal Server Error\r\n\r\n');
+        socket.destroy();
+      }
+    });
+  });
+
+  // Broadcast function to send messages to all clients in a room
+  const broadcastToRoom = async (roomId: string, message: any, excludeEmployeeId?: string) => {
+    // Get all participants in the room
+    const participants = await db.select()
+      .from(chatParticipants)
+      .where(eq(chatParticipants.roomId, roomId));
+
+    const participantIds = participants.map(p => p.participantId);
+
+    wss.clients.forEach((client) => {
+      const chatClient = client as ChatWebSocket;
+      if (client.readyState === WebSocket.OPEN && 
+          chatClient.employeeId && 
+          participantIds.includes(chatClient.employeeId) &&
+          chatClient.employeeId !== excludeEmployeeId) {
+        client.send(JSON.stringify(message));
+      }
+    });
+  };
+
+  wss.on('connection', (ws: ChatWebSocket, req: any) => {
+    // Employee identity is now set during upgrade - verified via session
+    console.log(`WebSocket connection established for ${ws.employeeName} (${ws.employeeId})`);
+
+    // Send confirmation with server-verified identity
+    ws.send(JSON.stringify({ 
+      type: 'authenticated', 
+      success: true,
+      employeeId: ws.employeeId,
+      employeeName: ws.employeeName 
+    }));
+
+    ws.on('message', async (message) => {
+      try {
+        const data = JSON.parse(message.toString());
+        
+        // Only accept typing indicators - identity is already verified
+        if (data.type === 'typing' && ws.employeeId) {
+          await broadcastToRoom(data.roomId, {
+            type: 'typing',
+            roomId: data.roomId,
+            employeeeName: ws.employeeName,
+            employeeId: ws.employeeId
+          }, ws.employeeId);
+        }
+      } catch (error) {
+        console.error('WebSocket message error:', error);
+      }
+    });
+
+    ws.on('close', () => {
+      console.log(`WebSocket connection closed for ${ws.employeeName}`);
+    });
+
+    ws.on('error', (error) => {
+      console.error('WebSocket error:', error);
+    });
+  });
+
+  // Export broadcast function for use in message endpoints
+  (app as any).broadcastToRoom = broadcastToRoom;
+
   return httpServer;
 }
