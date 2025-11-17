@@ -20,7 +20,7 @@ import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X,
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { ChatDock } from '@/components/chat/chat-dock';
 import { HelpCircle } from 'lucide-react';
 
@@ -669,14 +669,6 @@ export default function RecruiterDashboard2() {
                         </span>
                       </div>
                       <div className="flex justify-between items-center py-2">
-                        <span className="text-sm font-medium text-gray-600">Avg. Resumes per Requirement</span>
-                        <span className="text-4xl font-bold text-blue-600" data-testid="text-avg-resumes">{Number(dailyMetrics?.avgResumesPerRequirement ?? 0).toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between items-center py-2">
-                        <span className="text-sm font-medium text-gray-600">Requirements per Recruiter</span>
-                        <span className="text-4xl font-bold text-blue-600" data-testid="text-requirements-recruiter">{Number(dailyMetrics?.requirementsPerRecruiter ?? 0).toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between items-center py-2">
                         <span className="text-sm font-medium text-gray-600">Completed Requirements</span>
                         <span className="text-4xl font-bold text-blue-600" data-testid="text-completed-requirements">{dailyMetrics?.completedRequirements ?? 0}</span>
                       </div>
@@ -717,19 +709,17 @@ export default function RecruiterDashboard2() {
                       </div>
                       <div className="h-48 flex items-center justify-center bg-white rounded-lg p-4 border border-gray-200">
                         <ResponsiveContainer width="100%" height="100%">
-                          <LineChart 
-                            data={[
-                              { quarter: 'Q1', closures: 2, closureValue: 300000, incentives: 6000 },
-                              { quarter: 'Q2', closures: 3, closureValue: 550000, incentives: 9000 },
-                              { quarter: 'Q3', closures: 4, closureValue: 775000, incentives: 12000 },
-                              { quarter: 'Q4', closures: 3, closureValue: 600000, incentives: 9000 },
-                            ]}
-                            margin={{ top: 5, right: 40, left: 0, bottom: 5 }}
+                          <BarChart 
+                            data={(dailyMetrics?.requirements || []).map((req: any) => ({
+                              criticality: req.criticality,
+                              delivered: req.delivered,
+                              remaining: req.required - req.delivered
+                            }))}
+                            margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
                           >
                             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                            <XAxis dataKey="quarter" stroke="#6b7280" style={{ fontSize: '10px' }} />
-                            <YAxis yAxisId="left" stroke="#3b82f6" style={{ fontSize: '10px' }} />
-                            <YAxis yAxisId="right" orientation="right" stroke="#10b981" style={{ fontSize: '10px' }} />
+                            <XAxis dataKey="criticality" stroke="#6b7280" style={{ fontSize: '12px' }} />
+                            <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} label={{ value: 'Resumes', angle: -90, position: 'insideLeft', style: { fontSize: '12px' } }} />
                             <Tooltip 
                               contentStyle={{ 
                                 backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -739,10 +729,9 @@ export default function RecruiterDashboard2() {
                               }}
                             />
                             <Legend wrapperStyle={{ fontSize: '10px' }} />
-                            <Line yAxisId="left" type="monotone" dataKey="closures" stroke="#3b82f6" strokeWidth={2} name="Closures" dot={{ fill: '#3b82f6', r: 3 }} />
-                            <Line yAxisId="right" type="monotone" dataKey="closureValue" stroke="#10b981" strokeWidth={2} name="Value (₹)" dot={{ fill: '#10b981', r: 3 }} />
-                            <Line yAxisId="right" type="monotone" dataKey="incentives" stroke="#f59e0b" strokeWidth={2} name="Incentives (₹)" dot={{ fill: '#f59e0b', r: 3 }} />
-                          </LineChart>
+                            <Bar dataKey="delivered" stackId="a" fill="#22c55e" name="Delivered" />
+                            <Bar dataKey="remaining" stackId="a" fill="#ef4444" name="Remaining" />
+                          </BarChart>
                         </ResponsiveContainer>
                       </div>
                     </div>
