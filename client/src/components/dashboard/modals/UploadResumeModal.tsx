@@ -3,7 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Upload } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useState } from 'react';
 
 interface ResumeFormData {
   firstName: string;
@@ -52,6 +55,9 @@ export default function UploadResumeModal({
   formError,
   setFormError
 }: UploadResumeModalProps) {
+  const { toast } = useToast();
+  const [deliverToRequirement, setDeliverToRequirement] = useState(false);
+  const [selectedRequirement, setSelectedRequirement] = useState('');
   
   const handleSubmit = () => {
     // Basic validation
@@ -66,6 +72,14 @@ export default function UploadResumeModal({
     
     onClose();
     onSuccess();
+    
+    // Show success toast
+    toast({
+      title: "Resume uploaded successfully",
+      description: deliverToRequirement && selectedRequirement 
+        ? `Resume delivered to requirement: ${selectedRequirement}` 
+        : "Resume has been added to the database",
+    });
     
     // Reset form
     setFormData({
@@ -93,6 +107,8 @@ export default function UploadResumeModal({
     });
     setResumeFile(null);
     setFormError('');
+    setDeliverToRequirement(false);
+    setSelectedRequirement('');
   };
 
   return (
@@ -384,6 +400,38 @@ export default function UploadResumeModal({
                   </label>
                 </div>
               </div>
+            </div>
+
+            {/* Deliver to Requirement Section */}
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <Label className="text-sm font-medium text-gray-700">Deliver to Requirement</Label>
+                <Switch
+                  checked={deliverToRequirement}
+                  onCheckedChange={setDeliverToRequirement}
+                  data-testid="toggle-deliver-requirement"
+                />
+              </div>
+              <Select 
+                value={selectedRequirement} 
+                onValueChange={setSelectedRequirement}
+                disabled={!deliverToRequirement}
+              >
+                <SelectTrigger 
+                  className={`bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 ${!deliverToRequirement ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  data-testid="select-requirement"
+                >
+                  <SelectValue placeholder="Select Requirement" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="frontend-developer">Frontend Developer</SelectItem>
+                  <SelectItem value="backend-developer">Backend Developer</SelectItem>
+                  <SelectItem value="fullstack-developer">Full Stack Developer</SelectItem>
+                  <SelectItem value="ui-ux-designer">UI/UX Designer</SelectItem>
+                  <SelectItem value="product-manager">Product Manager</SelectItem>
+                  <SelectItem value="devops-engineer">DevOps Engineer</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Submit Button */}
