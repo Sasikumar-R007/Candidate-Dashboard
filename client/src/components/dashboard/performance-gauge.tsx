@@ -16,27 +16,35 @@ export default function PerformanceGauge({ value, size = 200 }: PerformanceGauge
           cornerRadius: 1,
           subArcs: [
             {
-              limit: 40,
+              limit: 50,
               color: '#EF4444',
               showTick: true,
               tooltip: {
-                text: 'Decline'
+                text: 'Poor Performance'
               }
             },
             {
-              limit: 60,
-              color: '#F59E0B',
+              limit: 75,
+              color: '#F97316',
               showTick: true,
               tooltip: {
-                text: 'Growth'
+                text: 'Needs Improvement'
+              }
+            },
+            {
+              limit: 90,
+              color: '#84CC16',
+              showTick: true,
+              tooltip: {
+                text: 'Good Performance'
               }
             },
             {
               limit: 100,
-              color: '#10B981',
+              color: '#16A34A',
               showTick: true,
               tooltip: {
-                text: 'Stable'
+                text: 'Excellent'
               }
             }
           ]
@@ -59,10 +67,10 @@ export default function PerformanceGauge({ value, size = 200 }: PerformanceGauge
           tickLabels: {
             type: 'outer',
             ticks: [
-              { value: 20 },
-              { value: 40 },
-              { value: 60 },
-              { value: 80 },
+              { value: 0 },
+              { value: 50 },
+              { value: 75 },
+              { value: 90 },
               { value: 100 }
             ],
             defaultTickValueConfig: {
