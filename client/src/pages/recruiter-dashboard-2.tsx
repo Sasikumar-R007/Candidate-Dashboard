@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign } from "lucide-react";
+import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, ExternalLink } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
@@ -54,6 +54,10 @@ export default function RecruiterDashboard2() {
   const [pipelineDate, setPipelineDate] = useState<Date>(new Date());
   const [isViewAllClosuresModalOpen, setIsViewAllClosuresModalOpen] = useState(false);
   const [closureSearchQuery, setClosureSearchQuery] = useState('');
+  const [isPendingMeetingsModalOpen, setIsPendingMeetingsModalOpen] = useState(false);
+  const [isCeoCommandsModalOpen, setIsCeoCommandsModalOpen] = useState(false);
+  const [isApplicantOverviewModalOpen, setIsApplicantOverviewModalOpen] = useState(false);
+  const [applicantSearchQuery, setApplicantSearchQuery] = useState('');
   
   // Interview tracker state with initial empty interviews array
   const [interviewTrackerData, setInterviewTrackerData] = useState({
@@ -331,6 +335,23 @@ export default function RecruiterDashboard2() {
     { id: 3, appliedOn: '20-06-2025', candidateName: 'Shaurya', company: 'CodeLabs', roleApplied: 'Backend Developer', submission: 'Uploaded', currentStatus: 'In-Process' },
     { id: 4, appliedOn: '01-07-2025', candidateName: 'Vihaan', company: 'AppLogic', roleApplied: 'QA Tester', submission: 'Inbound', currentStatus: 'In-Process' },
     { id: 5, appliedOn: '23-07-2025', candidateName: 'Aditya', company: 'Bug Catchers', roleApplied: 'Mobile App Developer', submission: 'Inbound', currentStatus: 'In-Process' },
+    { id: 6, appliedOn: '05-08-2025', candidateName: 'Rohan', company: 'DataHub', roleApplied: 'Data Analyst', submission: 'Uploaded', currentStatus: 'In-Process' },
+    { id: 7, appliedOn: '10-08-2025', candidateName: 'Priya', company: 'CloudTech', roleApplied: 'DevOps Engineer', submission: 'Inbound', currentStatus: 'In-Process' },
+  ]);
+
+  // Pending Meetings data
+  const [pendingMeetingsData] = useState([
+    { id: 1, meeting: 'TL', date: '25-05-2025', person: 'Arun' },
+    { id: 2, meeting: 'CEO', date: '01-05-2025', person: 'Vikna Prakash' },
+    { id: 3, meeting: 'Client Interaction', date: '15-05-2025', person: 'Rajesh Kumar' },
+  ]);
+
+  // CEO Commands data
+  const [ceoCommandsData] = useState([
+    { id: 1, command: 'Discuss with Shri Ragavi on her production' },
+    { id: 2, command: 'Discuss with Kavya about her leaves' },
+    { id: 3, command: 'Discuss with Umar for data' },
+    { id: 4, command: 'Review team performance metrics with HR' },
   ]);
 
   // Handle status change for applicants
@@ -533,8 +554,18 @@ export default function RecruiterDashboard2() {
 
               {/* Applicant Overview Table */}
               <Card className="bg-white border border-gray-200">
-                <CardHeader className="pb-4 pt-6">
+                <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4 pt-6">
                   <CardTitle className="text-lg font-semibold text-gray-900">Applicant Overview</CardTitle>
+                  {applicantData.length > 5 && (
+                    <Button 
+                      variant="link"
+                      className="text-sm text-blue-600 hover:text-blue-800 p-0 flex items-center gap-1"
+                      onClick={() => setIsApplicantOverviewModalOpen(true)}
+                      data-testid="button-view-all-applicants"
+                    >
+                      View All
+                    </Button>
+                  )}
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
@@ -550,7 +581,7 @@ export default function RecruiterDashboard2() {
                         </tr>
                       </thead>
                       <tbody>
-                        {applicantData.map((applicant, index) => (
+                        {applicantData.slice(0, 5).map((applicant, index) => (
                           <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
                             <td className="py-3 px-6 text-gray-900">{applicant.appliedOn}</td>
                             <td className="py-3 px-6 text-gray-900 font-medium">{applicant.candidateName}</td>
@@ -743,8 +774,19 @@ export default function RecruiterDashboard2() {
               <div className="grid grid-cols-2 gap-6">
                 {/* Pending Meetings */}
                 <Card className="bg-white border border-gray-200">
-                  <CardHeader className="pb-4 pt-6">
+                  <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4 pt-6">
                     <CardTitle className="text-lg font-semibold text-gray-900">Pending Meetings</CardTitle>
+                    {pendingMeetingsData.length > 2 && (
+                      <Button 
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => setIsPendingMeetingsModalOpen(true)}
+                        data-testid="button-open-pending-meetings"
+                      >
+                        <ExternalLink className="h-4 w-4 text-gray-600" />
+                      </Button>
+                    )}
                   </CardHeader>
                   <CardContent className="px-6 pb-6 pt-0">
                     <div className="overflow-x-auto">
@@ -757,16 +799,13 @@ export default function RecruiterDashboard2() {
                           </tr>
                         </thead>
                         <tbody>
-                          <tr className="border-b border-gray-100">
-                            <td className="py-3 text-gray-900">TL</td>
-                            <td className="py-3 text-gray-900">25-05-2025</td>
-                            <td className="py-3 text-gray-900">Arun</td>
-                          </tr>
-                          <tr className="border-b border-gray-100">
-                            <td className="py-3 text-gray-900">CEO</td>
-                            <td className="py-3 text-gray-900">01-05-2025</td>
-                            <td className="py-3 text-gray-900">Vikna Prakash</td>
-                          </tr>
+                          {pendingMeetingsData.slice(0, 2).map((meeting) => (
+                            <tr key={meeting.id} className="border-b border-gray-100">
+                              <td className="py-3 text-gray-900">{meeting.meeting}</td>
+                              <td className="py-3 text-gray-900">{meeting.date}</td>
+                              <td className="py-3 text-gray-900">{meeting.person}</td>
+                            </tr>
+                          ))}
                         </tbody>
                       </table>
                     </div>
@@ -775,20 +814,27 @@ export default function RecruiterDashboard2() {
 
                 {/* CEO Commands */}
                 <Card className="bg-white border border-gray-200">
-                  <CardHeader className="pb-4 pt-6">
+                  <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4 pt-6">
                     <CardTitle className="text-lg font-semibold text-gray-900">CEO Commands</CardTitle>
+                    {ceoCommandsData.length > 3 && (
+                      <Button 
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => setIsCeoCommandsModalOpen(true)}
+                        data-testid="button-open-ceo-commands"
+                      >
+                        <ExternalLink className="h-4 w-4 text-gray-600" />
+                      </Button>
+                    )}
                   </CardHeader>
                   <CardContent className="px-6 pb-6 pt-0">
                     <div className="bg-slate-800 text-white rounded-lg p-6 space-y-4">
-                      <div className="text-sm text-gray-300">
-                        <p>Discuss with Shri Ragavi on her production</p>
-                      </div>
-                      <div className="text-sm text-gray-300">
-                        <p>Discuss with Kavya about her leaves</p>
-                      </div>
-                      <div className="text-sm text-gray-300">
-                        <p>Discuss with Umar for data</p>
-                      </div>
+                      {ceoCommandsData.slice(0, 3).map((command) => (
+                        <div key={command.id} className="text-sm text-gray-300">
+                          <p>{command.command}</p>
+                        </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
@@ -952,6 +998,13 @@ export default function RecruiterDashboard2() {
       return `${delivered}/${expected}`;
     };
 
+    // Function to check if count is fully completed
+    const isCountComplete = (req: any): boolean => {
+      const delivered = getDeliveredCount(req.id);
+      const expected = getExpectedCount(req.criticality, req.toughness);
+      return delivered >= expected && expected > 0;
+    };
+
     // Summary boxes data
     const summaryBoxes = [
       { title: 'Total', count: '20', color: 'text-gray-900' },
@@ -1023,7 +1076,7 @@ export default function RecruiterDashboard2() {
                             <td className="py-3 px-4 text-gray-900">{req.spoc}</td>
                             <td className="py-3 px-4 text-gray-900">{req.spocEmail}</td>
                             <td className="py-3 px-4">
-                              <span className="text-gray-900 font-medium" data-testid={`text-count-${index}`}>
+                              <span className={`font-medium ${isCountComplete(req) ? 'text-green-600' : 'text-red-600'}`} data-testid={`text-count-${index}`}>
                                 {getCountDisplay(req)}
                               </span>
                             </td>
@@ -1125,13 +1178,177 @@ export default function RecruiterDashboard2() {
                                 <td className="py-3 px-4 text-gray-900">{req.company}</td>
                                 <td className="py-3 px-4 text-gray-900">{req.spoc}</td>
                                 <td className="py-3 px-4 text-gray-900">{req.spocEmail}</td>
-                                <td className="py-3 px-4 text-gray-900">
-                                  {getCountDisplay(req)}
+                                <td className="py-3 px-4">
+                                  <span className={`font-medium ${isCountComplete(req) ? 'text-green-600' : 'text-red-600'}`}>
+                                    {getCountDisplay(req)}
+                                  </span>
                                 </td>
                               </tr>
                             ))}
                         </tbody>
                       </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Applicant Overview Modal */}
+              {isApplicantOverviewModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+                  <div className="bg-white rounded-lg max-w-6xl w-full mx-4 max-h-[90vh] flex flex-col">
+                    <div className="flex justify-between items-center p-6 border-b border-gray-200">
+                      <h2 className="text-2xl font-bold text-gray-900">
+                        All Applicants
+                      </h2>
+                      <div className="flex items-center gap-4">
+                        <input
+                          type="text"
+                          value={applicantSearchQuery}
+                          onChange={(e) => setApplicantSearchQuery(e.target.value)}
+                          placeholder="Search applicants..."
+                          className="border border-gray-300 px-4 py-2 rounded bg-white text-gray-900 w-64"
+                          data-testid="input-search-applicants"
+                        />
+                        <button
+                          onClick={() => {
+                            setIsApplicantOverviewModalOpen(false);
+                            setApplicantSearchQuery('');
+                          }}
+                          className="text-red-500 hover:text-red-700 font-bold text-2xl"
+                          data-testid="button-close-applicants-modal"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="overflow-auto flex-1 p-6">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-gray-50 border-b border-gray-200 sticky top-0">
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">Applied on</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">Candidate Name</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">Company</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">Role Applied</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">Submission</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">Current Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {applicantData
+                            .filter((applicant) => {
+                              if (!applicantSearchQuery) return true;
+                              const query = applicantSearchQuery.toLowerCase();
+                              return (
+                                applicant.candidateName.toLowerCase().includes(query) ||
+                                applicant.company.toLowerCase().includes(query) ||
+                                applicant.roleApplied.toLowerCase().includes(query) ||
+                                applicant.submission.toLowerCase().includes(query) ||
+                                applicant.currentStatus.toLowerCase().includes(query)
+                              );
+                            })
+                            .map((applicant, index) => (
+                              <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                                <td className="py-3 px-4 text-gray-900">{applicant.appliedOn}</td>
+                                <td className="py-3 px-4 text-gray-900 font-medium">{applicant.candidateName}</td>
+                                <td className="py-3 px-4 text-gray-900">{applicant.company}</td>
+                                <td className="py-3 px-4 text-gray-900">{applicant.roleApplied}</td>
+                                <td className="py-3 px-4">
+                                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                    applicant.submission === 'Inbound' 
+                                      ? 'bg-green-100 text-green-800' 
+                                      : 'bg-blue-100 text-blue-800'
+                                  }`}>
+                                    {applicant.submission}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <Select value={applicant.currentStatus} onValueChange={(value) => handleStatusChange(applicant, value)}>
+                                    <SelectTrigger className="w-32 h-8 text-sm">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {statuses.map((status) => (
+                                        <SelectItem key={status} value={status}>{status}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </td>
+                              </tr>
+                            ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Pending Meetings Modal */}
+              {isPendingMeetingsModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+                  <div className="bg-white rounded-lg max-w-3xl w-full mx-4 max-h-[90vh] flex flex-col">
+                    <div className="flex justify-between items-center p-6 border-b border-gray-200">
+                      <h2 className="text-2xl font-bold text-gray-900">
+                        All Pending Meetings
+                      </h2>
+                      <button
+                        onClick={() => setIsPendingMeetingsModalOpen(false)}
+                        className="text-red-500 hover:text-red-700 font-bold text-2xl"
+                        data-testid="button-close-meetings-modal"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    
+                    <div className="overflow-auto flex-1 p-6">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="bg-gray-50 border-b border-gray-200 sticky top-0">
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">Meeting</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">Date</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700">Person</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pendingMeetingsData.map((meeting) => (
+                            <tr key={meeting.id} className="border-b border-gray-100 hover:bg-gray-50">
+                              <td className="py-3 px-4 text-gray-900">{meeting.meeting}</td>
+                              <td className="py-3 px-4 text-gray-900">{meeting.date}</td>
+                              <td className="py-3 px-4 text-gray-900">{meeting.person}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* CEO Commands Modal */}
+              {isCeoCommandsModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+                  <div className="bg-white rounded-lg max-w-3xl w-full mx-4 max-h-[90vh] flex flex-col">
+                    <div className="flex justify-between items-center p-6 border-b border-gray-200">
+                      <h2 className="text-2xl font-bold text-gray-900">
+                        All CEO Commands
+                      </h2>
+                      <button
+                        onClick={() => setIsCeoCommandsModalOpen(false)}
+                        className="text-red-500 hover:text-red-700 font-bold text-2xl"
+                        data-testid="button-close-commands-modal"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    
+                    <div className="overflow-auto flex-1 p-6">
+                      <div className="bg-slate-800 text-white rounded-lg p-6 space-y-4">
+                        {ceoCommandsData.map((command) => (
+                          <div key={command.id} className="text-sm text-gray-300 border-b border-gray-700 pb-4 last:border-b-0 last:pb-0">
+                            <p>{command.command}</p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
