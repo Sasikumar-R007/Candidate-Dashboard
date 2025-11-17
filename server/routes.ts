@@ -1643,16 +1643,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const dailyMetrics = {
       id: "daily-rec-001",
       date: "21-Aug-2025",
-      totalRequirements: 0,
+      totalRequirements: 3,
       completedRequirements: 0,
-      avgResumesPerRequirement: "0.00",
-      requirementsPerRecruiter: "0.00",
       totalResumes: 0,
-      totalResumesDelivered: 0,
-      totalResumesRequired: 0,
+      totalResumesDelivered: 4,
+      totalResumesRequired: 9,
       dailyDeliveryDelivered: 0,
       dailyDeliveryDefaulted: 0,
-      overallPerformance: "G"
+      overallPerformance: "G",
+      requirements: [
+        { criticality: "HH", required: 2, delivered: 1 },
+        { criticality: "MM", required: 3, delivered: 2 },
+        { criticality: "LE", required: 4, delivered: 1 }
+      ]
     };
     res.json(dailyMetrics);
   });
