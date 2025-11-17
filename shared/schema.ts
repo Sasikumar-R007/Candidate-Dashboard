@@ -209,6 +209,17 @@ export const archivedRequirements = pgTable("archived_requirements", {
   originalId: varchar("original_id").notNull(),
 });
 
+export const deliveries = pgTable("deliveries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requirementId: varchar("requirement_id").notNull(), // Links to requirements.id
+  candidateName: text("candidate_name").notNull(),
+  candidateEmail: text("candidate_email"),
+  recruiterName: text("recruiter_name").notNull(),
+  deliveredAt: text("delivered_at").notNull(),
+  status: text("status").notNull().default("delivered"), // delivered, accepted, rejected
+  notes: text("notes"),
+});
+
 export const employees = pgTable("employees", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   employeeId: text("employee_id").notNull().unique(), // SCE001, SCE002, etc
@@ -484,6 +495,10 @@ export const insertRequirementSchema = createInsertSchema(requirements).omit({
 });
 
 export const insertArchivedRequirementSchema = createInsertSchema(archivedRequirements).omit({
+  id: true,
+});
+
+export const insertDeliverySchema = createInsertSchema(deliveries).omit({
   id: true,
 });
 

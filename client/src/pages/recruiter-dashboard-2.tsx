@@ -927,6 +927,31 @@ export default function RecruiterDashboard2() {
 
     const priorityDistribution = calculatePriorityDistribution();
 
+    // Sample delivery data - tracks resume deliveries to requirements
+    // In production, this would come from the database
+    const deliveryData: Record<number, number> = {
+      1: 2,  // Frontend Developer - 2 delivered
+      7: 1,  // Full Stack Developer - 1 delivered
+      13: 3, // QA Tester - 3 delivered
+    };
+
+    // Function to get expected count based on criticality and toughness from Priority Distribution
+    const getExpectedCount = (criticality: string, toughness: string): number => {
+      return priorityDistribution[criticality]?.[toughness] || 0;
+    };
+
+    // Function to get delivered count for a requirement
+    const getDeliveredCount = (reqId: number): number => {
+      return deliveryData[reqId] || 0;
+    };
+
+    // Function to format count display as "delivered/expected"
+    const getCountDisplay = (req: any): string => {
+      const delivered = getDeliveredCount(req.id);
+      const expected = getExpectedCount(req.criticality, req.toughness);
+      return `${delivered}/${expected}`;
+    };
+
     // Summary boxes data
     const summaryBoxes = [
       { title: 'Total', count: '20', color: 'text-gray-900' },
@@ -982,7 +1007,7 @@ export default function RecruiterDashboard2() {
                         </tr>
                       </thead>
                       <tbody>
-                        {requirementsTableData.map((req, index) => (
+                        {requirementsTableData.slice(0, 5).map((req, index) => (
                           <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
                             <td className="py-3 px-4 text-gray-900">{req.position}</td>
                             <td className="py-3 px-4">
@@ -998,21 +1023,9 @@ export default function RecruiterDashboard2() {
                             <td className="py-3 px-4 text-gray-900">{req.spoc}</td>
                             <td className="py-3 px-4 text-gray-900">{req.spocEmail}</td>
                             <td className="py-3 px-4">
-                              <Button 
-                                size="sm" 
-                                className="bg-blue-500 hover:bg-blue-600 text-white rounded" 
-                                onClick={() => {
-                                  setOpenCalendarId(req.id.toString());
-                                  const mostRecentDate = getMostRecentDateForReq(req.id.toString());
-                                  setSelectedDateForCount(mostRecentDate || getToday());
-                                  setInputCount('');
-                                  setCalendarStep('calendar');
-                                  setShowModal(true);
-                                }}
-                                data-testid={`button-set-count-${index}`}
-                              >
-                                {getTotalCountForReq(req.id.toString()) === 0 ? 'Set' : getTotalCountForReq(req.id.toString())}
-                              </Button>
+                              <span className="text-gray-900 font-medium" data-testid={`text-count-${index}`}>
+                                {getCountDisplay(req)}
+                              </span>
                             </td>
                           </tr>
                         ))}
@@ -1040,116 +1053,6 @@ export default function RecruiterDashboard2() {
                   </div>
                 </CardContent>
               </Card>
-              
-              {/* Calendar Modal for Setting Counts */}
-              {showModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-                  <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-                    <div className="flex justify-between items-center mb-4">
-                      <h2 className="text-xl font-bold text-gray-900">
-                        Set Requirements Count
-                      </h2>
-                      <button
-                        onClick={() => setShowModal(false)}
-                        className="text-red-500 hover:text-red-700 font-bold text-lg"
-                        data-testid="button-close-modal"
-                      >
-                        ×
-                      </button>
-                    </div>
-                    
-                    {calendarStep === 'calendar' && (
-                      <div>
-                        <h3 className="text-lg font-semibold mb-4 text-gray-900">
-                          Select Date
-                        </h3>
-                        <div className="mb-4">
-                          <input
-                            type="date"
-                            value={selectedDateForCount}
-                            onChange={(e) => setSelectedDateForCount(e.target.value)}
-                            className="w-full border border-gray-300 px-3 py-2 rounded bg-white text-gray-900"
-                            data-testid="input-date"
-                          />
-                        </div>
-                        <div className="flex gap-4 justify-end">
-                          <button
-                            className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-                            onClick={() => setShowModal(false)}
-                            data-testid="button-cancel"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                            onClick={() => setCalendarStep('input')}
-                            data-testid="button-next"
-                          >
-                            Next
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {calendarStep === 'input' && (
-                      <div>
-                        <h3 className="text-lg font-semibold mb-4 text-gray-900">
-                          Add Count for {selectedDateForCount}
-                        </h3>
-                        <div className="mb-4">
-                          <input
-                            type="number"
-                            value={inputCount}
-                            onChange={(e) => setInputCount(e.target.value)}
-                            placeholder="Enter count to add"
-                            className="w-full border border-gray-300 px-3 py-2 rounded bg-white text-gray-900"
-                            min="0"
-                            autoFocus
-                            data-testid="input-count"
-                          />
-                        </div>
-                        <div className="text-sm text-gray-500 mb-4">
-                          This will be added to the existing count for this date.
-                        </div>
-                        <div className="flex gap-4 justify-end">
-                          <button
-                            className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500"
-                            onClick={() => setCalendarStep('calendar')}
-                            data-testid="button-back"
-                          >
-                            Back
-                          </button>
-                          <button
-                            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-                            onClick={() => {
-                              if (openCalendarId && inputCount) {
-                                const currentCount = parseInt(requirementCounts[openCalendarId]?.[selectedDateForCount] || '0');
-                                const newCount = parseInt(inputCount) || 0;
-                                const totalCount = currentCount + newCount;
-
-                                setRequirementCounts(prev => ({
-                                  ...prev,
-                                  [openCalendarId]: {
-                                    ...(prev[openCalendarId] || {}),
-                                    [selectedDateForCount]: totalCount.toString()
-                                  }
-                                }));
-                                setShowModal(false);
-                                setOpenCalendarId(null);
-                                setCalendarStep('calendar');
-                                setInputCount('');
-                              }
-                            }}
-                            data-testid="button-save"
-                          >
-                            Save
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
 
               {/* All Requirements Modal */}
               {isAllRequirementsModalOpen && (
@@ -1223,7 +1126,7 @@ export default function RecruiterDashboard2() {
                                 <td className="py-3 px-4 text-gray-900">{req.spoc}</td>
                                 <td className="py-3 px-4 text-gray-900">{req.spocEmail}</td>
                                 <td className="py-3 px-4 text-gray-900">
-                                  {getTotalCountForReq(req.id.toString()) || 0}
+                                  {getCountDisplay(req)}
                                 </td>
                               </tr>
                             ))}
