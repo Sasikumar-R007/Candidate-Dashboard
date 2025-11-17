@@ -1191,168 +1191,6 @@ export default function RecruiterDashboard2() {
                   </div>
                 </div>
               )}
-
-              {/* Applicant Overview Modal */}
-              {isApplicantOverviewModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-                  <div className="bg-white rounded-lg max-w-6xl w-full mx-4 max-h-[90vh] flex flex-col">
-                    <div className="flex justify-between items-center p-6 border-b border-gray-200">
-                      <h2 className="text-2xl font-bold text-gray-900">
-                        All Applicants
-                      </h2>
-                      <div className="flex items-center gap-4">
-                        <input
-                          type="text"
-                          value={applicantSearchQuery}
-                          onChange={(e) => setApplicantSearchQuery(e.target.value)}
-                          placeholder="Search applicants..."
-                          className="border border-gray-300 px-4 py-2 rounded bg-white text-gray-900 w-64"
-                          data-testid="input-search-applicants"
-                        />
-                        <button
-                          onClick={() => {
-                            setIsApplicantOverviewModalOpen(false);
-                            setApplicantSearchQuery('');
-                          }}
-                          className="text-red-500 hover:text-red-700 font-bold text-2xl"
-                          data-testid="button-close-applicants-modal"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div className="overflow-auto flex-1 p-6">
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="bg-gray-50 border-b border-gray-200 sticky top-0">
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">Applied on</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">Candidate Name</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">Company</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">Role Applied</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">Submission</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">Current Status</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {applicantData
-                            .filter((applicant) => {
-                              if (!applicantSearchQuery) return true;
-                              const query = applicantSearchQuery.toLowerCase();
-                              return (
-                                applicant.candidateName.toLowerCase().includes(query) ||
-                                applicant.company.toLowerCase().includes(query) ||
-                                applicant.roleApplied.toLowerCase().includes(query) ||
-                                applicant.submission.toLowerCase().includes(query) ||
-                                applicant.currentStatus.toLowerCase().includes(query)
-                              );
-                            })
-                            .map((applicant, index) => (
-                              <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                                <td className="py-3 px-4 text-gray-900">{applicant.appliedOn}</td>
-                                <td className="py-3 px-4 text-gray-900 font-medium">{applicant.candidateName}</td>
-                                <td className="py-3 px-4 text-gray-900">{applicant.company}</td>
-                                <td className="py-3 px-4 text-gray-900">{applicant.roleApplied}</td>
-                                <td className="py-3 px-4">
-                                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                    applicant.submission === 'Inbound' 
-                                      ? 'bg-green-100 text-green-800' 
-                                      : 'bg-blue-100 text-blue-800'
-                                  }`}>
-                                    {applicant.submission}
-                                  </span>
-                                </td>
-                                <td className="py-3 px-4">
-                                  <Select value={applicant.currentStatus} onValueChange={(value) => handleStatusChange(applicant, value)}>
-                                    <SelectTrigger className="w-32 h-8 text-sm">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {statuses.map((status) => (
-                                        <SelectItem key={status} value={status}>{status}</SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Pending Meetings Modal */}
-              {isPendingMeetingsModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-                  <div className="bg-white rounded-lg max-w-3xl w-full mx-4 max-h-[90vh] flex flex-col">
-                    <div className="flex justify-between items-center p-6 border-b border-gray-200">
-                      <h2 className="text-2xl font-bold text-gray-900">
-                        All Pending Meetings
-                      </h2>
-                      <button
-                        onClick={() => setIsPendingMeetingsModalOpen(false)}
-                        className="text-red-500 hover:text-red-700 font-bold text-2xl"
-                        data-testid="button-close-meetings-modal"
-                      >
-                        ×
-                      </button>
-                    </div>
-                    
-                    <div className="overflow-auto flex-1 p-6">
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="bg-gray-50 border-b border-gray-200 sticky top-0">
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">Meeting</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">Date</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">Person</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {pendingMeetingsData.map((meeting) => (
-                            <tr key={meeting.id} className="border-b border-gray-100 hover:bg-gray-50">
-                              <td className="py-3 px-4 text-gray-900">{meeting.meeting}</td>
-                              <td className="py-3 px-4 text-gray-900">{meeting.date}</td>
-                              <td className="py-3 px-4 text-gray-900">{meeting.person}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* CEO Commands Modal */}
-              {isCeoCommandsModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-                  <div className="bg-white rounded-lg max-w-3xl w-full mx-4 max-h-[90vh] flex flex-col">
-                    <div className="flex justify-between items-center p-6 border-b border-gray-200">
-                      <h2 className="text-2xl font-bold text-gray-900">
-                        All CEO Commands
-                      </h2>
-                      <button
-                        onClick={() => setIsCeoCommandsModalOpen(false)}
-                        className="text-red-500 hover:text-red-700 font-bold text-2xl"
-                        data-testid="button-close-commands-modal"
-                      >
-                        ×
-                      </button>
-                    </div>
-                    
-                    <div className="overflow-auto flex-1 p-6">
-                      <div className="bg-slate-800 text-white rounded-lg p-6 space-y-4">
-                        {ceoCommandsData.map((command) => (
-                          <div key={command.id} className="text-sm text-gray-300 border-b border-gray-700 pb-4 last:border-b-0 last:pb-0">
-                            <p>{command.command}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* Priority Distribution Sidebar */}
@@ -2346,6 +2184,168 @@ export default function RecruiterDashboard2() {
         formError={resumeFormError}
         setFormError={setResumeFormError}
       />
+
+      {/* Applicant Overview Modal */}
+      {isApplicantOverviewModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+          <div className="bg-white rounded-lg max-w-6xl w-full mx-4 max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">
+                All Applicants
+              </h2>
+              <div className="flex items-center gap-4">
+                <input
+                  type="text"
+                  value={applicantSearchQuery}
+                  onChange={(e) => setApplicantSearchQuery(e.target.value)}
+                  placeholder="Search applicants..."
+                  className="border border-gray-300 px-4 py-2 rounded bg-white text-gray-900 w-64"
+                  data-testid="input-search-applicants"
+                />
+                <button
+                  onClick={() => {
+                    setIsApplicantOverviewModalOpen(false);
+                    setApplicantSearchQuery('');
+                  }}
+                  className="text-red-500 hover:text-red-700 font-bold text-2xl"
+                  data-testid="button-close-applicants-modal"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            
+            <div className="overflow-auto flex-1 p-6">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200 sticky top-0">
+                    <th className="text-left py-3 px-4 font-medium text-gray-700">Applied on</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-700">Candidate Name</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-700">Company</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-700">Role Applied</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-700">Submission</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-700">Current Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {applicantData
+                    .filter((applicant) => {
+                      if (!applicantSearchQuery) return true;
+                      const query = applicantSearchQuery.toLowerCase();
+                      return (
+                        applicant.candidateName.toLowerCase().includes(query) ||
+                        applicant.company.toLowerCase().includes(query) ||
+                        applicant.roleApplied.toLowerCase().includes(query) ||
+                        applicant.submission.toLowerCase().includes(query) ||
+                        applicant.currentStatus.toLowerCase().includes(query)
+                      );
+                    })
+                    .map((applicant, index) => (
+                      <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                        <td className="py-3 px-4 text-gray-900">{applicant.appliedOn}</td>
+                        <td className="py-3 px-4 text-gray-900 font-medium">{applicant.candidateName}</td>
+                        <td className="py-3 px-4 text-gray-900">{applicant.company}</td>
+                        <td className="py-3 px-4 text-gray-900">{applicant.roleApplied}</td>
+                        <td className="py-3 px-4">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            applicant.submission === 'Inbound' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {applicant.submission}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Select value={applicant.currentStatus} onValueChange={(value) => handleStatusChange(applicant, value)}>
+                            <SelectTrigger className="w-32 h-8 text-sm">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {statuses.map((status) => (
+                                <SelectItem key={status} value={status}>{status}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pending Meetings Modal */}
+      {isPendingMeetingsModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+          <div className="bg-white rounded-lg max-w-3xl w-full mx-4 max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">
+                All Pending Meetings
+              </h2>
+              <button
+                onClick={() => setIsPendingMeetingsModalOpen(false)}
+                className="text-red-500 hover:text-red-700 font-bold text-2xl"
+                data-testid="button-close-meetings-modal"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="overflow-auto flex-1 p-6">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-200 sticky top-0">
+                    <th className="text-left py-3 px-4 font-medium text-gray-700">Meeting</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-700">Date</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-700">Person</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pendingMeetingsData.map((meeting) => (
+                    <tr key={meeting.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-3 px-4 text-gray-900">{meeting.meeting}</td>
+                      <td className="py-3 px-4 text-gray-900">{meeting.date}</td>
+                      <td className="py-3 px-4 text-gray-900">{meeting.person}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CEO Commands Modal */}
+      {isCeoCommandsModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+          <div className="bg-white rounded-lg max-w-3xl w-full mx-4 max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">
+                All CEO Commands
+              </h2>
+              <button
+                onClick={() => setIsCeoCommandsModalOpen(false)}
+                className="text-red-500 hover:text-red-700 font-bold text-2xl"
+                data-testid="button-close-commands-modal"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="overflow-auto flex-1 p-6">
+              <div className="bg-slate-800 text-white rounded-lg p-6 space-y-4">
+                {ceoCommandsData.map((command) => (
+                  <div key={command.id} className="text-sm text-gray-300 border-b border-gray-700 pb-4 last:border-b-0 last:pb-0">
+                    <p>{command.command}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floating Help Button */}
       <button
