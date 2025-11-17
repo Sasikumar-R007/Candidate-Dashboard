@@ -990,6 +990,10 @@ export default function AdminDashboard() {
   const [isAddClientCredentialsModalOpen, setIsAddClientCredentialsModalOpen] = useState(false);
   const [isPerformanceGraphModalOpen, setIsPerformanceGraphModalOpen] = useState(false);
   const [isRevenueGraphModalOpen, setIsRevenueGraphModalOpen] = useState(false);
+  const [revenueTeam, setRevenueTeam] = useState<string>("all");
+  const [revenueDateFrom, setRevenueDateFrom] = useState<Date | undefined>(undefined);
+  const [revenueDateTo, setRevenueDateTo] = useState<Date | undefined>(undefined);
+  const [revenuePeriod, setRevenuePeriod] = useState<string>("monthly");
   const [userList, setUserList] = useState<any[]>([]);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [editingUser, setEditingUser] = useState<any>(null);
@@ -3053,12 +3057,10 @@ export default function AdminDashboard() {
                           padding: 0.005,
                           cornerRadius: 1,
                           subArcs: [
-                            { limit: 20, color: '#EF4444', showTick: true, tooltip: { text: 'Critical' } },
-                            { limit: 40, color: '#F87171', showTick: true, tooltip: { text: 'Poor' } },
-                            { limit: 50, color: '#EAB308', showTick: true, tooltip: { text: 'Below Average' } },
-                            { limit: 60, color: '#FDE047', showTick: true, tooltip: { text: 'Average' } },
-                            { limit: 80, color: '#86EFAC', showTick: true, tooltip: { text: 'Good' } },
-                            { limit: 100, color: '#22C55E', showTick: true, tooltip: { text: 'Excellent' } }
+                            { limit: 50, color: '#EF4444', showTick: true, tooltip: { text: 'Needs Improvement' } },
+                            { limit: 75, color: '#F97316', showTick: true, tooltip: { text: 'Good' } },
+                            { limit: 90, color: '#84CC16', showTick: true, tooltip: { text: 'Very Good' } },
+                            { limit: 100, color: '#16A34A', showTick: true, tooltip: { text: 'Excellent' } }
                           ]
                         }}
                         pointer={{
@@ -7418,6 +7420,73 @@ export default function AdminDashboard() {
             <DialogTitle>Revenue Analysis - Detailed View</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Filters Section */}
+            <div className="flex flex-wrap gap-4">
+              <Select value={revenueTeam} onValueChange={setRevenueTeam}>
+                <SelectTrigger className="w-48 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" data-testid="select-revenue-team">
+                  <SelectValue placeholder="Select Team" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Teams</SelectItem>
+                  <SelectItem value="arun">Arun (TL)</SelectItem>
+                  <SelectItem value="anusha">Anusha (TL)</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={`w-48 justify-start text-left font-normal ${!revenueDateFrom && "text-gray-500 dark:text-gray-400"}`}
+                    data-testid="button-revenue-date-from"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {revenueDateFrom ? format(revenueDateFrom, "PPP") : <span>From Date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={revenueDateFrom}
+                    onSelect={setRevenueDateFrom}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={`w-48 justify-start text-left font-normal ${!revenueDateTo && "text-gray-500 dark:text-gray-400"}`}
+                    data-testid="button-revenue-date-to"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {revenueDateTo ? format(revenueDateTo, "PPP") : <span>To Date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={revenueDateTo}
+                    onSelect={setRevenueDateTo}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              
+              <Select value={revenuePeriod} onValueChange={setRevenuePeriod}>
+                <SelectTrigger className="w-32 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" data-testid="select-revenue-period">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="quarterly">Quarterly</SelectItem>
+                  <SelectItem value="yearly">Yearly</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="flex justify-start space-x-4">
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-purple-500 rounded-full"></div>

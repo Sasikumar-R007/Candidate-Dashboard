@@ -146,10 +146,22 @@ const memberCompletionStatsByPeriod: Record<string, Record<string, Record<string
 };
 
 export default function PerformanceChartModal({ isOpen, onClose }: PerformanceChartModalProps) {
+  const [selectedTeam, setSelectedTeam] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
+  const [period, setPeriod] = useState<string>("monthly");
   const [selectedDefaultRateMember, setSelectedDefaultRateMember] = useState<string>("Sudharshan");
-  const [selectedDefaultRateDate, setSelectedDefaultRateDate] = useState<Date | undefined>(undefined);
+  const [defaultRateDateFrom, setDefaultRateDateFrom] = useState<Date | undefined>(undefined);
+  const [defaultRateDateTo, setDefaultRateDateTo] = useState<Date | undefined>(undefined);
 
-  const maxResume = Math.max(...performanceChartData.map(d => Math.max(d.resumesA, d.resumesB)));
+  // Filter performance data based on selected filters
+  const filteredPerformanceData = performanceChartData.filter((item) => {
+    // Team filter logic (currently showing all as we don't have team assignment in mock data)
+    // In production, this would filter based on team assignment
+    return true;
+  });
+
+  const maxResume = Math.max(...filteredPerformanceData.map(d => Math.max(d.resumesA, d.resumesB)));
   const roundedMax = Math.ceil(maxResume / 2) * 2 + 2;
   const ticks = Array.from({ length: Math.ceil(roundedMax / 2) + 1 }, (_, i) => i * 2);
 
@@ -172,6 +184,73 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
         </DialogHeader>
         
         <div className="p-6 overflow-y-auto flex-1">
+          {/* Filters Section */}
+          <div className="flex flex-wrap gap-4 mb-6">
+            <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+              <SelectTrigger className="w-48 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" data-testid="select-team">
+                <SelectValue placeholder="Select Team" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Teams</SelectItem>
+                <SelectItem value="arun">Arun (TL)</SelectItem>
+                <SelectItem value="anusha">Anusha (TL)</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={`w-48 justify-start text-left font-normal ${!dateFrom && "text-gray-500 dark:text-gray-400"}`}
+                  data-testid="button-date-from"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateFrom ? format(dateFrom, "PPP") : <span>From Date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={dateFrom}
+                  onSelect={setDateFrom}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={`w-48 justify-start text-left font-normal ${!dateTo && "text-gray-500 dark:text-gray-400"}`}
+                  data-testid="button-date-to"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateTo ? format(dateTo, "PPP") : <span>To Date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={dateTo}
+                  onSelect={setDateTo}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            
+            <Select value={period} onValueChange={setPeriod}>
+              <SelectTrigger className="w-32 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" data-testid="select-period">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="monthly">Monthly</SelectItem>
+                <SelectItem value="quarterly">Quarterly</SelectItem>
+                <SelectItem value="yearly">Yearly</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="bg-gray-50 dark:bg-gray-900 rounded-md p-4" data-testid="chart-performance">
             <div className="flex justify-start space-x-4 mb-2">
               <div className="flex items-center space-x-2">
@@ -185,7 +264,7 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
             </div>
             <div className="h-[400px]">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={performanceChartData}>
+                <ComposedChart data={filteredPerformanceData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis 
                     dataKey="member"
@@ -193,8 +272,8 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
                     style={{ fontSize: '11px' }}
                     tick={{ fill: '#6b7280' }}
                     tickFormatter={(value, index) => {
-                      if (performanceChartData[index]?.memberIndex !== undefined) {
-                        return `${performanceChartData[index].memberIndex}. ${value}`;
+                      if (filteredPerformanceData[index]?.memberIndex !== undefined) {
+                        return `${filteredPerformanceData[index].memberIndex}. ${value}`;
                       }
                       return value;
                     }}
@@ -243,7 +322,7 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Default Rate (Individually)</h3>
           
           {/* Filters */}
-          <div className="flex gap-4 mb-4">
+          <div className="flex flex-wrap gap-4 mb-4">
             <Select value={selectedDefaultRateMember} onValueChange={setSelectedDefaultRateMember}>
               <SelectTrigger className="w-48 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" data-testid="select-default-rate-member">
                 <SelectValue />
@@ -262,18 +341,39 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className={`w-48 justify-start text-left font-normal ${!selectedDefaultRateDate && "text-gray-500 dark:text-gray-400"}`}
-                  data-testid="button-select-default-rate-date"
+                  className={`w-48 justify-start text-left font-normal ${!defaultRateDateFrom && "text-gray-500 dark:text-gray-400"}`}
+                  data-testid="button-default-rate-date-from"
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {selectedDefaultRateDate ? format(selectedDefaultRateDate, "PPP") : <span>Pick a date</span>}
+                  {defaultRateDateFrom ? format(defaultRateDateFrom, "PPP") : <span>From Date</span>}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
                 <Calendar
                   mode="single"
-                  selected={selectedDefaultRateDate}
-                  onSelect={setSelectedDefaultRateDate}
+                  selected={defaultRateDateFrom}
+                  onSelect={setDefaultRateDateFrom}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={`w-48 justify-start text-left font-normal ${!defaultRateDateTo && "text-gray-500 dark:text-gray-400"}`}
+                  data-testid="button-default-rate-date-to"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {defaultRateDateTo ? format(defaultRateDateTo, "PPP") : <span>To Date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={defaultRateDateTo}
+                  onSelect={setDefaultRateDateTo}
                   initialFocus
                 />
               </PopoverContent>
@@ -293,8 +393,8 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
                 );
               }
               
-              const selectedPeriod = selectedDefaultRateDate 
-                ? `${selectedDefaultRateDate.getFullYear()}-${String(selectedDefaultRateDate.getMonth() + 1).padStart(2, '0')}`
+              const selectedPeriod = defaultRateDateFrom 
+                ? `${defaultRateDateFrom.getFullYear()}-${String(defaultRateDateFrom.getMonth() + 1).padStart(2, '0')}`
                 : "2024-11";
               
               const periodStats = memberData[selectedPeriod];
@@ -303,7 +403,7 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
                 return (
                   <div className="flex items-center justify-center h-full">
                     <p className="text-gray-500 dark:text-gray-400">
-                      No data for {format(selectedDefaultRateDate || new Date(), "MMMM yyyy")}
+                      No data for {format(defaultRateDateFrom || new Date(), "MMMM yyyy")}
                     </p>
                   </div>
                 );

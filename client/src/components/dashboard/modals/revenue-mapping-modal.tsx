@@ -68,7 +68,7 @@ export default function RevenueMappingModal({ isOpen, onClose }: RevenueMappingM
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto scrollbar-hide">
         <DialogHeader className="border-b pb-4">
           <DialogTitle className="text-lg font-semibold">
             Revenue Mapping
