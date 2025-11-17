@@ -409,7 +409,7 @@ export default function UploadResumeModal({
 
             {/* Deliver to Requirement Section */}
             <div className="border-t pt-4">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3 mb-3">
                 <Label className="text-sm font-medium text-gray-700">Deliver to Requirement</Label>
                 <Switch
                   checked={deliverToRequirement}
@@ -423,18 +423,18 @@ export default function UploadResumeModal({
                 disabled={!deliverToRequirement}
               >
                 <SelectTrigger 
-                  className={`bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 ${!deliverToRequirement ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 w-80 ${!deliverToRequirement ? 'opacity-50 cursor-not-allowed' : ''}`}
                   data-testid="select-requirement"
                 >
                   <SelectValue placeholder="Select Requirement" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="frontend-developer">Frontend Developer</SelectItem>
-                  <SelectItem value="backend-developer">Backend Developer</SelectItem>
-                  <SelectItem value="fullstack-developer">Full Stack Developer</SelectItem>
-                  <SelectItem value="ui-ux-designer">UI/UX Designer</SelectItem>
-                  <SelectItem value="product-manager">Product Manager</SelectItem>
-                  <SelectItem value="devops-engineer">DevOps Engineer</SelectItem>
+                  <SelectItem value="frontend-developer">Frontend Developer - REQ001</SelectItem>
+                  <SelectItem value="backend-developer">Backend Developer - REQ002</SelectItem>
+                  <SelectItem value="fullstack-developer">Full Stack Developer - REQ003</SelectItem>
+                  <SelectItem value="ui-ux-designer">UI/UX Designer - REQ004</SelectItem>
+                  <SelectItem value="product-manager">Product Manager - REQ005</SelectItem>
+                  <SelectItem value="devops-engineer">DevOps Engineer - REQ006</SelectItem>
                 </SelectContent>
               </Select>
             </div>
