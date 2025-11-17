@@ -70,18 +70,19 @@ export default function UploadResumeModal({
       return;
     }
     
-    onClose();
-    onSuccess();
+    // Capture state before closing
+    const isDelivering = deliverToRequirement;
+    const requirementName = selectedRequirement;
     
-    // Show success toast
+    // Show success toast before closing
     toast({
       title: "Resume uploaded successfully",
-      description: deliverToRequirement && selectedRequirement 
-        ? `Resume delivered to requirement: ${selectedRequirement}` 
+      description: isDelivering && requirementName 
+        ? `Resume delivered to requirement: ${requirementName}` 
         : "Resume has been added to the database",
     });
     
-    // Reset form
+    // Reset form first
     setFormData({
       firstName: '',
       lastName: '',
@@ -109,6 +110,10 @@ export default function UploadResumeModal({
     setFormError('');
     setDeliverToRequirement(false);
     setSelectedRequirement('');
+    
+    // Close modal after reset
+    onClose();
+    onSuccess();
   };
 
   return (
