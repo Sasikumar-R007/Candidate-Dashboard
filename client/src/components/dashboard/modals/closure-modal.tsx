@@ -24,14 +24,14 @@ const closureData = [
 export default function ClosureModal({ isOpen, onClose }: ClosureModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg">
-        <DialogHeader className="p-4 border-b dark:border-gray-700">
+      <DialogContent className="max-w-6xl max-h-[90vh] mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg flex flex-col">
+        <DialogHeader className="p-4 border-b dark:border-gray-700 flex-shrink-0">
           <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">
             List of Closures - Detailed View
           </DialogTitle>
         </DialogHeader>
         
-        <div className="p-6 max-h-96 overflow-y-auto">
+        <div className="p-6 overflow-y-auto flex-1">
           <div className="overflow-x-auto">
             <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
               <thead>
@@ -60,14 +60,6 @@ export default function ClosureModal({ isOpen, onClose }: ClosureModalProps) {
               </tbody>
             </table>
           </div>
-        </div>
-        
-        <div className="flex justify-end p-4 border-t dark:border-gray-700">
-          <Button 
-            onClick={onClose}
-          >
-            Close
-          </Button>
         </div>
       </DialogContent>
     </Dialog>

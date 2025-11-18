@@ -2568,11 +2568,12 @@ export default function AdminDashboard() {
 
             {/* Closure Reports */}
             <Card>
-              <CardHeader className="pb-3 flex flex-row items-center justify-between gap-2">
+              <CardHeader className="pb-3 flex flex-row flex-wrap items-center justify-between gap-2">
                 <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Closure Reports</CardTitle>
                 <Button 
                   onClick={() => setIsPipelineModalOpen(true)}
                   data-testid="button-see-more-pipeline"
+                  size="sm"
                 >
                   See More
                 </Button>
@@ -3095,10 +3096,9 @@ export default function AdminDashboard() {
 
               {/* Team Performance Table */}
               <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
-                <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between gap-2">
+                <CardHeader className="pb-2 pt-3 flex flex-row flex-wrap items-center justify-between gap-2">
                   <CardTitle className="text-lg text-gray-900 dark:text-white">Team Performance</CardTitle>
                   <Button 
-                    size="sm" 
                     onClick={() => setIsTeamPerformanceTableModalOpen(true)}
                     data-testid="button-view-team-performance-table"
                   >
@@ -3159,11 +3159,11 @@ export default function AdminDashboard() {
 
               {/* List of Closures Table */}
               <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
-                <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between gap-2">
+                <CardHeader className="pb-2 pt-3 flex flex-row flex-wrap items-center justify-between gap-2">
                   <CardTitle className="text-lg text-gray-900 dark:text-white">List Of Closures</CardTitle>
                   <Button 
-                    size="sm" 
                     onClick={() => setIsClosureModalOpen(true)}
+                    data-testid="button-view-list-closures"
                   >
                     View List
                   </Button>
