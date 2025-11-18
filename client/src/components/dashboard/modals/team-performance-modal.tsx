@@ -1,6 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
 
 interface TeamPerformanceTableModalProps {
   isOpen: boolean;
@@ -25,19 +24,10 @@ export default function TeamPerformanceTableModal({ isOpen, onClose }: TeamPerfo
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg">
-        <DialogHeader className="flex flex-row items-center justify-between p-4 border-b dark:border-gray-700">
+        <DialogHeader className="p-4 border-b dark:border-gray-700">
           <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">
             Team Performance - Table View
           </DialogTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
-            data-testid="button-close-team-performance-table-modal"
-          >
-            <X className="h-4 w-4" />
-          </Button>
         </DialogHeader>
         
         <div className="p-6 max-h-[600px] overflow-y-auto">
@@ -71,7 +61,6 @@ export default function TeamPerformanceTableModal({ isOpen, onClose }: TeamPerfo
         
         <div className="flex justify-end p-4 border-t dark:border-gray-700">
           <Button 
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded"
             onClick={onClose}
             data-testid="button-close-modal"
           >

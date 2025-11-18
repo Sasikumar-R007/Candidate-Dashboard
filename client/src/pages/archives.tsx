@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { useLocation } from "wouter";
 import { useQuery } from '@tanstack/react-query';
 
 const getCriticalityColor = (criticality: string) => {
@@ -19,7 +18,6 @@ const getCriticalityColor = (criticality: string) => {
 };
 
 export default function Archives() {
-  const [, navigate] = useLocation();
   const [visibleRows, setVisibleRows] = useState(10);
 
   // Fetch archived requirements from API
@@ -51,12 +49,12 @@ export default function Archives() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate('/admin')}
+            onClick={() => window.history.back()}
             className="flex items-center gap-2"
             data-testid="button-back-to-admin"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Admin
+            Back
           </Button>
           <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">Archived Requirements</h1>
         </div>

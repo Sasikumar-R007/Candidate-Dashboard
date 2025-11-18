@@ -2568,8 +2568,14 @@ export default function AdminDashboard() {
 
             {/* Closure Reports */}
             <Card>
-              <CardHeader className="pb-3">
+              <CardHeader className="pb-3 flex flex-row items-center justify-between gap-2">
                 <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Closure Reports</CardTitle>
+                <Button 
+                  onClick={() => setIsPipelineModalOpen(true)}
+                  data-testid="button-see-more-pipeline"
+                >
+                  See More
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto admin-scrollbar">
@@ -2637,14 +2643,6 @@ export default function AdminDashboard() {
                       </tr>
                     </tbody>
                   </table>
-                </div>
-                <div className="flex justify-end mt-4">
-                  <Button 
-                    onClick={() => setIsPipelineModalOpen(true)}
-                    data-testid="button-see-more-pipeline"
-                  >
-                    See More
-                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -3100,13 +3098,11 @@ export default function AdminDashboard() {
                 <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between gap-2">
                   <CardTitle className="text-lg text-gray-900 dark:text-white">Team Performance</CardTitle>
                   <Button 
-                    variant="link" 
                     size="sm" 
-                    className="text-blue-600 text-sm"
                     onClick={() => setIsTeamPerformanceTableModalOpen(true)}
                     data-testid="button-view-team-performance-table"
                   >
-                    view list
+                    View List
                   </Button>
                 </CardHeader>
                 <CardContent className="p-3">
@@ -3163,15 +3159,13 @@ export default function AdminDashboard() {
 
               {/* List of Closures Table */}
               <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
-                <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
+                <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between gap-2">
                   <CardTitle className="text-lg text-gray-900 dark:text-white">List Of Closures</CardTitle>
                   <Button 
-                    variant="link" 
                     size="sm" 
-                    className="text-blue-600 text-sm"
                     onClick={() => setIsClosureModalOpen(true)}
                   >
-                    view list
+                    View List
                   </Button>
                 </CardHeader>
                 <CardContent className="p-3">

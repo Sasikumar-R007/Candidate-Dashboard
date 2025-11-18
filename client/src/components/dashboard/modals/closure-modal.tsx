@@ -1,6 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
 
 interface ClosureModalProps {
   isOpen: boolean;
@@ -25,45 +24,37 @@ const closureData = [
 export default function ClosureModal({ isOpen, onClose }: ClosureModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl mx-auto bg-white rounded-lg shadow-lg">
-        <DialogHeader className="flex flex-row items-center justify-between p-4 border-b">
-          <DialogTitle className="text-lg font-semibold text-gray-900">
+      <DialogContent className="max-w-6xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+        <DialogHeader className="p-4 border-b dark:border-gray-700">
+          <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">
             List of Closures - Detailed View
           </DialogTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="p-1 hover:bg-gray-100 rounded-full"
-          >
-            <X className="h-4 w-4" />
-          </Button>
         </DialogHeader>
         
         <div className="p-6 max-h-96 overflow-y-auto">
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse bg-white rounded">
+            <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
               <thead>
-                <tr className="bg-gray-200">
-                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Candidate</th>
-                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Position</th>
-                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Client</th>
-                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Quarter</th>
-                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Talent Advisor</th>
-                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">CTC</th>
-                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700">Revenue</th>
+                <tr className="bg-gray-200 dark:bg-gray-700">
+                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700 dark:text-gray-300">Candidate</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700 dark:text-gray-300">Position</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700 dark:text-gray-300">Client</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700 dark:text-gray-300">Quarter</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700 dark:text-gray-300">Talent Advisor</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700 dark:text-gray-300">CTC</th>
+                  <th className="text-left py-2 px-3 text-xs font-medium text-gray-700 dark:text-gray-300">Revenue</th>
                 </tr>
               </thead>
               <tbody>
                 {closureData.map((closure, index) => (
-                  <tr key={index} className="border-b border-gray-100">
-                    <td className="py-2 px-3 text-xs text-gray-900 font-medium">{closure.candidate}</td>
-                    <td className="py-2 px-3 text-xs text-gray-600">{closure.position}</td>
-                    <td className="py-2 px-3 text-xs text-gray-600">{closure.client}</td>
-                    <td className="py-2 px-3 text-xs text-gray-600">{closure.quarter}</td>
-                    <td className="py-2 px-3 text-xs text-gray-600">{closure.talentAdvisor}</td>
-                    <td className="py-2 px-3 text-xs text-gray-600">{closure.ctc}</td>
-                    <td className="py-2 px-3 text-xs text-gray-600">{closure.revenue}</td>
+                  <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="py-2 px-3 text-xs text-gray-900 dark:text-white font-medium">{closure.candidate}</td>
+                    <td className="py-2 px-3 text-xs text-gray-600 dark:text-gray-400">{closure.position}</td>
+                    <td className="py-2 px-3 text-xs text-gray-600 dark:text-gray-400">{closure.client}</td>
+                    <td className="py-2 px-3 text-xs text-gray-600 dark:text-gray-400">{closure.quarter}</td>
+                    <td className="py-2 px-3 text-xs text-gray-600 dark:text-gray-400">{closure.talentAdvisor}</td>
+                    <td className="py-2 px-3 text-xs text-gray-600 dark:text-gray-400">{closure.ctc}</td>
+                    <td className="py-2 px-3 text-xs text-gray-600 dark:text-gray-400">{closure.revenue}</td>
                   </tr>
                 ))}
               </tbody>
@@ -71,9 +62,8 @@ export default function ClosureModal({ isOpen, onClose }: ClosureModalProps) {
           </div>
         </div>
         
-        <div className="flex justify-end p-4 border-t">
+        <div className="flex justify-end p-4 border-t dark:border-gray-700">
           <Button 
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded"
             onClick={onClose}
           >
             Close
