@@ -22,6 +22,7 @@ export default function AddTeamLeaderModal({ isOpen, onClose, editData, onSubmit
     id: editData?.id || "",
     name: editData?.name || "",
     email: editData?.email || "",
+    password: editData?.password || "",
     phone: editData?.phone || "",
     department: editData?.department || "",
     joiningDate: editData?.joiningDate || "",
@@ -39,6 +40,7 @@ export default function AddTeamLeaderModal({ isOpen, onClose, editData, onSubmit
         id: editData?.id || "",
         name: editData?.name || "",
         email: editData?.email || "",
+        password: editData?.password || "",
         phone: editData?.phone || "",
         department: editData?.department || "",
         joiningDate: editData?.joiningDate || "",
@@ -63,6 +65,7 @@ export default function AddTeamLeaderModal({ isOpen, onClose, editData, onSubmit
     const submitData = {
       ...formData,
       id: formData.id || `STTL${String(Date.now()).slice(-3)}`,
+      phoneNumber: formData.phone, // Map phone to phoneNumber for backend
       role: "Team Leader"
     };
     
@@ -75,6 +78,7 @@ export default function AddTeamLeaderModal({ isOpen, onClose, editData, onSubmit
       id: "",
       name: "",
       email: "",
+      password: "",
       phone: "",
       department: "",
       joiningDate: "",
@@ -130,6 +134,23 @@ export default function AddTeamLeaderModal({ isOpen, onClose, editData, onSubmit
               placeholder="Enter email address"
               required
               className="w-full"
+              data-testid="input-email"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="password" className="text-sm font-medium text-gray-700 mb-2 block">
+              Password *
+            </Label>
+            <Input
+              id="password"
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({...formData, password: e.target.value})}
+              placeholder="Enter password"
+              required
+              className="w-full"
+              data-testid="input-password"
             />
           </div>
 
@@ -145,6 +166,7 @@ export default function AddTeamLeaderModal({ isOpen, onClose, editData, onSubmit
               placeholder="Enter phone number"
               required
               className="w-full"
+              data-testid="input-phone"
             />
           </div>
 
