@@ -76,12 +76,7 @@ export default function EmployerLogin() {
       }
 
       if (result.success && result.employee) {
-        toast({
-          title: "Login Successful",
-          description: `Welcome back, ${result.employee.name}!`,
-        });
-
-        // Update auth context with employee data
+        // Update auth context with employee data FIRST
         setUser({
           type: 'employee',
           data: result.employee
@@ -90,31 +85,39 @@ export default function EmployerLogin() {
         // Also store in sessionStorage for backward compatibility
         sessionStorage.setItem('employee', JSON.stringify(result.employee));
 
-        // Navigate based on employee role
-        switch (result.employee.role) {
-          case 'recruiter':
-            navigate("/recruiter-login-2");
-            break;
-          case 'team_leader':
-            navigate("/team-leader");
-            break;
-          case 'client':
-            navigate("/client");
-            break;
-          case 'admin':
-            navigate("/admin");
-            break;
-          case 'support':
-            navigate("/support-dashboard");
-            break;
-          default:
-            toast({
-              title: "Unknown Role",
-              description: "Your account role is not recognized. Please contact admin.",
-              variant: "destructive",
-            });
-            break;
-        }
+        toast({
+          title: "Login Successful",
+          description: `Welcome back, ${result.employee.name}!`,
+        });
+
+        // Use setTimeout to ensure state update completes before navigation
+        setTimeout(() => {
+          // Navigate based on employee role
+          switch (result.employee.role) {
+            case 'recruiter':
+              navigate("/recruiter-login-2");
+              break;
+            case 'team_leader':
+              navigate("/team-leader");
+              break;
+            case 'client':
+              navigate("/client");
+              break;
+            case 'admin':
+              navigate("/admin");
+              break;
+            case 'support':
+              navigate("/support-dashboard");
+              break;
+            default:
+              toast({
+                title: "Unknown Role",
+                description: "Your account role is not recognized. Please contact admin.",
+                variant: "destructive",
+              });
+              break;
+          }
+        }, 100);
       } else {
         throw new Error("Invalid response from server");
       }

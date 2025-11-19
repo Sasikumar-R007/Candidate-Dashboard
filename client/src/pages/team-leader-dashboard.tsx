@@ -104,33 +104,38 @@ export default function TeamLeaderDashboard() {
     // Only run auth check once
     if (hasCheckedAuth) return;
     
-    // Check if user is logged in as an employee with team_leader role
-    if (!user || user.type !== 'employee') {
-      toast({
-        title: "Authentication Required",
-        description: "Please login to access Team Leader dashboard",
-        variant: "destructive",
-      });
-      navigate('/employer-login');
+    // Give a small delay to allow auth context to update after login
+    const timer = setTimeout(() => {
+      // Check if user is logged in as an employee with team_leader role
+      if (!user || user.type !== 'employee') {
+        toast({
+          title: "Authentication Required",
+          description: "Please login to access Team Leader dashboard",
+          variant: "destructive",
+        });
+        navigate('/employer-login');
+        setHasCheckedAuth(true);
+        return;
+      }
+      
+      // Check if employee has team_leader role
+      const employeeData = user.data as Employee;
+      if (employeeData.role !== 'team_leader') {
+        toast({
+          title: "Access Denied",
+          description: "You must be a Team Leader to access this page",
+          variant: "destructive",
+        });
+        navigate('/employer-login');
+        setHasCheckedAuth(true);
+        return;
+      }
+      
+      // Mark auth as checked if valid
       setHasCheckedAuth(true);
-      return;
-    }
+    }, 200);
     
-    // Check if employee has team_leader role
-    const employeeData = user.data as Employee;
-    if (employeeData.role !== 'team_leader') {
-      toast({
-        title: "Access Denied",
-        description: "You must be a Team Leader to access this page",
-        variant: "destructive",
-      });
-      navigate('/employer-login');
-      setHasCheckedAuth(true);
-      return;
-    }
-    
-    // Mark auth as checked if valid
-    setHasCheckedAuth(true);
+    return () => clearTimeout(timer);
   }, [user, isLoading, hasCheckedAuth, navigate, toast]);
   
   // Show loading state while auth is being checked
