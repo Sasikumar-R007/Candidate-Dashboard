@@ -24,7 +24,7 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Start as true during bootstrap
 
   // Initialize user from localStorage on mount
   useEffect(() => {
@@ -38,6 +38,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         localStorage.removeItem('auth_user');
       }
     }
+    // Mark loading as complete after bootstrap
+    setIsLoading(false);
   }, []);
 
   // Save user to localStorage whenever it changes

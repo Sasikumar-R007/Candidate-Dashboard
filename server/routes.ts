@@ -1375,34 +1375,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(comments);
   });
 
-  // Team leader requirements endpoint
-  app.get("/api/team-leader/requirements", (req, res) => {
-    res.json([
-      { id: "req-001", position: "Mobile App Developer", criticality: "HIGH", company: "Tesco", spoc: "Mel Gibson", talentAdvisor: "Mel Gibson", teamLead: "Arun" },
-      { id: "req-002", position: "Backend Developer", criticality: "LOW", company: "CodeLabs", spoc: "Robert Kim", talentAdvisor: "Robert Kim", teamLead: "Arun" },
-      { id: "req-003", position: "Frontend Developer", criticality: "MEDIUM", company: "TechCorp", spoc: "David Wilson", talentAdvisor: "Unassigned", teamLead: "Arun" },
-      { id: "req-004", position: "QA Tester", criticality: "HIGH", company: "AppLogic", spoc: "Kevin Brown", talentAdvisor: "Unassigned", teamLead: "Unassigned" },
-      { id: "req-005", position: "Mobile App Developer", criticality: "MEDIUM", company: "Tesco", spoc: "Mel Gibson", talentAdvisor: "Mel Gibson", teamLead: "Arun" },
-      { id: "req-006", position: "Backend Developer", criticality: "LOW", company: "CodeLabs", spoc: "Robert Kim", talentAdvisor: "Robert Kim", teamLead: "Arun" },
-      { id: "req-007", position: "UI/UX Designer", criticality: "MEDIUM", company: "Designify", spoc: "Tom Anderson", talentAdvisor: "Unassigned", teamLead: "Anusha" },
-      { id: "req-008", position: "Frontend Developer", criticality: "HIGH", company: "TechCorp", spoc: "David Wilson", talentAdvisor: "Unassigned", teamLead: "Arun" },
-      { id: "req-009", position: "UI/UX Designer", criticality: "MEDIUM", company: "Designify", spoc: "Tom Anderson", talentAdvisor: "Unassigned", teamLead: "Anusha" },
-      { id: "req-010", position: "QA Tester", criticality: "MEDIUM", company: "AppLogic", spoc: "Kevin Brown", talentAdvisor: "Unassigned", teamLead: "Unassigned" },
-      { id: "req-011", position: "Mobile App Developer", criticality: "HIGH", company: "Designify", spoc: "Mel Gibson", talentAdvisor: "Mel Gibson", teamLead: "Arun" },
-      { id: "req-012", position: "Backend Developer", criticality: "LOW", company: "Tesco", spoc: "Robert Kim", talentAdvisor: "Robert Kim", teamLead: "Unassigned" },
-      { id: "req-013", position: "Frontend Developer", criticality: "HIGH", company: "CodeLabs", spoc: "David Wilson", talentAdvisor: "Unassigned", teamLead: "Anusha" },
-      { id: "req-014", position: "QA Tester", criticality: "LOW", company: "TechCorp", spoc: "Kevin Brown", talentAdvisor: "Unassigned", teamLead: "Arun" }
-    ]);
+  // Team leader requirements endpoint - fetch requirements assigned to logged-in TL
+  app.get("/api/team-leader/requirements", requireEmployeeAuth, async (req, res) => {
+    try {
+      // Get the employee from session
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(401).json({ message: "Employee not found" });
+      }
+
+      // Verify employee is a team leader
+      if (employee.role !== 'team_leader') {
+        return res.status(403).json({ message: "Access denied. Team Leader role required." });
+      }
+
+      // Fetch requirements assigned to this team leader
+      const requirements = await storage.getRequirementsByTeamLead(employee.name);
+      res.json(requirements);
+    } catch (error) {
+      console.error('Get team leader requirements error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
   });
 
-  // Team leader requirements priority distribution
-  app.get("/api/team-leader/requirements-distribution", (req, res) => {
-    res.json({
-      high: 15,
-      medium: 9,
-      low: 3,
-      total: 27
-    });
+  // Assign talent advisor to a requirement (Team Leader only)
+  app.post("/api/team-leader/requirements/:id/assign-ta", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { talentAdvisor } = req.body;
+
+      if (!talentAdvisor) {
+        return res.status(400).json({ message: "Talent Advisor is required" });
+      }
+
+      // Get the employee from session
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(401).json({ message: "Employee not found" });
+      }
+
+      // Verify employee is a team leader
+      if (employee.role !== 'team_leader') {
+        return res.status(403).json({ message: "Access denied. Team Leader role required." });
+      }
+
+      // Get the requirement and verify it's assigned to this team leader
+      const requirements = await storage.getRequirements();
+      const requirement = requirements.find(r => r.id === id);
+      
+      if (!requirement) {
+        return res.status(404).json({ message: "Requirement not found" });
+      }
+
+      if (requirement.teamLead !== employee.name) {
+        return res.status(403).json({ message: "Access denied. This requirement is not assigned to you." });
+      }
+
+      // Validate talent advisor value (list of allowed advisors)
+      const allowedTalentAdvisors = ['Kavitha', 'Rajesh', 'Sowmiya', 'Kalaiselvi', 'Malathi'];
+      if (!allowedTalentAdvisors.includes(talentAdvisor)) {
+        return res.status(400).json({ message: "Invalid Talent Advisor. Must be one of: " + allowedTalentAdvisors.join(', ') });
+      }
+
+      // Update the requirement with the talent advisor
+      const updated = await storage.updateRequirement(id, { talentAdvisor });
+      if (!updated) {
+        return res.status(404).json({ message: "Requirement not found" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      console.error('Assign talent advisor error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
   });
 
   // Team Leader file upload endpoints

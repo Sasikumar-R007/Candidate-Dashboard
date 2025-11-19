@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import TeamLeaderMainSidebar from '@/components/dashboard/team-leader-main-sidebar';
 import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
 import AdminTopHeader from '@/components/dashboard/admin-top-header';
@@ -15,13 +15,16 @@ import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, HelpCircle, ExternalLink } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { ChatDock } from '@/components/chat/chat-dock';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ComposedChart } from 'recharts';
 import { SearchBar } from '@/components/ui/search-bar';
+import { useAuth, useEmployeeAuth } from '@/contexts/auth-context';
+import type { Requirement, Employee } from '@shared/schema';
+import { apiRequest } from '@/lib/queryClient';
 
 // Helper function to format numbers in Indian currency format
 const formatIndianCurrency = (value: number): string => {
@@ -88,13 +91,69 @@ function PerformanceChart({ data, height = "100%", benchmarkValue = 10 }: Perfor
 export default function TeamLeaderDashboard() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { user, isLoading } = useAuth();
+  const employee = useEmployeeAuth();
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+  
+  // Check authentication - wait for loading to complete
+  useEffect(() => {
+    // Don't check auth until loading is complete
+    if (isLoading) return;
+    
+    // Only run auth check once
+    if (hasCheckedAuth) return;
+    
+    // Check if user is logged in as an employee with team_leader role
+    if (!user || user.type !== 'employee') {
+      toast({
+        title: "Authentication Required",
+        description: "Please login to access Team Leader dashboard",
+        variant: "destructive",
+      });
+      navigate('/employer-login');
+      setHasCheckedAuth(true);
+      return;
+    }
+    
+    // Check if employee has team_leader role
+    const employeeData = user.data as Employee;
+    if (employeeData.role !== 'team_leader') {
+      toast({
+        title: "Access Denied",
+        description: "You must be a Team Leader to access this page",
+        variant: "destructive",
+      });
+      navigate('/employer-login');
+      setHasCheckedAuth(true);
+      return;
+    }
+    
+    // Mark auth as checked if valid
+    setHasCheckedAuth(true);
+  }, [user, isLoading, hasCheckedAuth, navigate, toast]);
+  
+  // Show loading state while auth is being checked
+  if (isLoading || !hasCheckedAuth) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-lg text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+  
+  // Don't render anything if not authenticated
+  if (!employee || employee.role !== 'team_leader') {
+    return null;
+  }
+  
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [activeTab, setActiveTab] = useState('team');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
   const [isClosureDetailsModalOpen, setIsClosureDetailsModalOpen] = useState(false);
   const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
-  const [selectedRequirement, setSelectedRequirement] = useState<any>(null);
+  const [selectedRequirement, setSelectedRequirement] = useState<Requirement | null>(null);
   const [assignments, setAssignments] = useState<{[key: string]: string}>({'mobile-app-dev': 'Arun'});
   const [isReallocating, setIsReallocating] = useState(false);
   const [selectedAssignee, setSelectedAssignee] = useState<string>('');
@@ -243,49 +302,77 @@ export default function TeamLeaderDashboard() {
     return 'Chat';
   };
 
-  // Sample requirements data
-  const [requirementsData, setRequirementsData] = useState([
-    { id: 'frontend-dev', position: 'Frontend Developer', criticality: 'HIGH', company: 'TechCorp', contact: 'David Wilson', talentAdvisor: 'kavitha', recruiter: null },
-    { id: 'ui-ux-designer', position: 'UI/UX Designer', criticality: 'MEDIUM', company: 'Designify', contact: 'Tom Anderson', talentAdvisor: 'Rajesh', recruiter: null },
-    { id: 'backend-dev', position: 'Backend Developer', criticality: 'LOW', company: 'CodeLabs', contact: 'Robert Kim', talentAdvisor: 'Sowmiya', recruiter: null },
-    { id: 'qa-tester', position: 'QA Tester', criticality: 'MEDIUM', company: 'AppLogic', contact: 'Kevin Brown', talentAdvisor: 'Kalaiselvi', recruiter: null },
-    { id: 'mobile-app-dev', position: 'Mobile App Developer', criticality: 'HIGH', company: 'Tesco', contact: 'Mel Gibson', talentAdvisor: 'Malathi', recruiter: 'Arun' },
-    { id: 'data-scientist', position: 'Data Scientist', criticality: 'HIGH', company: 'DataTech', contact: 'Sarah Wilson', talentAdvisor: 'Kavitha', recruiter: null },
-    { id: 'devops-engineer', position: 'DevOps Engineer', criticality: 'MEDIUM', company: 'CloudSoft', contact: 'Michael Chen', talentAdvisor: 'Rajesh', recruiter: null },
-    { id: 'product-manager', position: 'Product Manager', criticality: 'LOW', company: 'InnovateHub', contact: 'Lisa Rodriguez', talentAdvisor: 'Sowmiya', recruiter: null },
-    { id: 'fullstack-dev', position: 'Full Stack Developer', criticality: 'HIGH', company: 'WebSolutions', contact: 'James Martinez', talentAdvisor: 'Kalaiselvi', recruiter: null },
-    { id: 'security-analyst', position: 'Security Analyst', criticality: 'HIGH', company: 'SecureNet', contact: 'Emma Thompson', talentAdvisor: 'Malathi', recruiter: null }
-  ]);
+  // Fetch requirements from API
+  const { data: requirementsData = [], isLoading: isLoadingRequirements } = useQuery<Requirement[]>({
+    queryKey: ['/api/team-leader/requirements'],
+    enabled: !!employee, // Only fetch if logged in
+  });
 
   // Available talent advisors
-  const talentAdvisors = ['Arun', 'Anusha', 'Priya', 'Vikash', 'Suresh', 'Meena'];
+  const talentAdvisors = ['Kavitha', 'Rajesh', 'Sowmiya', 'Kalaiselvi', 'Malathi'];
+  
+  // Calculate priority distribution dynamically from real data
+  const priorityDistribution = useMemo(() => {
+    const distribution = requirementsData.reduce((acc, req) => {
+      const crit = req.criticality;
+      if (crit === 'HIGH') acc.high++;
+      else if (crit === 'MEDIUM') acc.medium++;
+      else if (crit === 'LOW') acc.low++;
+      return acc;
+    }, { high: 0, medium: 0, low: 0 });
+    
+    return {
+      ...distribution,
+      total: requirementsData.length
+    };
+  }, [requirementsData]);
 
-  const handleAssign = (requirement: any) => {
+  // Mutation to assign talent advisor to requirement
+  const assignTalentAdvisorMutation = useMutation({
+    mutationFn: async ({ id, talentAdvisor }: { id: string; talentAdvisor: string }) => {
+      const res = await apiRequest('POST', `/api/team-leader/requirements/${id}/assign-ta`, { talentAdvisor });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team-leader/requirements'] });
+      toast({
+        title: "Success",
+        description: "Talent Advisor assigned successfully!",
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+      setIsAssignmentModalOpen(false);
+      setSelectedRequirement(null);
+      setSelectedAssignee('');
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to assign Talent Advisor",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAssign = (requirement: Requirement) => {
     setSelectedRequirement(requirement);
     setIsReallocating(false);
     setSelectedAssignee('');
     setIsAssignmentModalOpen(true);
   };
 
-  const handleReallocate = (requirement: any) => {
+  const handleReallocate = (requirement: Requirement) => {
     setSelectedRequirement(requirement);
     setIsReallocating(true);
-    setSelectedAssignee(requirement.recruiter || '');
+    setSelectedAssignee(requirement.talentAdvisor || '');
     setIsAssignmentModalOpen(true);
   };
 
-  const handleConfirmAssignment = (advisor: string) => {
-    if (selectedRequirement) {
-      const updatedRequirements = requirementsData.map(req => 
-        req.id === selectedRequirement.id 
-          ? { ...req, recruiter: advisor }
-          : req
-      );
-      setRequirementsData(updatedRequirements);
-      setAssignments(prev => ({ ...prev, [selectedRequirement.id]: advisor }));
-      setIsAssignmentModalOpen(false);
-      setSelectedRequirement(null);
-      setSelectedAssignee('');
+  const handleConfirmAssignment = () => {
+    if (selectedRequirement && selectedAssignee) {
+      assignTalentAdvisorMutation.mutate({
+        id: selectedRequirement.id,
+        talentAdvisor: selectedAssignee
+      });
     }
   };
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
@@ -748,47 +835,53 @@ export default function TeamLeaderDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        {requirementsData.slice(0, 10).map((requirement, index) => (
-                          <tr key={requirement.id} className="border-b border-gray-100">
-                            <td className="p-3 text-gray-900">{requirement.position}</td>
-                            <td className="p-3">
-                              <span className={`text-xs font-semibold px-2 py-1 rounded inline-flex items-center ${
-                                requirement.criticality === 'HIGH' ? 'bg-red-100 text-red-800' :
-                                requirement.criticality === 'MEDIUM' ? 'bg-blue-100 text-blue-800' :
-                                'bg-gray-100 text-gray-800'
-                              }`}>
-                                <span className={`w-2 h-2 rounded-full mr-1 ${
-                                  requirement.criticality === 'HIGH' ? 'bg-red-500' :
-                                  requirement.criticality === 'MEDIUM' ? 'bg-blue-500' :
-                                  'bg-gray-500'
-                                }`}></span>
-                                {requirement.criticality}
-                              </span>
-                            </td>
-                            <td className="p-3 text-gray-900">{requirement.company}</td>
-                            <td className="p-3 text-gray-900">{requirement.contact}</td>
-                            <td className="p-3 text-gray-900">{requirement.talentAdvisor || 'Unassigned'}</td>
-                            <td className="p-3">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="p-1"
-                                onClick={() => {
-                                  setSelectedRequirement({
-                                    id: requirement.id,
-                                    position: requirement.position,
-                                    company: requirement.company,
-                                    criticality: requirement.criticality,
-                                    contactPerson: requirement.contact
-                                  });
-                                  setIsAssignmentModalOpen(true);
-                                }}
-                              >
-                                <UserRound className="w-4 h-4" />
-                              </Button>
+                        {isLoadingRequirements ? (
+                          <tr>
+                            <td colSpan={6} className="p-6 text-center text-gray-600">
+                              Loading requirements...
                             </td>
                           </tr>
-                        ))}
+                        ) : requirementsData.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="p-6 text-center text-gray-600">
+                              No requirements assigned to you yet.
+                            </td>
+                          </tr>
+                        ) : (
+                          requirementsData.slice(0, 10).map((requirement) => (
+                            <tr key={requirement.id} className="border-b border-gray-100">
+                              <td className="p-3 text-gray-900">{requirement.position}</td>
+                              <td className="p-3">
+                                <span className={`text-xs font-semibold px-2 py-1 rounded inline-flex items-center ${
+                                  requirement.criticality === 'HIGH' ? 'bg-red-100 text-red-800' :
+                                  requirement.criticality === 'MEDIUM' ? 'bg-blue-100 text-blue-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  <span className={`w-2 h-2 rounded-full mr-1 ${
+                                    requirement.criticality === 'HIGH' ? 'bg-red-500' :
+                                    requirement.criticality === 'MEDIUM' ? 'bg-blue-500' :
+                                    'bg-gray-500'
+                                  }`}></span>
+                                  {requirement.criticality}
+                                </span>
+                              </td>
+                              <td className="p-3 text-gray-900">{requirement.company}</td>
+                              <td className="p-3 text-gray-900">{requirement.spoc}</td>
+                              <td className="p-3 text-gray-900">{requirement.talentAdvisor || 'not-assigned'}</td>
+                              <td className="p-3">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="p-1"
+                                  onClick={() => handleAssign(requirement)}
+                                  data-testid={`button-assign-ta-${requirement.id}`}
+                                >
+                                  <UserRound className="w-4 h-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -812,7 +905,7 @@ export default function TeamLeaderDashboard() {
                 </div>
               </div>
 
-              {/* Right Section - Priority Distribution (Static) */}
+              {/* Right Section - Priority Distribution (Dynamic) */}
               <div className="w-80 flex-shrink-0">
                 <div className="bg-white border border-gray-200 rounded-lg sticky top-0">
                   <div className="px-6 py-4 border-b border-gray-200">
@@ -825,7 +918,7 @@ export default function TeamLeaderDashboard() {
                         <div className="text-5xl font-bold text-red-600">H</div>
                         <div className="text-sm text-gray-600 uppercase">IGH</div>
                       </div>
-                      <div className="text-4xl font-bold text-red-600">15</div>
+                      <div className="text-4xl font-bold text-red-600">{priorityDistribution.high}</div>
                     </div>
                     
                     <div className="flex items-center justify-between p-4 bg-cyan-50 rounded-lg">
@@ -833,7 +926,7 @@ export default function TeamLeaderDashboard() {
                         <div className="text-5xl font-bold text-cyan-600">M</div>
                         <div className="text-sm text-gray-600 uppercase">EDIUM</div>
                       </div>
-                      <div className="text-4xl font-bold text-cyan-600">9</div>
+                      <div className="text-4xl font-bold text-cyan-600">{priorityDistribution.medium}</div>
                     </div>
                     
                     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
@@ -841,7 +934,7 @@ export default function TeamLeaderDashboard() {
                         <div className="text-5xl font-bold text-gray-600">L</div>
                         <div className="text-sm text-gray-600 uppercase">OW</div>
                       </div>
-                      <div className="text-4xl font-bold text-gray-600">3</div>
+                      <div className="text-4xl font-bold text-gray-600">{priorityDistribution.low}</div>
                     </div>
                     
                     <div className="flex items-center justify-between p-4 bg-slate-100 rounded-lg">
@@ -849,7 +942,7 @@ export default function TeamLeaderDashboard() {
                         <div className="text-5xl font-bold text-gray-900">T</div>
                         <div className="text-sm text-gray-600 uppercase">OTAL</div>
                       </div>
-                      <div className="text-4xl font-bold text-gray-900">27</div>
+                      <div className="text-4xl font-bold text-gray-900">{priorityDistribution.total}</div>
                     </div>
                   </div>
                 </div>
@@ -875,7 +968,7 @@ export default function TeamLeaderDashboard() {
                     <div><strong>Position:</strong> {selectedRequirement.position}</div>
                     <div><strong>Company:</strong> {selectedRequirement.company}</div>
                     <div><strong>Criticality:</strong> <span className="text-red-600">{selectedRequirement.criticality}</span></div>
-                    <div><strong>Contact Person:</strong> {selectedRequirement.contactPerson}</div>
+                    <div><strong>SPOC:</strong> {selectedRequirement.spoc}</div>
                   </div>
                 </div>
                 
@@ -884,15 +977,13 @@ export default function TeamLeaderDashboard() {
                     Assign to Talent Advisor:
                   </Label>
                   <Select value={selectedAssignee} onValueChange={setSelectedAssignee}>
-                    <SelectTrigger className="mt-2">
+                    <SelectTrigger className="mt-2" data-testid="select-talent-advisor">
                       <SelectValue placeholder="Select a Talent Advisor" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Kavitha">Kavitha</SelectItem>
-                      <SelectItem value="Rajesh">Rajesh</SelectItem>
-                      <SelectItem value="Sowmiya">Sowmiya</SelectItem>
-                      <SelectItem value="Kalaiselvi">Kalaiselvi</SelectItem>
-                      <SelectItem value="Malathi">Malathi</SelectItem>
+                      {talentAdvisors.map(advisor => (
+                        <SelectItem key={advisor} value={advisor}>{advisor}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -907,28 +998,17 @@ export default function TeamLeaderDashboard() {
                       setSelectedAssignee('');
                     }}
                     className="px-6 py-2 rounded"
+                    data-testid="button-cancel-assignment"
                   >
                     Cancel
                   </Button>
                   <Button
                     className="bg-gray-800 hover:bg-gray-900 text-white font-medium px-6 py-2 rounded"
-                    onClick={() => {
-                      if (selectedAssignee && selectedRequirement) {
-                        // Update the requirements data with the new talent advisor assignment
-                        setRequirementsData(prev => 
-                          prev.map(req => 
-                            req.id === selectedRequirement.id 
-                              ? { ...req, talentAdvisor: selectedAssignee }
-                              : req
-                          )
-                        );
-                      }
-                      setIsAssignmentModalOpen(false);
-                      setSelectedRequirement(null);
-                      setSelectedAssignee('');
-                    }}
+                    onClick={handleConfirmAssignment}
+                    disabled={!selectedAssignee || assignTalentAdvisorMutation.isPending}
+                    data-testid="button-confirm-assignment"
                   >
-                    Confirm Assignment
+                    {assignTalentAdvisorMutation.isPending ? 'Assigning...' : 'Confirm Assignment'}
                   </Button>
                 </div>
               </div>

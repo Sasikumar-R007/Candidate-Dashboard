@@ -37,6 +37,9 @@ export default function AddRequirementModal({ isOpen, onClose }: AddRequirementM
         },
         body: JSON.stringify({
           ...data,
+          // Explicitly set talentAdvisor to null if empty (not-assigned)
+          talentAdvisor: data.talentAdvisor || null,
+          teamLead: data.teamLead === 'Unassigned' ? null : data.teamLead,
           createdAt: new Date().toISOString()
         }),
       });
