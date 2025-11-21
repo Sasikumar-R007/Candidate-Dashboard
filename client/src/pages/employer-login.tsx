@@ -117,7 +117,7 @@ export default function EmployerLogin() {
               });
               break;
           }
-        }, 100);
+        }, 300);
       } else {
         throw new Error("Invalid response from server");
       }

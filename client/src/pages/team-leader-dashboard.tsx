@@ -142,14 +142,24 @@ export default function TeamLeaderDashboard() {
   if (isLoading || !hasCheckedAuth) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-lg text-gray-600">Loading...</div>
+        <div className="flex flex-col items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600 mb-3"></div>
+          <div className="text-lg text-gray-600">Loading...</div>
+        </div>
       </div>
     );
   }
   
-  // Don't render anything if not authenticated
+  // Don't render anything if not authenticated (will be redirected by useEffect)
   if (!employee || employee.role !== 'team_leader') {
-    return null;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="flex flex-col items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600 mb-3"></div>
+          <div className="text-lg text-gray-600">Loading...</div>
+        </div>
+      </div>
+    );
   }
   
   const [sidebarTab, setSidebarTab] = useState('dashboard');
