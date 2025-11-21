@@ -1284,10 +1284,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Team Leader Dashboard API routes
-  app.get("/api/team-leader/profile", (req, res) => {
-    res.json(teamLeaderProfile);
-  });
-
   app.get("/api/team-leader/team-members", (req, res) => {
     const teamMembers = [
       { id: "tm-001", name: "Sudharshan", salary: "2,95,000 INR", year: "2024-2025", profilesCount: "10" },
