@@ -96,72 +96,7 @@ export default function TeamLeaderDashboard() {
   const employee = useEmployeeAuth();
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   
-  // Check authentication - wait for loading to complete
-  useEffect(() => {
-    // Don't check auth until loading is complete
-    if (isLoading) return;
-    
-    // Only run auth check once
-    if (hasCheckedAuth) return;
-    
-    // Give a small delay to allow auth context to update after login
-    const timer = setTimeout(() => {
-      // Check if user is logged in as an employee with team_leader role
-      if (!user || user.type !== 'employee') {
-        toast({
-          title: "Authentication Required",
-          description: "Please login to access Team Leader dashboard",
-          variant: "destructive",
-        });
-        navigate('/employer-login');
-        setHasCheckedAuth(true);
-        return;
-      }
-      
-      // Check if employee has team_leader role
-      const employeeData = user.data as Employee;
-      if (employeeData.role !== 'team_leader') {
-        toast({
-          title: "Access Denied",
-          description: "You must be a Team Leader to access this page",
-          variant: "destructive",
-        });
-        navigate('/employer-login');
-        setHasCheckedAuth(true);
-        return;
-      }
-      
-      // Mark auth as checked if valid
-      setHasCheckedAuth(true);
-    }, 200);
-    
-    return () => clearTimeout(timer);
-  }, [user, isLoading, hasCheckedAuth, navigate, toast]);
-  
-  // Show loading state while auth is being checked
-  if (isLoading || !hasCheckedAuth) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="flex flex-col items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600 mb-3"></div>
-          <div className="text-lg text-gray-600">Loading...</div>
-        </div>
-      </div>
-    );
-  }
-  
-  // Don't render anything if not authenticated (will be redirected by useEffect)
-  if (!employee || employee.role !== 'team_leader') {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="flex flex-col items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600 mb-3"></div>
-          <div className="text-lg text-gray-600">Loading...</div>
-        </div>
-      </div>
-    );
-  }
-  
+  // ALL useState hooks MUST be here at the top, before any conditionals
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [activeTab, setActiveTab] = useState('team');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -446,6 +381,72 @@ export default function TeamLeaderDashboard() {
   const { data: ceoComments } = useQuery({
     queryKey: ['/api/team-leader/ceo-comments'],
   });
+  
+  // Check authentication - wait for loading to complete
+  useEffect(() => {
+    // Don't check auth until loading is complete
+    if (isLoading) return;
+    
+    // Only run auth check once
+    if (hasCheckedAuth) return;
+    
+    // Give a small delay to allow auth context to update after login
+    const timer = setTimeout(() => {
+      // Check if user is logged in as an employee with team_leader role
+      if (!user || user.type !== 'employee') {
+        toast({
+          title: "Authentication Required",
+          description: "Please login to access Team Leader dashboard",
+          variant: "destructive",
+        });
+        navigate('/employer-login');
+        setHasCheckedAuth(true);
+        return;
+      }
+      
+      // Check if employee has team_leader role
+      const employeeData = user.data as Employee;
+      if (employeeData.role !== 'team_leader') {
+        toast({
+          title: "Access Denied",
+          description: "You must be a Team Leader to access this page",
+          variant: "destructive",
+        });
+        navigate('/employer-login');
+        setHasCheckedAuth(true);
+        return;
+      }
+      
+      // Mark auth as checked if valid
+      setHasCheckedAuth(true);
+    }, 200);
+    
+    return () => clearTimeout(timer);
+  }, [user, isLoading, hasCheckedAuth, navigate, toast]);
+  
+  // Show loading state while auth is being checked
+  if (isLoading || !hasCheckedAuth) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="flex flex-col items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600 mb-3"></div>
+          <div className="text-lg text-gray-600">Loading...</div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Don't render anything if not authenticated (will be redirected by useEffect)
+  if (!employee || employee.role !== 'team_leader') {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="flex flex-col items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600 mb-3"></div>
+          <div className="text-lg text-gray-600">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   if (!teamLeaderProfile) {
     return (
