@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { X, CalendarIcon } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, BarChart, Bar } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, AreaChart, Area } from 'recharts';
 import { useState } from "react";
 import { format } from "date-fns";
 
@@ -254,7 +254,7 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
           <div className="bg-gray-50 dark:bg-gray-900 rounded-md p-4" data-testid="chart-performance">
             <div className="flex justify-start space-x-4 mb-2">
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-0.5 bg-red-500"></div>
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                 <span className="text-sm text-gray-600 dark:text-gray-400">Resume Count A</span>
               </div>
               <div className="flex items-center space-x-2">
@@ -264,8 +264,18 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
             </div>
             <div className="h-[400px]">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={filteredPerformanceData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <AreaChart data={filteredPerformanceData}>
+                  <defs>
+                    <linearGradient id="colorResumesAModal" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
+                    </linearGradient>
+                    <linearGradient id="colorResumesBModal" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} />
                   <XAxis 
                     dataKey="member"
                     stroke="#6b7280" 
@@ -293,26 +303,28 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
                     }}
                   />
                   <Legend />
-                  <Line 
+                  <Area 
                     type="monotone" 
                     dataKey="resumesA" 
                     stroke="#ef4444" 
                     strokeWidth={2} 
-                    strokeDasharray="4 4"
-                    dot={{ fill: '#ef4444', r: 5 }}
-                    activeDot={{ r: 7 }}
+                    fill="url(#colorResumesAModal)"
+                    dot={{ fill: '#ef4444', r: 4 }}
+                    activeDot={{ r: 6 }}
                     name="Resume Count A"
                   />
-                  <Line 
+                  <Area 
                     type="monotone" 
                     dataKey="resumesB" 
                     stroke="#3b82f6" 
                     strokeWidth={2} 
-                    dot={{ fill: '#3b82f6', r: 5 }}
-                    activeDot={{ r: 7 }}
+                    fill="url(#colorResumesBModal)"
+                    fillOpacity={0.6}
+                    dot={{ fill: '#3b82f6', r: 4 }}
+                    activeDot={{ r: 6 }}
                     name="Resume Count B"
                   />
-                </ComposedChart>
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>

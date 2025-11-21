@@ -32,7 +32,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from "@/components/ui/input";
 import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users, ExternalLink, HelpCircle, MoreVertical } from "lucide-react";
 import { format } from "date-fns";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ComposedChart, BarChart, Bar, Cell } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ComposedChart, BarChart, Bar, Cell, AreaChart, Area } from 'recharts';
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
@@ -326,8 +326,22 @@ function PerformanceChart({ data, height = "100%", benchmarkValue = 10, showDual
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <ComposedChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+      <AreaChart data={data}>
+        <defs>
+          <linearGradient id="colorRequirementsMain" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+          </linearGradient>
+          <linearGradient id="colorResumesAMain" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+            <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
+          </linearGradient>
+          <linearGradient id="colorResumesBMain" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} />
         <XAxis 
           dataKey="member"
           stroke="#6b7280" 
@@ -364,41 +378,44 @@ function PerformanceChart({ data, height = "100%", benchmarkValue = 10, showDual
               strokeDasharray="5 5"
               label={{ value: `Avg: ${benchmarkValue}`, position: 'right', fill: '#ef4444', fontSize: 12 }}
             />
-            <Line 
+            <Area 
               type="monotone" 
               dataKey="requirements" 
               stroke="#3b82f6" 
-              strokeWidth={3} 
-              dot={{ fill: '#3b82f6', r: 5 }}
-              activeDot={{ r: 7 }}
+              strokeWidth={2} 
+              fill="url(#colorRequirementsMain)"
+              dot={{ fill: '#3b82f6', r: 4 }}
+              activeDot={{ r: 6 }}
               name="Requirements"
             />
           </>
         )}
         {showDualLines && (
           <>
-            <Line 
+            <Area 
               type="monotone" 
               dataKey="resumesA" 
               stroke="#ef4444" 
               strokeWidth={2} 
-              strokeDasharray="4 4"
-              dot={{ fill: '#ef4444', r: 5 }}
-              activeDot={{ r: 7 }}
+              fill="url(#colorResumesAMain)"
+              dot={{ fill: '#ef4444', r: 4 }}
+              activeDot={{ r: 6 }}
               name="Resume Count A"
             />
-            <Line 
+            <Area 
               type="monotone" 
               dataKey="resumesB" 
               stroke="#3b82f6" 
               strokeWidth={2} 
-              dot={{ fill: '#3b82f6', r: 5 }}
-              activeDot={{ r: 7 }}
+              fill="url(#colorResumesBMain)"
+              fillOpacity={0.6}
+              dot={{ fill: '#3b82f6', r: 4 }}
+              activeDot={{ r: 6 }}
               name="Resume Count B"
             />
           </>
         )}
-      </ComposedChart>
+      </AreaChart>
     </ResponsiveContainer>
   );
 }
