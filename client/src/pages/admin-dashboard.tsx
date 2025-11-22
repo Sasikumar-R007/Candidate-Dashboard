@@ -30,7 +30,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users, ExternalLink, HelpCircle, MoreVertical } from "lucide-react";
+import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users, ExternalLink, HelpCircle, MoreVertical, Download } from "lucide-react";
 import { format } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ComposedChart, BarChart, Bar, Cell, AreaChart, Area } from 'recharts';
 import { useLocation } from "wouter";
@@ -940,6 +940,7 @@ export default function AdminDashboard() {
   const [isAddRequirementModalOpen, setIsAddRequirementModalOpen] = useState(false);
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
   const [isMetricsModalOpen, setIsMetricsModalOpen] = useState(false);
+  const [isClientMetricsModalOpen, setIsClientMetricsModalOpen] = useState(false);
   const [isPipelineModalOpen, setIsPipelineModalOpen] = useState(false);
   const [isCashoutModalOpen, setIsCashoutModalOpen] = useState(false);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
@@ -5095,82 +5096,163 @@ export default function AdminDashboard() {
           <div className="flex h-full gap-6 px-6 py-6">
             {/* Middle Section - Key Metrics and Cash Outflow - Scrollable */}
             <div className="flex-1 overflow-y-auto space-y-6 admin-scrollbar pr-4">
-                {/* Key Metrics Section */}
-                <Card>
-                  <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Key Metrics</CardTitle>
-                      <div className="flex gap-4">
-                        <Select>
-                          <SelectTrigger className="w-48 input-styled rounded">
-                            <SelectValue placeholder="Client" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="client1">Client 1</SelectItem>
-                            <SelectItem value="client2">Client 2</SelectItem>
-                            <SelectItem value="all">All Clients</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        
-                        <Select>
-                          <SelectTrigger className="w-48 input-styled rounded">
-                            <SelectValue placeholder="Monthly" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="monthly">Monthly</SelectItem>
-                            <SelectItem value="quarterly">Quarterly</SelectItem>
-                            <SelectItem value="yearly">Yearly</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        
+                {/* Split Section - Key Metrics and Client Metrics */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+                  {/* Key Metrics Section (Half Size) */}
+                  <Card>
+                    <CardHeader className="p-4 lg:p-6">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                        <CardTitle className="text-base lg:text-lg font-semibold text-gray-900 dark:text-white">Key Metrics</CardTitle>
+                        <div className="flex gap-2 flex-wrap">
+                          <Select>
+                            <SelectTrigger className="w-28 sm:w-32 input-styled rounded text-xs sm:text-sm" data-testid="select-key-metrics-client">
+                              <SelectValue placeholder="Client" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="client1">Client 1</SelectItem>
+                              <SelectItem value="client2">Client 2</SelectItem>
+                              <SelectItem value="all">All Clients</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          
+                          <Select>
+                            <SelectTrigger className="w-28 sm:w-32 input-styled rounded text-xs sm:text-sm" data-testid="select-key-metrics-period">
+                              <SelectValue placeholder="Monthly" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                              <SelectItem value="quarterly">Quarterly</SelectItem>
+                              <SelectItem value="yearly">Yearly</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-64 mb-4">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart
-                          data={[
-                            { name: 'Jan', revenue: 45000, growth: 38000, profit: 25000, clients: 15000 },
-                            { name: 'Feb', revenue: 35000, growth: 28000, profit: 18000, clients: 12000 },
-                            { name: 'Mar', revenue: 55000, growth: 45000, profit: 32000, clients: 22000 },
-                            { name: 'Apr', revenue: 48000, growth: 42000, profit: 28000, clients: 18000 },
-                            { name: 'May', revenue: 65000, growth: 52000, profit: 38000, clients: 28000 },
-                            { name: 'Jun', revenue: 58000, growth: 48000, profit: 35000, clients: 25000 },
-                            { name: 'Jul', revenue: 70000, growth: 58000, profit: 42000, clients: 32000 },
-                            { name: 'Aug', revenue: 75000, growth: 62000, profit: 45000, clients: 35000 },
-                          ]}
-                          margin={{
-                            top: 5,
-                            right: 30,
-                            left: 20,
-                            bottom: 5,
-                          }}
+                    </CardHeader>
+                    <CardContent className="p-4 lg:p-6">
+                      <div className="h-48 sm:h-64 mb-4">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart
+                            data={[
+                              { name: 'Jan', revenue: 45000, growth: 38000, profit: 25000, clients: 15000 },
+                              { name: 'Feb', revenue: 35000, growth: 28000, profit: 18000, clients: 12000 },
+                              { name: 'Mar', revenue: 55000, growth: 45000, profit: 32000, clients: 22000 },
+                              { name: 'Apr', revenue: 48000, growth: 42000, profit: 28000, clients: 18000 },
+                              { name: 'May', revenue: 65000, growth: 52000, profit: 38000, clients: 28000 },
+                              { name: 'Jun', revenue: 58000, growth: 48000, profit: 35000, clients: 25000 },
+                              { name: 'Jul', revenue: 70000, growth: 58000, profit: 42000, clients: 32000 },
+                              { name: 'Aug', revenue: 75000, growth: 62000, profit: 45000, clients: 35000 },
+                            ]}
+                            margin={{
+                              top: 5,
+                              right: 15,
+                              left: 10,
+                              bottom: 5,
+                            }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" style={{ fontSize: '10px' }} />
+                            <YAxis style={{ fontSize: '10px' }} />
+                            <Tooltip />
+                            <Legend wrapperStyle={{ fontSize: '10px' }} />
+                            <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} />
+                            <Line type="monotone" dataKey="growth" stroke="#82ca9d" strokeWidth={2} />
+                            <Line type="monotone" dataKey="profit" stroke="#ffc658" strokeWidth={2} />
+                            <Line type="monotone" dataKey="clients" stroke="#ff7c7c" strokeWidth={2} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                      
+                      <div className="flex justify-end mt-4">
+                        <Button 
+                          className="bg-cyan-400 hover:bg-cyan-500 text-black px-3 sm:px-4 py-2 rounded text-xs sm:text-sm"
+                          onClick={() => setIsMetricsModalOpen(true)}
+                          data-testid="button-show-more-key-metrics"
                         >
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="name" />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} />
-                          <Line type="monotone" dataKey="growth" stroke="#82ca9d" strokeWidth={2} />
-                          <Line type="monotone" dataKey="profit" stroke="#ffc658" strokeWidth={2} />
-                          <Line type="monotone" dataKey="clients" stroke="#ff7c7c" strokeWidth={2} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                    
-                    {/* Show More Button positioned below graph on the right */}
-                    <div className="flex justify-end mt-4">
-                      <Button 
-                        className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded"
-                        onClick={() => setIsMetricsModalOpen(true)}
-                      >
-                        Show More
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                          Show More
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Client Metrics Summary Section (Half Size) */}
+                  <Card>
+                    <CardHeader className="p-4 lg:p-6">
+                      <div className="flex justify-between items-center">
+                        <CardTitle className="text-base lg:text-lg font-semibold text-gray-900 dark:text-white">Client Metrics</CardTitle>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setIsClientMetricsModalOpen(true)}
+                            className="h-8 w-8"
+                            data-testid="button-open-client-metrics-modal"
+                          >
+                            <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-4 lg:p-6">
+                      <div className="space-y-3 sm:space-y-4">
+                        {/* Speed Metrics Summary */}
+                        <div>
+                          <h3 className="text-xs sm:text-sm font-semibold text-blue-700 dark:text-blue-400 mb-2">Speed Metrics</h3>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-2 border border-blue-100 dark:border-blue-800">
+                              <div className="text-xs font-medium text-blue-700 dark:text-blue-400">1st Submission</div>
+                              <div className="text-base sm:text-lg font-bold text-blue-900 dark:text-blue-300">0 <span className="text-xs">days</span></div>
+                            </div>
+                            <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-2 border border-blue-100 dark:border-blue-800">
+                              <div className="text-xs font-medium text-blue-700 dark:text-blue-400">Time to Fill</div>
+                              <div className="text-base sm:text-lg font-bold text-blue-900 dark:text-blue-300">0 <span className="text-xs">days</span></div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Quality Metrics Summary */}
+                        <div>
+                          <h3 className="text-xs sm:text-sm font-semibold text-green-700 dark:text-green-400 mb-2">Quality Metrics</h3>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-green-50 dark:bg-green-900/20 rounded p-2 border border-green-100 dark:border-green-800">
+                              <div className="text-xs font-medium text-green-700 dark:text-green-400">Submission Rate</div>
+                              <div className="text-base sm:text-lg font-bold text-green-900 dark:text-green-300">0<span className="text-xs">%</span></div>
+                            </div>
+                            <div className="bg-green-50 dark:bg-green-900/20 rounded p-2 border border-green-100 dark:border-green-800">
+                              <div className="text-xs font-medium text-green-700 dark:text-green-400">Offer Rate</div>
+                              <div className="text-base sm:text-lg font-bold text-green-900 dark:text-green-300">0<span className="text-xs">%</span></div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Impact Metrics Summary */}
+                        <div>
+                          <h3 className="text-xs sm:text-sm font-semibold text-red-700 dark:text-red-400 mb-2">Impact Metrics</h3>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="bg-red-50 dark:bg-red-900/20 rounded p-2 border border-red-100 dark:border-red-800">
+                              <div className="text-xs font-medium text-red-700 dark:text-red-400">Client NPS</div>
+                              <div className="text-base sm:text-lg font-bold text-red-900 dark:text-red-300">+0</div>
+                            </div>
+                            <div className="bg-red-50 dark:bg-red-900/20 rounded p-2 border border-red-100 dark:border-red-800">
+                              <div className="text-xs font-medium text-red-700 dark:text-red-400">Retention Rate</div>
+                              <div className="text-base sm:text-lg font-bold text-red-900 dark:text-red-300">0<span className="text-xs">%</span></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end mt-4">
+                        <Button 
+                          className="bg-cyan-400 hover:bg-cyan-500 text-black px-3 sm:px-4 py-2 rounded text-xs sm:text-sm flex items-center gap-2"
+                          onClick={() => window.print()}
+                          data-testid="button-download-client-metrics-summary"
+                        >
+                          <Download className="h-4 w-4" />
+                          Download
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
 
                 {/* Cash Outflow Section */}
                 <Card>
@@ -7662,6 +7744,188 @@ export default function AdminDashboard() {
                 height="100%"
                 benchmarkValue={230000}
               />
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Client Metrics Modal */}
+      <Dialog open={isClientMetricsModalOpen} onOpenChange={setIsClientMetricsModalOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">Client Metrics - Full View</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            {/* Header Section */}
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold text-gray-900">Speed Metrics</h2>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <CalendarIcon className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm">12-Aug-2025</span>
+                </div>
+                <Select>
+                  <SelectTrigger className="w-24" data-testid="select-client-metrics-period">
+                    <SelectValue defaultValue="Monthly" placeholder="Monthly" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="daily">Daily</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Speed Metrics */}
+            <div className="grid grid-cols-4 gap-4">
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                <h3 className="text-sm font-medium text-blue-700 mb-2">Time to 1st Submission</h3>
+                <div className="flex items-end space-x-3 mb-2">
+                  <span className="text-3xl font-bold text-blue-900">0</span>
+                  <span className="text-sm text-blue-700 mb-1">days</span>
+                  <div className="w-3 h-3 bg-cyan-400 rounded-full mb-1"></div>
+                </div>
+              </div>
+              
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                <h3 className="text-sm font-medium text-blue-700 mb-2">Time to Interview</h3>
+                <div className="flex items-end space-x-3 mb-2">
+                  <span className="text-3xl font-bold text-blue-900">0</span>
+                  <span className="text-sm text-blue-700 mb-1">days</span>
+                  <div className="w-3 h-3 bg-red-400 rounded-full mb-1"></div>
+                </div>
+              </div>
+              
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                <h3 className="text-sm font-medium text-blue-700 mb-2">Time to Offer</h3>
+                <div className="flex items-end space-x-3 mb-2">
+                  <span className="text-3xl font-bold text-blue-900">0</span>
+                  <span className="text-sm text-blue-700 mb-1">days</span>
+                  <div className="w-3 h-3 bg-purple-400 rounded-full mb-1"></div>
+                </div>
+              </div>
+              
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                <h3 className="text-sm font-medium text-blue-700 mb-2">Time to Fill</h3>
+                <div className="flex items-end space-x-3 mb-2">
+                  <span className="text-3xl font-bold text-blue-900">0</span>
+                  <span className="text-sm text-blue-700 mb-1">days</span>
+                  <div className="w-3 h-3 bg-amber-600 rounded-full mb-1"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quality Metrics */}
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Quality Metrics</h2>
+              <div className="grid grid-cols-4 gap-4">
+                <div className="bg-green-100 rounded-lg p-4 border border-green-200">
+                  <h3 className="text-sm font-medium text-green-700 mb-2">Submission to Short List %</h3>
+                  <div className="flex items-end space-x-3 mb-2">
+                    <span className="text-3xl font-bold text-green-800">0</span>
+                    <span className="text-sm text-green-700 mb-1">%</span>
+                    <div className="w-3 h-3 bg-cyan-400 rounded-full mb-1"></div>
+                  </div>
+                </div>
+                
+                <div className="bg-green-100 rounded-lg p-4 border border-green-200">
+                  <h3 className="text-sm font-medium text-green-700 mb-2">Interview to Offer %</h3>
+                  <div className="flex items-end space-x-3 mb-2">
+                    <span className="text-3xl font-bold text-green-800">0</span>
+                    <span className="text-sm text-green-700 mb-1">%</span>
+                    <div className="w-3 h-3 bg-red-400 rounded-full mb-1"></div>
+                  </div>
+                </div>
+                
+                <div className="bg-green-100 rounded-lg p-4 border border-green-200">
+                  <h3 className="text-sm font-medium text-green-700 mb-2">Offer Acceptance %</h3>
+                  <div className="flex items-end space-x-3 mb-2">
+                    <span className="text-3xl font-bold text-green-800">0</span>
+                    <span className="text-sm text-green-700 mb-1">%</span>
+                    <div className="w-3 h-3 bg-purple-400 rounded-full mb-1"></div>
+                  </div>
+                </div>
+                
+                <div className="bg-green-100 rounded-lg p-4 border border-green-200">
+                  <h3 className="text-sm font-medium text-green-700 mb-2">Early Attrition %</h3>
+                  <div className="flex items-end space-x-3 mb-2">
+                    <span className="text-3xl font-bold text-green-800">0</span>
+                    <span className="text-sm text-green-700 mb-1">%</span>
+                    <div className="w-3 h-3 bg-amber-600 rounded-full mb-1"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Impact Metrics */}
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Impact Metrics</h2>
+              <div className="grid grid-cols-4 gap-4 mb-4">
+                <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                  <h3 className="text-sm font-medium text-red-700 mb-2">Speed to Hire value</h3>
+                  <div className="text-3xl font-bold text-red-600">0</div>
+                  <div className="text-sm text-gray-600 mt-1">Days faster*</div>
+                </div>
+                
+                <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                  <h3 className="text-sm font-medium text-red-700 mb-2">Revenue Impact Of Delay</h3>
+                  <div className="text-3xl font-bold text-red-600">0</div>
+                  <div className="text-sm text-gray-600 mt-1">Lost per Role*</div>
+                </div>
+                
+                <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                  <h3 className="text-sm font-medium text-purple-700 mb-2">Client NPS</h3>
+                  <div className="text-3xl font-bold text-purple-600">+0</div>
+                  <div className="text-sm text-gray-600 mt-1">Net Promoter Score*</div>
+                </div>
+                
+                <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                  <h3 className="text-sm font-medium text-purple-700 mb-2">Candidate NPS</h3>
+                  <div className="text-3xl font-bold text-purple-600">+0</div>
+                  <div className="text-sm text-gray-600 mt-1">Net Promoter Score*</div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-4 gap-4">
+                <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                  <h3 className="text-sm font-medium text-yellow-700 mb-2">Feedback Turn Around</h3>
+                  <div className="text-3xl font-bold text-yellow-600">0</div>
+                  <div className="text-sm text-gray-600 mt-1">days</div>
+                  <div className="text-xs text-gray-500 mt-1">Industry Avg. 5 days*</div>
+                </div>
+                
+                <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                  <h3 className="text-sm font-medium text-yellow-700 mb-2">First Year Retention Rate</h3>
+                  <div className="text-3xl font-bold text-yellow-600">0</div>
+                  <div className="text-sm text-gray-600 mt-1">%</div>
+                </div>
+                
+                <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                  <h3 className="text-sm font-medium text-yellow-700 mb-2">Fulfillment Rate</h3>
+                  <div className="text-3xl font-bold text-yellow-600">0</div>
+                  <div className="text-sm text-gray-600 mt-1">%</div>
+                </div>
+                
+                <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                  <h3 className="text-sm font-medium text-yellow-700 mb-2">Revenue Recovered</h3>
+                  <div className="text-3xl font-bold text-yellow-600">0 <span className="text-2xl">L</span></div>
+                  <div className="text-sm text-gray-600 mt-1">Gained per hire*</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Download Button */}
+            <div className="flex justify-end mt-6">
+              <Button 
+                onClick={() => window.print()}
+                className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded shadow-lg flex items-center gap-2"
+                data-testid="button-download-metrics-modal"
+              >
+                <Download className="h-4 w-4" />
+                Download PDF
+              </Button>
             </div>
           </div>
         </DialogContent>
