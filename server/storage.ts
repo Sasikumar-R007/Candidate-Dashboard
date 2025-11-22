@@ -30,7 +30,9 @@ import {
   type ImpactMetrics,
   type InsertImpactMetrics,
   type TargetMappings,
-  type InsertTargetMappings
+  type InsertTargetMappings,
+  type RevenueMapping,
+  type InsertRevenueMapping
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
@@ -144,6 +146,14 @@ export interface IStorage {
       status: string;
     }>;
   }>;
+  
+  // Revenue Mapping methods
+  createRevenueMapping(mapping: InsertRevenueMapping): Promise<RevenueMapping>;
+  getAllRevenueMappings(): Promise<RevenueMapping[]>;
+  getRevenueMappingById(id: string): Promise<RevenueMapping | undefined>;
+  updateRevenueMapping(id: string, updates: Partial<RevenueMapping>): Promise<RevenueMapping | undefined>;
+  deleteRevenueMapping(id: string): Promise<boolean>;
+  getClientById(id: string): Promise<Client | undefined>;
 }
 
 export class MemStorage implements IStorage {

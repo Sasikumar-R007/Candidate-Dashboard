@@ -36,6 +36,8 @@ import {
   type InsertImpactMetrics,
   type TargetMappings,
   type InsertTargetMappings,
+  type RevenueMapping,
+  type InsertRevenueMapping,
   users,
   profiles,
   jobPreferences,
@@ -53,7 +55,8 @@ import {
   notifications,
   clients,
   impactMetrics,
-  targetMappings
+  targetMappings,
+  revenueMappings
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc } from "drizzle-orm";
@@ -729,5 +732,38 @@ export class DatabaseStorage implements IStorage {
       currentQuarter,
       allQuarters
     };
+  }
+
+  async createRevenueMapping(mapping: InsertRevenueMapping): Promise<RevenueMapping> {
+    const [revenueMapping] = await db.insert(revenueMappings).values(mapping).returning();
+    return revenueMapping;
+  }
+
+  async getAllRevenueMappings(): Promise<RevenueMapping[]> {
+    return await db.select().from(revenueMappings).orderBy(desc(revenueMappings.createdAt));
+  }
+
+  async getRevenueMappingById(id: string): Promise<RevenueMapping | undefined> {
+    const [mapping] = await db.select().from(revenueMappings).where(eq(revenueMappings.id, id));
+    return mapping || undefined;
+  }
+
+  async updateRevenueMapping(id: string, updates: Partial<RevenueMapping>): Promise<RevenueMapping | undefined> {
+    const [mapping] = await db
+      .update(revenueMappings)
+      .set(updates)
+      .where(eq(revenueMappings.id, id))
+      .returning();
+    return mapping || undefined;
+  }
+
+  async deleteRevenueMapping(id: string): Promise<boolean> {
+    const result = await db.delete(revenueMappings).where(eq(revenueMappings.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getClientById(id: string): Promise<Client | undefined> {
+    const [client] = await db.select().from(clients).where(eq(clients.id, id));
+    return client || undefined;
   }
 }

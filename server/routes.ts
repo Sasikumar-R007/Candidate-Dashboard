@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import session from "express-session";
 import fs from "fs";
 import { storage } from "./storage";
-import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, chatRooms, chatMessages, chatParticipants, chatAttachments, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema } from "@shared/schema";
+import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import multer from "multer";
@@ -2597,6 +2597,229 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get target mappings error:', error);
       res.status(500).json({ message: "Failed to get target mappings" });
+    }
+  });
+
+  // Revenue Mappings CRUD operations
+  
+  // Create revenue mapping
+  app.post("/api/admin/revenue-mappings", async (req, res) => {
+    try {
+      const {
+        talentAdvisorId,
+        teamLeadId,
+        year,
+        quarter,
+        position,
+        clientId,
+        clientType,
+        partnerName,
+        offeredDate,
+        closureDate,
+        percentage,
+        revenue,
+        incentivePlan,
+        incentive,
+        source,
+        invoiceDate,
+        invoiceNumber,
+        receivedPayment,
+        paymentDetails,
+        paymentStatus,
+        incentivePaidMonth,
+      } = req.body;
+
+      // Fetch employee and client information for validation and names
+      const talentAdvisor = await storage.getEmployeeById(talentAdvisorId);
+      const teamLead = await storage.getEmployeeById(teamLeadId);
+      const client = await storage.getClientById(clientId);
+
+      if (!talentAdvisor) {
+        return res.status(400).json({ message: "Talent advisor not found" });
+      }
+
+      if (!teamLead) {
+        return res.status(400).json({ message: "Team lead not found" });
+      }
+
+      if (!client) {
+        return res.status(400).json({ message: "Client not found" });
+      }
+
+      const revenueMappingData = insertRevenueMappingSchema.parse({
+        talentAdvisorId,
+        talentAdvisorName: talentAdvisor.name,
+        teamLeadId,
+        teamLeadName: teamLead.name,
+        year: parseInt(year),
+        quarter,
+        position,
+        clientId,
+        clientName: client.brandName,
+        clientType,
+        partnerName: clientType === "Partner" ? partnerName : null,
+        offeredDate,
+        closureDate,
+        percentage: parseFloat(percentage),
+        revenue: parseFloat(revenue),
+        incentivePlan,
+        incentive: parseFloat(incentive),
+        source,
+        invoiceDate,
+        invoiceNumber,
+        receivedPayment: receivedPayment ? parseFloat(receivedPayment) : null,
+        paymentDetails,
+        paymentStatus,
+        incentivePaidMonth,
+        createdAt: new Date().toISOString(),
+      });
+
+      const revenueMapping = await storage.createRevenueMapping(revenueMappingData);
+
+      res.status(201).json({
+        message: "Revenue mapping created successfully",
+        revenueMapping,
+      });
+    } catch (error: any) {
+      console.error("Create revenue mapping error:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({
+          message: "Invalid revenue mapping data",
+          errors: error.errors,
+        });
+      }
+      res.status(500).json({ message: "Failed to create revenue mapping" });
+    }
+  });
+
+  // Get all revenue mappings
+  app.get("/api/admin/revenue-mappings", async (req, res) => {
+    try {
+      const revenueMappings = await storage.getAllRevenueMappings();
+      res.json(revenueMappings);
+    } catch (error) {
+      console.error("Get revenue mappings error:", error);
+      res.status(500).json({ message: "Failed to get revenue mappings" });
+    }
+  });
+
+  // Update revenue mapping
+  app.put("/api/admin/revenue-mappings/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const {
+        talentAdvisorId,
+        teamLeadId,
+        year,
+        quarter,
+        position,
+        clientId,
+        clientType,
+        partnerName,
+        offeredDate,
+        closureDate,
+        percentage,
+        revenue,
+        incentivePlan,
+        incentive,
+        source,
+        invoiceDate,
+        invoiceNumber,
+        receivedPayment,
+        paymentDetails,
+        paymentStatus,
+        incentivePaidMonth,
+      } = req.body;
+
+      // Fetch employee and client information if IDs are being updated
+      let talentAdvisorName, teamLeadName, clientName;
+
+      if (talentAdvisorId) {
+        const talentAdvisor = await storage.getEmployeeById(talentAdvisorId);
+        if (!talentAdvisor) {
+          return res.status(400).json({ message: "Talent advisor not found" });
+        }
+        talentAdvisorName = talentAdvisor.name;
+      }
+
+      if (teamLeadId) {
+        const teamLead = await storage.getEmployeeById(teamLeadId);
+        if (!teamLead) {
+          return res.status(400).json({ message: "Team lead not found" });
+        }
+        teamLeadName = teamLead.name;
+      }
+
+      if (clientId) {
+        const client = await storage.getClientById(clientId);
+        if (!client) {
+          return res.status(400).json({ message: "Client not found" });
+        }
+        clientName = client.brandName;
+      }
+
+      const updateData: any = {};
+      if (talentAdvisorId) updateData.talentAdvisorId = talentAdvisorId;
+      if (talentAdvisorName) updateData.talentAdvisorName = talentAdvisorName;
+      if (teamLeadId) updateData.teamLeadId = teamLeadId;
+      if (teamLeadName) updateData.teamLeadName = teamLeadName;
+      if (year) updateData.year = parseInt(year);
+      if (quarter) updateData.quarter = quarter;
+      if (position) updateData.position = position;
+      if (clientId) updateData.clientId = clientId;
+      if (clientName) updateData.clientName = clientName;
+      if (clientType) updateData.clientType = clientType;
+      if (partnerName !== undefined) updateData.partnerName = clientType === "Partner" ? partnerName : null;
+      if (offeredDate) updateData.offeredDate = offeredDate;
+      if (closureDate) updateData.closureDate = closureDate;
+      if (percentage) updateData.percentage = parseFloat(percentage);
+      if (revenue) updateData.revenue = parseFloat(revenue);
+      if (incentivePlan) updateData.incentivePlan = incentivePlan;
+      if (incentive) updateData.incentive = parseFloat(incentive);
+      if (source) updateData.source = source;
+      if (invoiceDate) updateData.invoiceDate = invoiceDate;
+      if (invoiceNumber) updateData.invoiceNumber = invoiceNumber;
+      if (receivedPayment !== undefined) updateData.receivedPayment = receivedPayment ? parseFloat(receivedPayment) : null;
+      if (paymentDetails) updateData.paymentDetails = paymentDetails;
+      if (paymentStatus) updateData.paymentStatus = paymentStatus;
+      if (incentivePaidMonth) updateData.incentivePaidMonth = incentivePaidMonth;
+
+      const updatedRevenueMapping = await storage.updateRevenueMapping(id, updateData);
+
+      if (!updatedRevenueMapping) {
+        return res.status(404).json({ message: "Revenue mapping not found" });
+      }
+
+      res.json({
+        message: "Revenue mapping updated successfully",
+        revenueMapping: updatedRevenueMapping,
+      });
+    } catch (error: any) {
+      console.error("Update revenue mapping error:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({
+          message: "Invalid revenue mapping data",
+          errors: error.errors,
+        });
+      }
+      res.status(500).json({ message: "Failed to update revenue mapping" });
+    }
+  });
+
+  // Delete revenue mapping
+  app.delete("/api/admin/revenue-mappings/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteRevenueMapping(id);
+
+      if (!deleted) {
+        return res.status(404).json({ message: "Revenue mapping not found" });
+      }
+
+      res.json({ message: "Revenue mapping deleted successfully" });
+    } catch (error) {
+      console.error("Delete revenue mapping error:", error);
+      res.status(500).json({ message: "Failed to delete revenue mapping" });
     }
   });
 
