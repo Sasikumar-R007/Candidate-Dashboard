@@ -52,25 +52,25 @@ export default function TeamPerformanceTableModal({ isOpen, onClose }: TeamPerfo
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg flex flex-col">
         <DialogHeader className="p-4 border-b dark:border-gray-700 flex-shrink-0">
-          <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">
-            Team Performance - Table View
-          </DialogTitle>
-        </DialogHeader>
-        
-        <div className="p-6 overflow-y-auto flex-1">
-          <div className="mb-4">
-            <div className="relative">
+          <div className="flex items-center justify-between gap-4">
+            <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">
+              Team Performance - Table View
+            </DialogTitle>
+            <div className="relative w-64">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
                 type="text"
-                placeholder="Search by talent advisor, date, tenure, closures..."
+                placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 h-9"
                 data-testid="input-search-team-performance"
               />
             </div>
           </div>
+        </DialogHeader>
+        
+        <div className="p-6 overflow-y-auto flex-1">
           <div className="overflow-x-auto" data-testid="table-team-performance">
             <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
               <thead>

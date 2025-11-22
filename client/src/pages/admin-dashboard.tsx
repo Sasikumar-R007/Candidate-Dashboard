@@ -963,6 +963,20 @@ export default function AdminDashboard() {
   const [selectedRequirement, setSelectedRequirement] = useState<any>(null);
   const queryClient = useQueryClient();
   
+  // Check if all cashout form fields are filled
+  const isCashoutFormComplete = useMemo(() => {
+    return !!(
+      cashoutForm.month && 
+      cashoutForm.year && 
+      cashoutForm.employees && 
+      cashoutForm.salary && 
+      cashoutForm.incentive && 
+      cashoutForm.tools && 
+      cashoutForm.rent && 
+      cashoutForm.others
+    );
+  }, [cashoutForm]);
+  
   // Fetch target mappings from API
   const { data: targetMappings = [], isLoading: isLoadingTargets } = useQuery<TargetMappings[]>({
     queryKey: ["/api/admin/target-mappings"],
@@ -5268,8 +5282,9 @@ export default function AdminDashboard() {
                       </div>
                       <div className="flex items-end">
                         <Button 
-                          className="bg-cyan-400 hover:bg-cyan-500 text-black px-4 py-2 rounded w-20"
+                          className="bg-cyan-400 hover:bg-cyan-500 text-black px-4 py-2 rounded w-20 disabled:opacity-50 disabled:cursor-not-allowed"
                           onClick={handleAddCashoutData}
+                          disabled={!isCashoutFormComplete}
                           data-testid="button-add-cashout"
                         >
                           Add
