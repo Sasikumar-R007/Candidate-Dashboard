@@ -427,6 +427,35 @@ export const chatAttachments = pgTable("chat_attachments", {
   uploadedAt: text("uploaded_at").notNull(),
 });
 
+export const revenueMappings = pgTable("revenue_mappings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  talentAdvisorId: varchar("talent_advisor_id").notNull(),
+  talentAdvisorName: text("talent_advisor_name").notNull(),
+  teamLeadId: varchar("team_lead_id").notNull(),
+  teamLeadName: text("team_lead_name").notNull(),
+  year: integer("year").notNull(),
+  quarter: text("quarter").notNull(), // JFM, AMJ, JAS, OND
+  position: text("position").notNull(),
+  clientId: varchar("client_id").notNull(),
+  clientName: text("client_name").notNull(),
+  clientType: text("client_type").notNull(), // Direct, Partner
+  partnerName: text("partner_name"),
+  offeredDate: text("offered_date"),
+  closureDate: text("closure_date"),
+  percentage: real("percentage").notNull(),
+  revenue: real("revenue").notNull(),
+  incentivePlan: text("incentive_plan").notNull(), // TL, TA, Business Development
+  incentive: real("incentive").notNull(),
+  source: text("source").notNull(), // LinkedIn, Naukri, Referral, Direct, Other
+  invoiceDate: text("invoice_date"),
+  invoiceNumber: text("invoice_number"),
+  receivedPayment: real("received_payment"),
+  paymentDetails: text("payment_details"), // Fully paid, Part paid
+  paymentStatus: text("payment_status"),
+  incentivePaidMonth: text("incentive_paid_month"),
+  createdAt: text("created_at").notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
 });
@@ -619,6 +648,11 @@ export const insertChatAttachmentSchema = createInsertSchema(chatAttachments).om
   id: true,
 });
 
+export const insertRevenueMappingSchema = createInsertSchema(revenueMappings).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
@@ -683,3 +717,5 @@ export type InsertChatMessage = z.infer<typeof insertChatMessageSchema>;
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type InsertChatAttachment = z.infer<typeof insertChatAttachmentSchema>;
 export type ChatAttachment = typeof chatAttachments.$inferSelect;
+export type InsertRevenueMapping = z.infer<typeof insertRevenueMappingSchema>;
+export type RevenueMapping = typeof revenueMappings.$inferSelect;
