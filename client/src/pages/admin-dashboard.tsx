@@ -3116,6 +3116,7 @@ export default function AdminDashboard() {
                 <CardHeader className="pb-2 pt-3 flex flex-row flex-wrap items-center justify-between gap-2">
                   <CardTitle className="text-lg text-gray-900 dark:text-white">Team Performance</CardTitle>
                   <Button 
+                    className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded"
                     onClick={() => setIsTeamPerformanceTableModalOpen(true)}
                     data-testid="button-view-team-performance-table"
                   >
@@ -3179,6 +3180,7 @@ export default function AdminDashboard() {
                 <CardHeader className="pb-2 pt-3 flex flex-row flex-wrap items-center justify-between gap-2">
                   <CardTitle className="text-lg text-gray-900 dark:text-white">List Of Closures</CardTitle>
                   <Button 
+                    className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded"
                     onClick={() => setIsClosureModalOpen(true)}
                     data-testid="button-view-list-closures"
                   >
