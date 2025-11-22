@@ -1,5 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
+import { useState, useMemo } from "react";
 
 interface TeamPerformanceTableModalProps {
   isOpen: boolean;
@@ -20,6 +23,30 @@ const teamPerformanceData = [
 ];
 
 export default function TeamPerformanceTableModal({ isOpen, onClose }: TeamPerformanceTableModalProps) {
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredData = useMemo(() => {
+    if (!searchTerm) return teamPerformanceData;
+    
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    return teamPerformanceData.filter(member => {
+      const talentAdvisor = String(member.talentAdvisor ?? "").toLowerCase();
+      const joiningDate = String(member.joiningDate ?? "").toLowerCase();
+      const tenure = String(member.tenure ?? "").toLowerCase();
+      const closures = String(member.closures ?? "").toLowerCase();
+      const lastClosure = String(member.lastClosure ?? "").toLowerCase();
+      const qtrsAchieved = String(member.qtrsAchieved ?? "").toLowerCase();
+      
+      return (
+        talentAdvisor.includes(lowerSearchTerm) ||
+        joiningDate.includes(lowerSearchTerm) ||
+        tenure.includes(lowerSearchTerm) ||
+        closures.includes(lowerSearchTerm) ||
+        lastClosure.includes(lowerSearchTerm) ||
+        qtrsAchieved.includes(lowerSearchTerm)
+      );
+    });
+  }, [searchTerm]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -31,6 +58,19 @@ export default function TeamPerformanceTableModal({ isOpen, onClose }: TeamPerfo
         </DialogHeader>
         
         <div className="p-6 overflow-y-auto flex-1">
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                type="text"
+                placeholder="Search by talent advisor, date, tenure, closures..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+                data-testid="input-search-team-performance"
+              />
+            </div>
+          </div>
           <div className="overflow-x-auto" data-testid="table-team-performance">
             <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
               <thead>
@@ -44,16 +84,24 @@ export default function TeamPerformanceTableModal({ isOpen, onClose }: TeamPerfo
                 </tr>
               </thead>
               <tbody>
-                {teamPerformanceData.map((member, index) => (
-                  <tr key={index} className="border-b border-gray-100 dark:border-gray-700">
-                    <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium">{member.talentAdvisor}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{member.joiningDate}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{member.tenure}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{member.closures}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{member.lastClosure}</td>
-                    <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{member.qtrsAchieved}</td>
+                {filteredData.length > 0 ? (
+                  filteredData.map((member, index) => (
+                    <tr key={index} className="border-b border-gray-100 dark:border-gray-700">
+                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium">{member.talentAdvisor}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{member.joiningDate}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{member.tenure}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{member.closures}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{member.lastClosure}</td>
+                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{member.qtrsAchieved}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                      No results found for "{searchTerm}"
+                    </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>

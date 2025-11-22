@@ -1,5 +1,8 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
+import { useState, useMemo } from "react";
 
 interface ClosureModalProps {
   isOpen: boolean;
@@ -22,6 +25,33 @@ const closureData = [
 ];
 
 export default function ClosureModal({ isOpen, onClose }: ClosureModalProps) {
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredData = useMemo(() => {
+    if (!searchTerm) return closureData;
+    
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    return closureData.filter(closure => {
+      const candidate = String(closure.candidate ?? "").toLowerCase();
+      const position = String(closure.position ?? "").toLowerCase();
+      const client = String(closure.client ?? "").toLowerCase();
+      const quarter = String(closure.quarter ?? "").toLowerCase();
+      const talentAdvisor = String(closure.talentAdvisor ?? "").toLowerCase();
+      const ctc = String(closure.ctc ?? "").toLowerCase();
+      const revenue = String(closure.revenue ?? "").toLowerCase();
+      
+      return (
+        candidate.includes(lowerSearchTerm) ||
+        position.includes(lowerSearchTerm) ||
+        client.includes(lowerSearchTerm) ||
+        quarter.includes(lowerSearchTerm) ||
+        talentAdvisor.includes(lowerSearchTerm) ||
+        ctc.includes(lowerSearchTerm) ||
+        revenue.includes(lowerSearchTerm)
+      );
+    });
+  }, [searchTerm]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-6xl max-h-[90vh] mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg flex flex-col">
@@ -32,6 +62,19 @@ export default function ClosureModal({ isOpen, onClose }: ClosureModalProps) {
         </DialogHeader>
         
         <div className="p-6 overflow-y-auto flex-1">
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                type="text"
+                placeholder="Search by candidate, position, client, quarter, advisor..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+                data-testid="input-search-closures"
+              />
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
               <thead>
@@ -46,17 +89,25 @@ export default function ClosureModal({ isOpen, onClose }: ClosureModalProps) {
                 </tr>
               </thead>
               <tbody>
-                {closureData.map((closure, index) => (
-                  <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
-                    <td className="py-2 px-3 text-xs text-gray-900 dark:text-white font-medium">{closure.candidate}</td>
-                    <td className="py-2 px-3 text-xs text-gray-600 dark:text-gray-400">{closure.position}</td>
-                    <td className="py-2 px-3 text-xs text-gray-600 dark:text-gray-400">{closure.client}</td>
-                    <td className="py-2 px-3 text-xs text-gray-600 dark:text-gray-400">{closure.quarter}</td>
-                    <td className="py-2 px-3 text-xs text-gray-600 dark:text-gray-400">{closure.talentAdvisor}</td>
-                    <td className="py-2 px-3 text-xs text-gray-600 dark:text-gray-400">{closure.ctc}</td>
-                    <td className="py-2 px-3 text-xs text-gray-600 dark:text-gray-400">{closure.revenue}</td>
+                {filteredData.length > 0 ? (
+                  filteredData.map((closure, index) => (
+                    <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
+                      <td className="py-2 px-3 text-xs text-gray-900 dark:text-white font-medium">{closure.candidate}</td>
+                      <td className="py-2 px-3 text-xs text-gray-600 dark:text-gray-400">{closure.position}</td>
+                      <td className="py-2 px-3 text-xs text-gray-600 dark:text-gray-400">{closure.client}</td>
+                      <td className="py-2 px-3 text-xs text-gray-600 dark:text-gray-400">{closure.quarter}</td>
+                      <td className="py-2 px-3 text-xs text-gray-600 dark:text-gray-400">{closure.talentAdvisor}</td>
+                      <td className="py-2 px-3 text-xs text-gray-600 dark:text-gray-400">{closure.ctc}</td>
+                      <td className="py-2 px-3 text-xs text-gray-600 dark:text-gray-400">{closure.revenue}</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                      No results found for "{searchTerm}"
+                    </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
