@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,14 +7,18 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 interface RevenueMappingModalProps {
   isOpen: boolean;
   onClose: () => void;
+  editingRevenueMapping?: any;
 }
 
-export default function RevenueMappingModal({ isOpen, onClose }: RevenueMappingModalProps) {
+export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMapping }: RevenueMappingModalProps) {
+  const queryClient = useQueryClient();
   const [talentAdvisor, setTalentAdvisor] = useState<string>("");
   const [teamLead, setTeamLead] = useState<string>("");
   const [year, setYear] = useState<string>("");
@@ -60,10 +64,127 @@ export default function RevenueMappingModal({ isOpen, onClose }: RevenueMappingM
     emp.designation?.toLowerCase().includes('lead')
   );
 
+  // Populate form when editing
+  useEffect(() => {
+    if (editingRevenueMapping) {
+      setTalentAdvisor(editingRevenueMapping.talentAdvisorId || "");
+      setTeamLead(editingRevenueMapping.teamLeadId || "");
+      setYear(editingRevenueMapping.year?.toString() || "");
+      setQuarter(editingRevenueMapping.quarter || "");
+      setPosition(editingRevenueMapping.position || "");
+      setClient(editingRevenueMapping.clientId || "");
+      setClientType(editingRevenueMapping.clientType || "");
+      setPartnerName(editingRevenueMapping.partnerName || "");
+      setOfferedDate(editingRevenueMapping.offeredDate ? new Date(editingRevenueMapping.offeredDate) : undefined);
+      setClosureDate(editingRevenueMapping.closureDate ? new Date(editingRevenueMapping.closureDate) : undefined);
+      setPercentage(editingRevenueMapping.percentage?.toString() || "");
+      setRevenue(editingRevenueMapping.revenue?.toString() || "");
+      setIncentivePlan(editingRevenueMapping.incentivePlan || "");
+      setIncentive(editingRevenueMapping.incentive?.toString() || "");
+      setPaymentStatus(editingRevenueMapping.paymentReceived ? "Received" : "Pending");
+      setSource(editingRevenueMapping.source || "");
+      setInvoiceDate(editingRevenueMapping.invoiceDate ? new Date(editingRevenueMapping.invoiceDate) : undefined);
+      setInvoiceNumber(editingRevenueMapping.invoiceNumber || "");
+      setReceivedPayment(editingRevenueMapping.paymentReceived ? "Yes" : "No");
+      setPaymentDetails(editingRevenueMapping.paymentDetails || "");
+      setIncentivePaidMonth(editingRevenueMapping.incentivePaidMonth || "");
+    } else {
+      // Reset form when creating new
+      setTalentAdvisor("");
+      setTeamLead("");
+      setYear("");
+      setQuarter("");
+      setPosition("");
+      setClient("");
+      setClientType("");
+      setPartnerName("");
+      setOfferedDate(undefined);
+      setClosureDate(undefined);
+      setPercentage("");
+      setRevenue("");
+      setIncentivePlan("");
+      setIncentive("");
+      setPaymentStatus("");
+      setSource("");
+      setInvoiceDate(undefined);
+      setInvoiceNumber("");
+      setReceivedPayment("");
+      setPaymentDetails("");
+      setIncentivePaidMonth("");
+    }
+  }, [editingRevenueMapping, isOpen]);
+
+  // Create/Update revenue mapping mutation
+  const revenueMappingMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (editingRevenueMapping) {
+        return await apiRequest(`/api/admin/revenue-mappings/${editingRevenueMapping.id}`, {
+          method: "PUT",
+          body: JSON.stringify(data),
+          headers: { "Content-Type": "application/json" },
+        });
+      } else {
+        return await apiRequest("/api/admin/revenue-mappings", {
+          method: "POST",
+          body: JSON.stringify(data),
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/revenue-mappings"] });
+      toast({
+        title: "Success",
+        description: editingRevenueMapping ? "Revenue mapping updated successfully" : "Revenue mapping created successfully",
+      });
+      onClose();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save revenue mapping",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSubmit = () => {
-    // Handle form submission
-    console.log("Form submitted");
-    onClose();
+    // Validate required fields
+    if (!talentAdvisor || !teamLead || !year || !quarter || !position || !client || !clientType || !percentage || !revenue || !incentivePlan || !incentive || !source) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Send as strings - backend will parse them
+    const data = {
+      talentAdvisorId: talentAdvisor,
+      teamLeadId: teamLead,
+      year, // string
+      quarter,
+      position,
+      clientId: client,
+      clientType,
+      partnerName: clientType === "Partner" ? partnerName : null,
+      offeredDate: offeredDate ? format(offeredDate, "yyyy-MM-dd") : null,
+      closureDate: closureDate ? format(closureDate, "yyyy-MM-dd") : null,
+      percentage, // string
+      revenue, // string
+      incentivePlan,
+      incentive, // string
+      source,
+      invoiceDate: invoiceDate ? format(invoiceDate, "yyyy-MM-dd") : null,
+      invoiceNumber: invoiceNumber || null,
+      receivedPayment: receivedPayment || null,
+      paymentDetails: paymentDetails || null,
+      paymentStatus: paymentStatus || null,
+      incentivePaidMonth: incentivePaidMonth || null,
+    };
+
+    revenueMappingMutation.mutate(data);
   };
 
   return (
