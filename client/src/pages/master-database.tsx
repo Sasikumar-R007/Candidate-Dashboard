@@ -54,7 +54,15 @@ export default function MasterDatabase() {
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
   const [isResumeDrawerOpen, setIsResumeDrawerOpen] = useState(false);
   const [selectedResume, setSelectedResume] = useState<ResumeData | EmployeeData | ClientData | null>(null);
-  const [deletedIds, setDeletedIds] = useState<number[]>([]);
+  const [deletedIds, setDeletedIds] = useState<{
+    resume: number[];
+    employee: number[];
+    client: number[];
+  }>({
+    resume: [],
+    employee: [],
+    client: []
+  });
   
   // Advanced filter state
   const [advancedFilters, setAdvancedFilters] = useState({
@@ -133,8 +141,8 @@ export default function MasterDatabase() {
 
   // Filter data based on search, status, and advanced filters
   const filteredData = getCurrentData().filter(item => {
-    // Exclude deleted items
-    if (deletedIds.includes(item.id)) {
+    // Exclude deleted items for the current profile type
+    if (deletedIds[profileType].includes(item.id)) {
       return false;
     }
     
@@ -264,7 +272,10 @@ export default function MasterDatabase() {
   // Handle delete row
   const handleDeleteRow = (e: React.MouseEvent, itemId: number) => {
     e.stopPropagation();
-    setDeletedIds(prev => [...prev, itemId]);
+    setDeletedIds(prev => ({
+      ...prev,
+      [profileType]: [...prev[profileType], itemId]
+    }));
     // Close drawer if the deleted item is currently selected
     if (selectedResume && selectedResume.id === itemId) {
       setIsResumeDrawerOpen(false);
