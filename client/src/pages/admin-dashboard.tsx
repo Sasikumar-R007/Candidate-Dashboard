@@ -4617,6 +4617,105 @@ export default function AdminDashboard() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Revenue Data Table */}
+            <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
+              <CardHeader className="pb-2 pt-3 flex flex-row flex-wrap items-center justify-between gap-2">
+                <CardTitle className="text-lg text-gray-900 dark:text-white">Revenue Data</CardTitle>
+                <Button 
+                  className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded"
+                  onClick={() => {
+                    setEditingRevenueMapping(null);
+                    setIsRevenueMappingModalOpen(true);
+                  }}
+                  data-testid="button-add-revenue-mapping-2"
+                >
+                  + Add Revenue
+                </Button>
+              </CardHeader>
+              <CardContent className="p-3">
+                <div className="overflow-x-auto admin-scrollbar">
+                  {isLoadingRevenue ? (
+                    <div className="text-center py-8 text-gray-600 dark:text-gray-400">
+                      Loading revenue data...
+                    </div>
+                  ) : revenueMappings.length === 0 ? (
+                    <div className="text-center py-8 text-gray-600 dark:text-gray-400">
+                      No revenue data available
+                    </div>
+                  ) : (
+                    <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
+                      <thead>
+                        <tr className="bg-gray-200 dark:bg-gray-700">
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Talent Advisor</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Team Lead</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Position</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Client</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Quarter</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Year</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Revenue</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Payment Status</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {revenueMappings.map((mapping: any) => (
+                          <tr key={mapping.id} className="border-b border-gray-100 dark:border-gray-700" data-testid={`row-revenue-2-${mapping.id}`}>
+                            <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{mapping.talentAdvisorName || 'N/A'}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{mapping.teamLeadName || 'N/A'}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{mapping.position || 'N/A'}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{mapping.clientName || 'N/A'}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{mapping.quarter || 'N/A'}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{mapping.year || 'N/A'}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
+                              {mapping.revenue ? `₹${Number(mapping.revenue).toLocaleString('en-IN')}` : 'N/A'}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className={`px-2 py-1 text-xs rounded ${
+                                mapping.receivedPayment 
+                                  ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
+                                  : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
+                              }`}>
+                                {mapping.receivedPayment ? 'Received' : 'Pending'}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex gap-2">
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setEditingRevenueMapping(mapping);
+                                    setIsRevenueMappingModalOpen(true);
+                                  }}
+                                  data-testid={`button-edit-revenue-2-${mapping.id}`}
+                                >
+                                  <EditIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    if (confirm('Are you sure you want to delete this revenue mapping?')) {
+                                      deleteRevenueMappingMutation.mutate(mapping.id);
+                                    }
+                                  }}
+                                  data-testid={`button-delete-revenue-2-${mapping.id}`}
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
             </div>
 
             {/* Right Sidebar - Quarterly/Yearly Metrics */}
@@ -5243,7 +5342,10 @@ export default function AdminDashboard() {
                       <div className="flex justify-end mt-4">
                         <Button 
                           className="bg-cyan-400 hover:bg-cyan-500 text-black px-3 sm:px-4 py-2 rounded text-xs sm:text-sm flex items-center gap-2"
-                          onClick={() => window.print()}
+                          onClick={() => {
+                            setIsClientMetricsModalOpen(true);
+                            setTimeout(() => window.print(), 300);
+                          }}
                           data-testid="button-download-client-metrics-summary"
                         >
                           <Download className="h-4 w-4" />
