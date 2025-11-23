@@ -12,6 +12,14 @@ interface AddRequirementModalProps {
   onClose: () => void;
 }
 
+interface Employee {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  employeeId: string;
+}
+
 export default function AddRequirementModal({ isOpen, onClose }: AddRequirementModalProps) {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
@@ -24,9 +32,17 @@ export default function AddRequirementModal({ isOpen, onClose }: AddRequirementM
     teamLead: ''
   });
 
-  // Get team leads for dropdown
-  const teamLeads = ["Arun", "Anusha"];
-  const talentAdvisors = ["Mel Gibson", "Robert Kim", "David Wilson", "Kevin Brown", "Tom Anderson"];
+  // Fetch all employees from backend
+  const { data: employees = [], isLoading: isLoadingEmployees } = useQuery<Employee[]>({
+    queryKey: ['/api/admin/employees'],
+    enabled: isOpen,
+  });
+
+  // Filter team leads from employees
+  const teamLeads = employees.filter(emp => emp.role === 'team_leader');
+  
+  // Filter talent advisors (recruiters) from employees
+  const talentAdvisors = employees.filter(emp => emp.role === 'recruiter');
 
   const createRequirementMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -210,14 +226,36 @@ export default function AddRequirementModal({ isOpen, onClose }: AddRequirementM
             <Select 
               value={formData.teamLead} 
               onValueChange={(value) => handleInputChange('teamLead', value)}
+              disabled={isLoadingEmployees}
             >
               <SelectTrigger className="input-styled" data-testid="select-team-lead">
-                <SelectValue placeholder="Select team lead" />
+                <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select team lead"} />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Unassigned">Unassigned</SelectItem>
                 {teamLeads.map(lead => (
-                  <SelectItem key={lead} value={lead}>{lead}</SelectItem>
+                  <SelectItem key={lead.id} value={lead.name}>{lead.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="talentAdvisor" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Talent Advisor
+            </Label>
+            <Select 
+              value={formData.talentAdvisor} 
+              onValueChange={(value) => handleInputChange('talentAdvisor', value)}
+              disabled={isLoadingEmployees}
+            >
+              <SelectTrigger className="input-styled" data-testid="select-talent-advisor">
+                <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select talent advisor"} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Not Assigned</SelectItem>
+                {talentAdvisors.map(advisor => (
+                  <SelectItem key={advisor.id} value={advisor.name}>{advisor.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
