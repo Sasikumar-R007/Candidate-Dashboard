@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ArrowLeft, Filter, Search, Trash2, X, Share2, Download } from "lucide-react";
@@ -63,6 +64,8 @@ export default function MasterDatabase() {
     employee: [],
     client: []
   });
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{id: number, name: string} | null>(null);
   
   // Advanced filter state
   const [advancedFilters, setAdvancedFilters] = useState({
@@ -269,18 +272,34 @@ export default function MasterDatabase() {
     setSelectedResume(null);
   };
 
-  // Handle delete row
-  const handleDeleteRow = (e: React.MouseEvent, itemId: number) => {
+  // Handle delete row - Show confirmation dialog
+  const handleDeleteRow = (e: React.MouseEvent, item: ResumeData | EmployeeData | ClientData) => {
     e.stopPropagation();
-    setDeletedIds(prev => ({
-      ...prev,
-      [profileType]: [...prev[profileType], itemId]
-    }));
-    // Close drawer if the deleted item is currently selected
-    if (selectedResume && selectedResume.id === itemId) {
-      setIsResumeDrawerOpen(false);
-      setSelectedResume(null);
+    setItemToDelete({ id: item.id, name: item.name });
+    setIsDeleteDialogOpen(true);
+  };
+
+  // Handle confirmed delete
+  const handleConfirmDelete = () => {
+    if (itemToDelete) {
+      setDeletedIds(prev => ({
+        ...prev,
+        [profileType]: [...prev[profileType], itemToDelete.id]
+      }));
+      // Close drawer if the deleted item is currently selected
+      if (selectedResume && selectedResume.id === itemToDelete.id) {
+        setIsResumeDrawerOpen(false);
+        setSelectedResume(null);
+      }
     }
+    setIsDeleteDialogOpen(false);
+    setItemToDelete(null);
+  };
+
+  // Handle cancel delete
+  const handleCancelDelete = () => {
+    setIsDeleteDialogOpen(false);
+    setItemToDelete(null);
   };
 
   // Handle share resume
@@ -434,7 +453,7 @@ export default function MasterDatabase() {
                           <Button 
                             variant="ghost" 
                             size="icon"
-                            onClick={(e) => handleDeleteRow(e, item.id)}
+                            onClick={(e) => handleDeleteRow(e, item)}
                             className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
                             data-testid={`button-delete-${item.id}`}
                           >
@@ -653,6 +672,30 @@ export default function MasterDatabase() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent data-testid="dialog-delete-confirm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{itemToDelete?.name}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleCancelDelete} data-testid="button-cancel-delete">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700"
+              data-testid="button-confirm-delete"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
