@@ -2771,42 +2771,54 @@ export default function AdminDashboard() {
                   <table className="w-full border-collapse">
                     <thead>
                       <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Employee ID</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Name</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Total Applicants</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Uploads</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Resume ID</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Candidate Name</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Position</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Experience</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Skills</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Upload Date</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTA001</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Sundhar Raj</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">500</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">1000</td>
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">RES001</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Rajesh Kumar</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Software Engineer</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">5 Years</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">React, Node.js, Python</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">15-01-2025</td>
                       </tr>
                       <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTA002</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">kavitha</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">220</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">850</td>
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">RES002</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Priya Sharma</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Data Analyst</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">3 Years</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">SQL, Excel, Power BI</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">18-01-2025</td>
                       </tr>
                       <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTA003</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Vignesh</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">600</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">1200</td>
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">RES003</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Arun Patel</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">DevOps Engineer</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">7 Years</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">AWS, Docker, Kubernetes</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">20-01-2025</td>
                       </tr>
                       <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTA004</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Saran</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">780</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">1000</td>
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">RES004</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Sneha Reddy</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">UI/UX Designer</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">4 Years</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Figma, Adobe XD, HTML/CSS</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">22-01-2025</td>
                       </tr>
                       <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTL005</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Helen</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">50</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">800</td>
+                        <td className="py-3 px-3 text-gray-900 dark:text-white">RES005</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Vikram Singh</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Project Manager</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">8 Years</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Agile, Scrum, JIRA</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">25-01-2025</td>
                       </tr>
                     </tbody>
                   </table>
