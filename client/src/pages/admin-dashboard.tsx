@@ -4725,6 +4725,7 @@ export default function AdminDashboard() {
 
         // Filter users based on search term
         const filteredUsers = userData.filter(user =>
+          user.id.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
           user.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
           user.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
           user.role.toLowerCase().includes(userSearchTerm.toLowerCase())
