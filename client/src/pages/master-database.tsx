@@ -65,7 +65,7 @@ export default function MasterDatabase() {
     client: []
   });
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<{id: number, name: string} | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{id: number, name: string, profileType: ProfileType} | null>(null);
   
   // Advanced filter state
   const [advancedFilters, setAdvancedFilters] = useState({
@@ -275,7 +275,7 @@ export default function MasterDatabase() {
   // Handle delete row - Show confirmation dialog
   const handleDeleteRow = (e: React.MouseEvent, item: ResumeData | EmployeeData | ClientData) => {
     e.stopPropagation();
-    setItemToDelete({ id: item.id, name: item.name });
+    setItemToDelete({ id: item.id, name: item.name, profileType });
     setIsDeleteDialogOpen(true);
   };
 
@@ -284,10 +284,10 @@ export default function MasterDatabase() {
     if (itemToDelete) {
       setDeletedIds(prev => ({
         ...prev,
-        [profileType]: [...prev[profileType], itemToDelete.id]
+        [itemToDelete.profileType]: [...prev[itemToDelete.profileType], itemToDelete.id]
       }));
-      // Close drawer if the deleted item is currently selected
-      if (selectedResume && selectedResume.id === itemToDelete.id) {
+      // Close drawer if the deleted item is currently selected and from the same profile type
+      if (selectedResume && selectedResume.id === itemToDelete.id && profileType === itemToDelete.profileType) {
         setIsResumeDrawerOpen(false);
         setSelectedResume(null);
       }
@@ -300,6 +300,14 @@ export default function MasterDatabase() {
   const handleCancelDelete = () => {
     setIsDeleteDialogOpen(false);
     setItemToDelete(null);
+  };
+
+  // Handle dialog close via backdrop or ESC
+  const handleDialogOpenChange = (open: boolean) => {
+    setIsDeleteDialogOpen(open);
+    if (!open) {
+      setItemToDelete(null);
+    }
   };
 
   // Handle share resume
@@ -674,7 +682,7 @@ export default function MasterDatabase() {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={handleDialogOpenChange}>
         <AlertDialogContent data-testid="dialog-delete-confirm">
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
