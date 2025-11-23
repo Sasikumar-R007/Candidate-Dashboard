@@ -3372,9 +3372,9 @@ export default function AdminDashboard() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="quarterly">Quarterly/Yearly</SelectItem>
                     <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="quarterly">Quarterly</SelectItem>
+                    <SelectItem value="yearly">Yearly</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -4662,9 +4662,9 @@ export default function AdminDashboard() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="quarterly">Quarterly/Yearly</SelectItem>
                     <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="weekly">Weekly</SelectItem>
+                    <SelectItem value="quarterly">Quarterly</SelectItem>
+                    <SelectItem value="yearly">Yearly</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -5539,8 +5539,7 @@ export default function AdminDashboard() {
   return (
     <div className="flex flex-col bg-gray-50 dark:bg-gray-900 min-h-screen">
       <AdminTopHeader 
-        userName="Sasi Kumar" 
-        companyName="Gumlat Marketing Private Limited" 
+        companyName="Scaling Theory" 
         onHelpClick={() => setIsChatOpen(true)}
       />
       <div className="flex flex-1">

@@ -13,7 +13,7 @@ interface AdminTopHeaderProps {
   onHelpClick?: () => void;
 }
 
-export default function AdminTopHeader({ companyName = "Gumlat Marketing Private Limited", onHelpClick }: AdminTopHeaderProps) {
+export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpClick }: AdminTopHeaderProps) {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
