@@ -2812,14 +2812,10 @@ export default function AdminDashboard() {
                   </table>
                 </div>
                 
-                <div className="flex justify-end mt-4">
-                  <Button 
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2" 
-                    onClick={() => setIsResumeDatabaseModalOpen(true)}
-                    data-testid="button-view-more-resume"
-                  >
-                    View More
-                  </Button>
+                <div className="mt-4 text-center">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 italic">
+                    Click on "View Full Database" button above to see the complete master database
+                  </p>
                 </div>
               </CardContent>
             </Card>
