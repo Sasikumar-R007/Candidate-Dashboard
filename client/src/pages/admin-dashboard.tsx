@@ -7853,7 +7853,7 @@ export default function AdminDashboard() {
 
       {/* Client Metrics Modal */}
       <Dialog open={isClientMetricsModalOpen} onOpenChange={setIsClientMetricsModalOpen}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto print-visible">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Client Metrics - Full View</DialogTitle>
           </DialogHeader>

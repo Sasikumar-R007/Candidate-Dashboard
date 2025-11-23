@@ -240,11 +240,23 @@
 
 /* Print Styles */
 @media print {
-  /* Hide all dialogs and overlays during print */
-  [role="dialog"],
+  /* Hide all dialogs and overlays during print, except printable ones */
+  [role="dialog"]:not(.print-visible),
   [data-radix-popper-content-wrapper],
-  [data-radix-dialog-overlay],
-  [data-radix-portal] {
+  [data-radix-dialog-overlay]:not(.print-visible-overlay) {
+    display: none !important;
+  }
+  
+  /* Show printable dialogs */
+  .print-visible {
+    display: block !important;
+    position: static !important;
+    max-width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  
+  .print-visible-overlay {
     display: none !important;
   }
   
