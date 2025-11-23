@@ -53,8 +53,8 @@ export default function AddRequirementModal({ isOpen, onClose }: AddRequirementM
         },
         body: JSON.stringify({
           ...data,
-          // Explicitly set talentAdvisor to null if empty (not-assigned)
-          talentAdvisor: data.talentAdvisor || null,
+          // Explicitly set talentAdvisor to null if not assigned
+          talentAdvisor: data.talentAdvisor === 'Not Assigned' ? null : data.talentAdvisor,
           teamLead: data.teamLead === 'Unassigned' ? null : data.teamLead,
           createdAt: new Date().toISOString()
         }),
@@ -253,7 +253,7 @@ export default function AddRequirementModal({ isOpen, onClose }: AddRequirementM
                 <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select talent advisor"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Not Assigned</SelectItem>
+                <SelectItem value="Not Assigned">Not Assigned</SelectItem>
                 {talentAdvisors.map(advisor => (
                   <SelectItem key={advisor.id} value={advisor.name}>{advisor.name}</SelectItem>
                 ))}
