@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Filter, Search, Pencil, Trash2, X, Share2, Download, Bookmark, Phone, Mail } from "lucide-react";
+import { ArrowLeft, Filter, Search, Trash2, X, Share2, Download } from "lucide-react";
 
 type ProfileType = 'resume' | 'employee' | 'client';
 
@@ -54,21 +54,7 @@ export default function MasterDatabase() {
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
   const [isResumeDrawerOpen, setIsResumeDrawerOpen] = useState(false);
   const [selectedResume, setSelectedResume] = useState<ResumeData | EmployeeData | ClientData | null>(null);
-  const [newComment, setNewComment] = useState("");
-  const [comments, setComments] = useState<Array<{id: string, author: string, text: string, timestamp: string}>>([
-    {
-      id: '1',
-      author: 'Team Leader1',
-      text: 'Candidate has interest — already working...',
-      timestamp: 'Last week • 5 days ago'
-    },
-    {
-      id: '2',
-      author: 'Team Leader2',
-      text: 'The candidate has confirmed availability for cross-related to financ...',
-      timestamp: 'Last week • 7 days ago'
-    }
-  ]);
+  const [deletedIds, setDeletedIds] = useState<number[]>([]);
   
   // Advanced filter state
   const [advancedFilters, setAdvancedFilters] = useState({
@@ -147,6 +133,11 @@ export default function MasterDatabase() {
 
   // Filter data based on search, status, and advanced filters
   const filteredData = getCurrentData().filter(item => {
+    // Exclude deleted items
+    if (deletedIds.includes(item.id)) {
+      return false;
+    }
+    
     const searchMatch = searchQuery === "" || 
       Object.values(item).some(value => 
         String(value).toLowerCase().includes(searchQuery.toLowerCase())
@@ -261,21 +252,6 @@ export default function MasterDatabase() {
     if (profileType === 'resume') {
       setSelectedResume(item);
       setIsResumeDrawerOpen(true);
-      // Reset to initial comments when opening drawer
-      setComments([
-        {
-          id: '1',
-          author: 'Team Leader1',
-          text: 'Candidate has interest — already working...',
-          timestamp: 'Last week • 5 days ago'
-        },
-        {
-          id: '2',
-          author: 'Team Leader2',
-          text: 'The candidate has confirmed availability for cross-related to financ...',
-          timestamp: 'Last week • 7 days ago'
-        }
-      ]);
     }
   };
 
@@ -283,7 +259,17 @@ export default function MasterDatabase() {
   const handleCloseDrawer = () => {
     setIsResumeDrawerOpen(false);
     setSelectedResume(null);
-    setNewComment("");
+  };
+
+  // Handle delete row
+  const handleDeleteRow = (e: React.MouseEvent, itemId: number) => {
+    e.stopPropagation();
+    setDeletedIds(prev => [...prev, itemId]);
+    // Close drawer if the deleted item is currently selected
+    if (selectedResume && selectedResume.id === itemId) {
+      setIsResumeDrawerOpen(false);
+      setSelectedResume(null);
+    }
   };
 
   // Handle share resume
@@ -296,20 +282,6 @@ export default function MasterDatabase() {
   const handleDownloadResume = () => {
     // Frontend only - just show a toast or alert
     alert('Download functionality - Frontend only');
-  };
-
-  // Handle add comment
-  const handleAddComment = () => {
-    if (newComment.trim()) {
-      const newCommentObj = {
-        id: Date.now().toString(),
-        author: 'Current User',
-        text: newComment,
-        timestamp: 'Just now'
-      };
-      setComments([newCommentObj, ...comments]);
-      setNewComment("");
-    }
   };
 
   // Get initials for avatar fallback
@@ -451,14 +423,7 @@ export default function MasterDatabase() {
                           <Button 
                             variant="ghost" 
                             size="icon"
-                            className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950"
-                            data-testid={`button-edit-${item.id}`}
-                          >
-                            <Pencil size={16} />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
+                            onClick={(e) => handleDeleteRow(e, item.id)}
                             className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
                             data-testid={`button-delete-${item.id}`}
                           >
@@ -507,39 +472,8 @@ export default function MasterDatabase() {
                   </div>
                 </div>
 
-                {/* Right Side: All Action Icons in One Row */}
+                {/* Right Side: Close Button */}
                 <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    data-testid="button-save-resume"
-                    title="Save Resume"
-                  >
-                    <Bookmark className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => {
-                      navigator.clipboard.writeText(selectedResume.position);
-                      alert('Phone number copied!');
-                    }}
-                    data-testid="button-call-resume"
-                    title="Copy Phone Number"
-                  >
-                    <Phone className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    data-testid="button-mail-resume"
-                    title="Send Email"
-                  >
-                    <Mail className="h-4 w-4" />
-                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -591,59 +525,6 @@ export default function MasterDatabase() {
                 </div>
               </div>
 
-              {/* Comments Section */}
-              <div className="space-y-4">
-                <h4 className="font-semibold text-gray-900 dark:text-gray-100">Comments</h4>
-                
-                {/* Comments List */}
-                <div className="space-y-3">
-                  {comments.map((comment) => (
-                    <div key={comment.id} className="bg-blue-50 dark:bg-blue-950/30 rounded-md p-3 space-y-2" data-testid={`comment-${comment.id}`}>
-                      <div className="flex items-start gap-3">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback className="bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-300 text-xs">
-                            {getInitials(comment.author)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{comment.author}</p>
-                          <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
-                            {comment.text}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{comment.timestamp}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Add Comment Input */}
-                <div className="space-y-2">
-                  <Label htmlFor="new-comment">Add a comment</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="new-comment"
-                      type="text"
-                      placeholder="Type your comment..."
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleAddComment();
-                        }
-                      }}
-                      data-testid="input-new-comment"
-                    />
-                    <Button 
-                      onClick={handleAddComment}
-                      disabled={!newComment.trim()}
-                      data-testid="button-add-comment"
-                    >
-                      Add
-                    </Button>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         )}
