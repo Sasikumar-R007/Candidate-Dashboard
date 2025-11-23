@@ -2631,15 +2631,23 @@ export default function AdminDashboard() {
 
             {/* Closure Reports */}
             <Card>
-              <CardHeader className="pb-3 flex flex-row flex-wrap items-center justify-between gap-2">
-                <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Closure Reports</CardTitle>
-                <Button 
+              <CardHeader className="pb-3">
+                <CardTitle 
+                  className="text-lg font-semibold text-gray-900 dark:text-white cursor-pointer hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors flex items-center gap-2"
                   onClick={() => setIsPipelineModalOpen(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setIsPipelineModalOpen(true);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
                   data-testid="button-see-more-pipeline"
-                  size="sm"
                 >
-                  See More
-                </Button>
+                  Closure Reports
+                  <span className="text-sm font-normal text-cyan-600 dark:text-cyan-400">(See More)</span>
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto admin-scrollbar">
@@ -5358,8 +5366,18 @@ export default function AdminDashboard() {
 
                 {/* Cash Outflow Section */}
                 <Card>
-                  <CardHeader>
+                  <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 pb-3">
                     <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Cash Outflow</CardTitle>
+                    {cashoutData.length > 5 && (
+                      <Button 
+                        className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded"
+                        onClick={() => setIsCashoutModalOpen(true)}
+                        size="sm"
+                        data-testid="button-view-more-cashout"
+                      >
+                        View More
+                      </Button>
+                    )}
                   </CardHeader>
                   <CardContent>
                     {/* Input Form */}
@@ -5507,17 +5525,6 @@ export default function AdminDashboard() {
                         </tbody>
                       </table>
                     </div>
-                    
-                    {cashoutData.length > 5 && (
-                      <div className="flex justify-end mt-4">
-                        <Button 
-                          className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded"
-                          onClick={() => setIsCashoutModalOpen(true)}
-                        >
-                          View More
-                        </Button>
-                      </div>
-                    )}
                   </CardContent>
                 </Card>
             </div>

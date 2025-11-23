@@ -40,9 +40,6 @@ export default function AddRequirementModal({ isOpen, onClose }: AddRequirementM
 
   // Filter team leads from employees
   const teamLeads = employees.filter(emp => emp.role === 'team_leader');
-  
-  // Filter talent advisors (recruiters) from employees
-  const talentAdvisors = employees.filter(emp => emp.role === 'recruiter');
 
   const createRequirementMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -53,8 +50,8 @@ export default function AddRequirementModal({ isOpen, onClose }: AddRequirementM
         },
         body: JSON.stringify({
           ...data,
-          // Explicitly set talentAdvisor to null if not assigned
-          talentAdvisor: data.talentAdvisor === 'Not Assigned' ? null : data.talentAdvisor,
+          // Admin doesn't assign TA - TL will assign later
+          talentAdvisor: null,
           teamLead: data.teamLead === 'Unassigned' ? null : data.teamLead,
           createdAt: new Date().toISOString()
         }),
@@ -235,27 +232,6 @@ export default function AddRequirementModal({ isOpen, onClose }: AddRequirementM
                 <SelectItem value="Unassigned">Unassigned</SelectItem>
                 {teamLeads.map(lead => (
                   <SelectItem key={lead.id} value={lead.name}>{lead.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="talentAdvisor" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Talent Advisor
-            </Label>
-            <Select 
-              value={formData.talentAdvisor} 
-              onValueChange={(value) => handleInputChange('talentAdvisor', value)}
-              disabled={isLoadingEmployees}
-            >
-              <SelectTrigger className="input-styled" data-testid="select-talent-advisor">
-                <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select talent advisor"} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Not Assigned">Not Assigned</SelectItem>
-                {talentAdvisors.map(advisor => (
-                  <SelectItem key={advisor.id} value={advisor.name}>{advisor.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
