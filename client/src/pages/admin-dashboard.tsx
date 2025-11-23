@@ -38,6 +38,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import GaugeComponent from 'react-gauge-component';
+import PerformanceGauge from '@/components/dashboard/performance-gauge';
 import { ChatDock } from '@/components/chat/chat-dock';
 // TypeScript interfaces
 interface Requirement {
@@ -3115,44 +3116,8 @@ export default function AdminDashboard() {
 
                   {/* Performance Gauge */}
                   <div className="xl:col-span-3 flex flex-col items-center justify-center">
-                    <div className="w-full max-w-sm mx-auto h-[240px]">
-                      <GaugeComponent
-                        id="performance-gauge-1"
-                        value={77.78}
-                        type="semicircle"
-                        minValue={0}
-                        maxValue={100}
-                        arc={{
-                          width: 0.2,
-                          padding: 0.005,
-                          cornerRadius: 1,
-                          subArcs: [
-                            { limit: 50, color: '#EF4444', showTick: true, tooltip: { text: 'Needs Improvement' } },
-                            { limit: 75, color: '#F97316', showTick: true, tooltip: { text: 'Good' } },
-                            { limit: 90, color: '#84CC16', showTick: true, tooltip: { text: 'Very Good' } },
-                            { limit: 100, color: '#16A34A', showTick: true, tooltip: { text: 'Excellent' } }
-                          ]
-                        }}
-                        pointer={{
-                          type: 'needle',
-                          elastic: true,
-                          animationDelay: 200,
-                          animationDuration: 1500,
-                          color: '#1F2937',
-                          length: 0.7,
-                          width: 15
-                        }}
-                        labels={{
-                          valueLabel: {
-                            formatTextValue: (value) => `${value.toFixed(1)}%`,
-                            style: { fontSize: '24px', fill: '#1F2937', fontWeight: 'bold' }
-                          },
-                          tickLabels: {
-                            type: 'outer',
-                            hideMinMax: true
-                          }
-                        }}
-                      />
+                    <div className="w-full max-w-sm mx-auto">
+                      <PerformanceGauge value={77.78} />
                     </div>
                     
                     <Button 
@@ -4439,46 +4404,8 @@ export default function AdminDashboard() {
 
                   {/* Performance Gauge */}
                   <div className="xl:col-span-3 flex flex-col items-center justify-center">
-                    <div className="w-full max-w-sm mx-auto h-[240px]">
-                      <GaugeComponent
-                        id="performance-gauge-2"
-                        value={77.78}
-                        type="semicircle"
-                        minValue={0}
-                        maxValue={100}
-                        arc={{
-                          width: 0.2,
-                          padding: 0.005,
-                          cornerRadius: 1,
-                          subArcs: [
-                            { limit: 20, color: '#EF4444', showTick: true, tooltip: { text: 'Critical' } },
-                            { limit: 40, color: '#F87171', showTick: true, tooltip: { text: 'Poor' } },
-                            { limit: 50, color: '#EAB308', showTick: true, tooltip: { text: 'Below Average' } },
-                            { limit: 60, color: '#FDE047', showTick: true, tooltip: { text: 'Average' } },
-                            { limit: 80, color: '#86EFAC', showTick: true, tooltip: { text: 'Good' } },
-                            { limit: 100, color: '#22C55E', showTick: true, tooltip: { text: 'Excellent' } }
-                          ]
-                        }}
-                        pointer={{
-                          type: 'needle',
-                          elastic: true,
-                          animationDelay: 200,
-                          animationDuration: 1500,
-                          color: '#1F2937',
-                          length: 0.7,
-                          width: 15
-                        }}
-                        labels={{
-                          valueLabel: {
-                            formatTextValue: (value) => `${value.toFixed(1)}%`,
-                            style: { fontSize: '24px', fill: '#1F2937', fontWeight: 'bold' }
-                          },
-                          tickLabels: {
-                            type: 'outer',
-                            hideMinMax: true
-                          }
-                        }}
-                      />
+                    <div className="w-full max-w-sm mx-auto">
+                      <PerformanceGauge value={77.78} />
                     </div>
                     
                     <Button 
