@@ -5246,14 +5246,14 @@ export default function AdminDashboard() {
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart
                             data={[
-                              { name: 'Jan', revenue: 45000, growth: 38000, profit: 25000, clients: 15000 },
-                              { name: 'Feb', revenue: 35000, growth: 28000, profit: 18000, clients: 12000 },
-                              { name: 'Mar', revenue: 55000, growth: 45000, profit: 32000, clients: 22000 },
-                              { name: 'Apr', revenue: 48000, growth: 42000, profit: 28000, clients: 18000 },
-                              { name: 'May', revenue: 65000, growth: 52000, profit: 38000, clients: 28000 },
-                              { name: 'Jun', revenue: 58000, growth: 48000, profit: 35000, clients: 25000 },
-                              { name: 'Jul', revenue: 70000, growth: 58000, profit: 42000, clients: 32000 },
-                              { name: 'Aug', revenue: 75000, growth: 62000, profit: 45000, clients: 35000 },
+                              { name: 'Jan', growthMoM: 12, burnRate: 4.2, churnRate: 11, attrition: 4.5 },
+                              { name: 'Feb', growthMoM: 13, burnRate: 3.8, churnRate: 10, attrition: 3.8 },
+                              { name: 'Mar', growthMoM: 14, burnRate: 3.5, churnRate: 9.5, attrition: 3.2 },
+                              { name: 'Apr', growthMoM: 13.5, burnRate: 3.3, churnRate: 9.8, attrition: 3.5 },
+                              { name: 'May', growthMoM: 14.5, burnRate: 3.1, churnRate: 9.2, attrition: 3.0 },
+                              { name: 'Jun', growthMoM: 14.8, burnRate: 3.0, churnRate: 9.0, attrition: 2.8 },
+                              { name: 'Jul', growthMoM: 15.2, burnRate: 2.9, churnRate: 8.8, attrition: 2.9 },
+                              { name: 'Aug', growthMoM: 15, burnRate: 3, churnRate: 9, attrition: 3 },
                             ]}
                             margin={{
                               top: 5,
@@ -5267,10 +5267,10 @@ export default function AdminDashboard() {
                             <YAxis style={{ fontSize: '10px' }} />
                             <Tooltip />
                             <Legend wrapperStyle={{ fontSize: '10px' }} />
-                            <Line type="monotone" dataKey="revenue" stroke="#8884d8" strokeWidth={2} />
-                            <Line type="monotone" dataKey="growth" stroke="#82ca9d" strokeWidth={2} />
-                            <Line type="monotone" dataKey="profit" stroke="#ffc658" strokeWidth={2} />
-                            <Line type="monotone" dataKey="clients" stroke="#ff7c7c" strokeWidth={2} />
+                            <Line type="monotone" dataKey="growthMoM" name="Growth MoM (%)" stroke="#82ca9d" strokeWidth={2} />
+                            <Line type="monotone" dataKey="burnRate" name="Burn Rate (%)" stroke="#ff7c7c" strokeWidth={2} />
+                            <Line type="monotone" dataKey="churnRate" name="Churn Rate (%)" stroke="#ffc658" strokeWidth={2} />
+                            <Line type="monotone" dataKey="attrition" name="Attrition (%)" stroke="#8884d8" strokeWidth={2} />
                           </LineChart>
                         </ResponsiveContainer>
                       </div>
