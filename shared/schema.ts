@@ -160,6 +160,7 @@ export const dailyMetrics = pgTable("daily_metrics", {
 
 export const meetingCategoryEnum = pgEnum("meeting_category", ["tl", "ceo_ta"]);
 export const meetingStatusEnum = pgEnum("meeting_status", ["scheduled", "pending", "completed", "cancelled"]);
+export const adminMessageStatusEnum = pgEnum("admin_message_status", ["active", "pending"]);
 
 export const meetings = pgTable("meetings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -616,6 +617,17 @@ export const bulkUploadFiles = pgTable("bulk_upload_files", {
   processedAt: text("processed_at"),
 });
 
+export const adminMessages = pgTable("admin_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  senderEmployeeId: text("sender_employee_id").notNull(),
+  recipientEmployeeId: text("recipient_employee_id").notNull(),
+  recipientName: text("recipient_name").notNull(),
+  preview: text("preview").notNull(),
+  body: text("body").notNull(),
+  status: adminMessageStatusEnum("status").notNull().default("active"),
+  sentAt: timestamp("sent_at").notNull().defaultNow(),
+});
+
 export const insertSupportConversationSchema = createInsertSchema(supportConversations).omit({
   id: true,
 });
@@ -651,6 +663,11 @@ export const insertChatAttachmentSchema = createInsertSchema(chatAttachments).om
 export const insertRevenueMappingSchema = createInsertSchema(revenueMappings).omit({
   id: true,
   createdAt: true,
+});
+
+export const insertAdminMessageSchema = createInsertSchema(adminMessages).omit({
+  id: true,
+  sentAt: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -719,3 +736,5 @@ export type InsertChatAttachment = z.infer<typeof insertChatAttachmentSchema>;
 export type ChatAttachment = typeof chatAttachments.$inferSelect;
 export type InsertRevenueMapping = z.infer<typeof insertRevenueMappingSchema>;
 export type RevenueMapping = typeof revenueMappings.$inferSelect;
+export type InsertAdminMessage = z.infer<typeof insertAdminMessageSchema>;
+export type AdminMessage = typeof adminMessages.$inferSelect;
