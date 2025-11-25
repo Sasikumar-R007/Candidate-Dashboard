@@ -1946,7 +1946,7 @@ export default function AdminDashboard() {
         <CardHeader className="pb-1 pt-1 flex flex-row items-center justify-between">
           <CardTitle className="text-lg text-gray-900 dark:text-white">Target & Incentives</CardTitle>
           <Button 
-            className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2"
+            className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
             onClick={() => setIsTargetModalOpen(true)}
             data-testid="button-view-all-targets"
           >
@@ -2377,7 +2377,7 @@ export default function AdminDashboard() {
                       Archives
                     </Button>
                     <Button 
-                      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                      className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
                       onClick={handleRequirementsViewMore}
                       disabled={requirements.length <= 10}
                     >
@@ -2440,7 +2440,7 @@ export default function AdminDashboard() {
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Pipeline</h2>
               <div className="flex items-center gap-4">
                 <Select value={selectedPipelineTeam} onValueChange={setSelectedPipelineTeam}>
-                  <SelectTrigger className="w-48 input-styled btn-rounded">
+                  <SelectTrigger className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm w-48">
                     <SelectValue placeholder="Arun/Anusha /All" />
                   </SelectTrigger>
                   <SelectContent>
@@ -2897,7 +2897,7 @@ export default function AdminDashboard() {
                 </div>
                 
                 <div className="flex justify-end mt-4">
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2">View More</Button>
+                  <Button className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm">View More</Button>
                 </div>
               </CardContent>
             </Card>
@@ -2976,7 +2976,7 @@ export default function AdminDashboard() {
                 </div>
                 
                 <div className="flex justify-end mt-4">
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2">View More</Button>
+                  <Button className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm">View More</Button>
                 </div>
               </CardContent>
             </Card>
@@ -3009,7 +3009,7 @@ export default function AdminDashboard() {
               {/* Filter Dropdowns */}
               <div className="flex gap-4 mb-4">
                 <Select value={selectedPerformanceTeam} onValueChange={setSelectedPerformanceTeam} data-testid="select-performance-team">
-                  <SelectTrigger className="w-48 bg-cyan-400 text-black">
+                  <SelectTrigger className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm w-48">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -3020,7 +3020,7 @@ export default function AdminDashboard() {
                 </Select>
                 
                 <Select defaultValue="monthly">
-                  <SelectTrigger className="w-32 bg-cyan-400 text-black">
+                  <SelectTrigger className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm w-32">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -3693,7 +3693,7 @@ export default function AdminDashboard() {
                       Archives
                     </Button>
                     <Button 
-                      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                      className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
                       onClick={handleRequirementsViewMore}
                       disabled={requirements.length <= 10}
                     >
@@ -3951,6 +3951,7 @@ export default function AdminDashboard() {
                     <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
                       <div className="flex justify-end">
                         <Button 
+                          className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
                           onClick={() => setIsClosureReportsModalOpen(true)}
                           data-testid="button-see-more-closure-admin"
                         >
