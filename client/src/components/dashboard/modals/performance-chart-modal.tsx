@@ -258,7 +258,7 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
                 <span className="text-sm text-gray-600 dark:text-gray-400">Resume Count A</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                 <span className="text-sm text-gray-600 dark:text-gray-400">Resume Count B</span>
               </div>
             </div>
@@ -271,8 +271,8 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
                       <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
                     </linearGradient>
                     <linearGradient id="colorResumesBModal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                      <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} />
@@ -316,11 +316,11 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
                   <Area 
                     type="monotone" 
                     dataKey="resumesB" 
-                    stroke="#3b82f6" 
+                    stroke="#22c55e" 
                     strokeWidth={2} 
                     fill="url(#colorResumesBModal)"
                     fillOpacity={0.6}
-                    dot={{ fill: '#3b82f6', r: 4 }}
+                    dot={{ fill: '#22c55e', r: 4 }}
                     activeDot={{ r: 6 }}
                     name="Resume Count B"
                   />
@@ -477,8 +477,8 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
                         return value;
                       }}
                     />
-                    <Bar dataKey="completed" stackId="a" fill="#22c55e" name="completed" barSize={40} />
-                    <Bar dataKey="incomplete" stackId="a" fill="#ef4444" name="incomplete" barSize={40} />
+                    <Bar dataKey="completed" stackId="a" fill="#22c55e" name="completed" barSize={28} radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="incomplete" stackId="a" fill="#ef4444" name="incomplete" barSize={28} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               );

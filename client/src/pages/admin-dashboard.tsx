@@ -330,16 +330,16 @@ function PerformanceChart({ data, height = "100%", benchmarkValue = 10, showDual
       <AreaChart data={data}>
         <defs>
           <linearGradient id="colorRequirementsMain" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+            <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
           </linearGradient>
           <linearGradient id="colorResumesAMain" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
             <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
           </linearGradient>
           <linearGradient id="colorResumesBMain" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+            <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} />
@@ -382,10 +382,10 @@ function PerformanceChart({ data, height = "100%", benchmarkValue = 10, showDual
             <Area 
               type="monotone" 
               dataKey="requirements" 
-              stroke="#3b82f6" 
+              stroke="#22c55e" 
               strokeWidth={2} 
               fill="url(#colorRequirementsMain)"
-              dot={{ fill: '#3b82f6', r: 4 }}
+              dot={{ fill: '#22c55e', r: 4 }}
               activeDot={{ r: 6 }}
               name="Requirements"
             />
@@ -406,11 +406,11 @@ function PerformanceChart({ data, height = "100%", benchmarkValue = 10, showDual
             <Area 
               type="monotone" 
               dataKey="resumesB" 
-              stroke="#3b82f6" 
+              stroke="#22c55e" 
               strokeWidth={2} 
               fill="url(#colorResumesBMain)"
               fillOpacity={0.6}
-              dot={{ fill: '#3b82f6', r: 4 }}
+              dot={{ fill: '#22c55e', r: 4 }}
               activeDot={{ r: 6 }}
               name="Resume Count B"
             />

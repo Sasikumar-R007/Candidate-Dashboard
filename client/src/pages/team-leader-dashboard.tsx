@@ -77,9 +77,9 @@ function PerformanceChart({ data, height = "100%", benchmarkValue = 10 }: Perfor
         <Line 
           type="monotone" 
           dataKey="requirements" 
-          stroke="#3b82f6" 
+          stroke="#22c55e" 
           strokeWidth={3} 
-          dot={{ fill: '#3b82f6', r: 5 }}
+          dot={{ fill: '#22c55e', r: 5 }}
           activeDot={{ r: 7 }}
           name="Requirements"
         />
