@@ -4407,7 +4407,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="h-[260px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={[
+                        <AreaChart data={[
                           { month: 'Jan', arunTeam: 600, anushaTeam: 500, sudharshan: 150, deepika: 140, dharshan: 120, kavya: 190 },
                           { month: 'Feb', arunTeam: 650, anushaTeam: 520, sudharshan: 160, deepika: 150, dharshan: 130, kavya: 210 },
                           { month: 'Mar', arunTeam: 580, anushaTeam: 540, sudharshan: 145, deepika: 135, dharshan: 125, kavya: 175 },
@@ -4415,34 +4415,60 @@ export default function AdminDashboard() {
                           { month: 'May', arunTeam: 680, anushaTeam: 620, sudharshan: 170, deepika: 165, dharshan: 140, kavya: 205 },
                           { month: 'Jun', arunTeam: 720, anushaTeam: 660, sudharshan: 180, deepika: 175, dharshan: 155, kavya: 210 }
                         ]}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="month" />
-                          <YAxis />
+                          <defs>
+                            <linearGradient id="colorArunTeam" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
+                              <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1}/>
+                            </linearGradient>
+                            <linearGradient id="colorAnushaTeam" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#EF4444" stopOpacity={0.8}/>
+                              <stop offset="95%" stopColor="#EF4444" stopOpacity={0.1}/>
+                            </linearGradient>
+                            <linearGradient id="colorSudharshan" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
+                              <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1}/>
+                            </linearGradient>
+                            <linearGradient id="colorDeepika" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
+                              <stop offset="95%" stopColor="#10B981" stopOpacity={0.1}/>
+                            </linearGradient>
+                            <linearGradient id="colorDharshan" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.8}/>
+                              <stop offset="95%" stopColor="#F59E0B" stopOpacity={0.1}/>
+                            </linearGradient>
+                            <linearGradient id="colorKavya" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8}/>
+                              <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.1}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} />
+                          <XAxis dataKey="month" stroke="#6b7280" style={{ fontSize: '11px' }} tick={{ fill: '#6b7280' }} />
+                          <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} tick={{ fill: '#6b7280' }} />
                           <Tooltip />
                           <Legend />
                           {selectedPerformanceTeam === 'all' && (
                             <>
-                              <Line type="monotone" dataKey="arunTeam" name="Arun's Team" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
-                              <Line type="monotone" dataKey="anushaTeam" name="Anusha's Team" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444' }} />
+                              <Area type="monotone" dataKey="arunTeam" name="Arun's Team" stroke="#3B82F6" strokeWidth={2} fill="url(#colorArunTeam)" dot={{ fill: '#3B82F6', r: 4 }} activeDot={{ r: 6 }} />
+                              <Area type="monotone" dataKey="anushaTeam" name="Anusha's Team" stroke="#EF4444" strokeWidth={2} fill="url(#colorAnushaTeam)" fillOpacity={0.6} dot={{ fill: '#EF4444', r: 4 }} activeDot={{ r: 6 }} />
                             </>
                           )}
                           {selectedPerformanceTeam === 'arun' && (
                             <>
-                              <Line type="monotone" dataKey="sudharshan" name="Sudharshan" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
-                              <Line type="monotone" dataKey="deepika" name="Deepika" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981' }} />
-                              <Line type="monotone" dataKey="dharshan" name="Dharshan" stroke="#F59E0B" strokeWidth={2} dot={{ fill: '#F59E0B' }} />
-                              <Line type="monotone" dataKey="kavya" name="Kavya" stroke="#8B5CF6" strokeWidth={2} dot={{ fill: '#8B5CF6' }} />
+                              <Area type="monotone" dataKey="sudharshan" name="Sudharshan" stroke="#3B82F6" strokeWidth={2} fill="url(#colorSudharshan)" dot={{ fill: '#3B82F6', r: 4 }} activeDot={{ r: 6 }} />
+                              <Area type="monotone" dataKey="deepika" name="Deepika" stroke="#10B981" strokeWidth={2} fill="url(#colorDeepika)" fillOpacity={0.6} dot={{ fill: '#10B981', r: 4 }} activeDot={{ r: 6 }} />
+                              <Area type="monotone" dataKey="dharshan" name="Dharshan" stroke="#F59E0B" strokeWidth={2} fill="url(#colorDharshan)" fillOpacity={0.6} dot={{ fill: '#F59E0B', r: 4 }} activeDot={{ r: 6 }} />
+                              <Area type="monotone" dataKey="kavya" name="Kavya" stroke="#8B5CF6" strokeWidth={2} fill="url(#colorKavya)" fillOpacity={0.6} dot={{ fill: '#8B5CF6', r: 4 }} activeDot={{ r: 6 }} />
                             </>
                           )}
                           {selectedPerformanceTeam === 'anusha' && (
                             <>
-                              <Line type="monotone" dataKey="sudharshan" name="Sudharshan" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
-                              <Line type="monotone" dataKey="deepika" name="Deepika" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981' }} />
-                              <Line type="monotone" dataKey="dharshan" name="Dharshan" stroke="#F59E0B" strokeWidth={2} dot={{ fill: '#F59E0B' }} />
-                              <Line type="monotone" dataKey="kavya" name="Kavya" stroke="#8B5CF6" strokeWidth={2} dot={{ fill: '#8B5CF6' }} />
+                              <Area type="monotone" dataKey="sudharshan" name="Sudharshan" stroke="#3B82F6" strokeWidth={2} fill="url(#colorSudharshan)" dot={{ fill: '#3B82F6', r: 4 }} activeDot={{ r: 6 }} />
+                              <Area type="monotone" dataKey="deepika" name="Deepika" stroke="#10B981" strokeWidth={2} fill="url(#colorDeepika)" fillOpacity={0.6} dot={{ fill: '#10B981', r: 4 }} activeDot={{ r: 6 }} />
+                              <Area type="monotone" dataKey="dharshan" name="Dharshan" stroke="#F59E0B" strokeWidth={2} fill="url(#colorDharshan)" fillOpacity={0.6} dot={{ fill: '#F59E0B', r: 4 }} activeDot={{ r: 6 }} />
+                              <Area type="monotone" dataKey="kavya" name="Kavya" stroke="#8B5CF6" strokeWidth={2} fill="url(#colorKavya)" fillOpacity={0.6} dot={{ fill: '#8B5CF6', r: 4 }} activeDot={{ r: 6 }} />
                             </>
                           )}
-                        </LineChart>
+                        </AreaChart>
                       </ResponsiveContainer>
                     </div>
                   </div>
@@ -8005,7 +8031,7 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-4 gap-4">
                 <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200 relative">
                   <h3 className="text-sm font-medium text-yellow-700 mb-2">Feedback Turn Around</h3>
-                  <div className="text-3xl font-bold text-yellow-600">{impactMetricsQuery.data?.[0]?.feedbackTurnAround || 0}</div>
+                  <div className="text-3xl font-bold text-yellow-600 mb-1">{impactMetricsQuery.data?.[0]?.feedbackTurnAround || 0}</div>
                   {isEditingFeedbackModal ? (
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
@@ -8024,7 +8050,7 @@ export default function AdminDashboard() {
                         <Button 
                           size="sm" 
                           onClick={handleSaveModal}
-                          className="h-7 text-xs px-2 bg-green-500 hover:bg-green-600 text-white"
+                          className="h-7 text-xs"
                           data-testid="button-save-feedback-turnaround-modal"
                         >
                           Save
@@ -8032,7 +8058,7 @@ export default function AdminDashboard() {
                         <Button 
                           size="sm" 
                           onClick={handleCancelModal}
-                          className="h-7 text-xs px-2"
+                          className="h-7 text-xs"
                           variant="outline"
                           data-testid="button-cancel-feedback-turnaround-modal"
                         >
@@ -8042,16 +8068,15 @@ export default function AdminDashboard() {
                     </div>
                   ) : (
                     <>
-                      <div className="text-sm text-gray-600 mt-1">days</div>
-                      <div className="text-xs text-gray-500 mt-1">Industry Avg. {impactMetricsQuery.data?.[0]?.feedbackTurnAroundAvgDays || 5} days*</div>
+                      <div className="text-xs text-gray-500">days (Avg. {impactMetricsQuery.data?.[0]?.feedbackTurnAroundAvgDays || 5} days)*</div>
                       <Button
-                        size="sm"
+                        size="icon"
                         variant="ghost"
                         onClick={handleEditClickModal}
-                        className="absolute top-2 right-2 h-6 w-6 p-0 hover:bg-yellow-100"
+                        className="absolute top-2 right-2 h-6 w-6 hover-elevate"
                         data-testid="button-edit-feedback-turnaround-modal"
                       >
-                        <Edit2 className="h-3 w-3 text-yellow-700" />
+                        <EditIcon className="h-3 w-3" />
                       </Button>
                     </>
                   )}
