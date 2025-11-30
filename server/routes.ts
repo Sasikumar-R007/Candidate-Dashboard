@@ -3106,6 +3106,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Close a recruiter job (mark as Closed)
+  app.post("/api/recruiter/jobs/:id/close", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const job = await storage.updateRecruiterJob(id, { 
+        status: "Closed",
+        closedDate: new Date()
+      });
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+      res.json({ message: "Job closed successfully", job });
+    } catch (error) {
+      console.error("Close recruiter job error:", error);
+      res.status(500).json({ message: "Failed to close job" });
+    }
+  });
+
+  // Get active jobs for candidates (public endpoint)
+  app.get("/api/jobs", async (req, res) => {
+    try {
+      const jobs = await storage.getAllRecruiterJobs();
+      // Filter only active jobs for candidates
+      const activeJobs = jobs.filter(job => job.status === "Active");
+      res.json(activeJobs);
+    } catch (error) {
+      console.error("Get jobs error:", error);
+      res.status(500).json({ message: "Failed to get jobs" });
+    }
+  });
+
   // ===================== JOB APPLICATIONS ROUTES =====================
 
   // Get all job applications (for recruiter dashboard)

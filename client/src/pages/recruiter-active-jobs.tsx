@@ -2,188 +2,106 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLocation } from "wouter";
-import { ArrowLeft, MapPin, Calendar, Users, DollarSign, Briefcase, Edit, Trash2 } from "lucide-react";
-
-interface JobListing {
-  id: string;
-  title: string;
-  company: string;
-  location: string;
-  type: string;
-  experience: string;
-  salary: string;
-  posted: string;
-  applications: number;
-  status: 'Active' | 'Closed' | 'Draft';
-  description: string;
-  requirements: string[];
-  skills: string[];
-}
-
-const activeJobs: JobListing[] = [
-  {
-    id: '1',
-    title: 'Senior Full Stack Developer',
-    company: 'TechCorp Inc.',
-    location: 'Bangalore, India',
-    type: 'Full Time',
-    experience: '5-8 Years',
-    salary: '25-35 LPA',
-    posted: '3 days ago',
-    applications: 24,
-    status: 'Active',
-    description: 'We are seeking a talented Senior Full Stack Developer to join our dynamic team...',
-    requirements: ['5+ years of experience', 'Strong React/Node.js skills', 'Team leadership experience'],
-    skills: ['React', 'Node.js', 'MongoDB', 'AWS', 'TypeScript']
-  },
-  {
-    id: '2',
-    title: 'DevOps Engineer',
-    company: 'CloudBase Solutions',
-    location: 'Mumbai, India',
-    type: 'Full Time',
-    experience: '3-5 Years',
-    salary: '18-25 LPA',
-    posted: '1 week ago',
-    applications: 42,
-    status: 'Active',
-    description: 'Join our infrastructure team to build and maintain scalable cloud solutions...',
-    requirements: ['AWS/Azure experience', 'Docker & Kubernetes', 'CI/CD pipeline expertise'],
-    skills: ['AWS', 'Docker', 'Kubernetes', 'Jenkins', 'Terraform']
-  },
-  {
-    id: '3',
-    title: 'UI/UX Designer',
-    company: 'DesignMasters',
-    location: 'Remote',
-    type: 'Full Time',
-    experience: '2-4 Years',
-    salary: '12-18 LPA',
-    posted: '5 days ago',
-    applications: 31,
-    status: 'Active',
-    description: 'Create beautiful and intuitive user experiences for our products...',
-    requirements: ['Portfolio of design work', 'Figma/Adobe XD proficiency', 'User research experience'],
-    skills: ['Figma', 'Adobe XD', 'Prototyping', 'User Research', 'Wireframing']
-  },
-  {
-    id: '4',
-    title: 'Data Scientist',
-    company: 'Analytics Pro',
-    location: 'Hyderabad, India',
-    type: 'Full Time',
-    experience: '4-6 Years',
-    salary: '22-30 LPA',
-    posted: '2 weeks ago',
-    applications: 18,
-    status: 'Active',
-    description: 'Work with large datasets to derive insights and build predictive models...',
-    requirements: ['Python/R expertise', 'Machine Learning background', 'SQL proficiency'],
-    skills: ['Python', 'Machine Learning', 'SQL', 'TensorFlow', 'Pandas']
-  },
-  {
-    id: '5',
-    title: 'Frontend Developer',
-    company: 'WebSolutions Ltd.',
-    location: 'Chennai, India',
-    type: 'Full Time',
-    experience: '2-3 Years',
-    salary: '8-12 LPA',
-    posted: '4 days ago',
-    applications: 67,
-    status: 'Active',
-    description: 'Build responsive and interactive web applications using modern frameworks...',
-    requirements: ['React/Vue.js experience', 'Responsive design skills', 'JavaScript proficiency'],
-    skills: ['React', 'JavaScript', 'CSS3', 'HTML5', 'Redux']
-  },
-  {
-    id: '6',
-    title: 'Backend Developer',
-    company: 'ServerTech Inc.',
-    location: 'Pune, India',
-    type: 'Full Time',
-    experience: '3-5 Years',
-    salary: '15-22 LPA',
-    posted: '1 week ago',
-    applications: 29,
-    status: 'Active',
-    description: 'Develop robust backend systems and APIs for our applications...',
-    requirements: ['Java/Node.js experience', 'Database design', 'Microservices architecture'],
-    skills: ['Java', 'Spring Boot', 'PostgreSQL', 'Redis', 'Microservices']
-  },
-  {
-    id: '7',
-    title: 'Product Manager',
-    company: 'InnovateTech',
-    location: 'Gurgaon, India',
-    type: 'Full Time',
-    experience: '5-7 Years',
-    salary: '28-40 LPA',
-    posted: '6 days ago',
-    applications: 15,
-    status: 'Active',
-    description: 'Lead product strategy and development for our flagship products...',
-    requirements: ['Product management experience', 'Technical background', 'Stakeholder management'],
-    skills: ['Product Strategy', 'Agile', 'Analytics', 'Roadmapping', 'Leadership']
-  },
-  {
-    id: '8',
-    title: 'Mobile App Developer',
-    company: 'MobileFirst Solutions',
-    location: 'Kochi, India',
-    type: 'Full Time',
-    experience: '2-4 Years',
-    salary: '10-16 LPA',
-    posted: '3 days ago',
-    applications: 38,
-    status: 'Active',
-    description: 'Develop native and cross-platform mobile applications...',
-    requirements: ['React Native/Flutter experience', 'iOS/Android development', 'API integration'],
-    skills: ['React Native', 'Flutter', 'iOS', 'Android', 'JavaScript']
-  },
-  {
-    id: '9',
-    title: 'QA Engineer',
-    company: 'QualityFirst Ltd.',
-    location: 'Ahmedabad, India',
-    type: 'Full Time',
-    experience: '3-5 Years',
-    salary: '12-18 LPA',
-    posted: '1 week ago',
-    applications: 22,
-    status: 'Active',
-    description: 'Ensure product quality through comprehensive testing strategies...',
-    requirements: ['Manual and automation testing', 'Test framework experience', 'Bug tracking tools'],
-    skills: ['Selenium', 'TestNG', 'Postman', 'JIRA', 'Python']
-  },
-  {
-    id: '10',
-    title: 'Business Analyst',
-    company: 'AnalyticsCorp',
-    location: 'Delhi, India',
-    type: 'Full Time',
-    experience: '3-6 Years',
-    salary: '14-20 LPA',
-    posted: '5 days ago',
-    applications: 33,
-    status: 'Active',
-    description: 'Analyze business requirements and translate them into technical solutions...',
-    requirements: ['Business analysis experience', 'Requirements gathering', 'Stakeholder communication'],
-    skills: ['Business Analysis', 'SQL', 'Excel', 'Tableau', 'Process Mapping']
-  }
-];
+import { ArrowLeft, MapPin, Calendar, Users, DollarSign, Briefcase, Edit, Trash2, XCircle, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { RecruiterJob } from "@shared/schema";
 
 export default function RecruiterActiveJobs() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'closed' | 'draft'>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const jobsPerPage = 5;
+  const [editingJob, setEditingJob] = useState<RecruiterJob | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
+  const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const { toast } = useToast();
+  const jobsPerPage = 6;
 
-  const filteredJobs = activeJobs.filter(job => {
-    const matchesSearch = job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         job.company.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || job.status.toLowerCase() === statusFilter;
+  const { data: jobs = [], isLoading, error } = useQuery<RecruiterJob[]>({
+    queryKey: ['/api/recruiter/jobs'],
+  });
+
+  const updateJobMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<RecruiterJob> }) => {
+      const response = await apiRequest('PUT', `/api/recruiter/jobs/${id}`, updates);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/jobs'] });
+      toast({
+        title: "Job updated",
+        description: "The job has been updated successfully.",
+      });
+      setShowEditModal(false);
+      setEditingJob(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update job",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const deleteJobMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest('DELETE', `/api/recruiter/jobs/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/jobs'] });
+      toast({
+        title: "Job deleted",
+        description: "The job has been deleted successfully.",
+      });
+      setShowDeleteConfirm(false);
+      setSelectedJobId(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete job",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const closeJobMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest('POST', `/api/recruiter/jobs/${id}/close`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/jobs'] });
+      toast({
+        title: "Job closed",
+        description: "The job has been marked as closed.",
+      });
+      setShowCloseConfirm(false);
+      setSelectedJobId(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to close job",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const filteredJobs = jobs.filter(job => {
+    const matchesSearch = job.role?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         job.companyName?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || job.status?.toLowerCase() === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -195,17 +113,102 @@ export default function RecruiterActiveJobs() {
 
   const getStatusBadge = (status: string) => {
     const statusClasses: Record<string, string> = {
-      'Active': 'bg-green-100 text-green-800',
-      'Closed': 'bg-red-100 text-red-800',
-      'Draft': 'bg-yellow-100 text-yellow-800'
+      'Active': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+      'Closed': 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+      'Draft': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
     };
-    return statusClasses[status] || 'bg-gray-100 text-gray-800';
+    return statusClasses[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300';
   };
 
+  const getStatusIcon = (status: string) => {
+    switch(status) {
+      case 'Active': return <CheckCircle size={14} className="text-green-600 dark:text-green-400" />;
+      case 'Closed': return <XCircle size={14} className="text-red-600 dark:text-red-400" />;
+      case 'Draft': return <AlertCircle size={14} className="text-yellow-600 dark:text-yellow-400" />;
+      default: return null;
+    }
+  };
+
+  const formatDate = (dateString: string | Date | null) => {
+    if (!dateString) return 'Not specified';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
+    return date.toLocaleDateString();
+  };
+
+  const parseSkills = (skillsString: string | null): string[] => {
+    if (!skillsString) return [];
+    try {
+      return JSON.parse(skillsString);
+    } catch {
+      return skillsString.split(',').map(s => s.trim()).filter(Boolean);
+    }
+  };
+
+  const handleEdit = (job: RecruiterJob) => {
+    setEditingJob(job);
+    setShowEditModal(true);
+  };
+
+  const handleDelete = (jobId: string) => {
+    setSelectedJobId(jobId);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleClose = (jobId: string) => {
+    setSelectedJobId(jobId);
+    setShowCloseConfirm(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingJob) return;
+    updateJobMutation.mutate({
+      id: editingJob.id,
+      updates: {
+        role: editingJob.role,
+        companyName: editingJob.companyName,
+        location: editingJob.location,
+        experience: editingJob.experience,
+        salaryPackage: editingJob.salaryPackage,
+        workMode: editingJob.workMode,
+        aboutCompany: editingJob.aboutCompany,
+        roleDefinitions: editingJob.roleDefinitions,
+        status: editingJob.status,
+      }
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+          <Loader2 className="animate-spin" size={24} />
+          <span>Loading jobs...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-red-600 dark:text-red-400">
+          Failed to load jobs. Please try again.
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div className="flex items-center gap-4 mb-4">
           <Button
             onClick={() => {
@@ -218,18 +221,18 @@ export default function RecruiterActiveJobs() {
             variant="outline"
             size="sm"
             className="flex items-center gap-2"
+            data-testid="button-back"
           >
             <ArrowLeft size={16} />
             Back
           </Button>
-          <h1 className="text-2xl font-bold text-gray-900">Active Jobs</h1>
-          <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100" data-testid="text-page-title">Total Jobs</h1>
+          <span className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 px-3 py-1 rounded-full text-sm font-medium" data-testid="text-job-count">
             {filteredJobs.length} Jobs
           </span>
         </div>
         
-        {/* Search and Filter */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
           <div className="flex-1 max-w-md">
             <Input
               type="text"
@@ -237,13 +240,15 @@ export default function RecruiterActiveJobs() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full"
+              data-testid="input-search-jobs"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <Button
               onClick={() => setStatusFilter('all')}
               variant={statusFilter === 'all' ? 'default' : 'outline'}
               size="sm"
+              data-testid="button-filter-all"
             >
               All Jobs
             </Button>
@@ -251,6 +256,7 @@ export default function RecruiterActiveJobs() {
               onClick={() => setStatusFilter('active')}
               variant={statusFilter === 'active' ? 'default' : 'outline'}
               size="sm"
+              data-testid="button-filter-active"
             >
               Active
             </Button>
@@ -258,6 +264,7 @@ export default function RecruiterActiveJobs() {
               onClick={() => setStatusFilter('closed')}
               variant={statusFilter === 'closed' ? 'default' : 'outline'}
               size="sm"
+              data-testid="button-filter-closed"
             >
               Closed
             </Button>
@@ -265,6 +272,7 @@ export default function RecruiterActiveJobs() {
               onClick={() => setStatusFilter('draft')}
               variant={statusFilter === 'draft' ? 'default' : 'outline'}
               size="sm"
+              data-testid="button-filter-draft"
             >
               Draft
             </Button>
@@ -272,88 +280,137 @@ export default function RecruiterActiveJobs() {
         </div>
       </div>
 
-      {/* Job Listings */}
       <div className="p-6">
-        <div className="space-y-4">
-          {currentJobs.map((job) => (
-            <div key={job.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadge(job.status)}`}>
-                      {job.status}
-                    </span>
+        {currentJobs.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-gray-500 dark:text-gray-400">No jobs found matching your criteria.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {currentJobs.map((job) => (
+              <div 
+                key={job.id} 
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-5"
+                data-testid={`card-job-${job.id}`}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid={`text-job-title-${job.id}`}>
+                        {job.role}
+                      </h3>
+                      <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(job.status || 'Active')}`}>
+                        {getStatusIcon(job.status || 'Active')}
+                        {job.status || 'Active'}
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">{job.companyName}</div>
+                    <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 flex-wrap">
+                      {job.location && (
+                        <span className="flex items-center gap-1">
+                          <MapPin size={14} />
+                          {job.location}
+                        </span>
+                      )}
+                      {job.experience && (
+                        <span className="flex items-center gap-1">
+                          <Briefcase size={14} />
+                          {job.experience}
+                        </span>
+                      )}
+                      {job.salaryPackage && (
+                        <span className="flex items-center gap-1">
+                          <DollarSign size={14} />
+                          {job.salaryPackage}
+                        </span>
+                      )}
+                      <span className="flex items-center gap-1">
+                        <Calendar size={14} />
+                        Posted {formatDate(job.postedDate)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-600 mb-2">{job.company}</div>
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
-                    <span className="flex items-center gap-1">
-                      <MapPin size={14} />
-                      {job.location}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Briefcase size={14} />
-                      {job.experience}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <DollarSign size={14} />
-                      {job.salary}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Calendar size={14} />
-                      Posted {job.posted}
-                    </span>
+                  <div className="flex items-center gap-1 ml-2">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+                      onClick={() => handleEdit(job)}
+                      data-testid={`button-edit-job-${job.id}`}
+                    >
+                      <Edit size={16} />
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                      onClick={() => handleDelete(job.id)}
+                      data-testid={`button-delete-job-${job.id}`}
+                    >
+                      <Trash2 size={16} />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" className="flex items-center gap-1">
-                    <Edit size={14} />
-                    Edit
-                  </Button>
-                  <Button variant="outline" size="sm" className="flex items-center gap-1 text-red-600 hover:text-red-700">
-                    <Trash2 size={14} />
-                    Delete
-                  </Button>
-                </div>
-              </div>
 
-              <div className="mb-4">
-                <p className="text-gray-700 mb-3">{job.description}</p>
+                {job.aboutCompany && (
+                  <p className="text-gray-700 dark:text-gray-300 mb-3 text-sm line-clamp-2">{job.aboutCompany}</p>
+                )}
                 
-                {/* Skills */}
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {job.skills.map((skill, index) => (
-                    <span key={index} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {parseSkills(job.primarySkills).slice(0, 5).map((skill, index) => (
+                    <span key={index} className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-0.5 rounded text-xs font-medium">
                       {skill}
                     </span>
                   ))}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                <div className="flex items-center gap-6">
-                  <div className="flex items-center gap-2">
-                    <Users size={16} className="text-gray-400" />
-                    <span className="text-sm text-gray-600">
-                      <span className="font-medium">{job.applications}</span> applications
+                  {parseSkills(job.primarySkills).length > 5 && (
+                    <span className="text-gray-500 dark:text-gray-400 text-xs">
+                      +{parseSkills(job.primarySkills).length - 5} more
                     </span>
-                  </div>
-                  <span className="text-sm text-gray-500">Type: {job.type}</span>
+                  )}
                 </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline">
-                    View Applications
-                  </Button>
-                  <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
-                    Manage Job
-                  </Button>
+
+                <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1">
+                      <Users size={14} className="text-gray-400 dark:text-gray-500" />
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        <span className="font-medium">{job.applicationCount || 0}</span> applications
+                      </span>
+                    </div>
+                    {job.workMode && (
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
+                        {job.workMode}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    {job.status === 'Active' && (
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:text-orange-400 dark:border-orange-700 dark:hover:bg-orange-900/20"
+                        onClick={() => handleClose(job.id)}
+                        data-testid={`button-close-job-${job.id}`}
+                      >
+                        <XCircle size={14} className="mr-1" />
+                        Close Job
+                      </Button>
+                    )}
+                    <Button 
+                      size="sm" 
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      onClick={() => setLocation(`/recruiter/jobs/${job.id}/applications`)}
+                      data-testid={`button-view-applications-${job.id}`}
+                    >
+                      View Applications
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex justify-center items-center gap-4 mt-8">
             <Button
@@ -361,10 +418,11 @@ export default function RecruiterActiveJobs() {
               disabled={currentPage === 1}
               variant="outline"
               size="sm"
+              data-testid="button-prev-page"
             >
               Previous
             </Button>
-            <span className="text-sm text-gray-600">
+            <span className="text-sm text-gray-600 dark:text-gray-400">
               Page {currentPage} of {totalPages}
             </span>
             <Button
@@ -372,12 +430,212 @@ export default function RecruiterActiveJobs() {
               disabled={currentPage === totalPages}
               variant="outline"
               size="sm"
+              data-testid="button-next-page"
             >
               Next
             </Button>
           </div>
         )}
       </div>
+
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Job</DialogTitle>
+            <DialogDescription>
+              Make changes to the job posting below.
+            </DialogDescription>
+          </DialogHeader>
+          {editingJob && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="role">Job Title / Role</Label>
+                  <Input
+                    id="role"
+                    value={editingJob.role || ''}
+                    onChange={(e) => setEditingJob({ ...editingJob, role: e.target.value })}
+                    data-testid="input-edit-role"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="company">Company Name</Label>
+                  <Input
+                    id="company"
+                    value={editingJob.companyName || ''}
+                    onChange={(e) => setEditingJob({ ...editingJob, companyName: e.target.value })}
+                    data-testid="input-edit-company"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location</Label>
+                  <Input
+                    id="location"
+                    value={editingJob.location || ''}
+                    onChange={(e) => setEditingJob({ ...editingJob, location: e.target.value })}
+                    data-testid="input-edit-location"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="experience">Experience</Label>
+                  <Input
+                    id="experience"
+                    value={editingJob.experience || ''}
+                    onChange={(e) => setEditingJob({ ...editingJob, experience: e.target.value })}
+                    data-testid="input-edit-experience"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="salary">Salary Package</Label>
+                  <Input
+                    id="salary"
+                    value={editingJob.salaryPackage || ''}
+                    onChange={(e) => setEditingJob({ ...editingJob, salaryPackage: e.target.value })}
+                    data-testid="input-edit-salary"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="workMode">Work Mode</Label>
+                  <Select 
+                    value={editingJob.workMode || 'On-site'} 
+                    onValueChange={(value) => setEditingJob({ ...editingJob, workMode: value })}
+                  >
+                    <SelectTrigger data-testid="select-edit-workmode">
+                      <SelectValue placeholder="Select work mode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="On-site">On-site</SelectItem>
+                      <SelectItem value="Remote">Remote</SelectItem>
+                      <SelectItem value="Hybrid">Hybrid</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select 
+                  value={editingJob.status || 'Active'} 
+                  onValueChange={(value) => setEditingJob({ ...editingJob, status: value })}
+                >
+                  <SelectTrigger data-testid="select-edit-status">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Closed">Closed</SelectItem>
+                    <SelectItem value="Draft">Draft</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="about">About Company</Label>
+                <Textarea
+                  id="about"
+                  value={editingJob.aboutCompany || ''}
+                  onChange={(e) => setEditingJob({ ...editingJob, aboutCompany: e.target.value })}
+                  rows={3}
+                  data-testid="input-edit-about"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="roleDefinitions">Role Description</Label>
+                <Textarea
+                  id="roleDefinitions"
+                  value={editingJob.roleDefinitions || ''}
+                  onChange={(e) => setEditingJob({ ...editingJob, roleDefinitions: e.target.value })}
+                  rows={3}
+                  data-testid="input-edit-role-desc"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditModal(false)} data-testid="button-cancel-edit">
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveEdit} 
+              disabled={updateJobMutation.isPending}
+              data-testid="button-save-edit"
+            >
+              {updateJobMutation.isPending ? (
+                <>
+                  <Loader2 className="animate-spin mr-2" size={16} />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Job</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this job? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} data-testid="button-cancel-delete">
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => selectedJobId && deleteJobMutation.mutate(selectedJobId)}
+              disabled={deleteJobMutation.isPending}
+              data-testid="button-confirm-delete"
+            >
+              {deleteJobMutation.isPending ? (
+                <>
+                  <Loader2 className="animate-spin mr-2" size={16} />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Job'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showCloseConfirm} onOpenChange={setShowCloseConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Close Job</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to close this job? Candidates will no longer be able to apply.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCloseConfirm(false)} data-testid="button-cancel-close">
+              Cancel
+            </Button>
+            <Button 
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+              onClick={() => selectedJobId && closeJobMutation.mutate(selectedJobId)}
+              disabled={closeJobMutation.isPending}
+              data-testid="button-confirm-close"
+            >
+              {closeJobMutation.isPending ? (
+                <>
+                  <Loader2 className="animate-spin mr-2" size={16} />
+                  Closing...
+                </>
+              ) : (
+                'Close Job'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

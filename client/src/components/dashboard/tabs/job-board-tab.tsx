@@ -1,15 +1,17 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogOverlay, DialogPortal } from '@/components/ui/dialog';
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Search, MapPin, Filter, X, Heart, Clock, Bookmark, ChevronDown, Bell, Settings, User, Briefcase, DollarSign, MessageCircle } from "lucide-react";
+import { Search, MapPin, Filter, X, Heart, Clock, Bookmark, ChevronDown, Bell, Settings, User, Briefcase, DollarSign, MessageCircle, Loader2 } from "lucide-react";
 import { useSavedJobs, useSaveJob, useRemoveSavedJob } from "@/hooks/use-saved-jobs";
 import { useApplyJob, useJobApplications } from "@/hooks/use-job-applications";
 import { useToast } from "@/hooks/use-toast";
 import { useProfile } from "@/hooks/use-profile";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
+import type { RecruiterJob } from "@shared/schema";
 
 interface JobBoardTabProps {
   onNavigateToJobPreferences?: () => void;
@@ -34,110 +36,53 @@ interface JobListing {
   isHot: boolean;
 }
 
-const jobListings: JobListing[] = [
-  {
-    id: '1',
-    company: 'Google Technologies Inc.',
-    title: 'Cloud Engineer',
-    description: 'Technology Product based hyper growth, innovative company.',
-    experience: '8 Years',
-    salary: '25 LPA',
-    location: 'Bengaluru',
-    type: 'Full Time',
-    workType: 'Work from office',
-    skills: ['CI/CD', 'Docker', 'Azure'],
-    logo: '/api/placeholder/60/60',
-    isRemote: false,
-    postedDays: 3,
-    background: 'bg-gradient-to-br from-green-100 to-green-200',
-    isHot: true
-  },
-  {
-    id: '2', 
-    company: 'Google Technologies Inc.',
-    title: 'Cloud Engineer',
-    description: 'Technology Product based hyper growth, innovative company.',
-    experience: '8 Years',
-    salary: '25 LPA',
-    location: 'Bengaluru',
-    type: 'Full Time',
-    workType: 'Work from office',
-    skills: ['CI/CD', 'Docker', 'Azure'],
-    logo: '/api/placeholder/60/60',
-    isRemote: false,
-    postedDays: 3,
-    background: 'bg-gradient-to-br from-pink-100 to-pink-200',
-    isHot: false
-  },
-  {
-    id: '3',
-    company: 'Google Technologies Inc.',
-    title: 'Frontend Developer',
-    description: 'Technology Product based hyper growth, innovative company.',
-    experience: '8 Years',
-    salary: '25 LPA',
-    location: 'Bengaluru',
-    type: 'Full Time',
-    workType: 'Work from office',
-    skills: ['CI/CD', 'Docker', 'Azure'],
-    logo: '/api/placeholder/60/60',
-    isRemote: true,
-    postedDays: 2,
-    background: 'bg-gradient-to-br from-orange-100 to-orange-200',
-    isHot: true
-  },
-  {
-    id: '4',
-    company: 'Microsoft Corp.',
-    title: 'Software Engineer',
-    description: 'Technology Product based hyper growth, innovative company.',
-    experience: '5 Years',
-    salary: '18 LPA',
-    location: 'Bengaluru',
-    type: 'Full Time',
-    workType: 'Permanent',
-    skills: ['React', 'Node.js', 'MongoDB'],
-    logo: '/api/placeholder/60/60',
-    isRemote: false,
-    postedDays: 1,
-    background: 'bg-gradient-to-br from-blue-100 to-blue-200',
-    isHot: false
-  },
-  {
-    id: '5',
-    company: 'Amazon Web Services',
-    title: 'Backend Developer',
-    description: 'Technology Product based hyper growth, innovative company.',
-    experience: '6 Years',
-    salary: '8 LPA',
-    location: 'Mumbai',
-    type: 'Full Time',
-    workType: 'Work from office',
-    skills: ['Java', 'Spring', 'PostgreSQL'],
-    logo: '/api/placeholder/60/60',
-    isRemote: false,
-    postedDays: 5,
-    background: 'bg-gradient-to-br from-yellow-100 to-yellow-200',
-    isHot: false
-  },
-  {
-    id: '6',
-    company: 'Netflix Inc.',
-    title: 'Data Analyst',
-    description: 'Technology Product based hyper growth, innovative company.',
-    experience: '7 Years',
-    salary: '35 LPA',
-    location: 'Bengaluru',
-    type: 'Full Time',
-    workType: 'Hybrid',
-    skills: ['Python', 'SQL', 'Tableau'],
-    logo: '/api/placeholder/60/60',
-    isRemote: false,
-    postedDays: 4,
-    background: 'bg-gradient-to-br from-purple-100 to-purple-200',
-    isHot: true
-  }
+const backgroundColors = [
+  'bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/30 dark:to-green-800/30',
+  'bg-gradient-to-br from-pink-100 to-pink-200 dark:from-pink-900/30 dark:to-pink-800/30',
+  'bg-gradient-to-br from-orange-100 to-orange-200 dark:from-orange-900/30 dark:to-orange-800/30',
+  'bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30',
+  'bg-gradient-to-br from-yellow-100 to-yellow-200 dark:from-yellow-900/30 dark:to-yellow-800/30',
+  'bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/30 dark:to-purple-800/30',
 ];
+
+function parseSkills(skillsString: string | null): string[] {
+  if (!skillsString) return [];
+  try {
+    return JSON.parse(skillsString);
+  } catch {
+    return skillsString.split(',').map(s => s.trim()).filter(Boolean);
+  }
+}
+
+function transformRecruiterJobToJobListing(job: RecruiterJob, index: number): JobListing {
+  const postedDate = job.postedDate ? new Date(job.postedDate) : new Date();
+  const now = new Date();
+  const diffTime = Math.abs(now.getTime() - postedDate.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  const skills = [
+    ...parseSkills(job.primarySkills),
+    ...parseSkills(job.secondarySkills),
+  ].slice(0, 5);
+
+  return {
+    id: job.id,
+    company: job.companyName || 'Unknown Company',
+    title: job.role || 'Unknown Position',
+    description: job.aboutCompany || job.roleDefinitions || 'Join our team and make an impact!',
+    experience: job.experience || 'Not specified',
+    salary: job.salaryPackage || 'Competitive',
+    location: job.location || 'Not specified',
+    type: 'Full Time',
+    workType: job.workMode || 'On-site',
+    skills: skills.length > 0 ? skills : ['Skills not specified'],
+    logo: job.companyLogo || '/api/placeholder/60/60',
+    isRemote: job.workMode?.toLowerCase() === 'remote',
+    postedDays: diffDays,
+    background: backgroundColors[index % backgroundColors.length],
+    isHot: (job.applicationCount || 0) > 10 || diffDays <= 2,
+  };
+}
 
 export default function JobBoardTab({ onNavigateToJobPreferences, onNavigateToProfile }: JobBoardTabProps = {}) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -164,6 +109,14 @@ export default function JobBoardTab({ onNavigateToJobPreferences, onNavigateToPr
   const [showMoreRoles, setShowMoreRoles] = useState(false);
 
   const itemsPerPage = 5;
+
+  const { data: recruiterJobs = [], isLoading: isLoadingJobs } = useQuery<RecruiterJob[]>({
+    queryKey: ['/api/jobs'],
+  });
+
+  const jobListings = useMemo(() => {
+    return recruiterJobs.map((job, index) => transformRecruiterJobToJobListing(job, index));
+  }, [recruiterJobs]);
 
   const { data: savedJobsData = [] } = useSavedJobs();
   const saveJobMutation = useSaveJob();
