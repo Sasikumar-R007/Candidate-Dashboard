@@ -1897,48 +1897,24 @@ export default function RecruiterDashboard2() {
                   <span className="text-lg font-bold text-gray-900">{getPipelineCandidatesByStage.shortlisted.length}</span>
                 </button>
                 <button 
-                  onClick={() => handlePipelineStageClick('INTRO_CALL')}
-                  className="w-full flex justify-between items-center py-3 px-4 bg-green-300 rounded hover:bg-green-400 transition-colors cursor-pointer"
-                  data-testid="button-pipeline-intro-call"
-                >
-                  <span className="text-sm font-medium text-gray-700">INTRO CALL</span>
-                  <span className="text-lg font-bold text-gray-900">0</span>
-                </button>
-                <button 
-                  onClick={() => handlePipelineStageClick('ASSIGNMENT')}
-                  className="w-full flex justify-between items-center py-3 px-4 bg-green-400 rounded hover:bg-green-500 transition-colors cursor-pointer"
-                  data-testid="button-pipeline-assignment"
-                >
-                  <span className="text-sm font-medium text-gray-700">ASSIGNMENT</span>
-                  <span className="text-lg font-bold text-gray-800">0</span>
-                </button>
-                <button 
                   onClick={() => handlePipelineStageClick('L1')}
-                  className="w-full flex justify-between items-center py-3 px-4 bg-green-500 rounded hover:bg-green-600 transition-colors cursor-pointer"
+                  className="w-full flex justify-between items-center py-3 px-4 bg-green-400 rounded hover:bg-green-500 transition-colors cursor-pointer"
                   data-testid="button-pipeline-l1"
                 >
-                  <span className="text-sm font-medium text-white">L1</span>
-                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.level1.length}</span>
+                  <span className="text-sm font-medium text-gray-800">LEVEL 1</span>
+                  <span className="text-lg font-bold text-gray-800">{getPipelineCandidatesByStage.level1.length}</span>
                 </button>
                 <button 
                   onClick={() => handlePipelineStageClick('L2')}
-                  className="w-full flex justify-between items-center py-3 px-4 bg-green-600 rounded hover:bg-green-700 transition-colors cursor-pointer"
+                  className="w-full flex justify-between items-center py-3 px-4 bg-green-500 rounded hover:bg-green-600 transition-colors cursor-pointer"
                   data-testid="button-pipeline-l2"
                 >
-                  <span className="text-sm font-medium text-white">L2</span>
+                  <span className="text-sm font-medium text-white">LEVEL 2</span>
                   <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.level2.length}</span>
                 </button>
                 <button 
-                  onClick={() => handlePipelineStageClick('L3')}
-                  className="w-full flex justify-between items-center py-3 px-4 bg-green-700 rounded hover:bg-green-800 transition-colors cursor-pointer"
-                  data-testid="button-pipeline-l3"
-                >
-                  <span className="text-sm font-medium text-white">L3</span>
-                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.level3.length}</span>
-                </button>
-                <button 
                   onClick={() => handlePipelineStageClick('FINAL_ROUND')}
-                  className="w-full flex justify-between items-center py-3 px-4 bg-green-800 rounded hover:bg-green-900 transition-colors cursor-pointer"
+                  className="w-full flex justify-between items-center py-3 px-4 bg-green-600 rounded hover:bg-green-700 transition-colors cursor-pointer"
                   data-testid="button-pipeline-final-round"
                 >
                   <span className="text-sm font-medium text-white">FINAL ROUND</span>
@@ -1946,35 +1922,19 @@ export default function RecruiterDashboard2() {
                 </button>
                 <button 
                   onClick={() => handlePipelineStageClick('HR_ROUND')}
-                  className="w-full flex justify-between items-center py-3 px-4 bg-green-900 rounded hover:bg-green-950 transition-colors cursor-pointer"
+                  className="w-full flex justify-between items-center py-3 px-4 bg-green-700 rounded hover:bg-green-800 transition-colors cursor-pointer"
                   data-testid="button-pipeline-hr-round"
                 >
                   <span className="text-sm font-medium text-white">HR ROUND</span>
                   <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.hrRound.length}</span>
                 </button>
                 <button 
-                  onClick={() => handlePipelineStageClick('OFFER_STAGE')}
-                  className="w-full flex justify-between items-center py-3 px-4 bg-green-900 rounded hover:bg-green-950 transition-colors cursor-pointer"
-                  data-testid="button-pipeline-offer-stage"
+                  onClick={() => handlePipelineStageClick('SELECTED')}
+                  className="w-full flex justify-between items-center py-3 px-4 bg-green-800 rounded hover:bg-green-900 transition-colors cursor-pointer"
+                  data-testid="button-pipeline-selected"
                 >
-                  <span className="text-sm font-medium text-white">OFFER STAGE</span>
+                  <span className="text-sm font-medium text-white">SELECTED</span>
                   <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.offerStage.length}</span>
-                </button>
-                <button 
-                  onClick={() => handlePipelineStageClick('CLOSURE')}
-                  className="w-full flex justify-between items-center py-3 px-4 bg-green-950 rounded hover:bg-black transition-colors cursor-pointer"
-                  data-testid="button-pipeline-closure"
-                >
-                  <span className="text-sm font-medium text-white">CLOSURE</span>
-                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.closure.length}</span>
-                </button>
-                <button 
-                  onClick={() => handlePipelineStageClick('OFFER_DROP')}
-                  className="w-full flex justify-between items-center py-3 px-4 bg-amber-500 rounded hover:bg-amber-600 transition-colors cursor-pointer"
-                  data-testid="button-pipeline-offer-drop"
-                >
-                  <span className="text-sm font-medium text-white">OFFER DROP</span>
-                  <span className="text-lg font-bold text-white">0</span>
                 </button>
               </div>
             </div>
