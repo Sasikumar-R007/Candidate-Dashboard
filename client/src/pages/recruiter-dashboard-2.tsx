@@ -1661,60 +1661,68 @@ export default function RecruiterDashboard2() {
                 </div>
 
                 {/* Right Side - Statistics Panel (Display Only) */}
-                <div className="w-64">
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#E6F4EA'}}>
-                          <span className="font-semibold text-black">S</span>
-                          <span className="text-sm text-black">HORTLISTED</span>
-                          <span className="font-bold text-lg text-black" data-testid="count-shortlisted">{getPipelineCandidatesByStage.shortlisted.length}</span>
-                        </div>
-                        
-                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#D9F0E1'}}>
-                          <span className="font-semibold text-black">L1</span>
-                          <span className="text-sm text-black"></span>
-                          <span className="font-bold text-lg text-black" data-testid="count-l1">{getPipelineCandidatesByStage.level1.length}</span>
-                        </div>
-                        
-                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#C2EED0'}}>
-                          <span className="font-semibold text-black">L2</span>
-                          <span className="text-sm text-black"></span>
-                          <span className="font-bold text-lg text-black" data-testid="count-l2">{getPipelineCandidatesByStage.level2.length}</span>
-                        </div>
-                        
-                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#B5E1C1'}}>
-                          <span className="font-semibold text-black">L3</span>
-                          <span className="text-sm text-black"></span>
-                          <span className="font-bold text-lg text-black" data-testid="count-l3">{getPipelineCandidatesByStage.level3.length}</span>
-                        </div>
-                        
-                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#99D9AE'}}>
-                          <span className="font-semibold text-white">F</span>
-                          <span className="text-sm text-white">INAL ROUND</span>
-                          <span className="font-bold text-lg text-white" data-testid="count-finalround">{getPipelineCandidatesByStage.finalRound.length}</span>
-                        </div>
-                        
-                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#7CCBA0'}}>
-                          <span className="font-semibold text-white">H</span>
-                          <span className="text-sm text-white">R ROUND</span>
-                          <span className="font-bold text-lg text-white" data-testid="count-hrround">{getPipelineCandidatesByStage.hrRound.length}</span>
-                        </div>
-                        
-                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#6BB68C'}}>
-                          <span className="font-semibold text-white">O</span>
-                          <span className="text-sm text-white">FFER STAGE</span>
-                          <span className="font-bold text-lg text-white" data-testid="count-offerstage">{getPipelineCandidatesByStage.offerStage.length}</span>
-                        </div>
-                        
-                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#2F6F52'}}>
-                          <span className="font-semibold text-white">C</span>
-                          <span className="text-sm text-white">LOSURE</span>
-                          <span className="font-bold text-lg text-white" data-testid="count-closure">{getPipelineCandidatesByStage.offerStage.length}</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                <div className="w-48 flex-shrink-0">
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#E8F5E9'}}>
+                      <span className="text-sm font-medium text-gray-800">SOURCED</span>
+                      <span className="font-bold text-lg text-gray-900" data-testid="count-sourced">{getPipelineCandidatesByStage.inProcess.length + getPipelineCandidatesByStage.shortlisted.length}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#C8E6C9'}}>
+                      <span className="text-sm font-medium text-gray-800">SHORTLISTED</span>
+                      <span className="font-bold text-lg text-gray-900" data-testid="count-shortlisted">{getPipelineCandidatesByStage.shortlisted.length}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#A5D6A7'}}>
+                      <span className="text-sm font-medium text-gray-800">INTRO CALL</span>
+                      <span className="font-bold text-lg text-gray-900" data-testid="count-introcall">0</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#81C784'}}>
+                      <span className="text-sm font-medium text-gray-800">ASSIGNMENT</span>
+                      <span className="font-bold text-lg text-gray-900" data-testid="count-assignment">0</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#66BB6A'}}>
+                      <span className="text-sm font-medium text-white">L1</span>
+                      <span className="font-bold text-lg text-white" data-testid="count-l1">{getPipelineCandidatesByStage.level1.length}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#4CAF50'}}>
+                      <span className="text-sm font-medium text-white">L2</span>
+                      <span className="font-bold text-lg text-white" data-testid="count-l2">{getPipelineCandidatesByStage.level2.length}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#43A047'}}>
+                      <span className="text-sm font-medium text-white">L3</span>
+                      <span className="font-bold text-lg text-white" data-testid="count-l3">{getPipelineCandidatesByStage.level3.length}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#388E3C'}}>
+                      <span className="text-sm font-medium text-white">FINAL ROUND</span>
+                      <span className="font-bold text-lg text-white" data-testid="count-finalround">{getPipelineCandidatesByStage.finalRound.length}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#2E7D32'}}>
+                      <span className="text-sm font-medium text-white">HR ROUND</span>
+                      <span className="font-bold text-lg text-white" data-testid="count-hrround">{getPipelineCandidatesByStage.hrRound.length}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#1B5E20'}}>
+                      <span className="text-sm font-medium text-white">OFFER STAGE</span>
+                      <span className="font-bold text-lg text-white" data-testid="count-offerstage">{getPipelineCandidatesByStage.offerStage.length}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#1B5E20'}}>
+                      <span className="text-sm font-medium text-white">CLOSURE</span>
+                      <span className="font-bold text-lg text-white" data-testid="count-closure">{getPipelineCandidatesByStage.offerStage.length}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#FFC107'}}>
+                      <span className="text-sm font-medium text-gray-800">OFFER DROP</span>
+                      <span className="font-bold text-lg text-gray-900" data-testid="count-offerdrop">0</span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
