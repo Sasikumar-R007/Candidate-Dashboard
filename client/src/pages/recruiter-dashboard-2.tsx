@@ -179,6 +179,26 @@ export default function RecruiterDashboard2() {
     { id: 7, sender: "Kavitha", message: "Mobile App Developer candidate wants to negotiate salary", time: "9:30 AM", isOwn: false }
   ]);
 
+  // Query for job counts
+  const { data: jobCounts } = useQuery<{total: number, active: number, closed: number, draft: number}>({
+    queryKey: ['/api/recruiter/jobs/counts']
+  });
+
+  // Query for all job applications
+  const { data: allApplications = [] } = useQuery<any[]>({
+    queryKey: ['/api/recruiter/applications']
+  });
+
+  // Calculate application stats
+  const applicationStats = useMemo(() => {
+    const total = allApplications.length;
+    const today = new Date().toISOString().split('T')[0];
+    const newApps = allApplications.filter((app: any) => 
+      app.appliedDate && app.appliedDate.split('T')[0] === today
+    ).length;
+    return { total, new: newApps };
+  }, [allApplications]);
+
   // Handle sending new chat messages
   const handleSendMessage = () => {
     if (newMessage.trim()) {
@@ -328,16 +348,31 @@ export default function RecruiterDashboard2() {
   const statuses = ['In-Process', 'Shortlisted', 'Interview Scheduled', 'Interview On-Going', 'Final Round', 'HR Round', 'Selected', 'Screened Out'];
   const rejectionReasons = ['Skill mismatch', 'Lack of communication', 'Inadequate experience', 'Unprofessional behavior', 'Other'];
 
-  // Applicant data with state management
-  const [applicantData, setApplicantData] = useState([
-    { id: 1, appliedOn: '06-06-2025', candidateName: 'Aarav', company: 'TechCorp', roleApplied: 'Frontend Developer', submission: 'Inbound', currentStatus: 'In-Process' },
-    { id: 2, appliedOn: '08-06-2025', candidateName: 'Arjun', company: 'Designify', roleApplied: 'UI/UX Designer', submission: 'Uploaded', currentStatus: 'In-Process' },
-    { id: 3, appliedOn: '20-06-2025', candidateName: 'Shaurya', company: 'CodeLabs', roleApplied: 'Backend Developer', submission: 'Uploaded', currentStatus: 'In-Process' },
-    { id: 4, appliedOn: '01-07-2025', candidateName: 'Vihaan', company: 'AppLogic', roleApplied: 'QA Tester', submission: 'Inbound', currentStatus: 'In-Process' },
-    { id: 5, appliedOn: '23-07-2025', candidateName: 'Aditya', company: 'Bug Catchers', roleApplied: 'Mobile App Developer', submission: 'Inbound', currentStatus: 'In-Process' },
-    { id: 6, appliedOn: '05-08-2025', candidateName: 'Rohan', company: 'DataHub', roleApplied: 'Data Analyst', submission: 'Uploaded', currentStatus: 'In-Process' },
-    { id: 7, appliedOn: '10-08-2025', candidateName: 'Priya', company: 'CloudTech', roleApplied: 'DevOps Engineer', submission: 'Inbound', currentStatus: 'In-Process' },
-  ]);
+  // Transform API applications to applicant data format for the UI
+  const applicantData = useMemo(() => {
+    if (!allApplications || allApplications.length === 0) {
+      // Show sample data when no real applications exist
+      return [
+        { id: 1, appliedOn: '06-06-2025', candidateName: 'Aarav', company: 'TechCorp', roleApplied: 'Frontend Developer', submission: 'Inbound', currentStatus: 'In-Process' },
+        { id: 2, appliedOn: '08-06-2025', candidateName: 'Arjun', company: 'Designify', roleApplied: 'UI/UX Designer', submission: 'Uploaded', currentStatus: 'In-Process' },
+        { id: 3, appliedOn: '20-06-2025', candidateName: 'Shaurya', company: 'CodeLabs', roleApplied: 'Backend Developer', submission: 'Uploaded', currentStatus: 'In-Process' },
+        { id: 4, appliedOn: '01-07-2025', candidateName: 'Vihaan', company: 'AppLogic', roleApplied: 'QA Tester', submission: 'Inbound', currentStatus: 'In-Process' },
+        { id: 5, appliedOn: '23-07-2025', candidateName: 'Aditya', company: 'Bug Catchers', roleApplied: 'Mobile App Developer', submission: 'Inbound', currentStatus: 'In-Process' },
+      ];
+    }
+    return allApplications.map((app: any, index: number) => ({
+      id: app.id || index + 1,
+      appliedOn: app.appliedDate ? new Date(app.appliedDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : 'N/A',
+      candidateName: app.candidateName || 'Unknown Candidate',
+      company: app.company || 'N/A',
+      roleApplied: app.jobTitle || 'N/A',
+      submission: app.source === 'job_board' ? 'Inbound' : 'Uploaded',
+      currentStatus: app.status || 'In-Process'
+    }));
+  }, [allApplications]);
+
+  // Track local changes to applicant statuses
+  const [applicantStatusOverrides, setApplicantStatusOverrides] = useState<{[key: string]: string}>({});
 
   // Pending Meetings data
   const [pendingMeetingsData] = useState([
@@ -360,20 +395,34 @@ export default function RecruiterDashboard2() {
       setSelectedCandidate({ ...applicant, status: newStatus });
       setIsReasonModalOpen(true);
     } else {
-      setApplicantData(prev => 
-        prev.map(a => a.id === applicant.id ? { ...a, currentStatus: newStatus } : a)
-      );
+      setApplicantStatusOverrides(prev => ({
+        ...prev,
+        [applicant.id]: newStatus
+      }));
     }
   };
 
   // Archive candidate when screened out
   const archiveCandidate = () => {
     if (selectedCandidate) {
-      setApplicantData(prev => prev.filter(a => a.id !== selectedCandidate.id));
+      setApplicantStatusOverrides(prev => ({
+        ...prev,
+        [selectedCandidate.id]: 'Archived'
+      }));
       setIsReasonModalOpen(false);
       setSelectedCandidate(null);
       setReason('');
     }
+  };
+
+  // Get effective status (with local overrides)
+  const getEffectiveApplicantData = () => {
+    return applicantData
+      .filter(a => applicantStatusOverrides[a.id] !== 'Archived')
+      .map(a => ({
+        ...a,
+        currentStatus: applicantStatusOverrides[a.id] || a.currentStatus
+      }));
   };
 
   const handleAssign = (requirement: any) => {
@@ -527,9 +576,9 @@ export default function RecruiterDashboard2() {
                         <i className="fas fa-briefcase text-2xl text-gray-600 dark:text-gray-400"></i>
                       </div>
                       <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Active jobs</h3>
-                      <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">12</div>
+                      <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3" data-testid="text-card-active-jobs">{jobCounts?.active ?? 0}</div>
                       <div className="inline-block bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-2 py-1 rounded font-bold">
-                        Total Jobs Posted: 25
+                        Total Jobs Posted: {jobCounts?.total ?? 0}
                       </div>
                     </div>
                   </button>
@@ -543,9 +592,9 @@ export default function RecruiterDashboard2() {
                         <i className="fas fa-user text-2xl text-gray-600 dark:text-gray-400"></i>
                       </div>
                       <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">New applications:</h3>
-                      <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">12</div>
+                      <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3" data-testid="text-card-new-applications">{applicationStats.new}</div>
                       <div className="inline-block bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-2 py-1 rounded font-bold">
-                        Candidates Applied: 82
+                        Candidates Applied: {applicationStats.total}
                       </div>
                     </div>
                   </button>
@@ -556,7 +605,7 @@ export default function RecruiterDashboard2() {
               <Card className="bg-white border border-gray-200">
                 <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4 pt-6">
                   <CardTitle className="text-lg font-semibold text-gray-900">Applicant Overview</CardTitle>
-                  {applicantData.length > 5 && (
+                  {getEffectiveApplicantData().length > 5 && (
                     <Button 
                       variant="link"
                       className="text-sm text-blue-600 hover:text-blue-800 p-0 flex items-center gap-1"
@@ -581,8 +630,8 @@ export default function RecruiterDashboard2() {
                         </tr>
                       </thead>
                       <tbody>
-                        {applicantData.slice(0, 5).map((applicant, index) => (
-                          <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                        {getEffectiveApplicantData().slice(0, 5).map((applicant, index) => (
+                          <tr key={applicant.id || index} className="border-b border-gray-100 hover:bg-gray-50">
                             <td className="py-3 px-6 text-gray-900">{applicant.appliedOn}</td>
                             <td className="py-3 px-6 text-gray-900 font-medium">{applicant.candidateName}</td>
                             <td className="py-3 px-6 text-gray-900">{applicant.company}</td>
@@ -847,25 +896,25 @@ export default function RecruiterDashboard2() {
               {/* Active Jobs */}
               <div className="text-center">
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">Active Jobs</h3>
-                <div className="text-5xl font-bold text-gray-900 mb-2">12</div>
+                <div className="text-5xl font-bold text-gray-900 mb-2" data-testid="text-active-jobs-count">{jobCounts?.active ?? 0}</div>
               </div>
               
               {/* Total Jobs */}
               <div className="text-center">
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">Total Jobs</h3>
-                <div className="text-5xl font-bold text-gray-900 mb-2">20</div>
+                <div className="text-5xl font-bold text-gray-900 mb-2" data-testid="text-total-jobs-count">{jobCounts?.total ?? 0}</div>
               </div>
               
               {/* New Applications */}
               <div className="text-center">
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">New Applications</h3>
-                <div className="text-5xl font-bold text-gray-900 mb-2">10</div>
+                <div className="text-5xl font-bold text-gray-900 mb-2" data-testid="text-new-applications-count">{applicationStats.new}</div>
               </div>
               
               {/* Total Applications */}
               <div className="text-center">
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">Total Applications</h3>
-                <div className="text-5xl font-bold text-gray-900 mb-2">20</div>
+                <div className="text-5xl font-bold text-gray-900 mb-2" data-testid="text-total-applications-count">{applicationStats.total}</div>
                 <div className="text-right">
                   <Button size="sm" variant="link" className="text-blue-600 p-0 text-xs" onClick={() => window.location.href = '/master-database'} data-testid="button-see-all-applications">
                     See All

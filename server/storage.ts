@@ -32,7 +32,9 @@ import {
   type TargetMappings,
   type InsertTargetMappings,
   type RevenueMapping,
-  type InsertRevenueMapping
+  type InsertRevenueMapping,
+  type RecruiterJob,
+  type InsertRecruiterJob
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
@@ -154,6 +156,22 @@ export interface IStorage {
   updateRevenueMapping(id: string, updates: Partial<RevenueMapping>): Promise<RevenueMapping | undefined>;
   deleteRevenueMapping(id: string): Promise<boolean>;
   getClientById(id: string): Promise<Client | undefined>;
+  
+  // Recruiter Jobs methods
+  createRecruiterJob(job: InsertRecruiterJob): Promise<RecruiterJob>;
+  getAllRecruiterJobs(): Promise<RecruiterJob[]>;
+  getRecruiterJobsByRecruiterId(recruiterId: string): Promise<RecruiterJob[]>;
+  getRecruiterJobById(id: string): Promise<RecruiterJob | undefined>;
+  updateRecruiterJob(id: string, updates: Partial<RecruiterJob>): Promise<RecruiterJob | undefined>;
+  deleteRecruiterJob(id: string): Promise<boolean>;
+  getRecruiterJobCounts(): Promise<{total: number, active: number, closed: number, draft: number}>;
+  
+  // Applicant methods (for job applications from job board and recruiter tags)
+  getAllJobApplications(): Promise<JobApplication[]>;
+  getJobApplicationsByRecruiterJobId(recruiterJobId: string): Promise<JobApplication[]>;
+  getJobApplicationsByRequirementId(requirementId: string): Promise<JobApplication[]>;
+  createRecruiterJobApplication(application: InsertJobApplication & { profileId: string }): Promise<JobApplication>;
+  updateJobApplicationStatus(id: string, status: string): Promise<JobApplication | undefined>;
 }
 
 export class MemStorage implements IStorage {

@@ -30,7 +30,6 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
     { id: 'master-data', label: 'Master Data', icon: Database },
     { id: 'performance', label: 'Performance', icon: Trophy },
     { id: 'report', label: 'Report', icon: FileBarChart },
-    { id: 'client-settings', label: 'Client Settings', icon: Building2 },
     { id: 'user-management', label: 'User Management', icon: UserCog }
   ];
 

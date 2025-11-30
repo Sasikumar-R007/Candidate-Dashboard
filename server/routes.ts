@@ -2823,6 +2823,189 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===================== RECRUITER JOBS ROUTES =====================
+
+  // Create a new recruiter job posting
+  app.post("/api/recruiter/jobs", async (req, res) => {
+    try {
+      const {
+        title,
+        company,
+        location,
+        locationType,
+        experienceMin,
+        experienceMax,
+        salaryMin,
+        salaryMax,
+        description,
+        requirements,
+        responsibilities,
+        benefits,
+        skills,
+        department,
+        employmentType,
+        openings,
+        targetDate,
+        clientId,
+        status
+      } = req.body;
+
+      const recruiterId = req.session.employeeId || null;
+      const recruiterName = req.session.employeeName || null;
+
+      const jobData = {
+        title,
+        company,
+        location,
+        locationType: locationType || 'On-site',
+        experienceMin: experienceMin ? parseInt(experienceMin) : null,
+        experienceMax: experienceMax ? parseInt(experienceMax) : null,
+        salaryMin: salaryMin ? parseFloat(salaryMin) : null,
+        salaryMax: salaryMax ? parseFloat(salaryMax) : null,
+        description,
+        requirements,
+        responsibilities,
+        benefits,
+        skills: Array.isArray(skills) ? skills : (skills ? skills.split(',').map((s: string) => s.trim()) : []),
+        department,
+        employmentType: employmentType || 'Full-time',
+        openings: openings ? parseInt(openings) : 1,
+        targetDate,
+        clientId,
+        recruiterId,
+        recruiterName,
+        status: status || 'Active',
+        postedDate: new Date(),
+        applicationsCount: 0
+      };
+
+      const job = await storage.createRecruiterJob(jobData);
+      res.status(201).json({ message: "Job posted successfully", job });
+    } catch (error: any) {
+      console.error("Create recruiter job error:", error);
+      res.status(500).json({ message: "Failed to create job posting" });
+    }
+  });
+
+  // Get all recruiter jobs
+  app.get("/api/recruiter/jobs", async (req, res) => {
+    try {
+      const jobs = await storage.getAllRecruiterJobs();
+      res.json(jobs);
+    } catch (error) {
+      console.error("Get recruiter jobs error:", error);
+      res.status(500).json({ message: "Failed to get jobs" });
+    }
+  });
+
+  // Get job counts for dashboard
+  app.get("/api/recruiter/jobs/counts", async (req, res) => {
+    try {
+      const counts = await storage.getRecruiterJobCounts();
+      res.json(counts);
+    } catch (error) {
+      console.error("Get job counts error:", error);
+      res.status(500).json({ message: "Failed to get job counts" });
+    }
+  });
+
+  // Get a specific job by ID
+  app.get("/api/recruiter/jobs/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const job = await storage.getRecruiterJobById(id);
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+      res.json(job);
+    } catch (error) {
+      console.error("Get recruiter job error:", error);
+      res.status(500).json({ message: "Failed to get job" });
+    }
+  });
+
+  // Update a recruiter job
+  app.put("/api/recruiter/jobs/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updates = req.body;
+      
+      if (updates.skills && typeof updates.skills === 'string') {
+        updates.skills = updates.skills.split(',').map((s: string) => s.trim());
+      }
+      
+      const job = await storage.updateRecruiterJob(id, updates);
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+      res.json({ message: "Job updated successfully", job });
+    } catch (error) {
+      console.error("Update recruiter job error:", error);
+      res.status(500).json({ message: "Failed to update job" });
+    }
+  });
+
+  // Delete a recruiter job
+  app.delete("/api/recruiter/jobs/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteRecruiterJob(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+      res.json({ message: "Job deleted successfully" });
+    } catch (error) {
+      console.error("Delete recruiter job error:", error);
+      res.status(500).json({ message: "Failed to delete job" });
+    }
+  });
+
+  // ===================== JOB APPLICATIONS ROUTES =====================
+
+  // Get all job applications (for recruiter dashboard)
+  app.get("/api/recruiter/applications", async (req, res) => {
+    try {
+      const applications = await storage.getAllJobApplications();
+      res.json(applications);
+    } catch (error) {
+      console.error("Get applications error:", error);
+      res.status(500).json({ message: "Failed to get applications" });
+    }
+  });
+
+  // Get applications for a specific job
+  app.get("/api/recruiter/jobs/:id/applications", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const applications = await storage.getJobApplicationsByRecruiterJobId(id);
+      res.json(applications);
+    } catch (error) {
+      console.error("Get job applications error:", error);
+      res.status(500).json({ message: "Failed to get applications" });
+    }
+  });
+
+  // Update application status
+  app.patch("/api/recruiter/applications/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+      
+      const application = await storage.updateJobApplicationStatus(id, status);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+      res.json({ message: "Application status updated", application });
+    } catch (error) {
+      console.error("Update application status error:", error);
+      res.status(500).json({ message: "Failed to update application status" });
+    }
+  });
+
   // Get all employees
   app.get("/api/admin/employees", async (req, res) => {
     try {

@@ -4,7 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, Upload, X } from 'lucide-react';
+import { Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, Upload, X, Loader2 } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
 
 interface JobFormData {
   companyName: string;
@@ -47,23 +50,38 @@ export default function PostJobModal({
   setFormError
 }: PostJobModalProps) {
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const validateForm = () => {
     const required = ['companyName', 'experience', 'salaryPackage', 'aboutCompany', 'roleDefinitions', 'keyResponsibility'];
     return required.every(field => formData[field as keyof JobFormData].toString().trim() !== '');
   };
 
-  const handlePostJob = () => {
-    if (!validateForm()) {
-      setFormError('Please fill out all required fields');
-      return;
+  const postJobMutation = useMutation({
+    mutationFn: async (jobData: any) => {
+      return apiRequest('/api/recruiter/jobs', {
+        method: 'POST',
+        body: JSON.stringify(jobData),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/jobs'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/jobs/counts'] });
+      toast({ title: 'Job posted successfully!', description: 'Your job listing is now active.' });
+      onClose();
+      onSuccess();
+      setFormError('');
+      resetForm();
+    },
+    onError: (error: any) => {
+      toast({ title: 'Failed to post job', description: error.message || 'Please try again.', variant: 'destructive' });
+      setFormError(error.message || 'Failed to post job. Please try again.');
     }
-    
-    onClose();
-    onSuccess();
-    setFormError('');
-    
-    // Reset form
+  });
+
+  const resetForm = () => {
     setFormData({
       companyName: '',
       companyTagline: '',
@@ -84,6 +102,59 @@ export default function PostJobModal({
       knowledgeOnly: [''],
       companyLogo: ''
     });
+  };
+
+  const parseExperience = (exp: string): { min: number | null; max: number | null } => {
+    if (!exp) return { min: null, max: null };
+    if (exp === '0-2') return { min: 0, max: 2 };
+    if (exp === '2-5') return { min: 2, max: 5 };
+    if (exp === '5+') return { min: 5, max: null };
+    return { min: null, max: null };
+  };
+
+  const parseSalary = (salary: string): { min: number | null; max: number | null } => {
+    if (!salary) return { min: null, max: null };
+    if (salary === '0-5') return { min: 0, max: 500000 };
+    if (salary === '5-10') return { min: 500000, max: 1000000 };
+    if (salary === '10+') return { min: 1000000, max: null };
+    return { min: null, max: null };
+  };
+
+  const handlePostJob = () => {
+    if (!validateForm()) {
+      setFormError('Please fill out all required fields');
+      return;
+    }
+
+    const expRange = parseExperience(formData.experience);
+    const salaryRange = parseSalary(formData.salaryPackage);
+    const allSkills = [
+      ...formData.primarySkills.filter(s => s),
+      ...formData.secondarySkills.filter(s => s),
+      ...formData.knowledgeOnly.filter(s => s)
+    ];
+
+    const jobData = {
+      title: formData.role || 'Software Developer',
+      company: formData.companyName,
+      location: formData.location,
+      locationType: formData.workMode === 'remote' ? 'Remote' : formData.workMode === 'hybrid' ? 'Hybrid' : 'On-site',
+      experienceMin: expRange.min,
+      experienceMax: expRange.max,
+      salaryMin: salaryRange.min,
+      salaryMax: salaryRange.max,
+      description: formData.aboutCompany,
+      requirements: formData.roleDefinitions,
+      responsibilities: formData.keyResponsibility,
+      benefits: formData.companyTagline,
+      skills: allSkills,
+      department: formData.field || 'Engineering',
+      employmentType: formData.workMode === 'full-time' ? 'Full-time' : formData.workMode === 'part-time' ? 'Part-time' : 'Full-time',
+      openings: parseInt(formData.noOfPositions) || 1,
+      status: 'Active'
+    };
+
+    postJobMutation.mutate(jobData);
   };
 
   return (
@@ -429,6 +500,7 @@ export default function PostJobModal({
                   variant="outline" 
                   className="flex-1 bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 rounded-sm"
                   onClick={() => setIsPreviewModalOpen(true)}
+                  disabled={postJobMutation.isPending}
                   data-testid="button-preview-job"
                 >
                   Preview
@@ -436,9 +508,17 @@ export default function PostJobModal({
                 <Button 
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-sm"
                   onClick={handlePostJob}
+                  disabled={postJobMutation.isPending}
                   data-testid="button-submit-job"
                 >
-                  Post
+                  {postJobMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Posting...
+                    </>
+                  ) : (
+                    'Post'
+                  )}
                 </Button>
               </div>
             </div>

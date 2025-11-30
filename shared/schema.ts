@@ -79,12 +79,17 @@ export const activities = pgTable("activities", {
 export const jobApplications = pgTable("job_applications", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   profileId: varchar("profile_id").notNull(),
+  recruiterJobId: varchar("recruiter_job_id"), // Links to recruiter_jobs.id
+  requirementId: varchar("requirement_id"), // Links to requirements.id (for recruiter-tagged applications)
   jobTitle: text("job_title").notNull(),
   company: text("company").notNull(),
   jobType: text("job_type"),
-  status: text("status").notNull().default("In Process"), // In Process, Rejected, Applied, etc.
+  status: text("status").notNull().default("In Process"), // In Process, Rejected, Applied, Shortlisted, Interview Scheduled, etc.
+  source: text("source").notNull().default("job_board"), // job_board, recruiter_tagged, inbound
   appliedDate: timestamp("applied_date").notNull().defaultNow(),
-  // Additional job details for viewing
+  candidateName: text("candidate_name"),
+  candidateEmail: text("candidate_email"),
+  candidatePhone: text("candidate_phone"),
   description: text("description"),
   salary: text("salary"),
   location: text("location"),
@@ -628,6 +633,34 @@ export const adminMessages = pgTable("admin_messages", {
   sentAt: timestamp("sent_at").notNull().defaultNow(),
 });
 
+export const recruiterJobs = pgTable("recruiter_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  recruiterId: varchar("recruiter_id"), // Links to employees.id (the recruiter who posted)
+  companyName: text("company_name").notNull(),
+  companyTagline: text("company_tagline"),
+  companyType: text("company_type"),
+  companyLogo: text("company_logo"),
+  market: text("market"),
+  field: text("field"),
+  noOfPositions: integer("no_of_positions").default(1),
+  role: text("role").notNull(),
+  experience: text("experience").notNull(),
+  location: text("location"),
+  workMode: text("work_mode"), // Remote, Hybrid, On-site
+  salaryPackage: text("salary_package"),
+  aboutCompany: text("about_company"),
+  roleDefinitions: text("role_definitions"),
+  keyResponsibility: text("key_responsibility"),
+  primarySkills: text("primary_skills"), // JSON stringified array
+  secondarySkills: text("secondary_skills"), // JSON stringified array
+  knowledgeOnly: text("knowledge_only"), // JSON stringified array
+  status: text("status").notNull().default("Active"), // Active, Closed, Draft
+  applicationCount: integer("application_count").default(0),
+  postedDate: timestamp("posted_date").notNull().defaultNow(),
+  closedDate: timestamp("closed_date"),
+  createdAt: text("created_at").notNull(),
+});
+
 export const insertSupportConversationSchema = createInsertSchema(supportConversations).omit({
   id: true,
 });
@@ -668,6 +701,22 @@ export const insertRevenueMappingSchema = createInsertSchema(revenueMappings).om
 export const insertAdminMessageSchema = createInsertSchema(adminMessages).omit({
   id: true,
   sentAt: true,
+});
+
+export const insertRecruiterJobSchema = createInsertSchema(recruiterJobs).omit({
+  id: true,
+  postedDate: true,
+  closedDate: true,
+}).extend({
+  primarySkills: z.union([z.string(), z.array(z.string())]).optional().transform(val =>
+    Array.isArray(val) ? JSON.stringify(val) : val
+  ),
+  secondarySkills: z.union([z.string(), z.array(z.string())]).optional().transform(val =>
+    Array.isArray(val) ? JSON.stringify(val) : val
+  ),
+  knowledgeOnly: z.union([z.string(), z.array(z.string())]).optional().transform(val =>
+    Array.isArray(val) ? JSON.stringify(val) : val
+  ),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -738,3 +787,5 @@ export type InsertRevenueMapping = z.infer<typeof insertRevenueMappingSchema>;
 export type RevenueMapping = typeof revenueMappings.$inferSelect;
 export type InsertAdminMessage = z.infer<typeof insertAdminMessageSchema>;
 export type AdminMessage = typeof adminMessages.$inferSelect;
+export type InsertRecruiterJob = z.infer<typeof insertRecruiterJobSchema>;
+export type RecruiterJob = typeof recruiterJobs.$inferSelect;

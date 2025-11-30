@@ -3643,8 +3643,6 @@ export default function AdminDashboard() {
             </div>
           </div>
         );
-      case 'profile-details':
-        return <ClientSettingsSection />;
       default:
         return renderTeamSection();
     }
@@ -5634,8 +5632,6 @@ export default function AdminDashboard() {
               </div>
           </div>
         );
-      case 'client-settings':
-        return <ClientSettingsSection />;
       default:
         return renderTeamSection();
     }

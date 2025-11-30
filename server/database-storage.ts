@@ -38,6 +38,8 @@ import {
   type InsertTargetMappings,
   type RevenueMapping,
   type InsertRevenueMapping,
+  type RecruiterJob,
+  type InsertRecruiterJob,
   users,
   profiles,
   jobPreferences,
@@ -56,10 +58,11 @@ import {
   clients,
   impactMetrics,
   targetMappings,
-  revenueMappings
+  revenueMappings,
+  recruiterJobs
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql, count } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import type { IStorage } from "./storage";
 
@@ -765,5 +768,86 @@ export class DatabaseStorage implements IStorage {
   async getClientById(id: string): Promise<Client | undefined> {
     const [client] = await db.select().from(clients).where(eq(clients.id, id));
     return client || undefined;
+  }
+
+  // Recruiter Jobs methods
+  async createRecruiterJob(job: InsertRecruiterJob): Promise<RecruiterJob> {
+    const [recruiterJob] = await db.insert(recruiterJobs).values(job).returning();
+    return recruiterJob;
+  }
+
+  async getAllRecruiterJobs(): Promise<RecruiterJob[]> {
+    return await db.select().from(recruiterJobs).orderBy(desc(recruiterJobs.postedDate));
+  }
+
+  async getRecruiterJobsByRecruiterId(recruiterId: string): Promise<RecruiterJob[]> {
+    return await db.select().from(recruiterJobs)
+      .where(eq(recruiterJobs.recruiterId, recruiterId))
+      .orderBy(desc(recruiterJobs.postedDate));
+  }
+
+  async getRecruiterJobById(id: string): Promise<RecruiterJob | undefined> {
+    const [job] = await db.select().from(recruiterJobs).where(eq(recruiterJobs.id, id));
+    return job || undefined;
+  }
+
+  async updateRecruiterJob(id: string, updates: Partial<RecruiterJob>): Promise<RecruiterJob | undefined> {
+    const [job] = await db
+      .update(recruiterJobs)
+      .set(updates)
+      .where(eq(recruiterJobs.id, id))
+      .returning();
+    return job || undefined;
+  }
+
+  async deleteRecruiterJob(id: string): Promise<boolean> {
+    const result = await db.delete(recruiterJobs).where(eq(recruiterJobs.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getRecruiterJobCounts(): Promise<{total: number, active: number, closed: number, draft: number}> {
+    const allJobs = await db.select().from(recruiterJobs);
+    const total = allJobs.length;
+    const active = allJobs.filter(j => j.status === 'Active').length;
+    const closed = allJobs.filter(j => j.status === 'Closed').length;
+    const draft = allJobs.filter(j => j.status === 'Draft').length;
+    return { total, active, closed, draft };
+  }
+
+  // Applicant methods (for job applications from job board and recruiter tags)
+  async getAllJobApplications(): Promise<JobApplication[]> {
+    return await db.select().from(jobApplications).orderBy(desc(jobApplications.appliedDate));
+  }
+
+  async getJobApplicationsByRecruiterJobId(recruiterJobId: string): Promise<JobApplication[]> {
+    return await db.select().from(jobApplications)
+      .where(eq(jobApplications.recruiterJobId, recruiterJobId))
+      .orderBy(desc(jobApplications.appliedDate));
+  }
+
+  async getJobApplicationsByRequirementId(requirementId: string): Promise<JobApplication[]> {
+    return await db.select().from(jobApplications)
+      .where(eq(jobApplications.requirementId, requirementId))
+      .orderBy(desc(jobApplications.appliedDate));
+  }
+
+  async createRecruiterJobApplication(application: InsertJobApplication & { profileId: string }): Promise<JobApplication> {
+    const [jobApplication] = await db.insert(jobApplications).values(application).returning();
+    return jobApplication;
+  }
+
+  async updateJobApplicationStatus(id: string, status: string): Promise<JobApplication | undefined> {
+    const [application] = await db
+      .update(jobApplications)
+      .set({ status })
+      .where(eq(jobApplications.id, id))
+      .returning();
+    return application || undefined;
+  }
+
+  async getRequirementsByTeamLead(teamLeadName: string): Promise<Requirement[]> {
+    return await db.select().from(requirements)
+      .where(eq(requirements.teamLead, teamLeadName))
+      .orderBy(desc(requirements.createdAt));
   }
 }
