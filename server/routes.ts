@@ -2980,38 +2980,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         department,
         employmentType,
         openings,
-        targetDate,
-        clientId,
-        status
+        status,
+        companyLogo
       } = req.body;
 
       const recruiterId = req.session.employeeId || null;
-      const recruiterName = req.session.employeeName || null;
+
+      // Format experience as text (e.g., "2-5 years")
+      let experienceText = '';
+      if (experienceMin !== null && experienceMin !== undefined) {
+        if (experienceMax !== null && experienceMax !== undefined) {
+          experienceText = `${experienceMin}-${experienceMax} years`;
+        } else {
+          experienceText = `${experienceMin}+ years`;
+        }
+      }
+
+      // Format salary as text (e.g., "10-15 LPA")
+      let salaryText = '';
+      if (salaryMin !== null && salaryMin !== undefined) {
+        const minLPA = Math.round(salaryMin / 100000);
+        if (salaryMax !== null && salaryMax !== undefined) {
+          const maxLPA = Math.round(salaryMax / 100000);
+          salaryText = `${minLPA}-${maxLPA} LPA`;
+        } else {
+          salaryText = `${minLPA}+ LPA`;
+        }
+      }
+
+      // Prepare skills as JSON string
+      const skillsArray = Array.isArray(skills) ? skills : (skills ? skills.split(',').map((s: string) => s.trim()) : []);
 
       const jobData = {
-        title,
-        company,
-        location,
-        locationType: locationType || 'On-site',
-        experienceMin: experienceMin ? parseInt(experienceMin) : null,
-        experienceMax: experienceMax ? parseInt(experienceMax) : null,
-        salaryMin: salaryMin ? parseFloat(salaryMin) : null,
-        salaryMax: salaryMax ? parseFloat(salaryMax) : null,
-        description,
-        requirements,
-        responsibilities,
-        benefits,
-        skills: Array.isArray(skills) ? skills : (skills ? skills.split(',').map((s: string) => s.trim()) : []),
-        department,
-        employmentType: employmentType || 'Full-time',
-        openings: openings ? parseInt(openings) : 1,
-        targetDate,
-        clientId,
         recruiterId,
-        recruiterName,
+        companyName: company || 'Company',
+        companyTagline: benefits || null,
+        companyType: null,
+        companyLogo: companyLogo || null,
+        market: null,
+        field: department || null,
+        noOfPositions: openings ? parseInt(openings) : 1,
+        role: title || 'Job Role',
+        experience: experienceText || '0-1 years',
+        location: location || null,
+        workMode: locationType || 'On-site',
+        salaryPackage: salaryText || null,
+        aboutCompany: description || null,
+        roleDefinitions: requirements || null,
+        keyResponsibility: responsibilities || null,
+        primarySkills: JSON.stringify(skillsArray),
+        secondarySkills: null,
+        knowledgeOnly: null,
         status: status || 'Active',
-        postedDate: new Date(),
-        applicationsCount: 0
+        applicationCount: 0,
+        createdAt: new Date().toISOString()
       };
 
       const job = await storage.createRecruiterJob(jobData);
