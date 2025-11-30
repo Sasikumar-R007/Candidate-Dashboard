@@ -503,6 +503,17 @@ export default function RecruiterDashboard2() {
     queryKey: ['/api/recruiter/target-metrics'],
   }) as { data: any };
 
+  const { data: aggregatedTargets } = useQuery({
+    queryKey: ['/api/recruiter/aggregated-targets'],
+  }) as { data: { currentQuarter: { quarter: string; year: number; minimumTarget: number; targetAchieved: number; incentiveEarned: number; closures: number; }; allQuarters: any[] } | undefined };
+
+  const formatIndianCurrency = (value: number): string => {
+    if (value === 0) return '0';
+    return new Intl.NumberFormat('en-IN', {
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
   const { data: dailyMetrics } = useQuery({
     queryKey: ['/api/recruiter/daily-metrics'],
   }) as { data: any };
@@ -703,19 +714,35 @@ export default function RecruiterDashboard2() {
                   <div className="grid grid-cols-4 gap-0 bg-blue-50 rounded-lg overflow-hidden">
                     <div className="text-center py-8 px-4 border-r border-blue-100">
                       <p className="text-sm font-semibold text-gray-700 mb-3" data-testid="text-current-quarter">Current Quarter</p>
-                      <p className="text-2xl font-bold text-gray-900">ASO-2025</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {aggregatedTargets?.currentQuarter 
+                          ? `${aggregatedTargets.currentQuarter.quarter}-${aggregatedTargets.currentQuarter.year}` 
+                          : `Q${Math.ceil((new Date().getMonth() + 1) / 3)}-${new Date().getFullYear()}`}
+                      </p>
                     </div>
                     <div className="text-center py-8 px-4 border-r border-blue-100">
                       <p className="text-sm font-semibold text-gray-700 mb-3" data-testid="text-minimum-target">Minimum Target</p>
-                      <p className="text-2xl font-bold text-gray-900">15,00,000</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {aggregatedTargets?.currentQuarter 
+                          ? formatIndianCurrency(aggregatedTargets.currentQuarter.minimumTarget) 
+                          : '0'}
+                      </p>
                     </div>
                     <div className="text-center py-8 px-4 border-r border-blue-100">
                       <p className="text-sm font-semibold text-gray-700 mb-3" data-testid="text-target-achieved">Target Achieved</p>
-                      <p className="text-2xl font-bold text-gray-900">10,00,000</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {aggregatedTargets?.currentQuarter 
+                          ? formatIndianCurrency(aggregatedTargets.currentQuarter.targetAchieved) 
+                          : '0'}
+                      </p>
                     </div>
                     <div className="text-center py-8 px-4">
                       <p className="text-sm font-semibold text-gray-700 mb-3" data-testid="text-incentive-earned">Incentive Earned</p>
-                      <p className="text-2xl font-bold text-gray-900">50,000</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {aggregatedTargets?.currentQuarter 
+                          ? formatIndianCurrency(aggregatedTargets.currentQuarter.incentiveEarned) 
+                          : '0'}
+                      </p>
                     </div>
                   </div>
                 </CardContent>
@@ -1877,31 +1904,49 @@ export default function RecruiterDashboard2() {
       <Dialog open={isTargetModalOpen} onOpenChange={setIsTargetModalOpen}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Target Details</DialogTitle>
+            <DialogTitle>Target Details - All Quarters</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div className="flex justify-between items-center p-4 bg-blue-50 rounded">
-                  <span className="font-medium">Q1 Target</span>
-                  <span className="text-lg font-bold">15,00,000</span>
-                </div>
-                <div className="flex justify-between items-center p-4 bg-green-50 rounded">
-                  <span className="font-medium">Q1 Achieved</span>
-                  <span className="text-lg font-bold">10,00,000</span>
-                </div>
+            {aggregatedTargets?.allQuarters && aggregatedTargets.allQuarters.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse bg-white rounded border border-gray-200">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Quarter</th>
+                      <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Year</th>
+                      <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Minimum Target</th>
+                      <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Target Achieved</th>
+                      <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Incentive Earned</th>
+                      <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {aggregatedTargets.allQuarters.map((quarter: any, index: number) => (
+                      <tr key={index} className={index % 2 === 0 ? "bg-blue-50" : "bg-white"}>
+                        <td className="border border-gray-300 px-4 py-3">{quarter.quarter}</td>
+                        <td className="border border-gray-300 px-4 py-3">{quarter.year}</td>
+                        <td className="border border-gray-300 px-4 py-3">{formatIndianCurrency(quarter.minimumTarget)}</td>
+                        <td className="border border-gray-300 px-4 py-3">{formatIndianCurrency(quarter.targetAchieved)}</td>
+                        <td className="border border-gray-300 px-4 py-3">{formatIndianCurrency(quarter.incentiveEarned)}</td>
+                        <td className="border border-gray-300 px-4 py-3">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            quarter.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                            quarter.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {quarter.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center p-4 bg-orange-50 rounded">
-                  <span className="font-medium">Q2 Target</span>
-                  <span className="text-lg font-bold">18,00,000</span>
-                </div>
-                <div className="flex justify-between items-center p-4 bg-purple-50 rounded">
-                  <span className="font-medium">Total Incentive</span>
-                  <span className="text-lg font-bold">75,000</span>
-                </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                No target data available. Please contact your Team Lead or Admin to set up your targets.
               </div>
-            </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

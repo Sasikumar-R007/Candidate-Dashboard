@@ -1296,13 +1296,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(teamMembers);
   });
 
+  // Legacy endpoint - returns 0 defaults for backward compatibility
   app.get("/api/team-leader/target-metrics", (req, res) => {
     const targetMetrics = {
       id: "target-001",
-      currentQuarter: "ASO-2025",
-      minimumTarget: "15,00,000",
-      targetAchieved: "10,00,000",
-      incentiveEarned: "50,000"
+      currentQuarter: `Q${Math.ceil((new Date().getMonth() + 1) / 3)}-${new Date().getFullYear()}`,
+      minimumTarget: "0",
+      targetAchieved: "0",
+      incentiveEarned: "0"
     };
     res.json(targetMetrics);
   });
@@ -1669,15 +1670,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Recruiter file upload endpoints
   // Recruiter data endpoints - same as team leader
+  // Legacy endpoint - returns 0 defaults for backward compatibility
   app.get("/api/recruiter/target-metrics", (req, res) => {
     const targetMetrics = {
       id: "target-rec-001",
-      currentQuarter: "ASO-2025",
-      minimumTarget: "8,00,000",
-      targetAchieved: "6,50,000",
-      incentiveEarned: "35,000"
+      currentQuarter: `Q${Math.ceil((new Date().getMonth() + 1) / 3)}-${new Date().getFullYear()}`,
+      minimumTarget: "0",
+      targetAchieved: "0",
+      incentiveEarned: "0"
     };
     res.json(targetMetrics);
+  });
+
+  // Get aggregated target data for recruiter/TA based on their individual target mappings
+  app.get("/api/recruiter/aggregated-targets", async (req, res) => {
+    try {
+      const session = req.session as any;
+      if (!session?.employeeId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      // Fetch target summary for this recruiter (they are the teamMemberId)
+      const targetSummary = await storage.getRecruiterTargetSummary(employee.id);
+      res.json(targetSummary);
+    } catch (error) {
+      console.error('Get recruiter aggregated targets error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
   });
 
   app.get("/api/recruiter/daily-metrics", (req, res) => {

@@ -149,6 +149,25 @@ export interface IStorage {
       status: string;
     }>;
   }>;
+  getRecruiterTargetSummary(recruiterId: string): Promise<{
+    currentQuarter: {
+      quarter: string;
+      year: number;
+      minimumTarget: number;
+      targetAchieved: number;
+      incentiveEarned: number;
+      closures: number;
+    };
+    allQuarters: Array<{
+      quarter: string;
+      year: number;
+      minimumTarget: number;
+      targetAchieved: number;
+      incentiveEarned: number;
+      closures: number;
+      status: string;
+    }>;
+  }>;
   
   // Revenue Mapping methods
   createRevenueMapping(mapping: InsertRevenueMapping): Promise<RevenueMapping>;

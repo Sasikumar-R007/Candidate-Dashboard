@@ -568,19 +568,35 @@ export default function TeamLeaderDashboard() {
                   <div className="grid grid-cols-4 gap-0 bg-cyan-50 rounded-lg overflow-hidden">
                     <div className="text-center py-6 px-4 border-r border-cyan-100">
                       <p className="text-sm font-semibold text-gray-700 mb-2">Current Quarter</p>
-                      <p className="text-xl font-bold text-gray-900">ASO-2025</p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {aggregatedTargets?.currentQuarter 
+                          ? `${aggregatedTargets.currentQuarter.quarter}-${aggregatedTargets.currentQuarter.year}` 
+                          : `Q${Math.ceil((new Date().getMonth() + 1) / 3)}-${new Date().getFullYear()}`}
+                      </p>
                     </div>
                     <div className="text-center py-6 px-4 border-r border-cyan-100">
                       <p className="text-sm font-semibold text-gray-700 mb-2">Minimum Target</p>
-                      <p className="text-xl font-bold text-gray-900">15,00,000</p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {aggregatedTargets?.currentQuarter 
+                          ? formatIndianCurrency(aggregatedTargets.currentQuarter.minimumTarget) 
+                          : '0'}
+                      </p>
                     </div>
                     <div className="text-center py-6 px-4 border-r border-cyan-100">
                       <p className="text-sm font-semibold text-gray-700 mb-2">Target Achieved</p>
-                      <p className="text-xl font-bold text-gray-900">10,00,000</p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {aggregatedTargets?.currentQuarter 
+                          ? formatIndianCurrency(aggregatedTargets.currentQuarter.targetAchieved) 
+                          : '0'}
+                      </p>
                     </div>
                     <div className="text-center py-6 px-4">
                       <p className="text-sm font-semibold text-gray-700 mb-2">Incentive Earned</p>
-                      <p className="text-xl font-bold text-gray-900">50,000</p>
+                      <p className="text-xl font-bold text-gray-900">
+                        {aggregatedTargets?.currentQuarter 
+                          ? formatIndianCurrency(aggregatedTargets.currentQuarter.incentiveEarned) 
+                          : '0'}
+                      </p>
                     </div>
                   </div>
                 </CardContent>
