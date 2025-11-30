@@ -1518,7 +1518,7 @@ const SourceResume = () => {
                             data-testid={`button-deliver-${candidate.id}`}
                           >
                             <Send size={14} />
-                            Deliver to Requirement
+                            Tag to Requirement
                           </button>
                         </div>
                       </div>
@@ -1709,11 +1709,11 @@ const SourceResume = () => {
       )}
       </div>
 
-      {/* Deliver to Requirement Modal */}
+      {/* Tag to Requirement Modal */}
       <Dialog open={showDeliverModal} onOpenChange={setShowDeliverModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Deliver Candidate to Requirement</DialogTitle>
+            <DialogTitle>Tag Candidate to Requirement</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
