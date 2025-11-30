@@ -2996,6 +2996,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create a job application (for recruiter tagging candidates to requirements)
+  app.post("/api/recruiter/applications", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { 
+        candidateName, 
+        candidateEmail, 
+        candidatePhone, 
+        jobTitle, 
+        company, 
+        requirementId,
+        experience,
+        skills,
+        location
+      } = req.body;
+
+      // Validate required fields
+      if (!candidateName || !jobTitle || !company) {
+        return res.status(400).json({ message: "Candidate name, job title, and company are required" });
+      }
+
+      // Validate candidateName is a non-empty string
+      if (typeof candidateName !== 'string' || candidateName.trim().length === 0) {
+        return res.status(400).json({ message: "Invalid candidate name" });
+      }
+
+      // Validate jobTitle is a non-empty string
+      if (typeof jobTitle !== 'string' || jobTitle.trim().length === 0) {
+        return res.status(400).json({ message: "Invalid job title" });
+      }
+
+      // Validate company is a non-empty string
+      if (typeof company !== 'string' || company.trim().length === 0) {
+        return res.status(400).json({ message: "Invalid company name" });
+      }
+
+      const applicationData = {
+        profileId: `recruiter-tagged-${Date.now()}`,
+        requirementId: requirementId || null,
+        jobTitle: jobTitle.trim(),
+        company: company.trim(),
+        status: "In Process",
+        source: "recruiter_tagged",
+        candidateName: candidateName.trim(),
+        candidateEmail: candidateEmail?.trim() || null,
+        candidatePhone: candidatePhone?.trim() || null,
+        experience: experience?.toString() || null,
+        skills: Array.isArray(skills) ? JSON.stringify(skills) : (skills || null),
+        location: location?.trim() || null,
+        appliedDate: new Date(),
+      };
+
+      const application = await storage.createJobApplication(applicationData);
+      res.status(201).json({ message: "Application created successfully", application });
+    } catch (error) {
+      console.error("Create recruiter application error:", error);
+      res.status(500).json({ message: "Failed to create application" });
+    }
+  });
+
   // Update application status
   app.patch("/api/recruiter/applications/:id/status", async (req, res) => {
     try {

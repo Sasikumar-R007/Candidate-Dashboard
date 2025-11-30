@@ -21,7 +21,8 @@ import {
   Building,
 } from "lucide-react";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -309,14 +310,58 @@ const SourceResume = () => {
   const [showDeliverModal, setShowDeliverModal] = useState(false);
   const [selectedRequirement, setSelectedRequirement] = useState("");
   const [candidateToDeliver, setCandidateToDeliver] = useState<any>(null);
+  const [isDelivering, setIsDelivering] = useState(false);
   const resultsPerPage = 6;
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   // Fetch requirements from API
   const { data: requirements = [], isLoading: isLoadingRequirements, isError: isErrorRequirements } = useQuery({
     queryKey: ['/api/admin/requirements'],
     enabled: step === 2,
+  });
+
+  // Mutation for creating job application when delivering candidate to requirement
+  const deliverToRequirementMutation = useMutation({
+    mutationFn: async (data: { 
+      candidateName: string;
+      candidateEmail: string;
+      candidatePhone: string;
+      jobTitle: string;
+      company: string;
+      requirementId: string;
+      experience: string;
+      skills: string[];
+      location: string;
+    }) => {
+      const response = await apiRequest('POST', '/api/recruiter/applications', data);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/applications'] });
+      toast({
+        title: "Success!",
+        description: `${candidateToDeliver?.name} has been delivered to the requirement successfully.`,
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+      setShowDeliverModal(false);
+      setSelectedRequirement("");
+      setCandidateToDeliver(null);
+      setIsDelivering(false);
+    },
+    onError: (error: any) => {
+      console.error("Delivery error:", error);
+      const errorMessage = error?.message?.includes('401') 
+        ? "Authentication required. Please log in as a recruiter."
+        : "Failed to deliver candidate to requirement. Please try again.";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      setIsDelivering(false);
+    }
   });
 
   // Show error toast if requirements fetch fails
@@ -477,15 +522,22 @@ const SourceResume = () => {
   };
 
   const handleConfirmDelivery = () => {
-    if (selectedRequirement) {
-      toast({
-        title: "Success!",
-        description: `${candidateToDeliver.name} has been delivered to the requirement successfully.`,
-        className: "bg-green-50 border-green-200 text-green-800",
+    if (selectedRequirement && candidateToDeliver) {
+      setIsDelivering(true);
+      
+      const selectedReq = (requirements as any[]).find((req: any) => req.id === selectedRequirement);
+      
+      deliverToRequirementMutation.mutate({
+        candidateName: candidateToDeliver.name,
+        candidateEmail: candidateToDeliver.email || '',
+        candidatePhone: candidateToDeliver.phone || '',
+        jobTitle: selectedReq?.position || candidateToDeliver.title,
+        company: selectedReq?.company || '',
+        requirementId: selectedRequirement,
+        experience: candidateToDeliver.experience?.toString() || '',
+        skills: candidateToDeliver.skills || [],
+        location: candidateToDeliver.location || '',
       });
-      setShowDeliverModal(false);
-      setSelectedRequirement("");
-      setCandidateToDeliver(null);
     }
   };
 
@@ -1737,11 +1789,11 @@ const SourceResume = () => {
             </Button>
             <Button
               onClick={handleConfirmDelivery}
-              disabled={!selectedRequirement}
+              disabled={!selectedRequirement || isDelivering}
               className="bg-green-600 hover:bg-green-700"
               data-testid="button-confirm-deliver"
             >
-              Confirm Delivery
+              {isDelivering ? "Delivering..." : "Confirm Delivery"}
             </Button>
           </div>
         </DialogContent>
