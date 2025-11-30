@@ -161,12 +161,13 @@ export default function RecruiterDashboard2() {
     experience: '',
     location: '',
     workMode: '',
+    employmentType: '',
     salaryPackage: '',
     aboutCompany: '',
     roleDefinitions: '',
     keyResponsibility: '',
-    primarySkills: ['', '', ''],
-    secondarySkills: ['', ''],
+    primarySkills: [''],
+    secondarySkills: [''],
     knowledgeOnly: [''],
     companyLogo: ''
   });
@@ -282,12 +283,13 @@ export default function RecruiterDashboard2() {
       experience: '',
       location: '',
       workMode: '',
+      employmentType: '',
       salaryPackage: '',
       aboutCompany: '',
       roleDefinitions: '',
       keyResponsibility: '',
-      primarySkills: ['', '', ''],
-      secondarySkills: ['', ''],
+      primarySkills: [''],
+      secondarySkills: [''],
       knowledgeOnly: [''],
       companyLogo: ''
     });
@@ -912,33 +914,39 @@ export default function RecruiterDashboard2() {
                 {/* Active Jobs */}
                 <div className="flex items-center justify-between py-3 border-b border-gray-100">
                   <span className="text-sm text-gray-700">Active Jobs</span>
-                  <span className="text-xl font-semibold text-gray-900" data-testid="text-active-jobs-count">{jobCounts?.active ?? 0}</span>
+                  <span className="text-3xl font-bold text-gray-900" data-testid="text-active-jobs-count">{jobCounts?.active ?? 0}</span>
                 </div>
                 
-                {/* Total Jobs - Clickable Link */}
+                {/* Total Jobs - Clickable Link with External Icon */}
                 <div 
-                  className="flex items-center justify-between py-3 border-b border-gray-100 cursor-pointer hover-elevate rounded-md"
+                  className="flex items-center justify-between py-3 border-b border-gray-100 cursor-pointer hover-elevate rounded-md px-2 -mx-2"
                   onClick={() => navigate('/recruiter-active-jobs')}
                   data-testid="link-total-jobs"
                 >
-                  <span className="text-sm text-blue-600 font-medium">Total Jobs</span>
-                  <span className="text-xl font-semibold text-gray-900" data-testid="text-total-jobs-count">{jobCounts?.total ?? 0}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-blue-600 font-medium">Total Jobs</span>
+                    <ExternalLink className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <span className="text-3xl font-bold text-gray-900" data-testid="text-total-jobs-count">{jobCounts?.total ?? 0}</span>
                 </div>
                 
                 {/* New Applications */}
                 <div className="flex items-center justify-between py-3 border-b border-gray-100">
                   <span className="text-sm text-gray-700">New Applications</span>
-                  <span className="text-xl font-semibold text-gray-900" data-testid="text-new-applications-count">{applicationStats.new}</span>
+                  <span className="text-3xl font-bold text-gray-900" data-testid="text-new-applications-count">{applicationStats.new}</span>
                 </div>
                 
-                {/* Total Applications - Clickable Link */}
+                {/* Total Candidates - Clickable Link with External Icon */}
                 <div 
-                  className="flex items-center justify-between py-3 border-b border-gray-100 cursor-pointer hover-elevate rounded-md"
+                  className="flex items-center justify-between py-3 border-b border-gray-100 cursor-pointer hover-elevate rounded-md px-2 -mx-2"
                   onClick={() => navigate('/recruiter-new-applications')}
-                  data-testid="link-total-applications"
+                  data-testid="link-total-candidates"
                 >
-                  <span className="text-sm text-blue-600 font-medium">Total Applications</span>
-                  <span className="text-xl font-semibold text-gray-900" data-testid="text-total-applications-count">{applicationStats.total}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-blue-600 font-medium">Total Candidates</span>
+                    <ExternalLink className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <span className="text-3xl font-bold text-gray-900" data-testid="text-total-candidates-count">{applicationStats.total}</span>
                 </div>
               </div>
               
