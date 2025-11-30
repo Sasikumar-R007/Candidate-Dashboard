@@ -1514,117 +1514,75 @@ export default function RecruiterDashboard2() {
                 </div>
               </div>
 
-              {/* Pipeline Layout - Table + Right Side Stats */}
+              {/* Pipeline Layout - Matching Admin/TL Design */}
               <div className="flex gap-6 mb-6">
-                {/* Left Side - Pipeline Stages Table */}
+                {/* Main Pipeline Content */}
                 <div className="flex-1">
-                  <Card className="bg-white border border-gray-200">
+                  <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                     <CardContent className="p-0">
                       <div className="overflow-x-auto">
                         <table className="w-full border-collapse">
                           <thead>
                             <tr>
-                              <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[100px]" data-testid="header-pipeline-introcall">Intro Call</th>
-                              <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[100px]" data-testid="header-pipeline-assignment">Assignment</th>
-                              <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[100px]" data-testid="header-pipeline-l1">L1</th>
-                              <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[100px]" data-testid="header-pipeline-l2">L2</th>
-                              <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[100px]" data-testid="header-pipeline-l3">L3</th>
-                              <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[100px]" data-testid="header-pipeline-finalround">Final Round</th>
-                              <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[100px]" data-testid="header-pipeline-hrround">HR Round</th>
-                              <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[100px]" data-testid="header-pipeline-offerstage">Offer Stage</th>
-                              <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[100px]" data-testid="header-pipeline-closure">Closure</th>
-                              <th className="text-center p-4 font-medium text-gray-700 bg-yellow-100 min-w-[100px]" data-testid="header-pipeline-offerdrop">Offer Drop</th>
+                              <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]" data-testid="header-pipeline-level1">Level 1</th>
+                              <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]" data-testid="header-pipeline-level2">Level 2</th>
+                              <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]" data-testid="header-pipeline-level3">Level 3</th>
+                              <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]" data-testid="header-pipeline-finalround">Final Round</th>
+                              <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]" data-testid="header-pipeline-hrround">HR Round</th>
+                              <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]" data-testid="header-pipeline-offerstage">Offer Stage</th>
+                              <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]" data-testid="header-pipeline-closure">Closure</th>
                             </tr>
                           </thead>
                           <tbody>
                             <tr>
-                              <td className="p-3 align-top" data-testid="column-pipeline-introcall">
-                                <div className="flex flex-col gap-2">
-                                  {getPipelineCandidatesByStage.introCall.map((candidate, index) => (
-                                    <button
-                                      key={candidate.id}
-                                      onClick={() => handlePipelineCandidateClick(candidate)}
-                                      className="px-3 py-2 rounded text-center text-sm font-medium text-black cursor-pointer transition-colors border border-gray-300"
-                                      style={{backgroundColor: '#ffffff'}}
-                                      data-testid={`candidate-introcall-${index}`}
-                                    >
-                                      {candidate.candidateName}
-                                    </button>
-                                  ))}
-                                  {getPipelineCandidatesByStage.introCall.length === 0 && (
-                                    <div className="px-3 py-2 text-gray-400 text-sm text-center">-</div>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="p-3 align-top" data-testid="column-pipeline-assignment">
-                                <div className="flex flex-col gap-2">
-                                  {getPipelineCandidatesByStage.assignment.map((candidate, index) => (
-                                    <button
-                                      key={candidate.id}
-                                      onClick={() => handlePipelineCandidateClick(candidate)}
-                                      className="px-3 py-2 rounded text-center text-sm font-medium text-black cursor-pointer transition-colors border border-gray-300"
-                                      style={{backgroundColor: '#ffffff'}}
-                                      data-testid={`candidate-assignment-${index}`}
-                                    >
-                                      {candidate.candidateName}
-                                    </button>
-                                  ))}
-                                  {getPipelineCandidatesByStage.assignment.length === 0 && (
-                                    <div className="px-3 py-2 text-gray-400 text-sm text-center">-</div>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="p-3 align-top" data-testid="column-pipeline-l1">
+                              <td className="p-3 align-top" data-testid="column-pipeline-level1">
                                 <div className="flex flex-col gap-2">
                                   {getPipelineCandidatesByStage.level1.map((candidate, index) => (
                                     <button
                                       key={candidate.id}
                                       onClick={() => handlePipelineCandidateClick(candidate)}
-                                      className="px-3 py-2 rounded text-center text-sm font-medium text-black cursor-pointer transition-colors"
-                                      style={{backgroundColor: '#C8E6C9'}}
-                                      data-testid={`candidate-l1-${index}`}
+                                      className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200 cursor-pointer hover:bg-green-300 dark:hover:bg-green-700 transition-colors"
+                                      data-testid={`candidate-level1-${index}`}
                                     >
                                       {candidate.candidateName}
                                     </button>
                                   ))}
                                   {getPipelineCandidatesByStage.level1.length === 0 && (
-                                    <div className="px-3 py-2 text-gray-400 text-sm text-center">-</div>
+                                    <div className="px-3 py-2 text-gray-400 dark:text-gray-500 text-sm text-center">-</div>
                                   )}
                                 </div>
                               </td>
-                              <td className="p-3 align-top" data-testid="column-pipeline-l2">
+                              <td className="p-3 align-top" data-testid="column-pipeline-level2">
                                 <div className="flex flex-col gap-2">
                                   {getPipelineCandidatesByStage.level2.map((candidate, index) => (
                                     <button
                                       key={candidate.id}
                                       onClick={() => handlePipelineCandidateClick(candidate)}
-                                      className="px-3 py-2 rounded text-center text-sm font-medium text-black cursor-pointer transition-colors"
-                                      style={{backgroundColor: '#81C784'}}
-                                      data-testid={`candidate-l2-${index}`}
+                                      className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200 cursor-pointer hover:bg-green-400 dark:hover:bg-green-600 transition-colors"
+                                      data-testid={`candidate-level2-${index}`}
                                     >
                                       {candidate.candidateName}
                                     </button>
                                   ))}
                                   {getPipelineCandidatesByStage.level2.length === 0 && (
-                                    <div className="px-3 py-2 text-gray-400 text-sm text-center">-</div>
+                                    <div className="px-3 py-2 text-gray-400 dark:text-gray-500 text-sm text-center">-</div>
                                   )}
                                 </div>
                               </td>
-                              <td className="p-3 align-top" data-testid="column-pipeline-l3">
+                              <td className="p-3 align-top" data-testid="column-pipeline-level3">
                                 <div className="flex flex-col gap-2">
                                   {getPipelineCandidatesByStage.level3.map((candidate, index) => (
                                     <button
                                       key={candidate.id}
                                       onClick={() => handlePipelineCandidateClick(candidate)}
-                                      className="px-3 py-2 rounded text-center text-sm font-medium text-white cursor-pointer transition-colors"
-                                      style={{backgroundColor: '#66BB6A'}}
-                                      data-testid={`candidate-l3-${index}`}
+                                      className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200 cursor-pointer hover:bg-green-500 dark:hover:bg-green-500 transition-colors"
+                                      data-testid={`candidate-level3-${index}`}
                                     >
                                       {candidate.candidateName}
                                     </button>
                                   ))}
                                   {getPipelineCandidatesByStage.level3.length === 0 && (
-                                    <div className="px-3 py-2 text-gray-400 text-sm text-center">-</div>
+                                    <div className="px-3 py-2 text-gray-400 dark:text-gray-500 text-sm text-center">-</div>
                                   )}
                                 </div>
                               </td>
@@ -1634,15 +1592,14 @@ export default function RecruiterDashboard2() {
                                     <button
                                       key={candidate.id}
                                       onClick={() => handlePipelineCandidateClick(candidate)}
-                                      className="px-3 py-2 rounded text-center text-sm font-medium text-white cursor-pointer transition-colors"
-                                      style={{backgroundColor: '#4CAF50'}}
+                                      className="px-3 py-2 bg-green-500 dark:bg-green-600 rounded text-center text-sm font-medium text-white cursor-pointer hover:bg-green-600 dark:hover:bg-green-500 transition-colors"
                                       data-testid={`candidate-finalround-${index}`}
                                     >
                                       {candidate.candidateName}
                                     </button>
                                   ))}
                                   {getPipelineCandidatesByStage.finalRound.length === 0 && (
-                                    <div className="px-3 py-2 text-gray-400 text-sm text-center">-</div>
+                                    <div className="px-3 py-2 text-gray-400 dark:text-gray-500 text-sm text-center">-</div>
                                   )}
                                 </div>
                               </td>
@@ -1652,15 +1609,14 @@ export default function RecruiterDashboard2() {
                                     <button
                                       key={candidate.id}
                                       onClick={() => handlePipelineCandidateClick(candidate)}
-                                      className="px-3 py-2 rounded text-center text-sm font-medium text-white cursor-pointer transition-colors"
-                                      style={{backgroundColor: '#388E3C'}}
+                                      className="px-3 py-2 bg-green-600 dark:bg-green-500 rounded text-center text-sm font-medium text-white cursor-pointer hover:bg-green-700 dark:hover:bg-green-400 transition-colors"
                                       data-testid={`candidate-hrround-${index}`}
                                     >
                                       {candidate.candidateName}
                                     </button>
                                   ))}
                                   {getPipelineCandidatesByStage.hrRound.length === 0 && (
-                                    <div className="px-3 py-2 text-gray-400 text-sm text-center">-</div>
+                                    <div className="px-3 py-2 text-gray-400 dark:text-gray-500 text-sm text-center">-</div>
                                   )}
                                 </div>
                               </td>
@@ -1670,15 +1626,14 @@ export default function RecruiterDashboard2() {
                                     <button
                                       key={candidate.id}
                                       onClick={() => handlePipelineCandidateClick(candidate)}
-                                      className="px-3 py-2 rounded text-center text-sm font-medium text-white cursor-pointer transition-colors"
-                                      style={{backgroundColor: '#14B8A6'}}
+                                      className="px-3 py-2 bg-green-700 dark:bg-green-500 rounded text-center text-sm font-medium text-white cursor-pointer hover:bg-green-800 dark:hover:bg-green-400 transition-colors"
                                       data-testid={`candidate-offerstage-${index}`}
                                     >
                                       {candidate.candidateName}
                                     </button>
                                   ))}
                                   {getPipelineCandidatesByStage.offerStage.length === 0 && (
-                                    <div className="px-3 py-2 text-gray-400 text-sm text-center">-</div>
+                                    <div className="px-3 py-2 text-gray-400 dark:text-gray-500 text-sm text-center">-</div>
                                   )}
                                 </div>
                               </td>
@@ -1688,33 +1643,14 @@ export default function RecruiterDashboard2() {
                                     <button
                                       key={candidate.id}
                                       onClick={() => handlePipelineCandidateClick(candidate)}
-                                      className="px-3 py-2 rounded text-center text-sm font-medium text-white cursor-pointer transition-colors"
-                                      style={{backgroundColor: '#0D9488'}}
+                                      className="px-3 py-2 bg-green-800 dark:bg-green-400 rounded text-center text-sm font-medium text-white cursor-pointer hover:bg-green-900 dark:hover:bg-green-300 transition-colors"
                                       data-testid={`candidate-closure-${index}`}
                                     >
                                       {candidate.candidateName}
                                     </button>
                                   ))}
                                   {getPipelineCandidatesByStage.closure.length === 0 && (
-                                    <div className="px-3 py-2 text-gray-400 text-sm text-center">-</div>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="p-3 align-top" data-testid="column-pipeline-offerdrop">
-                                <div className="flex flex-col gap-2">
-                                  {getPipelineCandidatesByStage.offerDrop.map((candidate, index) => (
-                                    <button
-                                      key={candidate.id}
-                                      onClick={() => handlePipelineCandidateClick(candidate)}
-                                      className="px-3 py-2 rounded text-center text-sm font-medium text-gray-800 cursor-pointer transition-colors"
-                                      style={{backgroundColor: '#FACC15'}}
-                                      data-testid={`candidate-offerdrop-${index}`}
-                                    >
-                                      {candidate.candidateName}
-                                    </button>
-                                  ))}
-                                  {getPipelineCandidatesByStage.offerDrop.length === 0 && (
-                                    <div className="px-3 py-2 text-gray-400 text-sm text-center">-</div>
+                                    <div className="px-3 py-2 text-gray-400 dark:text-gray-500 text-sm text-center">-</div>
                                   )}
                                 </div>
                               </td>
@@ -1725,421 +1661,163 @@ export default function RecruiterDashboard2() {
                     </CardContent>
                   </Card>
                 </div>
-
-                {/* Right Side - Statistics Panel (Display Only) */}
-                <div className="w-48 flex-shrink-0">
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#E8F5E9'}}>
-                      <span className="text-sm font-medium text-gray-800">SOURCED</span>
-                      <span className="font-bold text-lg text-gray-900" data-testid="count-sourced">{getPipelineCandidatesByStage.sourced.length + getPipelineCandidatesByStage.shortlisted.length}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#C8E6C9'}}>
-                      <span className="text-sm font-medium text-gray-800">SHORTLISTED</span>
-                      <span className="font-bold text-lg text-gray-900" data-testid="count-shortlisted">{getPipelineCandidatesByStage.shortlisted.length}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#A5D6A7'}}>
-                      <span className="text-sm font-medium text-gray-800">INTRO CALL</span>
-                      <span className="font-bold text-lg text-gray-900" data-testid="count-introcall">{getPipelineCandidatesByStage.introCall.length}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#81C784'}}>
-                      <span className="text-sm font-medium text-gray-800">ASSIGNMENT</span>
-                      <span className="font-bold text-lg text-gray-900" data-testid="count-assignment">{getPipelineCandidatesByStage.assignment.length}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#66BB6A'}}>
-                      <span className="text-sm font-medium text-white">L1</span>
-                      <span className="font-bold text-lg text-white" data-testid="count-l1">{getPipelineCandidatesByStage.level1.length}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#4CAF50'}}>
-                      <span className="text-sm font-medium text-white">L2</span>
-                      <span className="font-bold text-lg text-white" data-testid="count-l2">{getPipelineCandidatesByStage.level2.length}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#43A047'}}>
-                      <span className="text-sm font-medium text-white">L3</span>
-                      <span className="font-bold text-lg text-white" data-testid="count-l3">{getPipelineCandidatesByStage.level3.length}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#388E3C'}}>
-                      <span className="text-sm font-medium text-white">FINAL ROUND</span>
-                      <span className="font-bold text-lg text-white" data-testid="count-finalround">{getPipelineCandidatesByStage.finalRound.length}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#2E7D32'}}>
-                      <span className="text-sm font-medium text-white">HR ROUND</span>
-                      <span className="font-bold text-lg text-white" data-testid="count-hrround">{getPipelineCandidatesByStage.hrRound.length}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#1B5E20'}}>
-                      <span className="text-sm font-medium text-white">OFFER STAGE</span>
-                      <span className="font-bold text-lg text-white" data-testid="count-offerstage">{getPipelineCandidatesByStage.offerStage.length}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#1B5E20'}}>
-                      <span className="text-sm font-medium text-white">CLOSURE</span>
-                      <span className="font-bold text-lg text-white" data-testid="count-closure">{getPipelineCandidatesByStage.closure.length}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between px-3 py-2 rounded" style={{backgroundColor: '#FFC107'}}>
-                      <span className="text-sm font-medium text-gray-800">OFFER DROP</span>
-                      <span className="font-bold text-lg text-gray-900" data-testid="count-offerdrop">{getPipelineCandidatesByStage.offerDrop.length}</span>
-                    </div>
-                  </div>
-                </div>
               </div>
 
-              {/* Candidate Profile Modal */}
-              {isCandidateProfileModalOpen && selectedPipelineCandidate && (
-                <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-                  <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col">
-                    <div className="flex justify-between items-center p-6 border-b border-gray-200">
-                      <h2 className="text-2xl font-bold text-gray-900" data-testid="modal-candidate-name">
-                        {selectedPipelineCandidate.candidateName}
-                      </h2>
-                      <button
-                        onClick={() => {
-                          setIsCandidateProfileModalOpen(false);
-                          setSelectedPipelineCandidate(null);
-                        }}
-                        className="text-red-500 hover:text-red-700 font-bold text-2xl"
-                        data-testid="button-close-candidate-modal"
-                      >
-                        ×
-                      </button>
-                    </div>
-                    
-                    <div className="overflow-auto flex-1 p-6">
-                      {/* Candidate Profile Header */}
-                      <div className="flex items-start gap-4 mb-6">
-                        <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                          {selectedPipelineCandidate.candidateName.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-xl font-semibold text-gray-900" data-testid="text-candidate-role">{selectedPipelineCandidate.roleApplied}</h3>
-                          <p className="text-gray-600" data-testid="text-candidate-company">{selectedPipelineCandidate.company}</p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                              selectedPipelineCandidate.currentStatus === 'Selected' ? 'bg-green-100 text-green-800' :
-                              selectedPipelineCandidate.currentStatus === 'HR Round' ? 'bg-purple-100 text-purple-800' :
-                              selectedPipelineCandidate.currentStatus === 'Final Round' ? 'bg-blue-100 text-blue-800' :
-                              selectedPipelineCandidate.currentStatus === 'L3' ? 'bg-teal-100 text-teal-800' :
-                              selectedPipelineCandidate.currentStatus === 'L2' ? 'bg-cyan-100 text-cyan-800' :
-                              selectedPipelineCandidate.currentStatus === 'L1' ? 'bg-sky-100 text-sky-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`} data-testid="badge-candidate-status">
-                              {selectedPipelineCandidate.currentStatus}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Contact Information */}
-                      <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Contact Information</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-4 w-4 text-gray-500" />
-                            <span className="text-sm text-gray-700" data-testid="text-candidate-email">{selectedPipelineCandidate.email || 'N/A'}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <UserRound className="h-4 w-4 text-gray-500" />
-                            <span className="text-sm text-gray-700" data-testid="text-candidate-phone">{selectedPipelineCandidate.phone || 'N/A'}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-gray-500" />
-                            <span className="text-sm text-gray-700" data-testid="text-candidate-location">{selectedPipelineCandidate.location || 'N/A'}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Building className="h-4 w-4 text-gray-500" />
-                            <span className="text-sm text-gray-700" data-testid="text-candidate-current-company">{selectedPipelineCandidate.currentCompany || 'N/A'}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Professional Details */}
-                      <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Professional Details</h4>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <span className="text-xs text-gray-500">Experience</span>
-                            <p className="text-sm font-medium text-gray-900" data-testid="text-candidate-experience">{selectedPipelineCandidate.experience || 'N/A'}</p>
-                          </div>
-                          <div>
-                            <span className="text-xs text-gray-500">Education</span>
-                            <p className="text-sm font-medium text-gray-900" data-testid="text-candidate-education">{selectedPipelineCandidate.education || 'N/A'}</p>
-                          </div>
-                          <div>
-                            <span className="text-xs text-gray-500">Applied On</span>
-                            <p className="text-sm font-medium text-gray-900" data-testid="text-candidate-applied">{selectedPipelineCandidate.appliedOn || 'N/A'}</p>
-                          </div>
-                          <div>
-                            <span className="text-xs text-gray-500">Rating</span>
-                            <div className="flex items-center gap-1">
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <span key={star} className={`text-sm ${star <= Math.round(selectedPipelineCandidate.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}`}>
-                                  ★
-                                </span>
-                              ))}
-                              <span className="text-sm text-gray-600 ml-1" data-testid="text-candidate-rating">({selectedPipelineCandidate.rating?.toFixed(1) || 'N/A'})</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Skills */}
-                      <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-3">Skills</h4>
-                        <div className="flex flex-wrap gap-2" data-testid="container-candidate-skills">
-                          {(selectedPipelineCandidate.skills || []).map((skill: string, index: number) => (
-                            <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                              {skill}
-                            </span>
-                          ))}
-                          {(!selectedPipelineCandidate.skills || selectedPipelineCandidate.skills.length === 0) && (
-                            <span className="text-gray-400 text-sm">No skills listed</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-                        <Button
-                          variant="outline"
-                          className="flex items-center gap-2"
-                          data-testid="button-download-resume"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                          Download Resume
-                        </Button>
-                        <Button
-                          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-                          data-testid="button-contact-candidate"
-                        >
-                          <Mail className="h-4 w-4" />
-                          Contact Candidate
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Closure Report Section */}
-              <div className="mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Closure report</h3>
-                <div className="text-sm text-gray-600 mb-4">Frame 97</div>
-              </div>
-
-              {/* Closure Report Table */}
-              <Card className="bg-white border border-gray-200">
+              {/* Closure Reports Table - Matching Admin Design */}
+              <Card className="mt-6">
+                <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                  <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Closure Reports</CardTitle>
+                </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
-                    <table className="w-full">
+                    <table className="w-full border-collapse">
                       <thead>
-                        <tr className="bg-gray-50 border-b border-gray-200">
-                          <th className="text-left py-3 px-4 font-medium text-gray-700">Candidate</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-700">Positions</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-700">Client</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-700">Revenue</th>
+                        <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Candidate</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Position</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Client</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Revenue</th>
                         </tr>
                       </thead>
                       <tbody>
                         {closureReportData.slice(0, 5).map((item) => (
-                          <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
-                            <td className="py-3 px-4 text-gray-900">{item.candidate}</td>
-                            <td className="py-3 px-4 text-gray-900">{item.position}</td>
-                            <td className="py-3 px-4 text-gray-900">{item.client}</td>
-                            <td className="py-3 px-4 text-gray-900">{item.revenue}</td>
+                          <tr key={item.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <td className="p-3 text-gray-900 dark:text-white">{item.candidate}</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">{item.position}</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">{item.client}</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">{item.revenue}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                  
-                  {/* View All Button */}
-                  <div className="flex justify-end p-4 border-t border-gray-100">
-                    <Button 
-                      className="bg-blue-500 hover:bg-blue-600 text-white rounded px-6"
-                      onClick={() => setIsViewAllClosuresModalOpen(true)}
-                      data-testid="button-view-all-closures"
-                    >
-                      View All
-                    </Button>
+                  <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                    <div className="flex justify-end">
+                      <Button 
+                        className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
+                        onClick={() => setIsViewAllClosuresModalOpen(true)}
+                        data-testid="button-see-more-closure-recruiter"
+                      >
+                        See More
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* View All Closures Modal */}
-              {isViewAllClosuresModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-                  <div className="bg-white rounded-lg max-w-6xl w-full mx-4 max-h-[90vh] flex flex-col">
-                    <div className="flex justify-between items-center p-6 border-b border-gray-200">
-                      <h2 className="text-2xl font-bold text-gray-900">
-                        All Closure Reports
-                      </h2>
-                      <div className="flex items-center gap-4">
-                        <input
-                          type="text"
-                          value={closureSearchQuery}
-                          onChange={(e) => setClosureSearchQuery(e.target.value)}
-                          placeholder="Search closures..."
-                          className="border border-gray-300 px-4 py-2 rounded bg-white text-gray-900 w-64 placeholder:text-gray-400"
-                          data-testid="input-search-closures"
-                        />
-                        <button
-                          onClick={() => {
-                            setIsViewAllClosuresModalOpen(false);
-                            setClosureSearchQuery('');
-                          }}
-                          className="text-red-500 hover:text-red-700 font-bold text-2xl"
-                          data-testid="button-close-closures-modal"
-                        >
-                          ×
-                        </button>
+              {/* Candidate Profile Modal */}
+              {selectedPipelineCandidate && (
+                <Dialog open={isCandidateProfileModalOpen} onOpenChange={setIsCandidateProfileModalOpen}>
+                  <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                      <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+                        Candidate Profile
+                      </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 p-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Name</label>
+                          <p className="text-base text-gray-900 dark:text-white">{selectedPipelineCandidate.candidateName}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Position</label>
+                          <p className="text-base text-gray-900 dark:text-white">{selectedPipelineCandidate.jobTitle || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</label>
+                          <p className="text-base text-gray-900 dark:text-white">{selectedPipelineCandidate.status || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Applied On</label>
+                          <p className="text-base text-gray-900 dark:text-white">{selectedPipelineCandidate.appliedOn || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Experience</label>
+                          <p className="text-base text-gray-900 dark:text-white">{selectedPipelineCandidate.experience || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Rating</label>
+                          <div className="flex items-center gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <span key={star} className={`text-sm ${star <= Math.round(selectedPipelineCandidate.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}`}>
+                                {star <= Math.round(selectedPipelineCandidate.rating || 0) ? 'filled-star' : 'empty-star'}
+                              </span>
+                            ))}
+                            <span className="text-sm text-gray-600 dark:text-gray-400 ml-1">({selectedPipelineCandidate.rating?.toFixed(1) || 'N/A'})</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Skills</label>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {(selectedPipelineCandidate.skills || []).map((skill: string, index: number) => (
+                            <span key={index} className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs rounded">
+                              {skill}
+                            </span>
+                          ))}
+                          {(!selectedPipelineCandidate.skills || selectedPipelineCandidate.skills.length === 0) && (
+                            <span className="text-gray-400 dark:text-gray-500 text-sm">No skills listed</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    
-                    <div className="overflow-auto flex-1 p-6">
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="bg-gray-50 border-b border-gray-200 sticky top-0">
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">Candidate</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">Position</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">Client</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">Revenue</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {closureReportData
-                            .filter((item) => {
-                              if (!closureSearchQuery) return true;
-                              const query = closureSearchQuery.toLowerCase();
-                              return (
-                                item.candidate.toLowerCase().includes(query) ||
-                                item.position.toLowerCase().includes(query) ||
-                                item.client.toLowerCase().includes(query) ||
-                                item.revenue.toLowerCase().includes(query)
-                              );
-                            })
-                            .map((item) => (
-                              <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
-                                <td className="py-3 px-4 text-gray-900">{item.candidate}</td>
-                                <td className="py-3 px-4 text-gray-900">{item.position}</td>
-                                <td className="py-3 px-4 text-gray-900">{item.client}</td>
-                                <td className="py-3 px-4 text-gray-900">{item.revenue}</td>
-                              </tr>
-                            ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
+                  </DialogContent>
+                </Dialog>
               )}
             </div>
 
-            {/* Pipeline Stages Sidebar */}
-            <div className="w-64 bg-white border-l border-gray-200">
+            {/* Right Sidebar with Stats - Matching Admin/TL Design */}
+            <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700">
               <div className="p-4 space-y-1">
-                <button 
-                  onClick={() => handlePipelineStageClick('SOURCED')}
-                  className="w-full flex justify-between items-center py-3 px-4 bg-green-50 border-l-4 border-green-500 rounded-r hover:bg-green-100 transition-colors cursor-pointer"
-                  data-testid="button-pipeline-sourced"
-                >
-                  <span className="text-sm font-medium text-gray-700">SOURCED</span>
-                  <span className="text-lg font-bold text-gray-900">{getPipelineCandidatesByStage.sourced.length}</span>
-                </button>
-                <button 
-                  onClick={() => handlePipelineStageClick('SHORTLISTED')}
-                  className="w-full flex justify-between items-center py-3 px-4 bg-green-100 rounded hover:bg-green-200 transition-colors cursor-pointer"
-                  data-testid="button-pipeline-shortlisted"
-                >
-                  <span className="text-sm font-medium text-gray-700">SHORTLISTED</span>
-                  <span className="text-lg font-bold text-gray-900">{getPipelineCandidatesByStage.shortlisted.length}</span>
-                </button>
-                <button 
-                  onClick={() => handlePipelineStageClick('INTRO_CALL')}
-                  className="w-full flex justify-between items-center py-3 px-4 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors cursor-pointer"
-                  data-testid="button-pipeline-intro-call"
-                >
-                  <span className="text-sm font-medium text-gray-700">INTRO CALL</span>
-                  <span className="text-lg font-bold text-gray-900">{getPipelineCandidatesByStage.introCall.length}</span>
-                </button>
-                <button 
-                  onClick={() => handlePipelineStageClick('ASSIGNMENT')}
-                  className="w-full flex justify-between items-center py-3 px-4 bg-white border border-gray-300 rounded hover:bg-gray-50 transition-colors cursor-pointer"
-                  data-testid="button-pipeline-assignment"
-                >
-                  <span className="text-sm font-medium text-gray-700">ASSIGNMENT</span>
-                  <span className="text-lg font-bold text-gray-900">{getPipelineCandidatesByStage.assignment.length}</span>
-                </button>
-                <button 
-                  onClick={() => handlePipelineStageClick('L1')}
-                  className="w-full flex justify-between items-center py-3 px-4 bg-green-200 rounded hover:bg-green-300 transition-colors cursor-pointer"
-                  data-testid="button-pipeline-l1"
-                >
-                  <span className="text-sm font-medium text-gray-800">L1</span>
-                  <span className="text-lg font-bold text-gray-800">{getPipelineCandidatesByStage.level1.length}</span>
-                </button>
-                <button 
-                  onClick={() => handlePipelineStageClick('L2')}
-                  className="w-full flex justify-between items-center py-3 px-4 bg-green-400 rounded hover:bg-green-500 transition-colors cursor-pointer"
-                  data-testid="button-pipeline-l2"
-                >
-                  <span className="text-sm font-medium text-gray-800">L2</span>
-                  <span className="text-lg font-bold text-gray-800">{getPipelineCandidatesByStage.level2.length}</span>
-                </button>
-                <button 
-                  onClick={() => handlePipelineStageClick('L3')}
-                  className="w-full flex justify-between items-center py-3 px-4 bg-green-500 rounded hover:bg-green-600 transition-colors cursor-pointer"
-                  data-testid="button-pipeline-l3"
-                >
+                <div className="flex justify-between items-center py-3 px-4 bg-green-100 dark:bg-green-900 rounded">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SOURCED</span>
+                  <span className="text-lg font-bold text-gray-900 dark:text-white" data-testid="count-sourced">{getPipelineCandidatesByStage.sourced.length}</span>
+                </div>
+                <div className="flex justify-between items-center py-3 px-4 bg-green-200 dark:bg-green-800 rounded">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SHORTLISTED</span>
+                  <span className="text-lg font-bold text-gray-900 dark:text-white" data-testid="count-shortlisted">{getPipelineCandidatesByStage.shortlisted.length}</span>
+                </div>
+                <div className="flex justify-between items-center py-3 px-4 bg-green-300 dark:bg-green-700 rounded">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">INTRO CALL</span>
+                  <span className="text-lg font-bold text-gray-900 dark:text-white" data-testid="count-introcall">{getPipelineCandidatesByStage.introCall.length}</span>
+                </div>
+                <div className="flex justify-between items-center py-3 px-4 bg-green-400 dark:bg-green-600 rounded">
+                  <span className="text-sm font-medium text-gray-800 dark:text-white">ASSIGNMENT</span>
+                  <span className="text-lg font-bold text-gray-800 dark:text-white" data-testid="count-assignment">{getPipelineCandidatesByStage.assignment.length}</span>
+                </div>
+                <div className="flex justify-between items-center py-3 px-4 bg-green-500 dark:bg-green-600 rounded">
+                  <span className="text-sm font-medium text-white">L1</span>
+                  <span className="text-lg font-bold text-white" data-testid="count-l1">{getPipelineCandidatesByStage.level1.length}</span>
+                </div>
+                <div className="flex justify-between items-center py-3 px-4 bg-green-600 dark:bg-green-500 rounded">
+                  <span className="text-sm font-medium text-white">L2</span>
+                  <span className="text-lg font-bold text-white" data-testid="count-l2">{getPipelineCandidatesByStage.level2.length}</span>
+                </div>
+                <div className="flex justify-between items-center py-3 px-4 bg-green-700 dark:bg-green-500 rounded">
                   <span className="text-sm font-medium text-white">L3</span>
-                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.level3.length}</span>
-                </button>
-                <button 
-                  onClick={() => handlePipelineStageClick('FINAL_ROUND')}
-                  className="w-full flex justify-between items-center py-3 px-4 bg-green-600 rounded hover:bg-green-700 transition-colors cursor-pointer"
-                  data-testid="button-pipeline-final-round"
-                >
+                  <span className="text-lg font-bold text-white" data-testid="count-l3">{getPipelineCandidatesByStage.level3.length}</span>
+                </div>
+                <div className="flex justify-between items-center py-3 px-4 bg-green-800 dark:bg-green-400 rounded">
                   <span className="text-sm font-medium text-white">FINAL ROUND</span>
-                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.finalRound.length}</span>
-                </button>
-                <button 
-                  onClick={() => handlePipelineStageClick('HR_ROUND')}
-                  className="w-full flex justify-between items-center py-3 px-4 bg-green-700 rounded hover:bg-green-800 transition-colors cursor-pointer"
-                  data-testid="button-pipeline-hr-round"
-                >
+                  <span className="text-lg font-bold text-white" data-testid="count-finalround">{getPipelineCandidatesByStage.finalRound.length}</span>
+                </div>
+                <div className="flex justify-between items-center py-3 px-4 bg-green-900 dark:bg-green-400 rounded">
                   <span className="text-sm font-medium text-white">HR ROUND</span>
-                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.hrRound.length}</span>
-                </button>
-                <button 
-                  onClick={() => handlePipelineStageClick('OFFER_STAGE')}
-                  className="w-full flex justify-between items-center py-3 px-4 bg-teal-500 rounded hover:bg-teal-600 transition-colors cursor-pointer"
-                  data-testid="button-pipeline-offer-stage"
-                >
+                  <span className="text-lg font-bold text-white" data-testid="count-hrround">{getPipelineCandidatesByStage.hrRound.length}</span>
+                </div>
+                <div className="flex justify-between items-center py-3 px-4 bg-green-900 dark:bg-green-300 rounded">
                   <span className="text-sm font-medium text-white">OFFER STAGE</span>
-                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.offerStage.length}</span>
-                </button>
-                <button 
-                  onClick={() => handlePipelineStageClick('CLOSURE')}
-                  className="w-full flex justify-between items-center py-3 px-4 bg-teal-600 rounded hover:bg-teal-700 transition-colors cursor-pointer"
-                  data-testid="button-pipeline-closure"
-                >
+                  <span className="text-lg font-bold text-white" data-testid="count-offerstage">{getPipelineCandidatesByStage.offerStage.length}</span>
+                </div>
+                <div className="flex justify-between items-center py-3 px-4 bg-green-950 dark:bg-green-300 rounded">
                   <span className="text-sm font-medium text-white">CLOSURE</span>
-                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.closure.length}</span>
-                </button>
-                <button 
-                  onClick={() => handlePipelineStageClick('OFFER_DROP')}
-                  className="w-full flex justify-between items-center py-3 px-4 bg-yellow-400 rounded hover:bg-yellow-500 transition-colors cursor-pointer"
-                  data-testid="button-pipeline-offer-drop"
-                >
-                  <span className="text-sm font-medium text-gray-800">OFFER DROP</span>
-                  <span className="text-lg font-bold text-gray-800">{getPipelineCandidatesByStage.offerDrop.length}</span>
-                </button>
+                  <span className="text-lg font-bold text-white" data-testid="count-closure">{getPipelineCandidatesByStage.closure.length}</span>
+                </div>
+                <div className="flex justify-between items-center py-3 px-4 bg-amber-500 dark:bg-amber-600 rounded">
+                  <span className="text-sm font-medium text-white">OFFER DROP</span>
+                  <span className="text-lg font-bold text-white" data-testid="count-offerdrop">{getPipelineCandidatesByStage.offerDrop.length}</span>
+                </div>
               </div>
             </div>
           </div>
