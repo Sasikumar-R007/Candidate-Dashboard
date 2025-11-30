@@ -315,7 +315,7 @@ export default function PostJobModal({
                 <Input
                   value={formData.companyName}
                   onChange={(e) => setFormData({...formData, companyName: e.target.value})}
-                  className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
+                  className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                   placeholder="Company Name *"
                   data-testid="input-company-name"
                 />
@@ -329,7 +329,7 @@ export default function PostJobModal({
                 <Input
                   value={formData.companyTagline}
                   onChange={(e) => setFormData({...formData, companyTagline: e.target.value})}
-                  className="pl-10 bg-gray-50 rounded-sm border pr-16 focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
+                  className="pl-10 bg-gray-50 rounded-sm border pr-16 focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                   placeholder="Company Tagline"
                   data-testid="input-company-tagline"
                 />
@@ -345,7 +345,7 @@ export default function PostJobModal({
                   <Input
                     value={formData.companyType}
                     onChange={(e) => setFormData({...formData, companyType: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
+                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                     placeholder="Company Type"
                     data-testid="input-company-type"
                   />
@@ -357,7 +357,7 @@ export default function PostJobModal({
                   <Input
                     value={formData.market}
                     onChange={(e) => setFormData({...formData, market: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
+                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                     placeholder="Market"
                     data-testid="input-market"
                   />
@@ -373,7 +373,7 @@ export default function PostJobModal({
                   <Input
                     value={formData.field}
                     onChange={(e) => setFormData({...formData, field: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
+                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                     placeholder="Field"
                     data-testid="input-field"
                   />
@@ -385,7 +385,7 @@ export default function PostJobModal({
                   <Input
                     value={formData.noOfPositions}
                     onChange={(e) => setFormData({...formData, noOfPositions: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
+                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                     placeholder="No of Positions"
                     data-testid="input-positions"
                   />
@@ -401,7 +401,7 @@ export default function PostJobModal({
                   <Input
                     value={formData.role}
                     onChange={(e) => setFormData({...formData, role: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
+                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                     placeholder="Role *"
                     data-testid="input-role"
                   />
@@ -413,7 +413,7 @@ export default function PostJobModal({
                   <Input
                     value={formData.experience}
                     onChange={(e) => setFormData({...formData, experience: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
+                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                     placeholder="Experience *"
                     data-testid="input-experience"
                   />
@@ -429,7 +429,7 @@ export default function PostJobModal({
                   <Input
                     value={formData.location}
                     onChange={(e) => setFormData({...formData, location: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
+                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                     placeholder="Location *"
                     data-testid="input-location"
                   />
@@ -441,7 +441,7 @@ export default function PostJobModal({
                   <Input
                     value={formData.workMode}
                     onChange={(e) => setFormData({...formData, workMode: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
+                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                     placeholder="Work Type"
                     data-testid="input-work-type"
                   />
@@ -457,7 +457,7 @@ export default function PostJobModal({
                   <Input
                     value={formData.employmentType}
                     onChange={(e) => setFormData({...formData, employmentType: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
+                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                     placeholder="Employment Type"
                     data-testid="input-employment-type"
                   />
@@ -469,7 +469,7 @@ export default function PostJobModal({
                   <Input
                     value={formData.salaryPackage}
                     onChange={(e) => setFormData({...formData, salaryPackage: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
+                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400"
                     placeholder="Salary Package *"
                     data-testid="input-salary"
                   />
@@ -481,7 +481,7 @@ export default function PostJobModal({
                 <textarea
                   value={formData.aboutCompany}
                   onChange={(e) => setFormData({...formData, aboutCompany: e.target.value})}
-                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-16 placeholder:text-gray-300"
+                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-16 placeholder:text-gray-400"
                   placeholder="About Company *"
                   data-testid="textarea-about-company"
                 />
@@ -493,7 +493,7 @@ export default function PostJobModal({
                 <textarea
                   value={formData.roleDefinitions}
                   onChange={(e) => setFormData({...formData, roleDefinitions: e.target.value})}
-                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-16 placeholder:text-gray-300"
+                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-16 placeholder:text-gray-400"
                   placeholder="Role Definitions *"
                   data-testid="textarea-role-definitions"
                 />
@@ -505,7 +505,7 @@ export default function PostJobModal({
                 <textarea
                   value={formData.keyResponsibility}
                   onChange={(e) => setFormData({...formData, keyResponsibility: e.target.value})}
-                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-20 placeholder:text-gray-300"
+                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-20 placeholder:text-gray-400"
                   placeholder="Key Responsibility *"
                   data-testid="textarea-key-responsibility"
                 />
@@ -525,7 +525,7 @@ export default function PostJobModal({
                         <Input
                           value={skill}
                           onChange={(e) => updatePrimarySkill(index, e.target.value)}
-                          className="w-28 bg-gray-50 text-sm rounded-sm border placeholder:text-gray-300"
+                          className="w-28 bg-gray-50 text-sm rounded-sm border placeholder:text-gray-400"
                           placeholder="Skill"
                           data-testid={`input-primary-skill-${index}`}
                         />
@@ -567,7 +567,7 @@ export default function PostJobModal({
                         <Input
                           value={skill}
                           onChange={(e) => updateSecondarySkill(index, e.target.value)}
-                          className="w-28 bg-gray-50 text-sm rounded-sm border placeholder:text-gray-300"
+                          className="w-28 bg-gray-50 text-sm rounded-sm border placeholder:text-gray-400"
                           placeholder="Skill"
                           data-testid={`input-secondary-skill-${index}`}
                         />
@@ -609,7 +609,7 @@ export default function PostJobModal({
                         <Input
                           value={skill}
                           onChange={(e) => updateKnowledgeSkill(index, e.target.value)}
-                          className="w-28 bg-gray-50 text-sm rounded-sm border placeholder:text-gray-300"
+                          className="w-28 bg-gray-50 text-sm rounded-sm border placeholder:text-gray-400"
                           placeholder="Skill"
                           data-testid={`input-knowledge-skill-${index}`}
                         />
