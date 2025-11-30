@@ -83,6 +83,26 @@ Preferred communication style: Simple, everyday language.
     - **Security**: Session-based user identification with unique guest IDs, protected support endpoints requiring employee authentication.
     - **Storage**: All conversations and messages stored permanently in PostgreSQL database.
     - **Real-time**: Polling mechanism (conversations poll every 5 seconds, messages every 3 seconds) for real-time message updates.
+- **Target Mapping System**:
+    - **Overview**: Admin sets individual quarterly targets for recruiters, which are then displayed on recruiter and team leader dashboards.
+    - **Data Flow**:
+      - Admin creates target mappings via the Target Mapping Modal in the Admin Dashboard
+      - Each mapping associates a Team Lead with a Team Member, quarter (Q1-Q4), year, and minimum target amount
+      - Targets are stored in the `targetMappings` table in PostgreSQL
+    - **Quarter Labels**: Standard calendar quarter format (Q1=Jan-Mar, Q2=Apr-Jun, Q3=Jul-Sep, Q4=Oct-Dec)
+    - **Recruiter Dashboard**:
+      - Fetches individual targets via `/api/recruiter/aggregated-targets` endpoint
+      - Displays current quarter's minimum target, achieved amount, and incentive earned
+      - Shows 0 values when no targets are assigned
+      - Modal displays all quarters with status (Pending, In Progress, Completed)
+    - **Team Leader Dashboard**:
+      - Fetches aggregated team targets via `/api/team-leader/aggregated-targets` endpoint
+      - Sums all targets for team members under the logged-in team leader
+      - Displays current quarter's aggregated minimum target, achieved amount, and incentive earned
+      - Shows 0 values when no targets are assigned to team members
+    - **Storage Functions**:
+      - `getRecruiterTargetSummary(recruiterId)`: Fetches and aggregates individual recruiter targets
+      - `getTeamLeaderTargetSummary(teamLeadId)`: Fetches and aggregates all team member targets under a team leader
 - **Master Database Resume Detail Drawer**:
     - **Overview**: Right-side drawer panel that opens when clicking on a resume row in the Master Database (Resumes section only).
     - **Features**:
