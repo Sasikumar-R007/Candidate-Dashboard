@@ -56,9 +56,13 @@ export default function PostJobModal({
   const { toast } = useToast();
 
   const validateForm = () => {
-    const required = ['companyName', 'experience', 'salaryPackage', 'aboutCompany', 'roleDefinitions', 'keyResponsibility'];
+    const required = ['companyName', 'role', 'experience', 'location', 'salaryPackage', 'aboutCompany', 'roleDefinitions', 'keyResponsibility'];
     return required.every(field => formData[field as keyof JobFormData].toString().trim() !== '');
   };
+
+  const isFormValid = validateForm();
+  
+  const getFilteredSkills = (skills: string[]) => skills.filter(s => s.trim() !== '');
 
   const postJobMutation = useMutation({
     mutationFn: async (jobData: any) => {
@@ -151,10 +155,10 @@ export default function PostJobModal({
 
     const expRange = parseExperience(formData.experience);
     const salaryRange = parseSalary(formData.salaryPackage);
-    const allSkills = [
-      ...formData.primarySkills.filter(s => s),
-      ...formData.secondarySkills.filter(s => s),
-      ...formData.knowledgeOnly.filter(s => s)
+    const skillsToSubmit = [
+      ...getFilteredSkills(formData.primarySkills),
+      ...getFilteredSkills(formData.secondarySkills),
+      ...getFilteredSkills(formData.knowledgeOnly)
     ];
 
     const jobData = {
@@ -170,7 +174,7 @@ export default function PostJobModal({
       requirements: formData.roleDefinitions,
       responsibilities: formData.keyResponsibility,
       benefits: formData.companyTagline,
-      skills: allSkills,
+      skills: skillsToSubmit,
       department: formData.field || 'Engineering',
       employmentType: deriveEmploymentType(formData.employmentType),
       openings: parseInt(formData.noOfPositions) || 1,
@@ -263,6 +267,25 @@ export default function PostJobModal({
     }
   };
 
+  const getBackgroundColor = () => {
+    const colors = [
+      'bg-gradient-to-br from-green-100 to-green-200',
+      'bg-gradient-to-br from-pink-100 to-pink-200',
+      'bg-gradient-to-br from-orange-100 to-orange-200',
+      'bg-gradient-to-br from-blue-100 to-blue-200',
+      'bg-gradient-to-br from-yellow-100 to-yellow-200',
+      'bg-gradient-to-br from-purple-100 to-purple-200',
+    ];
+    const index = formData.companyName.length % colors.length;
+    return colors[index];
+  };
+
+  const allSkills = [
+    ...getFilteredSkills(formData.primarySkills),
+    ...getFilteredSkills(formData.secondarySkills),
+    ...getFilteredSkills(formData.knowledgeOnly)
+  ];
+
   return (
     <>
       {/* Post Job Modal */}
@@ -292,7 +315,7 @@ export default function PostJobModal({
                 <Input
                   value={formData.companyName}
                   onChange={(e) => setFormData({...formData, companyName: e.target.value})}
-                  className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0"
+                  className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
                   placeholder="Company Name *"
                   data-testid="input-company-name"
                 />
@@ -306,7 +329,7 @@ export default function PostJobModal({
                 <Input
                   value={formData.companyTagline}
                   onChange={(e) => setFormData({...formData, companyTagline: e.target.value})}
-                  className="pl-10 bg-gray-50 rounded-sm border pr-16 focus-visible:ring-1 focus-visible:ring-offset-0"
+                  className="pl-10 bg-gray-50 rounded-sm border pr-16 focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
                   placeholder="Company Tagline"
                   data-testid="input-company-tagline"
                 />
@@ -322,8 +345,8 @@ export default function PostJobModal({
                   <Input
                     value={formData.companyType}
                     onChange={(e) => setFormData({...formData, companyType: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0"
-                    placeholder="Company Type (e.g., Startup, Corporate)"
+                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
+                    placeholder="Company Type"
                     data-testid="input-company-type"
                   />
                 </div>
@@ -334,8 +357,8 @@ export default function PostJobModal({
                   <Input
                     value={formData.market}
                     onChange={(e) => setFormData({...formData, market: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0"
-                    placeholder="Market (e.g., Technology, Finance)"
+                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
+                    placeholder="Market"
                     data-testid="input-market"
                   />
                 </div>
@@ -350,8 +373,8 @@ export default function PostJobModal({
                   <Input
                     value={formData.field}
                     onChange={(e) => setFormData({...formData, field: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0"
-                    placeholder="Field (e.g., Software Development)"
+                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
+                    placeholder="Field"
                     data-testid="input-field"
                   />
                 </div>
@@ -362,8 +385,8 @@ export default function PostJobModal({
                   <Input
                     value={formData.noOfPositions}
                     onChange={(e) => setFormData({...formData, noOfPositions: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0"
-                    placeholder="No of Positions (e.g., 1, 2-5)"
+                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
+                    placeholder="No of Positions"
                     data-testid="input-positions"
                   />
                 </div>
@@ -378,8 +401,8 @@ export default function PostJobModal({
                   <Input
                     value={formData.role}
                     onChange={(e) => setFormData({...formData, role: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0"
-                    placeholder="Role (e.g., Developer, Designer)"
+                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
+                    placeholder="Role *"
                     data-testid="input-role"
                   />
                 </div>
@@ -390,8 +413,8 @@ export default function PostJobModal({
                   <Input
                     value={formData.experience}
                     onChange={(e) => setFormData({...formData, experience: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0"
-                    placeholder="Experience * (e.g., 0-2 years, 5+ years)"
+                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
+                    placeholder="Experience *"
                     data-testid="input-experience"
                   />
                 </div>
@@ -406,8 +429,8 @@ export default function PostJobModal({
                   <Input
                     value={formData.location}
                     onChange={(e) => setFormData({...formData, location: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0"
-                    placeholder="Location (e.g., Mumbai, Bangalore)"
+                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
+                    placeholder="Location *"
                     data-testid="input-location"
                   />
                 </div>
@@ -418,8 +441,8 @@ export default function PostJobModal({
                   <Input
                     value={formData.workMode}
                     onChange={(e) => setFormData({...formData, workMode: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0"
-                    placeholder="Work Type (e.g., Remote, Office, Hybrid)"
+                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
+                    placeholder="Work Type"
                     data-testid="input-work-type"
                   />
                 </div>
@@ -434,8 +457,8 @@ export default function PostJobModal({
                   <Input
                     value={formData.employmentType}
                     onChange={(e) => setFormData({...formData, employmentType: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0"
-                    placeholder="Employment Type (e.g., Full Time, Part Time)"
+                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
+                    placeholder="Employment Type"
                     data-testid="input-employment-type"
                   />
                 </div>
@@ -446,8 +469,8 @@ export default function PostJobModal({
                   <Input
                     value={formData.salaryPackage}
                     onChange={(e) => setFormData({...formData, salaryPackage: e.target.value})}
-                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0"
-                    placeholder="Salary Package * (e.g., 5-10 LPA)"
+                    className="pl-10 bg-gray-50 rounded-sm border focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-300"
+                    placeholder="Salary Package *"
                     data-testid="input-salary"
                   />
                 </div>
@@ -458,7 +481,7 @@ export default function PostJobModal({
                 <textarea
                   value={formData.aboutCompany}
                   onChange={(e) => setFormData({...formData, aboutCompany: e.target.value})}
-                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-16"
+                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-16 placeholder:text-gray-300"
                   placeholder="About Company *"
                   data-testid="textarea-about-company"
                 />
@@ -470,7 +493,7 @@ export default function PostJobModal({
                 <textarea
                   value={formData.roleDefinitions}
                   onChange={(e) => setFormData({...formData, roleDefinitions: e.target.value})}
-                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-16"
+                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-16 placeholder:text-gray-300"
                   placeholder="Role Definitions *"
                   data-testid="textarea-role-definitions"
                 />
@@ -482,7 +505,7 @@ export default function PostJobModal({
                 <textarea
                   value={formData.keyResponsibility}
                   onChange={(e) => setFormData({...formData, keyResponsibility: e.target.value})}
-                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-20"
+                  className="w-full bg-gray-50 border rounded-sm p-3 min-h-[80px] text-sm resize-none pr-20 placeholder:text-gray-300"
                   placeholder="Key Responsibility *"
                   data-testid="textarea-key-responsibility"
                 />
@@ -496,14 +519,14 @@ export default function PostJobModal({
                 {/* Primary Skills */}
                 <div className="mb-4">
                   <Label className="text-xs text-gray-600 mb-2 block">Primary Skills</Label>
-                  <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2 items-center">
                     {formData.primarySkills.map((skill, index) => (
-                      <div key={`primary-${index}`} className="flex items-center gap-2">
+                      <div key={`primary-${index}`} className="flex items-center gap-1">
                         <Input
                           value={skill}
                           onChange={(e) => updatePrimarySkill(index, e.target.value)}
-                          className="flex-1 bg-gray-50 text-sm rounded-sm border"
-                          placeholder="Enter skill (e.g., React, Node.js)"
+                          className="w-28 bg-gray-50 text-sm rounded-sm border placeholder:text-gray-300"
+                          placeholder="Skill"
                           data-testid={`input-primary-skill-${index}`}
                         />
                         {formData.primarySkills.length > 1 && (
@@ -512,40 +535,40 @@ export default function PostJobModal({
                             size="icon"
                             variant="ghost"
                             onClick={() => removePrimarySkill(index)}
-                            className="text-gray-400"
+                            className="text-gray-400 h-8 w-8"
                             data-testid={`button-remove-primary-skill-${index}`}
                           >
-                            <X size={16} />
-                          </Button>
-                        )}
-                        {index === formData.primarySkills.length - 1 && formData.primarySkills.length < 5 && (
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="outline"
-                            onClick={addPrimarySkill}
-                            className="text-blue-500 border-blue-200"
-                            data-testid="button-add-primary-skill"
-                          >
-                            <Plus size={16} />
+                            <X size={14} />
                           </Button>
                         )}
                       </div>
                     ))}
+                    {formData.primarySkills.length < 5 && (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        onClick={addPrimarySkill}
+                        className="text-blue-500 border-blue-200 h-8 w-8"
+                        data-testid="button-add-primary-skill"
+                      >
+                        <Plus size={14} />
+                      </Button>
+                    )}
                   </div>
                 </div>
 
                 {/* Secondary Skills */}
                 <div className="mb-4">
                   <Label className="text-xs text-gray-600 mb-2 block">Secondary Skills</Label>
-                  <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2 items-center">
                     {formData.secondarySkills.map((skill, index) => (
-                      <div key={`secondary-${index}`} className="flex items-center gap-2">
+                      <div key={`secondary-${index}`} className="flex items-center gap-1">
                         <Input
                           value={skill}
                           onChange={(e) => updateSecondarySkill(index, e.target.value)}
-                          className="flex-1 bg-gray-50 text-sm rounded-sm border"
-                          placeholder="Enter skill (e.g., SEO, Analytics)"
+                          className="w-28 bg-gray-50 text-sm rounded-sm border placeholder:text-gray-300"
+                          placeholder="Skill"
                           data-testid={`input-secondary-skill-${index}`}
                         />
                         {formData.secondarySkills.length > 1 && (
@@ -554,40 +577,40 @@ export default function PostJobModal({
                             size="icon"
                             variant="ghost"
                             onClick={() => removeSecondarySkill(index)}
-                            className="text-gray-400"
+                            className="text-gray-400 h-8 w-8"
                             data-testid={`button-remove-secondary-skill-${index}`}
                           >
-                            <X size={16} />
-                          </Button>
-                        )}
-                        {index === formData.secondarySkills.length - 1 && formData.secondarySkills.length < 5 && (
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="outline"
-                            onClick={addSecondarySkill}
-                            className="text-blue-500 border-blue-200"
-                            data-testid="button-add-secondary-skill"
-                          >
-                            <Plus size={16} />
+                            <X size={14} />
                           </Button>
                         )}
                       </div>
                     ))}
+                    {formData.secondarySkills.length < 5 && (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        onClick={addSecondarySkill}
+                        className="text-blue-500 border-blue-200 h-8 w-8"
+                        data-testid="button-add-secondary-skill"
+                      >
+                        <Plus size={14} />
+                      </Button>
+                    )}
                   </div>
                 </div>
 
                 {/* Knowledge Only */}
                 <div>
                   <Label className="text-xs text-gray-600 mb-2 block">Knowledge Only</Label>
-                  <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2 items-center">
                     {formData.knowledgeOnly.map((skill, index) => (
-                      <div key={`knowledge-${index}`} className="flex items-center gap-2">
+                      <div key={`knowledge-${index}`} className="flex items-center gap-1">
                         <Input
                           value={skill}
                           onChange={(e) => updateKnowledgeSkill(index, e.target.value)}
-                          className="flex-1 bg-gray-50 text-sm rounded-sm border"
-                          placeholder="Enter skill (e.g., AI/ML, Blockchain)"
+                          className="w-28 bg-gray-50 text-sm rounded-sm border placeholder:text-gray-300"
+                          placeholder="Skill"
                           data-testid={`input-knowledge-skill-${index}`}
                         />
                         {formData.knowledgeOnly.length > 1 && (
@@ -596,26 +619,26 @@ export default function PostJobModal({
                             size="icon"
                             variant="ghost"
                             onClick={() => removeKnowledgeSkill(index)}
-                            className="text-gray-400"
+                            className="text-gray-400 h-8 w-8"
                             data-testid={`button-remove-knowledge-skill-${index}`}
                           >
-                            <X size={16} />
-                          </Button>
-                        )}
-                        {index === formData.knowledgeOnly.length - 1 && formData.knowledgeOnly.length < 5 && (
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="outline"
-                            onClick={addKnowledgeSkill}
-                            className="text-blue-500 border-blue-200"
-                            data-testid="button-add-knowledge-skill"
-                          >
-                            <Plus size={16} />
+                            <X size={14} />
                           </Button>
                         )}
                       </div>
                     ))}
+                    {formData.knowledgeOnly.length < 5 && (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        onClick={addKnowledgeSkill}
+                        className="text-blue-500 border-blue-200 h-8 w-8"
+                        data-testid="button-add-knowledge-skill"
+                      >
+                        <Plus size={14} />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -676,9 +699,9 @@ export default function PostJobModal({
                   Preview
                 </Button>
                 <Button 
-                  className="flex-1 bg-blue-600 text-white rounded-sm"
+                  className="flex-1 bg-blue-600 text-white rounded-sm disabled:bg-gray-300 disabled:text-gray-500"
                   onClick={handlePostJob}
-                  disabled={postJobMutation.isPending}
+                  disabled={!isFormValid || postJobMutation.isPending}
                   data-testid="button-post-job"
                 >
                   {postJobMutation.isPending ? (
@@ -696,70 +719,144 @@ export default function PostJobModal({
         </DialogContent>
       </Dialog>
 
-      {/* Preview Modal */}
+      {/* Preview Modal - Job Card Design matching Job Board */}
       <Dialog open={isPreviewModalOpen} onOpenChange={setIsPreviewModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-blue-50 dark:bg-blue-900/30">
           <DialogHeader>
-            <DialogTitle>Job Preview</DialogTitle>
+            <DialogTitle>Job Card Preview</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="flex items-start gap-4">
-              {logoPreview && (
-                <div className="w-16 h-16 border rounded-md overflow-hidden bg-gray-50 flex-shrink-0">
-                  <img src={logoPreview} alt="Company logo" className="w-full h-full object-contain" />
+            {/* Job Card matching Job Board design */}
+            <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 overflow-hidden p-4">
+              <div className="flex gap-4">
+                {/* Company Logo Section */}
+                <div className="flex-shrink-0">
+                  <div className={`${getBackgroundColor()} rounded-2xl p-6 w-36 h-52 flex flex-col items-center justify-center shadow-sm`}>
+                    {logoPreview ? (
+                      <img
+                        src={logoPreview}
+                        alt="Company logo"
+                        className="w-16 h-16 rounded object-cover mb-3"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded bg-gray-200 flex items-center justify-center mb-3">
+                        <Building className="w-8 h-8 text-gray-400" />
+                      </div>
+                    )}
+                    <div className="text-sm font-bold text-gray-800 dark:text-gray-200 text-center">
+                      {formData.companyName ? formData.companyName.split(' ')[0] : 'Company'}
+                    </div>
+                  </div>
                 </div>
-              )}
-              <div>
-                <h3 className="text-xl font-semibold">{formData.role || 'Job Title'}</h3>
-                <p className="text-gray-600">{formData.companyName || 'Company Name'}</p>
-                {formData.companyTagline && <p className="text-sm text-gray-500">{formData.companyTagline}</p>}
+
+                {/* Job Details */}
+                <div className="flex-1 relative">
+                  {/* Bookmark Button */}
+                  <button className="absolute top-0 right-0 p-2 rounded-lg bg-orange-100 dark:bg-orange-900">
+                    <svg className="w-4 h-4 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                    </svg>
+                  </button>
+
+                  <div className="pr-12">
+                    <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      {formData.companyName || 'Company Name'}
+                    </h3>
+                    <h4 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+                      {formData.role || 'Job Title'}
+                    </h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                      {formData.companyTagline || formData.aboutCompany?.substring(0, 60) || 'Technology Product based hyper growth, innovative company.'}
+                      {formData.aboutCompany && formData.aboutCompany.length > 60 ? '...' : ''}
+                    </p>
+                    
+                    <div className="flex items-center gap-4 text-sm text-gray-700 dark:text-gray-300 mb-3 flex-wrap">
+                      <span className="flex items-center gap-1">
+                        <Briefcase className="w-4 h-4" />
+                        {formData.experience || 'Experience'}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <DollarSign className="w-4 h-4" />
+                        {formData.salaryPackage || 'Salary'}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <MapPin className="w-4 h-4" />
+                        {formData.location || 'Location'}
+                      </span>
+                      <span>{formData.workMode || 'Work from office'}</span>
+                      <span>{formData.employmentType || 'Full Time'}</span>
+                    </div>
+
+                    {/* Tags */}
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <span className="bg-red-50 dark:bg-red-900 text-red-600 dark:text-red-200 px-3 py-1 rounded-md text-xs font-medium border border-red-200 dark:border-red-700">
+                        Open Positions ~ {formData.noOfPositions || '1'}
+                      </span>
+                      {formData.companyType && (
+                        <span className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-md text-xs font-medium border border-gray-200 dark:border-gray-600">
+                          {formData.companyType}
+                        </span>
+                      )}
+                      {formData.market && (
+                        <span className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-md text-xs font-medium border border-gray-200 dark:border-gray-600">
+                          {formData.market}
+                        </span>
+                      )}
+                      {formData.employmentType && (
+                        <span className="bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-md text-xs font-medium border border-gray-200 dark:border-gray-600">
+                          {formData.employmentType}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Skills */}
+                    {allSkills.length > 0 && (
+                      <div className="flex items-center gap-2 mb-3 flex-wrap">
+                        {allSkills.map((skill, index) => (
+                          <span key={index} className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 px-3 py-1 rounded-md text-xs font-medium border border-green-200 dark:border-green-700">
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        Posted: Just now
+                      </span>
+                      <Button 
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-medium" 
+                        size="sm"
+                      >
+                        View More
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div><span className="text-gray-500">Location:</span> {formData.location || 'Not specified'}</div>
-              <div><span className="text-gray-500">Work Type:</span> {formData.workMode || 'Not specified'}</div>
-              <div><span className="text-gray-500">Experience:</span> {formData.experience || 'Not specified'}</div>
-              <div><span className="text-gray-500">Salary:</span> {formData.salaryPackage || 'Not specified'}</div>
-              <div><span className="text-gray-500">Positions:</span> {formData.noOfPositions || '1'}</div>
-              <div><span className="text-gray-500">Field:</span> {formData.field || 'Not specified'}</div>
-            </div>
 
+            {/* Additional Details */}
             {formData.aboutCompany && (
-              <div>
-                <h4 className="font-medium mb-1">About Company</h4>
-                <p className="text-sm text-gray-600">{formData.aboutCompany}</p>
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
+                <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">About Company</h5>
+                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">{formData.aboutCompany}</p>
               </div>
             )}
 
             {formData.roleDefinitions && (
-              <div>
-                <h4 className="font-medium mb-1">Role Definitions</h4>
-                <p className="text-sm text-gray-600">{formData.roleDefinitions}</p>
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
+                <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Role Definition</h5>
+                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">{formData.roleDefinitions}</p>
               </div>
             )}
 
             {formData.keyResponsibility && (
-              <div>
-                <h4 className="font-medium mb-1">Key Responsibilities</h4>
-                <p className="text-sm text-gray-600">{formData.keyResponsibility}</p>
+              <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm">
+                <h5 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">Key Responsibilities</h5>
+                <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">{formData.keyResponsibility}</p>
               </div>
             )}
-
-            <div>
-              <h4 className="font-medium mb-2">Skills</h4>
-              <div className="flex flex-wrap gap-2">
-                {formData.primarySkills.filter(s => s).map((skill, i) => (
-                  <span key={`p-${i}`} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">{skill}</span>
-                ))}
-                {formData.secondarySkills.filter(s => s).map((skill, i) => (
-                  <span key={`s-${i}`} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">{skill}</span>
-                ))}
-                {formData.knowledgeOnly.filter(s => s).map((skill, i) => (
-                  <span key={`k-${i}`} className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">{skill}</span>
-                ))}
-              </div>
-            </div>
 
             <div className="flex gap-3 pt-4">
               <Button 
@@ -770,12 +867,12 @@ export default function PostJobModal({
                 Edit
               </Button>
               <Button 
-                className="flex-1 bg-blue-600 text-white"
+                className="flex-1 bg-blue-600 text-white disabled:bg-gray-300 disabled:text-gray-500"
                 onClick={() => {
                   setIsPreviewModalOpen(false);
                   handlePostJob();
                 }}
-                disabled={postJobMutation.isPending}
+                disabled={!isFormValid || postJobMutation.isPending}
               >
                 {postJobMutation.isPending ? (
                   <>
