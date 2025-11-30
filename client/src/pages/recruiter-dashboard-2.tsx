@@ -597,40 +597,6 @@ export default function RecruiterDashboard2() {
                   </div>
                 </div>
 
-                {/* Stats Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <button
-                    onClick={() => navigate('/recruiter-active-jobs')}
-                    className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-shadow duration-300 text-left w-full"
-                    data-testid="card-active-jobs">
-                    <div className="text-center">
-                      <div className="flex justify-center mb-4">
-                        <i className="fas fa-briefcase text-2xl text-gray-600 dark:text-gray-400"></i>
-                      </div>
-                      <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Active jobs</h3>
-                      <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3" data-testid="text-card-active-jobs">{jobCounts?.active ?? 0}</div>
-                      <div className="inline-block bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-2 py-1 rounded font-bold">
-                        Total Jobs Posted: {jobCounts?.total ?? 0}
-                      </div>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => navigate('/recruiter-new-applications')}
-                    className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-shadow duration-300 text-left w-full"
-                    data-testid="card-active-candidates">
-                    <div className="text-center">
-                      <div className="flex justify-center mb-4">
-                        <i className="fas fa-user text-2xl text-gray-600 dark:text-gray-400"></i>
-                      </div>
-                      <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Active candidates</h3>
-                      <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3" data-testid="text-card-active-candidates">{candidateCounts?.active ?? 0}</div>
-                      <div className="inline-block bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-2 py-1 rounded font-bold">
-                        Total Candidates: {candidateCounts?.total ?? 0}
-                      </div>
-                    </div>
-                  </button>
-                </div>
               </div>
 
               {/* Applicant Overview Table */}
@@ -941,32 +907,38 @@ export default function RecruiterDashboard2() {
 
             {/* Right Sidebar */}
             <div className="w-80 bg-white border-l border-gray-200 p-6 overflow-y-auto h-full space-y-6">
-              {/* Active Jobs */}
-              <div className="text-center">
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Active Jobs</h3>
-                <div className="text-5xl font-bold text-gray-900 mb-2" data-testid="text-active-jobs-count">{jobCounts?.active ?? 0}</div>
-              </div>
-              
-              {/* Total Jobs */}
-              <div className="text-center">
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Total Jobs</h3>
-                <div className="text-5xl font-bold text-gray-900 mb-2" data-testid="text-total-jobs-count">{jobCounts?.total ?? 0}</div>
-              </div>
-              
-              {/* New Applications */}
-              <div className="text-center">
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">New Applications</h3>
-                <div className="text-5xl font-bold text-gray-900 mb-2" data-testid="text-new-applications-count">{applicationStats.new}</div>
-              </div>
-              
-              {/* Total Applications */}
-              <div className="text-center">
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Total Applications</h3>
-                <div className="text-5xl font-bold text-gray-900 mb-2" data-testid="text-total-applications-count">{applicationStats.total}</div>
-                <div className="text-right">
-                  <Button size="sm" variant="link" className="text-blue-600 p-0 text-xs" onClick={() => window.location.href = '/master-database'} data-testid="button-see-all-applications">
-                    See All
-                  </Button>
+              {/* Jobs and Applications Stats List */}
+              <div className="space-y-0">
+                {/* Active Jobs */}
+                <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                  <span className="text-sm text-gray-700">Active Jobs</span>
+                  <span className="text-xl font-semibold text-gray-900" data-testid="text-active-jobs-count">{jobCounts?.active ?? 0}</span>
+                </div>
+                
+                {/* Total Jobs - Clickable Link */}
+                <div 
+                  className="flex items-center justify-between py-3 border-b border-gray-100 cursor-pointer hover-elevate rounded-md"
+                  onClick={() => navigate('/recruiter-active-jobs')}
+                  data-testid="link-total-jobs"
+                >
+                  <span className="text-sm text-blue-600 font-medium">Total Jobs</span>
+                  <span className="text-xl font-semibold text-gray-900" data-testid="text-total-jobs-count">{jobCounts?.total ?? 0}</span>
+                </div>
+                
+                {/* New Applications */}
+                <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                  <span className="text-sm text-gray-700">New Applications</span>
+                  <span className="text-xl font-semibold text-gray-900" data-testid="text-new-applications-count">{applicationStats.new}</span>
+                </div>
+                
+                {/* Total Applications - Clickable Link */}
+                <div 
+                  className="flex items-center justify-between py-3 border-b border-gray-100 cursor-pointer hover-elevate rounded-md"
+                  onClick={() => navigate('/recruiter-new-applications')}
+                  data-testid="link-total-applications"
+                >
+                  <span className="text-sm text-blue-600 font-medium">Total Applications</span>
+                  <span className="text-xl font-semibold text-gray-900" data-testid="text-total-applications-count">{applicationStats.total}</span>
                 </div>
               </div>
               
