@@ -1710,14 +1710,95 @@ export default function RecruiterDashboard2() {
   };
 
   const renderPerformanceContent = () => {
+    // Quarterly performance data for individual recruiter
+    const quarterlyPerformanceData = [
+      { quarter: 'Q1 2024', resumesDelivered: 45, closures: 3 },
+      { quarter: 'Q2 2024', resumesDelivered: 62, closures: 4 },
+      { quarter: 'Q3 2024', resumesDelivered: 58, closures: 2 },
+      { quarter: 'Q4 2024', resumesDelivered: 71, closures: 5 },
+      { quarter: 'Q1 2025', resumesDelivered: 54, closures: 3 },
+      { quarter: 'Q2 2025', resumesDelivered: 48, closures: 2 },
+    ];
+
     return (
       <div className="flex flex-1 gap-4 p-6 pt-8 ml-16 mt-12">
-        {/* Left side - Main Table */}
-        <div className="flex-1">
+        {/* Left side - Chart and Table */}
+        <div className="flex-1 space-y-6">
+          {/* Performance Graph Section */}
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="bg-gray-50 dark:bg-gray-800 px-6 py-3 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Quarterly Performance</h3>
+            </div>
+            <div className="p-6">
+              <div className="h-72">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={quarterlyPerformanceData} barGap={8}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                    <XAxis 
+                      dataKey="quarter" 
+                      stroke="#6b7280" 
+                      style={{ fontSize: '12px' }}
+                      tick={{ fill: '#6b7280' }}
+                    />
+                    <YAxis 
+                      yAxisId="left"
+                      stroke="#6b7280" 
+                      style={{ fontSize: '12px' }}
+                      tick={{ fill: '#6b7280' }}
+                      label={{ value: 'Resumes', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: '#6b7280', fontSize: '11px' } }}
+                    />
+                    <YAxis 
+                      yAxisId="right"
+                      orientation="right"
+                      stroke="#6b7280" 
+                      style={{ fontSize: '12px' }}
+                      tick={{ fill: '#6b7280' }}
+                      label={{ value: 'Closures', angle: 90, position: 'insideRight', style: { textAnchor: 'middle', fill: '#6b7280', fontSize: '11px' } }}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#ffffff', 
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                      }}
+                      formatter={(value: any, name: string) => {
+                        const label = name === 'resumesDelivered' ? 'Resumes Delivered' : 'Closures Made';
+                        return [value, label];
+                      }}
+                    />
+                    <Legend 
+                      formatter={(value) => {
+                        if (value === 'resumesDelivered') return 'Resumes Delivered';
+                        if (value === 'closures') return 'Closures Made';
+                        return value;
+                      }}
+                    />
+                    <Bar 
+                      yAxisId="left"
+                      dataKey="resumesDelivered" 
+                      fill="#3b82f6" 
+                      radius={[4, 4, 0, 0]}
+                      name="resumesDelivered"
+                    />
+                    <Bar 
+                      yAxisId="right"
+                      dataKey="closures" 
+                      fill="#22c55e" 
+                      radius={[4, 4, 0, 0]}
+                      name="closures"
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          {/* Performance Table */}
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
             {/* Table Header */}
             <div className="bg-gray-50 dark:bg-gray-800 px-6 py-3 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Performance</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Closure Details</h3>
             </div>
             
             {/* Table Content */}
