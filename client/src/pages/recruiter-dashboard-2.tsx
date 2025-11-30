@@ -1198,7 +1198,7 @@ export default function RecruiterDashboard2() {
                           value={requirementsSearchQuery}
                           onChange={(e) => setRequirementsSearchQuery(e.target.value)}
                           placeholder="Search requirements..."
-                          className="border border-gray-300 px-4 py-2 rounded bg-white text-gray-900 w-64"
+                          className="border border-gray-300 px-4 py-2 rounded bg-white text-gray-900 w-64 placeholder:text-gray-400"
                           data-testid="input-search-requirements"
                         />
                         <button
@@ -1548,7 +1548,7 @@ export default function RecruiterDashboard2() {
                           value={closureSearchQuery}
                           onChange={(e) => setClosureSearchQuery(e.target.value)}
                           placeholder="Search closures..."
-                          className="border border-gray-300 px-4 py-2 rounded bg-white text-gray-900 w-64"
+                          className="border border-gray-300 px-4 py-2 rounded bg-white text-gray-900 w-64 placeholder:text-gray-400"
                           data-testid="input-search-closures"
                         />
                         <button
@@ -2007,7 +2007,7 @@ export default function RecruiterDashboard2() {
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                className="flex-1"
+                className="flex-1 placeholder:text-gray-400"
                 data-testid="input-chat-message"
               />
               <Button onClick={handleSendMessage} data-testid="button-send-message">
@@ -2152,6 +2152,7 @@ export default function RecruiterDashboard2() {
                   value={interviewForm.candidateName}
                   onChange={(e) => setInterviewForm(prev => ({...prev, candidateName: e.target.value}))}
                   placeholder="Enter candidate name" 
+                  className="placeholder:text-gray-400"
                   data-testid="input-candidate-name"
                 />
               </div>
@@ -2162,6 +2163,7 @@ export default function RecruiterDashboard2() {
                   value={interviewForm.position}
                   onChange={(e) => setInterviewForm(prev => ({...prev, position: e.target.value}))}
                   placeholder="Enter position" 
+                  className="placeholder:text-gray-400"
                   data-testid="input-position"
                 />
               </div>
@@ -2172,6 +2174,7 @@ export default function RecruiterDashboard2() {
                   value={interviewForm.client}
                   onChange={(e) => setInterviewForm(prev => ({...prev, client: e.target.value}))}
                   placeholder="Enter client name" 
+                  className="placeholder:text-gray-400"
                   data-testid="input-client"
                 />
               </div>
@@ -2354,7 +2357,7 @@ export default function RecruiterDashboard2() {
             </div>
             <div>
               <Label htmlFor="count">Required Count</Label>
-              <Input id="count" type="number" placeholder="Enter count" />
+              <Input id="count" type="number" placeholder="Enter count" className="placeholder:text-gray-400" />
             </div>
             <div className="flex justify-end space-x-2">
               <Button variant="outline" onClick={() => setRequirementCountModal({isOpen: false, requirement: null})}>Cancel</Button>
@@ -2439,7 +2442,7 @@ export default function RecruiterDashboard2() {
                   value={applicantSearchQuery}
                   onChange={(e) => setApplicantSearchQuery(e.target.value)}
                   placeholder="Search applicants..."
-                  className="border border-gray-300 px-4 py-2 rounded bg-white text-gray-900 w-64"
+                  className="border border-gray-300 px-4 py-2 rounded bg-white text-gray-900 w-64 placeholder:text-gray-400"
                   data-testid="input-search-applicants"
                 />
                 <button
