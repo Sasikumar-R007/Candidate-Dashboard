@@ -1720,91 +1720,218 @@ export default function RecruiterDashboard2() {
       { quarter: 'Q2 2025', resumesDelivered: 48, closures: 2 },
     ];
 
+    // Full closure details data for the modal
+    const allClosureDetails = [
+      { candidate: 'Aarav', position: 'Frontend Developer', client: 'TechCorp', offeredOn: '06-06-2025', joinedOn: '06-06-2025', quarter: 'FMA', closureValue: '1,52,500', incentive: '3000' },
+      { candidate: 'Arjun', position: 'UI/UX Designer', client: 'Designify', offeredOn: '08-06-2025', joinedOn: '08-06-2025', quarter: 'MJJ', closureValue: '4,50,000', incentive: '6000' },
+      { candidate: 'Shaurya', position: 'Backend Developer', client: 'CodeLabs', offeredOn: '20-06-2025', joinedOn: '20-06-2025', quarter: 'ASO', closureValue: '3,50,000', incentive: '3000' },
+      { candidate: 'Vihaan', position: 'QA Tester', client: 'AppLogic', offeredOn: '01-07-2025', joinedOn: '01-07-2025', quarter: 'NDJ', closureValue: '2,00,000', incentive: '3000' },
+      { candidate: 'Aditya', position: 'Mobile App Developer', client: 'Bug Catchers', offeredOn: '23-07-2025', joinedOn: '23-07-2025', quarter: 'NDJ', closureValue: '1,75,000', incentive: '3000' },
+      { candidate: 'Priya', position: 'Data Scientist', client: 'DataTech', offeredOn: '15-08-2025', joinedOn: '01-09-2025', quarter: 'ASO', closureValue: '5,25,000', incentive: '7500' },
+      { candidate: 'Rahul', position: 'DevOps Engineer', client: 'CloudSoft', offeredOn: '10-09-2025', joinedOn: '25-09-2025', quarter: 'ASO', closureValue: '4,80,000', incentive: '6000' },
+      { candidate: 'Sneha', position: 'Product Manager', client: 'InnovateTech', offeredOn: '05-10-2025', joinedOn: '20-10-2025', quarter: 'NDJ', closureValue: '6,00,000', incentive: '9000' },
+      { candidate: 'Kiran', position: 'Full Stack Developer', client: 'WebSolutions', offeredOn: '12-10-2025', joinedOn: '01-11-2025', quarter: 'NDJ', closureValue: '4,25,000', incentive: '5000' },
+      { candidate: 'Meera', position: 'Security Analyst', client: 'SecureNet', offeredOn: '18-10-2025', joinedOn: '15-11-2025', quarter: 'NDJ', closureValue: '5,50,000', incentive: '7000' },
+      { candidate: 'Amit', position: 'React Developer', client: 'TechStack', offeredOn: '22-11-2025', joinedOn: '10-12-2025', quarter: 'NDJ', closureValue: '3,75,000', incentive: '4500' },
+      { candidate: 'Divya', position: 'Machine Learning Engineer', client: 'AILabs', offeredOn: '28-11-2025', joinedOn: '15-12-2025', quarter: 'NDJ', closureValue: '7,00,000', incentive: '10000' },
+    ];
+
     return (
-      <div className="flex flex-1 gap-4 p-6 pt-8 ml-16 mt-12">
-        {/* Left side - Chart and Table */}
-        <div className="flex-1 space-y-6">
-          {/* Performance Graph Section */}
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div className="bg-gray-50 dark:bg-gray-800 px-6 py-3 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Quarterly Performance</h3>
+      <div className="flex min-h-screen">
+        <div className="flex-1 ml-16 bg-gray-50 dark:bg-gray-950">
+          <AdminTopHeader userName={`${recruiterProfile?.name || 'Recruiter'} - Recruiter`} companyName="Gumlat Marketing Private Limited" />
+          <div className="flex h-[calc(100vh-64px)]">
+            {/* Main Content Area - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {/* Performance Graph Section */}
+              <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="bg-gray-50 dark:bg-gray-800 px-6 py-3 border-b border-gray-200 dark:border-gray-700">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Quarterly Performance</h3>
+                </div>
+                <div className="p-6">
+                  <div className="h-72">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={quarterlyPerformanceData} barGap={8}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                        <XAxis 
+                          dataKey="quarter" 
+                          stroke="#6b7280" 
+                          style={{ fontSize: '12px' }}
+                          tick={{ fill: '#6b7280' }}
+                        />
+                        <YAxis 
+                          yAxisId="left"
+                          stroke="#6b7280" 
+                          style={{ fontSize: '12px' }}
+                          tick={{ fill: '#6b7280' }}
+                          label={{ value: 'Resumes', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: '#6b7280', fontSize: '11px' } }}
+                        />
+                        <YAxis 
+                          yAxisId="right"
+                          orientation="right"
+                          stroke="#6b7280" 
+                          style={{ fontSize: '12px' }}
+                          tick={{ fill: '#6b7280' }}
+                          label={{ value: 'Closures', angle: 90, position: 'insideRight', style: { textAnchor: 'middle', fill: '#6b7280', fontSize: '11px' } }}
+                        />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: '#ffffff', 
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px',
+                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                          }}
+                          formatter={(value: any, name: string) => {
+                            const label = name === 'resumesDelivered' ? 'Resumes Delivered' : 'Closures Made';
+                            return [value, label];
+                          }}
+                        />
+                        <Legend 
+                          formatter={(value) => {
+                            if (value === 'resumesDelivered') return 'Resumes Delivered';
+                            if (value === 'closures') return 'Closures Made';
+                            return value;
+                          }}
+                        />
+                        <Bar 
+                          yAxisId="left"
+                          dataKey="resumesDelivered" 
+                          fill="#3b82f6" 
+                          radius={[4, 4, 0, 0]}
+                          name="resumesDelivered"
+                        />
+                        <Bar 
+                          yAxisId="right"
+                          dataKey="closures" 
+                          fill="#22c55e" 
+                          radius={[4, 4, 0, 0]}
+                          name="closures"
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+
+              {/* Performance Table */}
+              <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+                {/* Table Header */}
+                <div className="bg-gray-50 dark:bg-gray-800 px-6 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Closure Details</h3>
+                </div>
+                
+                {/* Table Content */}
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 dark:bg-gray-800">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Candidate</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Position</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Client</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Offered On</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Joined On</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quarter</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Closure Value</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Incentive</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                      {allClosureDetails.slice(0, 5).map((closure, index) => (
+                        <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.candidate}</td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.position}</td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.client}</td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.offeredOn}</td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.joinedOn}</td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.quarter}</td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.closureValue}</td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.incentive}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* View More Button */}
+                <div className="flex justify-center p-4 border-t border-gray-200 dark:border-gray-700">
+                  <Button 
+                    variant="outline" 
+                    className="bg-blue-500 hover:bg-blue-600 text-white hover:text-white border-blue-500 hover:border-blue-600 rounded px-6"
+                    onClick={() => setIsClosureDetailsModalOpen(true)}
+                    data-testid="button-view-more-closures"
+                  >
+                    View More
+                  </Button>
+                </div>
+              </div>
             </div>
-            <div className="p-6">
-              <div className="h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={quarterlyPerformanceData} barGap={8}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
-                    <XAxis 
-                      dataKey="quarter" 
-                      stroke="#6b7280" 
-                      style={{ fontSize: '12px' }}
-                      tick={{ fill: '#6b7280' }}
-                    />
-                    <YAxis 
-                      yAxisId="left"
-                      stroke="#6b7280" 
-                      style={{ fontSize: '12px' }}
-                      tick={{ fill: '#6b7280' }}
-                      label={{ value: 'Resumes', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: '#6b7280', fontSize: '11px' } }}
-                    />
-                    <YAxis 
-                      yAxisId="right"
-                      orientation="right"
-                      stroke="#6b7280" 
-                      style={{ fontSize: '12px' }}
-                      tick={{ fill: '#6b7280' }}
-                      label={{ value: 'Closures', angle: 90, position: 'insideRight', style: { textAnchor: 'middle', fill: '#6b7280', fontSize: '11px' } }}
-                    />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: '#ffffff', 
-                        border: '1px solid #e5e7eb',
-                        borderRadius: '8px',
-                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                      }}
-                      formatter={(value: any, name: string) => {
-                        const label = name === 'resumesDelivered' ? 'Resumes Delivered' : 'Closures Made';
-                        return [value, label];
-                      }}
-                    />
-                    <Legend 
-                      formatter={(value) => {
-                        if (value === 'resumesDelivered') return 'Resumes Delivered';
-                        if (value === 'closures') return 'Closures Made';
-                        return value;
-                      }}
-                    />
-                    <Bar 
-                      yAxisId="left"
-                      dataKey="resumesDelivered" 
-                      fill="#3b82f6" 
-                      radius={[4, 4, 0, 0]}
-                      name="resumesDelivered"
-                    />
-                    <Bar 
-                      yAxisId="right"
-                      dataKey="closures" 
-                      fill="#22c55e" 
-                      radius={[4, 4, 0, 0]}
-                      name="closures"
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+
+            {/* Right Sidebar - Separately Scrollable */}
+            <div className="w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 overflow-y-auto p-6 space-y-6">
+              {/* Tenure Card */}
+              <div className="bg-blue-100 dark:bg-blue-900 rounded-lg p-4">
+                <div className="text-center">
+                  <h4 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">Tenure</h4>
+                  <div className="text-4xl font-bold text-blue-600 dark:text-blue-300 mb-1">4</div>
+                  <div className="text-sm text-blue-700 dark:text-blue-200">Quarters</div>
+                </div>
+              </div>
+
+              {/* Total Closures Card */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                <div className="text-center">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Total Closures</h4>
+                  <div className="text-4xl font-bold text-gray-800 dark:text-gray-200 mb-1">12</div>
+                </div>
+              </div>
+
+              {/* Recent Closure Card */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                <div className="text-center">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Recent Closure</h4>
+                  <div className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-1">Adhitya</div>
+                </div>
+              </div>
+
+              {/* Last Closure Card */}
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                <div className="text-center">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Last Closure</h4>
+                  <div className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-1">1</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Month 15 days</div>
+                </div>
+              </div>
+
+              {/* Performance Summary Card */}
+              <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                <div className="text-center">
+                  <h4 className="text-lg font-semibold text-green-900 dark:text-green-100 mb-2">Total Revenue</h4>
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">49,57,500</div>
+                  <div className="text-sm text-green-700 dark:text-green-300">All time closures value</div>
+                </div>
+              </div>
+
+              {/* Incentive Summary Card */}
+              <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+                <div className="text-center">
+                  <h4 className="text-lg font-semibold text-purple-900 dark:text-purple-100 mb-2">Total Incentives</h4>
+                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">64,000</div>
+                  <div className="text-sm text-purple-700 dark:text-purple-300">All time earned</div>
+                </div>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Performance Table */}
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            {/* Table Header */}
-            <div className="bg-gray-50 dark:bg-gray-800 px-6 py-3 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Closure Details</h3>
-            </div>
-            
-            {/* Table Content */}
-            <div className="overflow-x-auto">
+        {/* Closure Details Modal */}
+        <Dialog open={isClosureDetailsModalOpen} onOpenChange={setIsClosureDetailsModalOpen}>
+          <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-gray-100">All Closure Details</DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 overflow-y-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-800">
+                <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Candidate</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Position</th>
@@ -1817,98 +1944,35 @@ export default function RecruiterDashboard2() {
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                  <tr className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">Aarav</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">Frontend Developer</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">TechCorp</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">06-06-2025</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">06-06-2025</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">FMA</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">1,52,500</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">3000</td>
-                  </tr>
-                  <tr className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">Arjun</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">UI/UX Designer</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">Designify</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">08-06-2025</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">08-06-2025</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">MJJ</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">4,50,000</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">6000</td>
-                  </tr>
-                  <tr className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">Shaurya</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">Backend Developer</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">CodeLabs</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">20-06-2025</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">20-06-2025</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">ASO</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">3,50,000</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">3000</td>
-                  </tr>
-                  <tr className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">Vihaan</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">QA Tester</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">AppLogic</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">01-07-2025</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">01-07-2025</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">NDJ</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">2,00,000</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">3000</td>
-                  </tr>
-                  <tr className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">Aditya</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">Mobile App Developer</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">Bug Catchers</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">23-07-2025</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">23-07-2025</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">NDJ</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">1,75,000</td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">3000</td>
-                  </tr>
+                  {allClosureDetails.map((closure, index) => (
+                    <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.candidate}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.position}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.client}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.offeredOn}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.joinedOn}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.quarter}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.closureValue}</td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.incentive}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
-          </div>
-        </div>
-
-        {/* Right Sidebar */}
-        <div className="w-80 space-y-6">
-          {/* Tenure Card */}
-          <div className="bg-blue-100 dark:bg-blue-900 rounded-lg p-4">
-            <div className="text-center">
-              <h4 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">Tenure</h4>
-              <div className="text-4xl font-bold text-blue-600 dark:text-blue-300 mb-1">4</div>
-              <div className="text-sm text-blue-700 dark:text-blue-200">Quarters</div>
+            <div className="flex justify-between items-center pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Showing {allClosureDetails.length} closures
+              </div>
+              <Button 
+                variant="outline"
+                onClick={() => setIsClosureDetailsModalOpen(false)}
+                data-testid="button-close-closure-details-modal"
+              >
+                Close
+              </Button>
             </div>
-          </div>
-
-          {/* Total Closures Card */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-            <div className="text-center">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Total Closures</h4>
-              <div className="text-4xl font-bold text-gray-800 dark:text-gray-200 mb-1">12</div>
-            </div>
-          </div>
-
-          {/* Recent Closure Card */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-            <div className="text-center">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Recent Closure</h4>
-              <div className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-1">Adhitya</div>
-            </div>
-          </div>
-
-          {/* Last Closure Card */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-            <div className="text-center">
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Last Closure</h4>
-              <div className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-1">1</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">Month 15 days</div>
-            </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   };
