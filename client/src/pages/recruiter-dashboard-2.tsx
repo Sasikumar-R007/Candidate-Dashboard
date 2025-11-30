@@ -371,40 +371,55 @@ export default function RecruiterDashboard2() {
   // Transform API applications to applicant data format for the UI
   const applicantData = useMemo(() => {
     if (!allApplications || allApplications.length === 0) {
-      // Show sample data when no real applications exist with full profile info
-      return [
-        { id: 1, appliedOn: '06-06-2025', candidateName: 'Aarav', company: 'TechCorp', roleApplied: 'Frontend Developer', submission: 'Inbound', currentStatus: 'L1', email: 'aarav.kumar@email.com', phone: '+91 9876543210', location: 'Bangalore, India', experience: '4 years', skills: ['React', 'TypeScript', 'Node.js', 'MongoDB'], education: 'B.Tech Computer Science', currentCompany: 'Microsoft', rating: 4.5 },
-        { id: 2, appliedOn: '08-06-2025', candidateName: 'Arjun', company: 'Designify', roleApplied: 'UI/UX Designer', submission: 'Uploaded', currentStatus: 'L2', email: 'arjun.sharma@email.com', phone: '+91 9876543211', location: 'Mumbai, India', experience: '3 years', skills: ['Figma', 'Adobe XD', 'Prototyping', 'User Research'], education: 'B.Des Visual Design', currentCompany: 'Adobe', rating: 4.2 },
-        { id: 3, appliedOn: '20-06-2025', candidateName: 'Shaurya', company: 'CodeLabs', roleApplied: 'Backend Developer', submission: 'Uploaded', currentStatus: 'L3', email: 'shaurya.singh@email.com', phone: '+91 9876543212', location: 'Delhi, India', experience: '5 years', skills: ['Java', 'Spring Boot', 'PostgreSQL', 'AWS'], education: 'M.Tech Software Engineering', currentCompany: 'Google', rating: 4.8 },
-        { id: 4, appliedOn: '01-07-2025', candidateName: 'Vihaan', company: 'AppLogic', roleApplied: 'QA Tester', submission: 'Inbound', currentStatus: 'HR Round', email: 'vihaan.patel@email.com', phone: '+91 9876543213', location: 'Hyderabad, India', experience: '3.5 years', skills: ['Selenium', 'JIRA', 'Python', 'API Testing'], education: 'B.Tech IT', currentCompany: 'Infosys', rating: 4.0 },
-        { id: 5, appliedOn: '23-07-2025', candidateName: 'Aditya', company: 'Bug Catchers', roleApplied: 'Mobile App Developer', submission: 'Inbound', currentStatus: 'Selected', email: 'aditya.gupta@email.com', phone: '+91 9876543214', location: 'Pune, India', experience: '4 years', skills: ['React Native', 'Flutter', 'iOS', 'Android'], education: 'B.Tech Computer Science', currentCompany: 'Flipkart', rating: 4.6 },
-        { id: 6, appliedOn: '25-07-2025', candidateName: 'Keerthana', company: 'TechStack', roleApplied: 'Full Stack Developer', submission: 'Inbound', currentStatus: 'L1', email: 'keerthana.r@email.com', phone: '+91 9876543215', location: 'Chennai, India', experience: '5 years', skills: ['React', 'Node.js', 'Python', 'MongoDB', 'AWS'], education: 'M.Tech Computer Science', currentCompany: 'Amazon', rating: 4.7 },
-        { id: 7, appliedOn: '26-07-2025', candidateName: 'Vishnu Purana', company: 'DataFlow', roleApplied: 'Data Scientist', submission: 'Uploaded', currentStatus: 'L2', email: 'vishnu.p@email.com', phone: '+91 9876543216', location: 'Bangalore, India', experience: '4 years', skills: ['Python', 'Machine Learning', 'TensorFlow', 'SQL'], education: 'M.Sc Data Science', currentCompany: 'IBM', rating: 4.4 },
-        { id: 8, appliedOn: '27-07-2025', candidateName: 'Chanakya', company: 'CloudOps', roleApplied: 'DevOps Engineer', submission: 'Inbound', currentStatus: 'Final Round', email: 'chanakya.dev@email.com', phone: '+91 9876543217', location: 'Gurgaon, India', experience: '6 years', skills: ['AWS', 'Docker', 'Kubernetes', 'Terraform', 'Jenkins'], education: 'B.Tech IT', currentCompany: 'Accenture', rating: 4.9 },
-        { id: 9, appliedOn: '28-07-2025', candidateName: 'Adhya', company: 'SecureNet', roleApplied: 'Security Analyst', submission: 'Uploaded', currentStatus: 'HR Round', email: 'adhya.sharma@email.com', phone: '+91 9876543218', location: 'Mumbai, India', experience: '4 years', skills: ['Penetration Testing', 'SIEM', 'Firewall', 'Python'], education: 'M.Tech Cybersecurity', currentCompany: 'Deloitte', rating: 4.3 },
-        { id: 10, appliedOn: '29-07-2025', candidateName: 'Vanshika', company: 'ProductLab', roleApplied: 'Product Designer', submission: 'Inbound', currentStatus: 'Selected', email: 'vanshika.reddy@email.com', phone: '+91 9876543219', location: 'Hyderabad, India', experience: '3 years', skills: ['Figma', 'Sketch', 'User Testing', 'Wireframing'], education: 'B.Des Product Design', currentCompany: 'Swiggy', rating: 4.5 },
-        { id: 11, appliedOn: '30-07-2025', candidateName: 'Reyansh', company: 'Enterprise', roleApplied: 'Java Developer', submission: 'Inbound', currentStatus: 'L1', email: 'reyansh.kumar@email.com', phone: '+91 9876543220', location: 'Noida, India', experience: '5 years', skills: ['Java', 'Spring', 'Hibernate', 'Microservices'], education: 'B.Tech Computer Science', currentCompany: 'TCS', rating: 4.1 },
-        { id: 12, appliedOn: '31-07-2025', candidateName: 'Vihana', company: 'WebTech', roleApplied: 'React Developer', submission: 'Uploaded', currentStatus: 'Shortlisted', email: 'vihana.singh@email.com', phone: '+91 9876543221', location: 'Bangalore, India', experience: '2 years', skills: ['React', 'JavaScript', 'CSS3', 'Redux'], education: 'BCA', currentCompany: 'Wipro', rating: 3.9 },
-        { id: 13, appliedOn: '01-08-2025', candidateName: 'Priya', company: 'CloudOps', roleApplied: 'Cloud Architect', submission: 'Inbound', currentStatus: 'L3', email: 'priya.m@email.com', phone: '+91 9876543222', location: 'Bangalore, India', experience: '7 years', skills: ['AWS', 'Azure', 'GCP', 'Kubernetes'], education: 'M.Tech Cloud Computing', currentCompany: 'Oracle', rating: 4.8 },
-      ];
+      // Return empty array when no real applications exist
+      return [];
     }
-    return allApplications.map((app: any, index: number) => ({
-      id: app.id || index + 1,
-      appliedOn: app.appliedDate ? new Date(app.appliedDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : 'N/A',
-      candidateName: app.candidateName || 'Unknown Candidate',
-      company: app.company || 'N/A',
-      roleApplied: app.jobTitle || 'N/A',
-      submission: app.source === 'job_board' ? 'Inbound' : 'Uploaded',
-      currentStatus: app.status || 'In-Process',
-      email: app.email || 'N/A',
-      phone: app.phone || 'N/A',
-      location: app.location || 'N/A',
-      experience: app.experience || 'N/A',
-      skills: app.skills || [],
-      education: app.education || 'N/A',
-      currentCompany: app.currentCompany || 'N/A',
-      rating: app.rating || 4.0
-    }));
+    return allApplications.map((app: any, index: number) => {
+      // Safely parse skills from JSON string
+      let parsedSkills: string[] = [];
+      if (app.skills) {
+        try {
+          parsedSkills = typeof app.skills === 'string' ? JSON.parse(app.skills) : (Array.isArray(app.skills) ? app.skills : []);
+        } catch {
+          parsedSkills = [];
+        }
+      }
+
+      // Map backend status to UI-friendly format
+      const statusMap: Record<string, string> = {
+        'In Process': 'In-Process',
+        'In-Process': 'In-Process',
+        'Shortlisted': 'Shortlisted',
+        'Rejected': 'Rejected',
+        'Screened Out': 'Screened Out',
+        'L1': 'L1',
+        'L2': 'L2',
+        'L3': 'L3',
+        'Final Round': 'Final Round',
+        'HR Round': 'HR Round',
+        'Selected': 'Selected',
+        'Interview Scheduled': 'L1',
+        'Applied': 'In-Process'
+      };
+
+      return {
+        id: app.id || `app-${index + 1}`,
+        appliedOn: app.appliedDate ? new Date(app.appliedDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : 'N/A',
+        candidateName: app.candidateName || 'Unknown Candidate',
+        company: app.company || 'N/A',
+        roleApplied: app.jobTitle || 'N/A',
+        submission: app.source === 'recruiter_tagged' ? 'Uploaded' : 'Inbound',
+        currentStatus: statusMap[app.status] || app.status || 'In-Process',
+        email: app.candidateEmail || 'N/A',
+        phone: app.candidatePhone || 'N/A',
+        location: app.location || 'N/A',
+        experience: app.experience || 'N/A',
+        skills: parsedSkills,
+        education: 'N/A',
+        currentCompany: app.company || 'N/A',
+        rating: 4.0
+      };
+    });
   }, [allApplications]);
 
   // Track local changes to applicant statuses
@@ -724,51 +739,82 @@ export default function RecruiterDashboard2() {
                   )}
                 </CardHeader>
                 <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="text-left py-3 px-6 font-medium text-gray-700">Applied on</th>
-                          <th className="text-left py-3 px-6 font-medium text-gray-700">Candidate Name</th>
-                          <th className="text-left py-3 px-6 font-medium text-gray-700">Company</th>
-                          <th className="text-left py-3 px-6 font-medium text-gray-700">Role Applied</th>
-                          <th className="text-left py-3 px-6 font-medium text-gray-700">Submission</th>
-                          <th className="text-left py-3 px-6 font-medium text-gray-700">Current Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {getEffectiveApplicantData().slice(0, 5).map((applicant, index) => (
-                          <tr key={applicant.id || index} className="border-b border-gray-100 hover:bg-gray-50">
-                            <td className="py-3 px-6 text-gray-900">{applicant.appliedOn}</td>
-                            <td className="py-3 px-6 text-gray-900 font-medium">{applicant.candidateName}</td>
-                            <td className="py-3 px-6 text-gray-900">{applicant.company}</td>
-                            <td className="py-3 px-6 text-gray-900">{applicant.roleApplied}</td>
-                            <td className="py-3 px-6">
-                              <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                applicant.submission === 'Inbound' 
-                                  ? 'bg-green-100 text-green-800' 
-                                  : 'bg-blue-100 text-blue-800'
-                              }`}>
-                                {applicant.submission}
-                              </span>
-                            </td>
-                            <td className="py-3 px-6">
-                              <Select value={applicant.currentStatus} onValueChange={(value) => handleStatusChange(applicant, value)}>
-                                <SelectTrigger className="w-32 h-8 text-sm">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {statuses.map((status) => (
-                                    <SelectItem key={status} value={status}>{status}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </td>
+                  {getEffectiveApplicantData().length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 px-6" data-testid="empty-applicant-overview">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <UserRound className="w-8 h-8 text-gray-400" />
+                      </div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Applications Yet</h3>
+                      <p className="text-sm text-gray-500 text-center max-w-md mb-4">
+                        Applications will appear here when candidates apply to your job postings or when you tag candidates to requirements.
+                      </p>
+                      <div className="flex gap-3">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setIsPostJobModalOpen(true)}
+                          data-testid="button-post-job-empty"
+                        >
+                          Post a Job
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => setIsUploadResumeModalOpen(true)}
+                          data-testid="button-upload-resume-empty"
+                        >
+                          <Upload className="w-4 h-4 mr-2" />
+                          Upload Resume
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="text-left py-3 px-6 font-medium text-gray-700">Applied on</th>
+                            <th className="text-left py-3 px-6 font-medium text-gray-700">Candidate Name</th>
+                            <th className="text-left py-3 px-6 font-medium text-gray-700">Company</th>
+                            <th className="text-left py-3 px-6 font-medium text-gray-700">Role Applied</th>
+                            <th className="text-left py-3 px-6 font-medium text-gray-700">Submission</th>
+                            <th className="text-left py-3 px-6 font-medium text-gray-700">Current Status</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody>
+                          {getEffectiveApplicantData().slice(0, 5).map((applicant, index) => (
+                            <tr key={applicant.id || index} className="border-b border-gray-100 hover:bg-gray-50">
+                              <td className="py-3 px-6 text-gray-900">{applicant.appliedOn}</td>
+                              <td className="py-3 px-6 text-gray-900 font-medium">{applicant.candidateName}</td>
+                              <td className="py-3 px-6 text-gray-900">{applicant.company}</td>
+                              <td className="py-3 px-6 text-gray-900">{applicant.roleApplied}</td>
+                              <td className="py-3 px-6">
+                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                  applicant.submission === 'Inbound' 
+                                    ? 'bg-green-100 text-green-800' 
+                                    : 'bg-blue-100 text-blue-800'
+                                }`}>
+                                  {applicant.submission}
+                                </span>
+                              </td>
+                              <td className="py-3 px-6">
+                                <Select value={applicant.currentStatus} onValueChange={(value) => handleStatusChange(applicant, value)}>
+                                  <SelectTrigger className="w-32 h-8 text-sm">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {statuses.map((status) => (
+                                      <SelectItem key={status} value={status}>{status}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
