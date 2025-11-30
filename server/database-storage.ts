@@ -40,6 +40,9 @@ import {
   type InsertRevenueMapping,
   type RecruiterJob,
   type InsertRecruiterJob,
+  type RecruiterCommand,
+  type InsertRecruiterCommand,
+  type Meeting,
   users,
   profiles,
   jobPreferences,
@@ -59,7 +62,9 @@ import {
   impactMetrics,
   targetMappings,
   revenueMappings,
-  recruiterJobs
+  recruiterJobs,
+  recruiterCommands,
+  meetings
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, count } from "drizzle-orm";
@@ -959,5 +964,57 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(requirements)
       .where(eq(requirements.teamLead, teamLeadName))
       .orderBy(desc(requirements.createdAt));
+  }
+
+  // Recruiter Commands methods
+  async createRecruiterCommand(command: InsertRecruiterCommand): Promise<RecruiterCommand> {
+    const [recruiterCommand] = await db.insert(recruiterCommands).values({
+      ...command,
+      createdAt: new Date().toISOString()
+    }).returning();
+    return recruiterCommand;
+  }
+
+  async getRecruiterCommandsByRecruiterId(recruiterId: string): Promise<RecruiterCommand[]> {
+    return await db.select().from(recruiterCommands)
+      .where(eq(recruiterCommands.recruiterId, recruiterId))
+      .orderBy(desc(recruiterCommands.createdAt));
+  }
+
+  async getAllRecruiterCommands(): Promise<RecruiterCommand[]> {
+    return await db.select().from(recruiterCommands)
+      .orderBy(desc(recruiterCommands.createdAt));
+  }
+
+  async updateRecruiterCommand(id: string, updates: Partial<RecruiterCommand>): Promise<RecruiterCommand | undefined> {
+    const [command] = await db
+      .update(recruiterCommands)
+      .set(updates)
+      .where(eq(recruiterCommands.id, id))
+      .returning();
+    return command || undefined;
+  }
+
+  async deleteRecruiterCommand(id: string): Promise<boolean> {
+    const result = await db.delete(recruiterCommands).where(eq(recruiterCommands.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Recruiter Meetings methods (fetch meetings assigned to a specific recruiter by personId)
+  async getMeetingsByRecruiterId(recruiterId: string): Promise<Meeting[]> {
+    return await db.select().from(meetings)
+      .where(eq(meetings.personId, recruiterId))
+      .orderBy(desc(meetings.createdAt));
+  }
+
+  async getMeetingsByRecruiterName(recruiterName: string): Promise<Meeting[]> {
+    return await db.select().from(meetings)
+      .where(eq(meetings.person, recruiterName))
+      .orderBy(desc(meetings.createdAt));
+  }
+
+  async getAllMeetings(): Promise<Meeting[]> {
+    return await db.select().from(meetings)
+      .orderBy(desc(meetings.createdAt));
   }
 }

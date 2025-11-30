@@ -633,6 +633,18 @@ export const adminMessages = pgTable("admin_messages", {
   sentAt: timestamp("sent_at").notNull().defaultNow(),
 });
 
+export const recruiterCommands = pgTable("recruiter_commands", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  recruiterId: varchar("recruiter_id").notNull(), // Links to employees.id (the recruiter assigned)
+  recruiterName: text("recruiter_name").notNull(),
+  command: text("command").notNull(),
+  status: text("status").notNull().default("pending"), // pending, completed, cancelled
+  createdBy: text("created_by").notNull(), // Admin/CEO who created the command
+  date: text("date").notNull(),
+  completedAt: text("completed_at"),
+  createdAt: text("created_at").notNull(),
+});
+
 export const recruiterJobs = pgTable("recruiter_jobs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   recruiterId: varchar("recruiter_id"), // Links to employees.id (the recruiter who posted)
@@ -701,6 +713,11 @@ export const insertRevenueMappingSchema = createInsertSchema(revenueMappings).om
 export const insertAdminMessageSchema = createInsertSchema(adminMessages).omit({
   id: true,
   sentAt: true,
+});
+
+export const insertRecruiterCommandSchema = createInsertSchema(recruiterCommands).omit({
+  id: true,
+  createdAt: true,
 });
 
 export const insertRecruiterJobSchema = createInsertSchema(recruiterJobs).omit({
@@ -787,5 +804,7 @@ export type InsertRevenueMapping = z.infer<typeof insertRevenueMappingSchema>;
 export type RevenueMapping = typeof revenueMappings.$inferSelect;
 export type InsertAdminMessage = z.infer<typeof insertAdminMessageSchema>;
 export type AdminMessage = typeof adminMessages.$inferSelect;
+export type InsertRecruiterCommand = z.infer<typeof insertRecruiterCommandSchema>;
+export type RecruiterCommand = typeof recruiterCommands.$inferSelect;
 export type InsertRecruiterJob = z.infer<typeof insertRecruiterJobSchema>;
 export type RecruiterJob = typeof recruiterJobs.$inferSelect;

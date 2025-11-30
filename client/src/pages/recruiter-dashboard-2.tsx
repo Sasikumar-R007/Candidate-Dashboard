@@ -392,20 +392,56 @@ export default function RecruiterDashboard2() {
   // Track local changes to applicant statuses
   const [applicantStatusOverrides, setApplicantStatusOverrides] = useState<{[key: string]: string}>({});
 
-  // Pending Meetings data
-  const [pendingMeetingsData] = useState([
-    { id: 1, meeting: 'TL', date: '25-05-2025', person: 'Arun' },
-    { id: 2, meeting: 'CEO', date: '01-05-2025', person: 'Vikna Prakash' },
-    { id: 3, meeting: 'Client Interaction', date: '15-05-2025', person: 'Rajesh Kumar' },
-  ]);
+  // Use API data for pending meetings and CEO commands
+  const { data: recruiterMeetings = [] } = useQuery({
+    queryKey: ['/api/recruiter/meetings'],
+  }) as { data: any[] };
 
-  // CEO Commands data
-  const [ceoCommandsData] = useState([
-    { id: 1, command: 'Discuss with Shri Ragavi on her production' },
-    { id: 2, command: 'Discuss with Kavya about her leaves' },
-    { id: 3, command: 'Discuss with Umar for data' },
-    { id: 4, command: 'Review team performance metrics with HR' },
-  ]);
+  const { data: recruiterCeoCommands = [] } = useQuery({
+    queryKey: ['/api/recruiter/ceo-comments'],
+  }) as { data: any[] };
+
+  // Helper function to format date strings
+  const formatMeetingDate = (dateStr: string | undefined): string => {
+    if (!dateStr) return '-';
+    try {
+      // Check if it's already in DD-MM-YYYY format
+      if (/^\d{2}-\d{2}-\d{4}$/.test(dateStr)) {
+        return dateStr;
+      }
+      // Parse ISO date and format
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return dateStr;
+      return format(date, 'dd-MMM-yyyy');
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Transform API meetings data to UI format
+  const pendingMeetingsData = useMemo(() => {
+    if (!recruiterMeetings || recruiterMeetings.length === 0) {
+      return [];
+    }
+    return recruiterMeetings.map((meeting: any) => ({
+      id: meeting.id,
+      meeting: meeting.meetingType,
+      date: formatMeetingDate(meeting.meetingDate),
+      person: meeting.person
+    }));
+  }, [recruiterMeetings]);
+
+  // Transform API commands data to UI format
+  const ceoCommandsData = useMemo(() => {
+    if (!recruiterCeoCommands || recruiterCeoCommands.length === 0) {
+      return [];
+    }
+    return recruiterCeoCommands.map((cmd: any) => ({
+      id: cmd.id,
+      command: cmd.command,
+      date: formatMeetingDate(cmd.date)
+    }));
+  }, [recruiterCeoCommands]);
 
   // Handle status change for applicants
   const handleStatusChange = (applicant: any, newStatus: string) => {

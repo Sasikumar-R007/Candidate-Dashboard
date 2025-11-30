@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import session from "express-session";
 import fs from "fs";
 import { storage } from "./storage";
-import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema } from "@shared/schema";
+import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema, insertRecruiterCommandSchema, recruiterCommands, employees } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import multer from "multer";
@@ -1725,21 +1725,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(dailyMetrics);
   });
 
-  app.get("/api/recruiter/meetings", (req, res) => {
-    const meetings = [
-      { id: "meeting-rec-001", type: "TL's Meeting", count: "2" },
-      { id: "meeting-rec-002", type: "CEO's Meeting", count: "1" }
-    ];
-    res.json(meetings);
+  app.get("/api/recruiter/meetings", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      // Fetch meetings assigned to this recruiter by personId first, fallback to name
+      const allMeetings = await db.select().from(meetings).orderBy(desc(meetings.createdAt));
+      
+      // Filter meetings by personId (primary) or person name (fallback)
+      const recruiterMeetings = allMeetings.filter(m => 
+        m.personId === employee.id || m.person === employee.name
+      );
+      
+      res.json(recruiterMeetings);
+    } catch (error) {
+      console.error('Get recruiter meetings error:', error);
+      res.status(500).json({ message: "Failed to fetch meetings" });
+    }
   });
 
-  app.get("/api/recruiter/ceo-comments", (req, res) => {
-    const comments = [
-      { id: "comment-rec-001", comment: "Focus on high-priority requirements this week", date: "21-Aug-2025" },
-      { id: "comment-rec-002", comment: "Improve interview scheduling process", date: "21-Aug-2025" },
-      { id: "comment-rec-003", comment: "Follow up on pending candidates", date: "20-Aug-2025" }
-    ];
-    res.json(comments);
+  app.get("/api/recruiter/ceo-comments", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      // Fetch commands assigned to this recruiter
+      const commands = await db.select().from(recruiterCommands)
+        .where(eq(recruiterCommands.recruiterId, employee.id))
+        .orderBy(desc(recruiterCommands.createdAt));
+      
+      res.json(commands);
+    } catch (error) {
+      console.error('Get recruiter commands error:', error);
+      res.status(500).json({ message: "Failed to fetch commands" });
+    }
   });
 
   app.post("/api/recruiter/upload/banner", upload.single('file'), (req, res) => {
@@ -1909,6 +1935,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Delete meeting error:', error);
       res.status(500).json({ message: "Failed to delete meeting" });
+    }
+  });
+
+  // Recruiter Commands API endpoints for Admin
+  app.get("/api/admin/recruiter-commands", async (req, res) => {
+    try {
+      const allCommands = await db.select().from(recruiterCommands).orderBy(desc(recruiterCommands.createdAt));
+      res.json(allCommands);
+    } catch (error) {
+      console.error('Get recruiter commands error:', error);
+      res.status(500).json({ message: "Failed to get recruiter commands" });
+    }
+  });
+
+  app.post("/api/admin/recruiter-commands", async (req, res) => {
+    try {
+      const validatedData = insertRecruiterCommandSchema.parse(req.body);
+      
+      const [command] = await db.insert(recruiterCommands).values({
+        ...validatedData,
+        createdAt: new Date().toISOString(),
+      }).returning();
+      res.status(201).json(command);
+    } catch (error: any) {
+      console.error('Create recruiter command error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid command data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create recruiter command" });
+    }
+  });
+
+  app.patch("/api/admin/recruiter-commands/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = insertRecruiterCommandSchema.partial().parse(req.body);
+      
+      const [updatedCommand] = await db.update(recruiterCommands)
+        .set(updateData)
+        .where(eq(recruiterCommands.id, id))
+        .returning();
+      
+      if (!updatedCommand) {
+        return res.status(404).json({ message: "Recruiter command not found" });
+      }
+      
+      res.json(updatedCommand);
+    } catch (error: any) {
+      console.error('Update recruiter command error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid command data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update recruiter command" });
+    }
+  });
+
+  app.delete("/api/admin/recruiter-commands/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const [deletedCommand] = await db.delete(recruiterCommands)
+        .where(eq(recruiterCommands.id, id))
+        .returning();
+      
+      if (!deletedCommand) {
+        return res.status(404).json({ message: "Recruiter command not found" });
+      }
+      
+      res.json({ message: "Recruiter command deleted successfully" });
+    } catch (error) {
+      console.error('Delete recruiter command error:', error);
+      res.status(500).json({ message: "Failed to delete recruiter command" });
+    }
+  });
+
+  // Get all recruiters for admin selection (when assigning commands/meetings)
+  app.get("/api/admin/recruiters", async (req, res) => {
+    try {
+      const allRecruiters = await db.select().from(employees)
+        .where(eq(employees.role, 'recruiter'))
+        .orderBy(employees.name);
+      res.json(allRecruiters);
+    } catch (error) {
+      console.error('Get recruiters error:', error);
+      res.status(500).json({ message: "Failed to get recruiters" });
     }
   });
 
