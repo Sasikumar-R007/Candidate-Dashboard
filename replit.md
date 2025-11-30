@@ -52,6 +52,7 @@ Preferred communication style: Simple, everyday language.
 - **Target Mapping System**: Admin sets quarterly individual targets for recruiters, displayed on recruiter and team leader dashboards. Targets are stored in `targetMappings` table.
 - **Master Database Resume Detail Drawer**: Right-side drawer for resume profiles in the Master Database. Displays candidate profile, resume viewing area (placeholder), share/download options, upload date, and a real-time comments section for collaboration.
 - **Recruiter Job Management System**: Full CRUD operations for job postings (Active, Closed, Draft statuses). Provides a responsive grid layout with filtering and search, and integration with the candidate job board.
+- **Recruiter Requirements System**: Recruiters see only requirements assigned to them by Team Leads (via the `talentAdvisor` field). The dashboard shows real delivery counts per requirement and priority distributions. Recruiters can only tag candidates to their assigned requirements via the Tag to Requirement modal.
 
 ## Development Tools
 - **Build System**: Vite.
