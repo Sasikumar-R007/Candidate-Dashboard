@@ -365,7 +365,7 @@ export default function RecruiterDashboard2() {
   const recruitingTeam = ['Priya', 'Amit', 'Sowmiya', 'Rajesh', 'Kavitha', 'Vinay'];
 
   // Status options for dropdowns
-  const statuses = ['In-Process', 'Shortlisted', 'Interview Scheduled', 'Interview On-Going', 'Final Round', 'HR Round', 'Selected', 'Screened Out'];
+  const statuses = ['In-Process', 'Shortlisted', 'L1', 'L2', 'L3', 'Final Round', 'HR Round', 'Selected', 'Screened Out'];
   const rejectionReasons = ['Skill mismatch', 'Lack of communication', 'Inadequate experience', 'Unprofessional behavior', 'Other'];
 
   // Transform API applications to applicant data format for the UI
@@ -373,18 +373,19 @@ export default function RecruiterDashboard2() {
     if (!allApplications || allApplications.length === 0) {
       // Show sample data when no real applications exist with full profile info
       return [
-        { id: 1, appliedOn: '06-06-2025', candidateName: 'Aarav', company: 'TechCorp', roleApplied: 'Frontend Developer', submission: 'Inbound', currentStatus: 'Interview Scheduled', email: 'aarav.kumar@email.com', phone: '+91 9876543210', location: 'Bangalore, India', experience: '4 years', skills: ['React', 'TypeScript', 'Node.js', 'MongoDB'], education: 'B.Tech Computer Science', currentCompany: 'Microsoft', rating: 4.5 },
-        { id: 2, appliedOn: '08-06-2025', candidateName: 'Arjun', company: 'Designify', roleApplied: 'UI/UX Designer', submission: 'Uploaded', currentStatus: 'Interview On-Going', email: 'arjun.sharma@email.com', phone: '+91 9876543211', location: 'Mumbai, India', experience: '3 years', skills: ['Figma', 'Adobe XD', 'Prototyping', 'User Research'], education: 'B.Des Visual Design', currentCompany: 'Adobe', rating: 4.2 },
-        { id: 3, appliedOn: '20-06-2025', candidateName: 'Shaurya', company: 'CodeLabs', roleApplied: 'Backend Developer', submission: 'Uploaded', currentStatus: 'Final Round', email: 'shaurya.singh@email.com', phone: '+91 9876543212', location: 'Delhi, India', experience: '5 years', skills: ['Java', 'Spring Boot', 'PostgreSQL', 'AWS'], education: 'M.Tech Software Engineering', currentCompany: 'Google', rating: 4.8 },
+        { id: 1, appliedOn: '06-06-2025', candidateName: 'Aarav', company: 'TechCorp', roleApplied: 'Frontend Developer', submission: 'Inbound', currentStatus: 'L1', email: 'aarav.kumar@email.com', phone: '+91 9876543210', location: 'Bangalore, India', experience: '4 years', skills: ['React', 'TypeScript', 'Node.js', 'MongoDB'], education: 'B.Tech Computer Science', currentCompany: 'Microsoft', rating: 4.5 },
+        { id: 2, appliedOn: '08-06-2025', candidateName: 'Arjun', company: 'Designify', roleApplied: 'UI/UX Designer', submission: 'Uploaded', currentStatus: 'L2', email: 'arjun.sharma@email.com', phone: '+91 9876543211', location: 'Mumbai, India', experience: '3 years', skills: ['Figma', 'Adobe XD', 'Prototyping', 'User Research'], education: 'B.Des Visual Design', currentCompany: 'Adobe', rating: 4.2 },
+        { id: 3, appliedOn: '20-06-2025', candidateName: 'Shaurya', company: 'CodeLabs', roleApplied: 'Backend Developer', submission: 'Uploaded', currentStatus: 'L3', email: 'shaurya.singh@email.com', phone: '+91 9876543212', location: 'Delhi, India', experience: '5 years', skills: ['Java', 'Spring Boot', 'PostgreSQL', 'AWS'], education: 'M.Tech Software Engineering', currentCompany: 'Google', rating: 4.8 },
         { id: 4, appliedOn: '01-07-2025', candidateName: 'Vihaan', company: 'AppLogic', roleApplied: 'QA Tester', submission: 'Inbound', currentStatus: 'HR Round', email: 'vihaan.patel@email.com', phone: '+91 9876543213', location: 'Hyderabad, India', experience: '3.5 years', skills: ['Selenium', 'JIRA', 'Python', 'API Testing'], education: 'B.Tech IT', currentCompany: 'Infosys', rating: 4.0 },
         { id: 5, appliedOn: '23-07-2025', candidateName: 'Aditya', company: 'Bug Catchers', roleApplied: 'Mobile App Developer', submission: 'Inbound', currentStatus: 'Selected', email: 'aditya.gupta@email.com', phone: '+91 9876543214', location: 'Pune, India', experience: '4 years', skills: ['React Native', 'Flutter', 'iOS', 'Android'], education: 'B.Tech Computer Science', currentCompany: 'Flipkart', rating: 4.6 },
-        { id: 6, appliedOn: '25-07-2025', candidateName: 'Keerthana', company: 'TechStack', roleApplied: 'Full Stack Developer', submission: 'Inbound', currentStatus: 'Interview Scheduled', email: 'keerthana.r@email.com', phone: '+91 9876543215', location: 'Chennai, India', experience: '5 years', skills: ['React', 'Node.js', 'Python', 'MongoDB', 'AWS'], education: 'M.Tech Computer Science', currentCompany: 'Amazon', rating: 4.7 },
-        { id: 7, appliedOn: '26-07-2025', candidateName: 'Vishnu Purana', company: 'DataFlow', roleApplied: 'Data Scientist', submission: 'Uploaded', currentStatus: 'Interview On-Going', email: 'vishnu.p@email.com', phone: '+91 9876543216', location: 'Bangalore, India', experience: '4 years', skills: ['Python', 'Machine Learning', 'TensorFlow', 'SQL'], education: 'M.Sc Data Science', currentCompany: 'IBM', rating: 4.4 },
+        { id: 6, appliedOn: '25-07-2025', candidateName: 'Keerthana', company: 'TechStack', roleApplied: 'Full Stack Developer', submission: 'Inbound', currentStatus: 'L1', email: 'keerthana.r@email.com', phone: '+91 9876543215', location: 'Chennai, India', experience: '5 years', skills: ['React', 'Node.js', 'Python', 'MongoDB', 'AWS'], education: 'M.Tech Computer Science', currentCompany: 'Amazon', rating: 4.7 },
+        { id: 7, appliedOn: '26-07-2025', candidateName: 'Vishnu Purana', company: 'DataFlow', roleApplied: 'Data Scientist', submission: 'Uploaded', currentStatus: 'L2', email: 'vishnu.p@email.com', phone: '+91 9876543216', location: 'Bangalore, India', experience: '4 years', skills: ['Python', 'Machine Learning', 'TensorFlow', 'SQL'], education: 'M.Sc Data Science', currentCompany: 'IBM', rating: 4.4 },
         { id: 8, appliedOn: '27-07-2025', candidateName: 'Chanakya', company: 'CloudOps', roleApplied: 'DevOps Engineer', submission: 'Inbound', currentStatus: 'Final Round', email: 'chanakya.dev@email.com', phone: '+91 9876543217', location: 'Gurgaon, India', experience: '6 years', skills: ['AWS', 'Docker', 'Kubernetes', 'Terraform', 'Jenkins'], education: 'B.Tech IT', currentCompany: 'Accenture', rating: 4.9 },
         { id: 9, appliedOn: '28-07-2025', candidateName: 'Adhya', company: 'SecureNet', roleApplied: 'Security Analyst', submission: 'Uploaded', currentStatus: 'HR Round', email: 'adhya.sharma@email.com', phone: '+91 9876543218', location: 'Mumbai, India', experience: '4 years', skills: ['Penetration Testing', 'SIEM', 'Firewall', 'Python'], education: 'M.Tech Cybersecurity', currentCompany: 'Deloitte', rating: 4.3 },
         { id: 10, appliedOn: '29-07-2025', candidateName: 'Vanshika', company: 'ProductLab', roleApplied: 'Product Designer', submission: 'Inbound', currentStatus: 'Selected', email: 'vanshika.reddy@email.com', phone: '+91 9876543219', location: 'Hyderabad, India', experience: '3 years', skills: ['Figma', 'Sketch', 'User Testing', 'Wireframing'], education: 'B.Des Product Design', currentCompany: 'Swiggy', rating: 4.5 },
-        { id: 11, appliedOn: '30-07-2025', candidateName: 'Reyansh', company: 'Enterprise', roleApplied: 'Java Developer', submission: 'Inbound', currentStatus: 'Interview Scheduled', email: 'reyansh.kumar@email.com', phone: '+91 9876543220', location: 'Noida, India', experience: '5 years', skills: ['Java', 'Spring', 'Hibernate', 'Microservices'], education: 'B.Tech Computer Science', currentCompany: 'TCS', rating: 4.1 },
+        { id: 11, appliedOn: '30-07-2025', candidateName: 'Reyansh', company: 'Enterprise', roleApplied: 'Java Developer', submission: 'Inbound', currentStatus: 'L1', email: 'reyansh.kumar@email.com', phone: '+91 9876543220', location: 'Noida, India', experience: '5 years', skills: ['Java', 'Spring', 'Hibernate', 'Microservices'], education: 'B.Tech Computer Science', currentCompany: 'TCS', rating: 4.1 },
         { id: 12, appliedOn: '31-07-2025', candidateName: 'Vihana', company: 'WebTech', roleApplied: 'React Developer', submission: 'Uploaded', currentStatus: 'Shortlisted', email: 'vihana.singh@email.com', phone: '+91 9876543221', location: 'Bangalore, India', experience: '2 years', skills: ['React', 'JavaScript', 'CSS3', 'Redux'], education: 'BCA', currentCompany: 'Wipro', rating: 3.9 },
+        { id: 13, appliedOn: '01-08-2025', candidateName: 'Priya', company: 'CloudOps', roleApplied: 'Cloud Architect', submission: 'Inbound', currentStatus: 'L3', email: 'priya.m@email.com', phone: '+91 9876543222', location: 'Bangalore, India', experience: '7 years', skills: ['AWS', 'Azure', 'GCP', 'Kubernetes'], education: 'M.Tech Cloud Computing', currentCompany: 'Oracle', rating: 4.8 },
       ];
     }
     return allApplications.map((app: any, index: number) => ({
@@ -421,8 +422,9 @@ export default function RecruiterDashboard2() {
 
     // Each status maps to exactly one pipeline column to prevent duplicates
     const stageMapping: Record<string, string[]> = {
-      'Level 1': ['Interview Scheduled'],
-      'Level 2': ['Interview On-Going'],
+      'Level 1': ['L1'],
+      'Level 2': ['L2'],
+      'Level 3': ['L3'],
       'Final Round': ['Final Round'],
       'HR Round': ['HR Round'],
       'Offer Stage': ['Selected'],
@@ -438,6 +440,7 @@ export default function RecruiterDashboard2() {
     return {
       level1: getCandidatesForStage('Level 1'),
       level2: getCandidatesForStage('Level 2'),
+      level3: getCandidatesForStage('Level 3'),
       finalRound: getCandidatesForStage('Final Round'),
       hrRound: getCandidatesForStage('HR Round'),
       offerStage: getCandidatesForStage('Offer Stage'),
@@ -1503,131 +1506,217 @@ export default function RecruiterDashboard2() {
                 </div>
               </div>
 
-              {/* Pipeline Table - Stacked Candidates by Stage */}
-              <Card className="bg-white border border-gray-200 mb-6">
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr>
-                          <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[160px]" data-testid="header-pipeline-shortlisted">Shortlisted</th>
-                          <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[160px]" data-testid="header-pipeline-level1">Level 1</th>
-                          <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[160px]" data-testid="header-pipeline-level2">Level 2</th>
-                          <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[160px]" data-testid="header-pipeline-finalround">Final Round</th>
-                          <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[160px]" data-testid="header-pipeline-hrround">HR Round</th>
-                          <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[160px]" data-testid="header-pipeline-offerstage">Selected</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td className="p-3 align-top" data-testid="column-pipeline-shortlisted">
-                            <div className="flex flex-col gap-2">
-                              {getPipelineCandidatesByStage.shortlisted.map((candidate, index) => (
-                                <button
-                                  key={candidate.id}
-                                  onClick={() => handlePipelineCandidateClick(candidate)}
-                                  className="px-3 py-2 bg-green-200 rounded text-center text-sm font-medium text-gray-800 cursor-pointer hover:bg-green-300 transition-colors"
-                                  data-testid={`candidate-shortlisted-${index}`}
-                                >
-                                  {candidate.candidateName}
-                                </button>
-                              ))}
-                              {getPipelineCandidatesByStage.shortlisted.length === 0 && (
-                                <div className="px-3 py-2 text-gray-400 text-sm text-center">No candidates</div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-3 align-top" data-testid="column-pipeline-level1">
-                            <div className="flex flex-col gap-2">
-                              {getPipelineCandidatesByStage.level1.map((candidate, index) => (
-                                <button
-                                  key={candidate.id}
-                                  onClick={() => handlePipelineCandidateClick(candidate)}
-                                  className="px-3 py-2 bg-green-300 rounded text-center text-sm font-medium text-gray-800 cursor-pointer hover:bg-green-400 transition-colors"
-                                  data-testid={`candidate-level1-${index}`}
-                                >
-                                  {candidate.candidateName}
-                                </button>
-                              ))}
-                              {getPipelineCandidatesByStage.level1.length === 0 && (
-                                <div className="px-3 py-2 text-gray-400 text-sm text-center">No candidates</div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-3 align-top" data-testid="column-pipeline-level2">
-                            <div className="flex flex-col gap-2">
-                              {getPipelineCandidatesByStage.level2.map((candidate, index) => (
-                                <button
-                                  key={candidate.id}
-                                  onClick={() => handlePipelineCandidateClick(candidate)}
-                                  className="px-3 py-2 bg-green-400 rounded text-center text-sm font-medium text-gray-800 cursor-pointer hover:bg-green-500 transition-colors"
-                                  data-testid={`candidate-level2-${index}`}
-                                >
-                                  {candidate.candidateName}
-                                </button>
-                              ))}
-                              {getPipelineCandidatesByStage.level2.length === 0 && (
-                                <div className="px-3 py-2 text-gray-400 text-sm text-center">No candidates</div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-3 align-top" data-testid="column-pipeline-finalround">
-                            <div className="flex flex-col gap-2">
-                              {getPipelineCandidatesByStage.finalRound.map((candidate, index) => (
-                                <button
-                                  key={candidate.id}
-                                  onClick={() => handlePipelineCandidateClick(candidate)}
-                                  className="px-3 py-2 bg-green-500 rounded text-center text-sm font-medium text-white cursor-pointer hover:bg-green-600 transition-colors"
-                                  data-testid={`candidate-finalround-${index}`}
-                                >
-                                  {candidate.candidateName}
-                                </button>
-                              ))}
-                              {getPipelineCandidatesByStage.finalRound.length === 0 && (
-                                <div className="px-3 py-2 text-gray-400 text-sm text-center">No candidates</div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-3 align-top" data-testid="column-pipeline-hrround">
-                            <div className="flex flex-col gap-2">
-                              {getPipelineCandidatesByStage.hrRound.map((candidate, index) => (
-                                <button
-                                  key={candidate.id}
-                                  onClick={() => handlePipelineCandidateClick(candidate)}
-                                  className="px-3 py-2 bg-green-600 rounded text-center text-sm font-medium text-white cursor-pointer hover:bg-green-700 transition-colors"
-                                  data-testid={`candidate-hrround-${index}`}
-                                >
-                                  {candidate.candidateName}
-                                </button>
-                              ))}
-                              {getPipelineCandidatesByStage.hrRound.length === 0 && (
-                                <div className="px-3 py-2 text-gray-400 text-sm text-center">No candidates</div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-3 align-top" data-testid="column-pipeline-offerstage">
-                            <div className="flex flex-col gap-2">
-                              {getPipelineCandidatesByStage.offerStage.map((candidate, index) => (
-                                <button
-                                  key={candidate.id}
-                                  onClick={() => handlePipelineCandidateClick(candidate)}
-                                  className="px-3 py-2 bg-green-700 rounded text-center text-sm font-medium text-white cursor-pointer hover:bg-green-800 transition-colors"
-                                  data-testid={`candidate-offerstage-${index}`}
-                                >
-                                  {candidate.candidateName}
-                                </button>
-                              ))}
-                              {getPipelineCandidatesByStage.offerStage.length === 0 && (
-                                <div className="px-3 py-2 text-gray-400 text-sm text-center">No candidates</div>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Pipeline Layout - Table + Right Side Stats */}
+              <div className="flex gap-6 mb-6">
+                {/* Left Side - Pipeline Stages Table */}
+                <div className="flex-1">
+                  <Card className="bg-white border border-gray-200">
+                    <CardContent className="p-0">
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr>
+                              <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[120px]" data-testid="header-pipeline-level1">Level 1</th>
+                              <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[120px]" data-testid="header-pipeline-level2">Level 2</th>
+                              <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[120px]" data-testid="header-pipeline-level3">Level 3</th>
+                              <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[120px]" data-testid="header-pipeline-finalround">Final Round</th>
+                              <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[120px]" data-testid="header-pipeline-hrround">HR Round</th>
+                              <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[120px]" data-testid="header-pipeline-offerstage">Offer Stage</th>
+                              <th className="text-center p-4 font-medium text-gray-700 bg-gray-100 min-w-[120px]" data-testid="header-pipeline-closure">Closure</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td className="p-3 align-top" data-testid="column-pipeline-level1">
+                                <div className="flex flex-col gap-2">
+                                  {getPipelineCandidatesByStage.level1.map((candidate, index) => (
+                                    <button
+                                      key={candidate.id}
+                                      onClick={() => handlePipelineCandidateClick(candidate)}
+                                      className="px-3 py-2 rounded text-center text-sm font-medium text-black cursor-pointer transition-colors"
+                                      style={{backgroundColor: '#E6F4EA'}}
+                                      data-testid={`candidate-level1-${index}`}
+                                    >
+                                      {candidate.candidateName}
+                                    </button>
+                                  ))}
+                                  {getPipelineCandidatesByStage.level1.length === 0 && (
+                                    <div className="px-3 py-2 text-gray-400 text-sm text-center">-</div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-3 align-top" data-testid="column-pipeline-level2">
+                                <div className="flex flex-col gap-2">
+                                  {getPipelineCandidatesByStage.level2.map((candidate, index) => (
+                                    <button
+                                      key={candidate.id}
+                                      onClick={() => handlePipelineCandidateClick(candidate)}
+                                      className="px-3 py-2 rounded text-center text-sm font-medium text-black cursor-pointer transition-colors"
+                                      style={{backgroundColor: '#D9F0E1'}}
+                                      data-testid={`candidate-level2-${index}`}
+                                    >
+                                      {candidate.candidateName}
+                                    </button>
+                                  ))}
+                                  {getPipelineCandidatesByStage.level2.length === 0 && (
+                                    <div className="px-3 py-2 text-gray-400 text-sm text-center">-</div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-3 align-top" data-testid="column-pipeline-level3">
+                                <div className="flex flex-col gap-2">
+                                  {getPipelineCandidatesByStage.level3.map((candidate, index) => (
+                                    <button
+                                      key={candidate.id}
+                                      onClick={() => handlePipelineCandidateClick(candidate)}
+                                      className="px-3 py-2 rounded text-center text-sm font-medium text-black cursor-pointer transition-colors"
+                                      style={{backgroundColor: '#C2EED0'}}
+                                      data-testid={`candidate-level3-${index}`}
+                                    >
+                                      {candidate.candidateName}
+                                    </button>
+                                  ))}
+                                  {getPipelineCandidatesByStage.level3.length === 0 && (
+                                    <div className="px-3 py-2 text-gray-400 text-sm text-center">-</div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-3 align-top" data-testid="column-pipeline-finalround">
+                                <div className="flex flex-col gap-2">
+                                  {getPipelineCandidatesByStage.finalRound.map((candidate, index) => (
+                                    <button
+                                      key={candidate.id}
+                                      onClick={() => handlePipelineCandidateClick(candidate)}
+                                      className="px-3 py-2 rounded text-center text-sm font-medium text-black cursor-pointer transition-colors"
+                                      style={{backgroundColor: '#B5E1C1'}}
+                                      data-testid={`candidate-finalround-${index}`}
+                                    >
+                                      {candidate.candidateName}
+                                    </button>
+                                  ))}
+                                  {getPipelineCandidatesByStage.finalRound.length === 0 && (
+                                    <div className="px-3 py-2 text-gray-400 text-sm text-center">-</div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-3 align-top" data-testid="column-pipeline-hrround">
+                                <div className="flex flex-col gap-2">
+                                  {getPipelineCandidatesByStage.hrRound.map((candidate, index) => (
+                                    <button
+                                      key={candidate.id}
+                                      onClick={() => handlePipelineCandidateClick(candidate)}
+                                      className="px-3 py-2 rounded text-center text-sm font-medium text-white cursor-pointer transition-colors"
+                                      style={{backgroundColor: '#99D9AE'}}
+                                      data-testid={`candidate-hrround-${index}`}
+                                    >
+                                      {candidate.candidateName}
+                                    </button>
+                                  ))}
+                                  {getPipelineCandidatesByStage.hrRound.length === 0 && (
+                                    <div className="px-3 py-2 text-gray-400 text-sm text-center">-</div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-3 align-top" data-testid="column-pipeline-offerstage">
+                                <div className="flex flex-col gap-2">
+                                  {getPipelineCandidatesByStage.offerStage.map((candidate, index) => (
+                                    <button
+                                      key={candidate.id}
+                                      onClick={() => handlePipelineCandidateClick(candidate)}
+                                      className="px-3 py-2 rounded text-center text-sm font-medium text-white cursor-pointer transition-colors"
+                                      style={{backgroundColor: '#7CCBA0'}}
+                                      data-testid={`candidate-offerstage-${index}`}
+                                    >
+                                      {candidate.candidateName}
+                                    </button>
+                                  ))}
+                                  {getPipelineCandidatesByStage.offerStage.length === 0 && (
+                                    <div className="px-3 py-2 text-gray-400 text-sm text-center">-</div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-3 align-top" data-testid="column-pipeline-closure">
+                                <div className="flex flex-col gap-2">
+                                  {getPipelineCandidatesByStage.offerStage.map((candidate, index) => (
+                                    <div
+                                      key={candidate.id}
+                                      className="px-3 py-2 rounded text-center text-sm font-medium text-white"
+                                      style={{backgroundColor: '#2F6F52'}}
+                                      data-testid={`candidate-closure-${index}`}
+                                    >
+                                      {candidate.candidateName}
+                                    </div>
+                                  ))}
+                                  {getPipelineCandidatesByStage.offerStage.length === 0 && (
+                                    <div className="px-3 py-2 text-gray-400 text-sm text-center">-</div>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Right Side - Statistics Panel (Display Only) */}
+                <div className="w-64">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#E6F4EA'}}>
+                          <span className="font-semibold text-black">S</span>
+                          <span className="text-sm text-black">HORTLISTED</span>
+                          <span className="font-bold text-lg text-black" data-testid="count-shortlisted">{getPipelineCandidatesByStage.shortlisted.length}</span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#D9F0E1'}}>
+                          <span className="font-semibold text-black">L1</span>
+                          <span className="text-sm text-black"></span>
+                          <span className="font-bold text-lg text-black" data-testid="count-l1">{getPipelineCandidatesByStage.level1.length}</span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#C2EED0'}}>
+                          <span className="font-semibold text-black">L2</span>
+                          <span className="text-sm text-black"></span>
+                          <span className="font-bold text-lg text-black" data-testid="count-l2">{getPipelineCandidatesByStage.level2.length}</span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#B5E1C1'}}>
+                          <span className="font-semibold text-black">L3</span>
+                          <span className="text-sm text-black"></span>
+                          <span className="font-bold text-lg text-black" data-testid="count-l3">{getPipelineCandidatesByStage.level3.length}</span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#99D9AE'}}>
+                          <span className="font-semibold text-white">F</span>
+                          <span className="text-sm text-white">INAL ROUND</span>
+                          <span className="font-bold text-lg text-white" data-testid="count-finalround">{getPipelineCandidatesByStage.finalRound.length}</span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#7CCBA0'}}>
+                          <span className="font-semibold text-white">H</span>
+                          <span className="text-sm text-white">R ROUND</span>
+                          <span className="font-bold text-lg text-white" data-testid="count-hrround">{getPipelineCandidatesByStage.hrRound.length}</span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#6BB68C'}}>
+                          <span className="font-semibold text-white">O</span>
+                          <span className="text-sm text-white">FFER STAGE</span>
+                          <span className="font-bold text-lg text-white" data-testid="count-offerstage">{getPipelineCandidatesByStage.offerStage.length}</span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#2F6F52'}}>
+                          <span className="font-semibold text-white">C</span>
+                          <span className="text-sm text-white">LOSURE</span>
+                          <span className="font-bold text-lg text-white" data-testid="count-closure">{getPipelineCandidatesByStage.offerStage.length}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
 
               {/* Candidate Profile Modal */}
               {isCandidateProfileModalOpen && selectedPipelineCandidate && (
@@ -1663,8 +1752,9 @@ export default function RecruiterDashboard2() {
                               selectedPipelineCandidate.currentStatus === 'Selected' ? 'bg-green-100 text-green-800' :
                               selectedPipelineCandidate.currentStatus === 'HR Round' ? 'bg-purple-100 text-purple-800' :
                               selectedPipelineCandidate.currentStatus === 'Final Round' ? 'bg-blue-100 text-blue-800' :
-                              selectedPipelineCandidate.currentStatus === 'Interview On-Going' ? 'bg-yellow-100 text-yellow-800' :
-                              selectedPipelineCandidate.currentStatus === 'Interview Scheduled' ? 'bg-orange-100 text-orange-800' :
+                              selectedPipelineCandidate.currentStatus === 'L3' ? 'bg-teal-100 text-teal-800' :
+                              selectedPipelineCandidate.currentStatus === 'L2' ? 'bg-cyan-100 text-cyan-800' :
+                              selectedPipelineCandidate.currentStatus === 'L1' ? 'bg-sky-100 text-sky-800' :
                               'bg-gray-100 text-gray-800'
                             }`} data-testid="badge-candidate-status">
                               {selectedPipelineCandidate.currentStatus}
