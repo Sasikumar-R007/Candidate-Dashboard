@@ -17,7 +17,8 @@ import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, ExternalLink } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, Legend } from 'recharts';
@@ -198,6 +199,16 @@ export default function RecruiterDashboard2() {
     ).length;
     return { total, new: newApps };
   }, [allApplications]);
+
+  // Mutation for updating application status
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      await apiRequest('PATCH', `/api/recruiter/applications/${id}/status`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/applications'] });
+    }
+  });
 
   // Handle sending new chat messages
   const handleSendMessage = () => {
@@ -395,10 +406,13 @@ export default function RecruiterDashboard2() {
       setSelectedCandidate({ ...applicant, status: newStatus });
       setIsReasonModalOpen(true);
     } else {
+      // Update local override immediately for optimistic UI
       setApplicantStatusOverrides(prev => ({
         ...prev,
         [applicant.id]: newStatus
       }));
+      // Persist the change to the backend
+      updateStatusMutation.mutate({ id: applicant.id, status: newStatus });
     }
   };
 
@@ -409,13 +423,15 @@ export default function RecruiterDashboard2() {
         ...prev,
         [selectedCandidate.id]: 'Archived'
       }));
+      // Persist the archived status
+      updateStatusMutation.mutate({ id: selectedCandidate.id, status: 'Screened Out' });
       setIsReasonModalOpen(false);
       setSelectedCandidate(null);
       setReason('');
     }
   };
 
-  // Get effective status (with local overrides)
+  // Get effective status (with local overrides for optimistic updates)
   const getEffectiveApplicantData = () => {
     return applicantData
       .filter(a => applicantStatusOverrides[a.id] !== 'Archived')
