@@ -477,6 +477,14 @@ export class DatabaseStorage implements IStorage {
     return (result.rowCount ?? 0) > 0;
   }
 
+  async getCandidateCounts(): Promise<{total: number, active: number, inactive: number}> {
+    const allCandidates = await db.select().from(candidates);
+    const total = allCandidates.length;
+    const active = allCandidates.filter(c => c.isActive).length;
+    const inactive = allCandidates.filter(c => !c.isActive).length;
+    return { total, active, inactive };
+  }
+
   async createBulkUploadJob(job: InsertBulkUploadJob): Promise<BulkUploadJob> {
     const [bulkJob] = await db.insert(bulkUploadJobs).values(job).returning();
     return bulkJob;

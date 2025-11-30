@@ -95,6 +95,7 @@ export interface IStorage {
   deleteCandidate(id: string): Promise<boolean>;
   generateNextCandidateId(): Promise<string>;
   updateCandidatePassword(email: string, newPasswordHash: string): Promise<boolean>;
+  getCandidateCounts(): Promise<{total: number, active: number, inactive: number}>;
   
   // Login attempt tracking methods
   getLoginAttempts(email: string): Promise<CandidateLoginAttempts | undefined>;
@@ -1164,6 +1165,14 @@ export class MemStorage implements IStorage {
     const updated: Candidate = { ...candidate, password: newPasswordHash };
     this.candidates.set(candidate.id, updated);
     return true;
+  }
+
+  async getCandidateCounts(): Promise<{total: number, active: number, inactive: number}> {
+    const allCandidates = Array.from(this.candidates.values());
+    const total = allCandidates.length;
+    const active = allCandidates.filter(c => c.isActive).length;
+    const inactive = allCandidates.filter(c => !c.isActive).length;
+    return { total, active, inactive };
   }
 
   // Notification methods

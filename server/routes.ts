@@ -2909,6 +2909,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get candidate counts for dashboard
+  app.get("/api/recruiter/candidates/counts", async (req, res) => {
+    try {
+      const counts = await storage.getCandidateCounts();
+      res.json(counts);
+    } catch (error) {
+      console.error("Get candidate counts error:", error);
+      res.status(500).json({ message: "Failed to get candidate counts" });
+    }
+  });
+
   // Get a specific job by ID
   app.get("/api/recruiter/jobs/:id", async (req, res) => {
     try {

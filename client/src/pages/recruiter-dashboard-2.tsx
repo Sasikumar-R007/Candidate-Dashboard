@@ -185,6 +185,11 @@ export default function RecruiterDashboard2() {
     queryKey: ['/api/recruiter/jobs/counts']
   });
 
+  // Query for candidate counts
+  const { data: candidateCounts } = useQuery<{total: number, active: number, inactive: number}>({
+    queryKey: ['/api/recruiter/candidates/counts']
+  });
+
   // Query for all job applications
   const { data: allApplications = [] } = useQuery<any[]>({
     queryKey: ['/api/recruiter/applications']
@@ -602,15 +607,15 @@ export default function RecruiterDashboard2() {
                   <button
                     onClick={() => navigate('/recruiter-new-applications')}
                     className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg transition-shadow duration-300 text-left w-full"
-                    data-testid="card-new-applications">
+                    data-testid="card-active-candidates">
                     <div className="text-center">
                       <div className="flex justify-center mb-4">
                         <i className="fas fa-user text-2xl text-gray-600 dark:text-gray-400"></i>
                       </div>
-                      <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">New applications:</h3>
-                      <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3" data-testid="text-card-new-applications">{applicationStats.new}</div>
+                      <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Active candidates</h3>
+                      <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3" data-testid="text-card-active-candidates">{candidateCounts?.active ?? 0}</div>
                       <div className="inline-block bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-2 py-1 rounded font-bold">
-                        Candidates Applied: {applicationStats.total}
+                        Total Candidates: {candidateCounts?.total ?? 0}
                       </div>
                     </div>
                   </button>
