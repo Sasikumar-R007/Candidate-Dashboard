@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, ExternalLink } from "lucide-react";
+import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, ExternalLink, Phone, Star, Copy, FileText } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
@@ -1771,6 +1771,44 @@ export default function RecruiterDashboard2() {
                           <p className="text-base text-gray-900 dark:text-white">{selectedPipelineCandidate.jobTitle || 'N/A'}</p>
                         </div>
                         <div>
+                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</label>
+                          <div className="flex items-center gap-2">
+                            <Mail size={16} className="text-gray-500 dark:text-gray-400" />
+                            <p className="text-base text-gray-900 dark:text-white">{selectedPipelineCandidate.email || 'N/A'}</p>
+                            {selectedPipelineCandidate.email && (
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(selectedPipelineCandidate.email);
+                                  toast({ title: "Email copied!", description: "Email address copied to clipboard" });
+                                }}
+                                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                                data-testid="button-copy-email"
+                              >
+                                <Copy size={14} className="text-gray-500 dark:text-gray-400" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Phone</label>
+                          <div className="flex items-center gap-2">
+                            <Phone size={16} className="text-gray-500 dark:text-gray-400" />
+                            <p className="text-base text-gray-900 dark:text-white">{selectedPipelineCandidate.phone || 'N/A'}</p>
+                            {selectedPipelineCandidate.phone && (
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(selectedPipelineCandidate.phone);
+                                  toast({ title: "Phone copied!", description: "Phone number copied to clipboard" });
+                                }}
+                                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                                data-testid="button-copy-phone"
+                              >
+                                <Copy size={14} className="text-gray-500 dark:text-gray-400" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <div>
                           <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</label>
                           <p className="text-base text-gray-900 dark:text-white">{selectedPipelineCandidate.status || 'N/A'}</p>
                         </div>
@@ -1785,10 +1823,12 @@ export default function RecruiterDashboard2() {
                         <div>
                           <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Rating</label>
                           <div className="flex items-center gap-1">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <span key={star} className={`text-sm ${star <= Math.round(selectedPipelineCandidate.rating || 0) ? 'text-yellow-400' : 'text-gray-300'}`}>
-                                {star <= Math.round(selectedPipelineCandidate.rating || 0) ? 'filled-star' : 'empty-star'}
-                              </span>
+                            {[1, 2, 3, 4, 5].map((starIndex) => (
+                              <Star
+                                key={starIndex}
+                                size={16}
+                                className={starIndex <= Math.round(selectedPipelineCandidate.rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 dark:text-gray-600'}
+                              />
                             ))}
                             <span className="text-sm text-gray-600 dark:text-gray-400 ml-1">({selectedPipelineCandidate.rating?.toFixed(1) || 'N/A'})</span>
                           </div>
@@ -1806,6 +1846,22 @@ export default function RecruiterDashboard2() {
                             <span className="text-gray-400 dark:text-gray-500 text-sm">No skills listed</span>
                           )}
                         </div>
+                      </div>
+                      <div className="flex justify-end pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <Button
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                          onClick={() => {
+                            if (selectedPipelineCandidate.resumeUrl) {
+                              window.open(selectedPipelineCandidate.resumeUrl, '_blank');
+                            } else {
+                              toast({ title: "Resume not available", description: "No resume file is attached for this candidate", variant: "destructive" });
+                            }
+                          }}
+                          data-testid="button-view-resume"
+                        >
+                          <FileText size={16} className="mr-2" />
+                          View Resume
+                        </Button>
                       </div>
                     </div>
                   </DialogContent>
