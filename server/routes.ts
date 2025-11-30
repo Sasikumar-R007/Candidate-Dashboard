@@ -1768,6 +1768,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get requirements assigned to the logged-in recruiter (Talent Advisor)
+  app.get("/api/recruiter/requirements", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      // Fetch requirements assigned to this recruiter/talent advisor
+      const recruiterRequirements = await storage.getRequirementsByTalentAdvisor(employee.name);
+      
+      // Also get job applications for each requirement to calculate delivery counts
+      const requirementsWithCounts = await Promise.all(
+        recruiterRequirements.map(async (req) => {
+          const applications = await storage.getJobApplicationsByRequirementId(req.id);
+          return {
+            ...req,
+            deliveredCount: applications.length
+          };
+        })
+      );
+      
+      res.json(requirementsWithCounts);
+    } catch (error) {
+      console.error('Get recruiter requirements error:', error);
+      res.status(500).json({ message: "Failed to fetch requirements" });
+    }
+  });
+
   app.post("/api/recruiter/upload/banner", upload.single('file'), (req, res) => {
     try {
       if (!req.file) {

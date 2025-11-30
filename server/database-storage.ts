@@ -966,6 +966,15 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(requirements.createdAt));
   }
 
+  async getRequirementsByTalentAdvisor(talentAdvisorName: string): Promise<Requirement[]> {
+    return await db.select().from(requirements)
+      .where(and(
+        eq(requirements.talentAdvisor, talentAdvisorName),
+        eq(requirements.isArchived, false)
+      ))
+      .orderBy(desc(requirements.createdAt));
+  }
+
   // Recruiter Commands methods
   async createRecruiterCommand(command: InsertRecruiterCommand): Promise<RecruiterCommand> {
     const [recruiterCommand] = await db.insert(recruiterCommands).values({

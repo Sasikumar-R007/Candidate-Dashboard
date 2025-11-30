@@ -316,9 +316,9 @@ const SourceResume = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch requirements from API
+  // Fetch only requirements assigned to this recruiter (not all admin requirements)
   const { data: requirements = [], isLoading: isLoadingRequirements, isError: isErrorRequirements } = useQuery({
-    queryKey: ['/api/admin/requirements'],
+    queryKey: ['/api/recruiter/requirements'],
     enabled: step === 2,
   });
 
@@ -1754,7 +1754,7 @@ const SourceResume = () => {
                   <SelectContent>
                     {(requirements as any[]).length === 0 ? (
                       <div className="p-4 text-sm text-gray-500 text-center">
-                        No requirements available
+                        No requirements assigned to you. Requirements will appear once your Team Lead assigns them.
                       </div>
                     ) : (
                       (requirements as any[])

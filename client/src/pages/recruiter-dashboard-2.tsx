@@ -650,6 +650,49 @@ export default function RecruiterDashboard2() {
     queryKey: ['/api/recruiter/ceo-comments'],
   }) as { data: any[] };
 
+  // Fetch requirements assigned to this recruiter
+  const { data: recruiterRequirements = [], isLoading: isLoadingRequirements } = useQuery<any[]>({
+    queryKey: ['/api/recruiter/requirements'],
+  });
+
+  // Calculate summary stats from real requirements data
+  const requirementsSummary = useMemo(() => {
+    const total = recruiterRequirements.length;
+    const highPriority = recruiterRequirements.filter((req: any) => req.criticality === 'HIGH').length;
+    const mediumPriority = recruiterRequirements.filter((req: any) => req.criticality === 'MEDIUM').length;
+    const lowPriority = recruiterRequirements.filter((req: any) => req.criticality === 'LOW').length;
+    
+    // Robust = requirements with at least 1 delivery
+    const robust = recruiterRequirements.filter((req: any) => (req.deliveredCount || 0) > 0).length;
+    // Idle = requirements with 0 deliveries
+    const idle = recruiterRequirements.filter((req: any) => (req.deliveredCount || 0) === 0).length;
+    // Delivery Pending = total - robust
+    const deliveryPending = total - robust;
+    // Easy = requirements with toughness 'Easy'
+    const easy = recruiterRequirements.filter((req: any) => req.toughness === 'Easy').length;
+    
+    return { total, highPriority, mediumPriority, lowPriority, robust, idle, deliveryPending, easy };
+  }, [recruiterRequirements]);
+
+  // Calculate priority distribution from real data
+  const priorityDistribution = useMemo(() => {
+    const distribution: Record<string, Record<string, number>> = {
+      HIGH: { Easy: 0, Medium: 0, Tough: 0 },
+      MEDIUM: { Easy: 0, Medium: 0, Tough: 0 },
+      LOW: { Easy: 0, Medium: 0, Tough: 0 },
+    };
+
+    recruiterRequirements.forEach((req: any) => {
+      const criticality = req.criticality || 'MEDIUM';
+      const toughness = req.toughness || 'Medium';
+      if (distribution[criticality] && distribution[criticality][toughness] !== undefined) {
+        distribution[criticality][toughness]++;
+      }
+    });
+
+    return distribution;
+  }, [recruiterRequirements]);
+
   if (!recruiterProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -1137,112 +1180,36 @@ export default function RecruiterDashboard2() {
   };
 
   const renderRequirementsContent = () => {
-    // Updated requirements data with SPOC Email field and IDs for count tracking
-    // Data structured to match Priority Distribution: HIGH(6,4,2), MED(5,3,2), LOW(4,3,2)
-    const requirementsTableData = [
-      // HIGH Priority - Easy: 6
-      { id: 1, position: 'Frontend Developer', criticality: 'HIGH', toughness: 'Easy', company: 'TechCorp', spoc: 'David Wilson', spocEmail: 'david@techcorp.com' },
-      { id: 2, position: 'React Developer', criticality: 'HIGH', toughness: 'Easy', company: 'WebTech', spoc: 'Sarah Johnson', spocEmail: 'sarah@webtech.com' },
-      { id: 3, position: 'UI Developer', criticality: 'HIGH', toughness: 'Easy', company: 'DesignCo', spoc: 'Mike Smith', spocEmail: 'mike@designco.com' },
-      { id: 4, position: 'HTML/CSS Specialist', criticality: 'HIGH', toughness: 'Easy', company: 'StyleHub', spoc: 'Emily Chen', spocEmail: 'emily@stylehub.com' },
-      { id: 5, position: 'Web Developer', criticality: 'HIGH', toughness: 'Easy', company: 'NetSoft', spoc: 'John Davis', spocEmail: 'john@netsoft.com' },
-      { id: 6, position: 'Junior Developer', criticality: 'HIGH', toughness: 'Easy', company: 'StartupX', spoc: 'Lisa Brown', spocEmail: 'lisa@startupx.com' },
-      // HIGH Priority - Medium: 4
-      { id: 7, position: 'Full Stack Developer', criticality: 'HIGH', toughness: 'Medium', company: 'TechStack', spoc: 'Robert Lee', spocEmail: 'robert@techstack.com' },
-      { id: 8, position: 'NodeJS Developer', criticality: 'HIGH', toughness: 'Medium', company: 'BackendPro', spoc: 'Anna White', spocEmail: 'anna@backendpro.com' },
-      { id: 9, position: 'Python Developer', criticality: 'HIGH', toughness: 'Medium', company: 'DataFlow', spoc: 'Chris Martin', spocEmail: 'chris@dataflow.com' },
-      { id: 10, position: 'Java Developer', criticality: 'HIGH', toughness: 'Medium', company: 'Enterprise', spoc: 'Diana Ross', spocEmail: 'diana@enterprise.com' },
-      // HIGH Priority - Tough: 2
-      { id: 11, position: 'Solution Architect', criticality: 'HIGH', toughness: 'Tough', company: 'ArchTech', spoc: 'Tom Wilson', spocEmail: 'tom@archtech.com' },
-      { id: 12, position: 'Mobile App Developer', criticality: 'HIGH', toughness: 'Tough', company: 'Tesco', spoc: 'Mel Gibson', spocEmail: 'mel@tesco.com' },
-      // MEDIUM Priority - Easy: 5
-      { id: 13, position: 'QA Tester', criticality: 'MEDIUM', toughness: 'Easy', company: 'AppLogic', spoc: 'Kevin Brown', spocEmail: 'kevin@applogic.com' },
-      { id: 14, position: 'Manual Tester', criticality: 'MEDIUM', toughness: 'Easy', company: 'TestLab', spoc: 'Grace Taylor', spocEmail: 'grace@testlab.com' },
-      { id: 15, position: 'Support Engineer', criticality: 'MEDIUM', toughness: 'Easy', company: 'HelpDesk', spoc: 'Frank Moore', spocEmail: 'frank@helpdesk.com' },
-      { id: 16, position: 'Content Writer', criticality: 'MEDIUM', toughness: 'Easy', company: 'MediaCorp', spoc: 'Helen Clark', spocEmail: 'helen@mediacorp.com' },
-      { id: 17, position: 'Documentation Specialist', criticality: 'MEDIUM', toughness: 'Easy', company: 'DocuPro', spoc: 'Ian Cooper', spocEmail: 'ian@docupro.com' },
-      // MEDIUM Priority - Medium: 3
-      { id: 18, position: 'UI/UX Designer', criticality: 'MEDIUM', toughness: 'Medium', company: 'Designify', spoc: 'Tom Anderson', spocEmail: 'tom@designify.com' },
-      { id: 19, position: 'Product Designer', criticality: 'MEDIUM', toughness: 'Medium', company: 'ProductLab', spoc: 'Julia King', spocEmail: 'julia@productlab.com' },
-      { id: 20, position: 'Business Analyst', criticality: 'MEDIUM', toughness: 'Medium', company: 'BizTech', spoc: 'Kevin Wright', spocEmail: 'kevin@biztech.com' },
-      // MEDIUM Priority - Tough: 2
-      { id: 21, position: 'DevOps Engineer', criticality: 'MEDIUM', toughness: 'Tough', company: 'CloudOps', spoc: 'Laura Green', spocEmail: 'laura@cloudops.com' },
-      { id: 22, position: 'Security Engineer', criticality: 'MEDIUM', toughness: 'Tough', company: 'SecureNet', spoc: 'Mark Adams', spocEmail: 'mark@securenet.com' },
-      // LOW Priority - Easy: 4
-      { id: 23, position: 'Office Admin', criticality: 'LOW', toughness: 'Easy', company: 'AdminCo', spoc: 'Nancy Hill', spocEmail: 'nancy@adminco.com' },
-      { id: 24, position: 'Receptionist', criticality: 'LOW', toughness: 'Easy', company: 'FrontDesk', spoc: 'Oliver Scott', spocEmail: 'oliver@frontdesk.com' },
-      { id: 25, position: 'Data Entry', criticality: 'LOW', toughness: 'Easy', company: 'DataEntry', spoc: 'Paula Young', spocEmail: 'paula@dataentry.com' },
-      { id: 26, position: 'HR Assistant', criticality: 'LOW', toughness: 'Easy', company: 'HRPro', spoc: 'Quinn Baker', spocEmail: 'quinn@hrpro.com' },
-      // LOW Priority - Medium: 3
-      { id: 27, position: 'Marketing Executive', criticality: 'LOW', toughness: 'Medium', company: 'MarketHub', spoc: 'Rachel Turner', spocEmail: 'rachel@markethub.com' },
-      { id: 28, position: 'Sales Manager', criticality: 'LOW', toughness: 'Medium', company: 'SalesPro', spoc: 'Steven Hall', spocEmail: 'steven@salespro.com' },
-      { id: 29, position: 'Account Manager', criticality: 'LOW', toughness: 'Medium', company: 'AccountCorp', spoc: 'Tina Lewis', spocEmail: 'tina@accountcorp.com' },
-      // LOW Priority - Tough: 2
-      { id: 30, position: 'Backend Developer', criticality: 'LOW', toughness: 'Tough', company: 'CodeLabs', spoc: 'Robert Kim', spocEmail: 'robert@codelabs.com' },
-      { id: 31, position: 'System Architect', criticality: 'LOW', toughness: 'Tough', company: 'SysArch', spoc: 'Uma Patel', spocEmail: 'uma@sysarch.com' },
-    ];
-
-    // Calculate priority distribution from requirements data
-    const calculatePriorityDistribution = () => {
-      const distribution: Record<string, Record<string, number>> = {
-        HIGH: { Easy: 0, Medium: 0, Tough: 0 },
-        MEDIUM: { Easy: 0, Medium: 0, Tough: 0 },
-        LOW: { Easy: 0, Medium: 0, Tough: 0 },
-      };
-
-      requirementsTableData.forEach((req) => {
-        const criticality = req.criticality;
-        const toughness = req.toughness;
-        if (distribution[criticality] && distribution[criticality][toughness] !== undefined) {
-          distribution[criticality][toughness]++;
-        }
-      });
-
-      return distribution;
-    };
-
-    const priorityDistribution = calculatePriorityDistribution();
-
-    // Sample delivery data - tracks resume deliveries to requirements
-    // In production, this would come from the database
-    const deliveryData: Record<number, number> = {
-      1: 2,  // Frontend Developer - 2 delivered
-      7: 1,  // Full Stack Developer - 1 delivered
-      13: 3, // QA Tester - 3 delivered
-    };
+    // Use real requirements data from API - no more sample data
+    const requirementsTableData = recruiterRequirements;
 
     // Function to get expected count based on criticality and toughness from Priority Distribution
     const getExpectedCount = (criticality: string, toughness: string): number => {
       return priorityDistribution[criticality]?.[toughness] || 0;
     };
 
-    // Function to get delivered count for a requirement
-    const getDeliveredCount = (reqId: number): number => {
-      return deliveryData[reqId] || 0;
-    };
-
     // Function to format count display as "delivered/expected"
     const getCountDisplay = (req: any): string => {
-      const delivered = getDeliveredCount(req.id);
+      const delivered = req.deliveredCount || 0;
       const expected = getExpectedCount(req.criticality, req.toughness);
       return `${delivered}/${expected}`;
     };
 
     // Function to check if count is fully completed
     const isCountComplete = (req: any): boolean => {
-      const delivered = getDeliveredCount(req.id);
+      const delivered = req.deliveredCount || 0;
       const expected = getExpectedCount(req.criticality, req.toughness);
       return delivered >= expected && expected > 0;
     };
 
-    // Summary boxes data
+    // Summary boxes data - dynamically calculated from real data
     const summaryBoxes = [
-      { title: 'Total', count: '20', color: 'text-gray-900' },
-      { title: 'High Priority', count: '6', color: 'text-orange-500' },
-      { title: 'Robust', count: '7', color: 'text-green-500' },
-      { title: 'Idle', count: '9', color: 'text-blue-500' },
-      { title: 'Delivery Pending', count: '3', color: 'text-red-400' },
-      { title: 'Easy', count: '2', color: 'text-green-600' }
+      { title: 'Total', count: requirementsSummary.total.toString(), color: 'text-gray-900' },
+      { title: 'High Priority', count: requirementsSummary.highPriority.toString(), color: 'text-orange-500' },
+      { title: 'Robust', count: requirementsSummary.robust.toString(), color: 'text-green-500' },
+      { title: 'Idle', count: requirementsSummary.idle.toString(), color: 'text-blue-500' },
+      { title: 'Delivery Pending', count: requirementsSummary.deliveryPending.toString(), color: 'text-red-400' },
+      { title: 'Easy', count: requirementsSummary.easy.toString(), color: 'text-green-600' }
     ];
 
     return (
@@ -1285,33 +1252,48 @@ export default function RecruiterDashboard2() {
                           <th className="text-left py-3 px-4 font-medium text-gray-700">Criticality</th>
                           <th className="text-left py-3 px-4 font-medium text-gray-700">Company</th>
                           <th className="text-left py-3 px-4 font-medium text-gray-700">SPOC</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-700">SPOC Email</th>
                           <th className="text-left py-3 px-4 font-medium text-gray-700">Count</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {requirementsTableData.slice(0, 5).map((req, index) => (
-                          <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                            <td className="py-3 px-4 text-gray-900">{req.position}</td>
-                            <td className="py-3 px-4">
-                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                req.criticality === 'HIGH' ? 'bg-red-100 text-red-800' :
-                                req.criticality === 'MEDIUM' ? 'bg-blue-100 text-blue-800' :
-                                'bg-green-100 text-green-800'
-                              }`}>
-                                • {req.criticality}-{req.toughness}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 text-gray-900">{req.company}</td>
-                            <td className="py-3 px-4 text-gray-900">{req.spoc}</td>
-                            <td className="py-3 px-4 text-gray-900">{req.spocEmail}</td>
-                            <td className="py-3 px-4">
-                              <span className={`font-medium ${isCountComplete(req) ? 'text-green-600' : 'text-red-600'}`} data-testid={`text-count-${index}`}>
-                                {getCountDisplay(req)}
-                              </span>
+                        {isLoadingRequirements ? (
+                          <tr>
+                            <td colSpan={5} className="py-8 text-center text-gray-500">
+                              <div className="flex items-center justify-center gap-2">
+                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600"></div>
+                                <span>Loading requirements...</span>
+                              </div>
                             </td>
                           </tr>
-                        ))}
+                        ) : requirementsTableData.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="py-8 text-center text-gray-500">
+                              No requirements assigned to you yet. Requirements will appear here once your Team Lead assigns them.
+                            </td>
+                          </tr>
+                        ) : (
+                          requirementsTableData.slice(0, 5).map((req: any, index: number) => (
+                            <tr key={req.id || index} className="border-b border-gray-100 hover:bg-gray-50">
+                              <td className="py-3 px-4 text-gray-900">{req.position}</td>
+                              <td className="py-3 px-4">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  req.criticality === 'HIGH' ? 'bg-red-100 text-red-800' :
+                                  req.criticality === 'MEDIUM' ? 'bg-blue-100 text-blue-800' :
+                                  'bg-green-100 text-green-800'
+                                }`}>
+                                  {req.criticality}-{req.toughness || 'Medium'}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-gray-900">{req.company}</td>
+                              <td className="py-3 px-4 text-gray-900">{req.spoc}</td>
+                              <td className="py-3 px-4">
+                                <span className={`font-medium ${isCountComplete(req) ? 'text-green-600' : 'text-red-600'}`} data-testid={`text-count-${index}`}>
+                                  {getCountDisplay(req)}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -1375,46 +1357,51 @@ export default function RecruiterDashboard2() {
                             <th className="text-left py-3 px-4 font-medium text-gray-700">Criticality</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700">Company</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700">SPOC</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">SPOC Email</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700">Count</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {requirementsTableData
-                            .filter((req) => {
-                              if (!requirementsSearchQuery) return true;
-                              const query = requirementsSearchQuery.toLowerCase();
-                              return (
-                                req.position.toLowerCase().includes(query) ||
-                                req.criticality.toLowerCase().includes(query) ||
-                                req.toughness.toLowerCase().includes(query) ||
-                                req.company.toLowerCase().includes(query) ||
-                                req.spoc.toLowerCase().includes(query) ||
-                                req.spocEmail.toLowerCase().includes(query)
-                              );
-                            })
-                            .map((req, index) => (
-                              <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                                <td className="py-3 px-4 text-gray-900">{req.position}</td>
-                                <td className="py-3 px-4">
-                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                    req.criticality === 'HIGH' ? 'bg-red-100 text-red-800' :
-                                    req.criticality === 'MEDIUM' ? 'bg-blue-100 text-blue-800' :
-                                    'bg-green-100 text-green-800'
-                                  }`}>
-                                    • {req.criticality}-{req.toughness}
-                                  </span>
-                                </td>
-                                <td className="py-3 px-4 text-gray-900">{req.company}</td>
-                                <td className="py-3 px-4 text-gray-900">{req.spoc}</td>
-                                <td className="py-3 px-4 text-gray-900">{req.spocEmail}</td>
-                                <td className="py-3 px-4">
-                                  <span className={`font-medium ${isCountComplete(req) ? 'text-green-600' : 'text-red-600'}`}>
-                                    {getCountDisplay(req)}
-                                  </span>
-                                </td>
-                              </tr>
-                            ))}
+                          {requirementsTableData.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="py-8 text-center text-gray-500">
+                                No requirements assigned to you yet.
+                              </td>
+                            </tr>
+                          ) : (
+                            requirementsTableData
+                              .filter((req: any) => {
+                                if (!requirementsSearchQuery) return true;
+                                const query = requirementsSearchQuery.toLowerCase();
+                                return (
+                                  (req.position || '').toLowerCase().includes(query) ||
+                                  (req.criticality || '').toLowerCase().includes(query) ||
+                                  (req.toughness || '').toLowerCase().includes(query) ||
+                                  (req.company || '').toLowerCase().includes(query) ||
+                                  (req.spoc || '').toLowerCase().includes(query)
+                                );
+                              })
+                              .map((req: any, index: number) => (
+                                <tr key={req.id || index} className="border-b border-gray-100 hover:bg-gray-50">
+                                  <td className="py-3 px-4 text-gray-900">{req.position}</td>
+                                  <td className="py-3 px-4">
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                      req.criticality === 'HIGH' ? 'bg-red-100 text-red-800' :
+                                      req.criticality === 'MEDIUM' ? 'bg-blue-100 text-blue-800' :
+                                      'bg-green-100 text-green-800'
+                                    }`}>
+                                      {req.criticality}-{req.toughness || 'Medium'}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 px-4 text-gray-900">{req.company}</td>
+                                  <td className="py-3 px-4 text-gray-900">{req.spoc}</td>
+                                  <td className="py-3 px-4">
+                                    <span className={`font-medium ${isCountComplete(req) ? 'text-green-600' : 'text-red-600'}`}>
+                                      {getCountDisplay(req)}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))
+                          )}
                         </tbody>
                       </table>
                     </div>
