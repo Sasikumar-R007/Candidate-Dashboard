@@ -1810,12 +1810,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fetch revenue mappings where this recruiter is the talent advisor
       const revenueMappings = await storage.getRevenueMappingsByRecruiterId(session.employeeId);
       
-      // Transform to closure report format for frontend
+      // Transform to closure report format for frontend with full data
       const closureReports = revenueMappings.map((mapping) => ({
         id: mapping.id,
         candidate: mapping.candidateName || 'N/A',
         position: mapping.position || 'N/A',
         client: mapping.clientName || 'N/A',
+        offeredOn: mapping.offeredDate || 'N/A',
+        joinedOn: mapping.closureDate || 'N/A',
+        quarter: mapping.quarter || 'N/A',
+        closureValue: mapping.revenue ? mapping.revenue.toLocaleString('en-IN') : '0',
+        incentive: mapping.incentive ? mapping.incentive.toLocaleString('en-IN') : '0',
         revenue: mapping.revenue ? mapping.revenue.toLocaleString('en-IN') : '0'
       }));
       
@@ -1823,6 +1828,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get recruiter closure reports error:', error);
       res.status(500).json({ message: "Failed to fetch closure reports" });
+    }
+  });
+
+  // Get recruiter quarterly performance data (resumes delivered and closures per quarter)
+  app.get("/api/recruiter/quarterly-performance", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      const quarterlyData = await storage.getRecruiterQuarterlyPerformance(session.employeeId);
+      res.json(quarterlyData);
+    } catch (error) {
+      console.error('Get recruiter quarterly performance error:', error);
+      res.status(500).json({ message: "Failed to fetch quarterly performance data" });
+    }
+  });
+
+  // Get recruiter performance summary (tenure, total closures, recent closure, etc.)
+  app.get("/api/recruiter/performance-summary", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      const summary = await storage.getRecruiterPerformanceSummary(session.employeeId);
+      res.json(summary);
+    } catch (error) {
+      console.error('Get recruiter performance summary error:', error);
+      res.status(500).json({ message: "Failed to fetch performance summary" });
     }
   });
 

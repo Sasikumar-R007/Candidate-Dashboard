@@ -67,7 +67,7 @@ import {
   meetings
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, count } from "drizzle-orm";
+import { eq, and, desc, sql, count, inArray } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import type { IStorage } from "./storage";
 
@@ -1031,5 +1031,171 @@ export class DatabaseStorage implements IStorage {
   async getAllMeetings(): Promise<Meeting[]> {
     return await db.select().from(meetings)
       .orderBy(desc(meetings.createdAt));
+  }
+
+  // Recruiter Quarterly Performance methods
+  async getRecruiterQuarterlyPerformance(recruiterId: string): Promise<Array<{
+    quarter: string;
+    resumesDelivered: number;
+    closures: number;
+  }>> {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    
+    // Determine current quarter index (0=Q1, 1=Q2, 2=Q3, 3=Q4)
+    const currentQuarterIndex = Math.floor(currentMonth / 3);
+    
+    // Get all revenue mappings for this recruiter (closures) using talentAdvisorId
+    const mappings = await db.select().from(revenueMappings)
+      .where(eq(revenueMappings.talentAdvisorId, recruiterId));
+    
+    // Get employee to find their name for linking to requirements
+    const [employee] = await db.select().from(employees).where(eq(employees.id, recruiterId));
+    
+    // Get all requirements assigned to this recruiter as talent advisor
+    const recruiterRequirements = employee ? await db.select().from(requirements)
+      .where(eq(requirements.talentAdvisor, employee.name)) : [];
+    
+    // Get requirement IDs for this recruiter
+    const recruiterRequirementIds = recruiterRequirements.map(r => r.id);
+    
+    // Get all job applications linked to this recruiter's requirements (deliveries)
+    // Using join with requirements table to properly link to the recruiter
+    let allDeliveries: Array<{ appliedDate: Date | null }> = [];
+    if (employee) {
+      allDeliveries = await db.select({ appliedDate: jobApplications.appliedDate })
+        .from(jobApplications)
+        .innerJoin(requirements, eq(jobApplications.requirementId, requirements.id))
+        .where(
+          and(
+            eq(requirements.talentAdvisor, employee.name),
+            eq(jobApplications.source, 'recruiter_tagged')
+          )
+        );
+    }
+    
+    // Quarter code mapping (JFM=Q1, AMJ=Q2, JAS=Q3, OND=Q4)
+    const quarterCodes = ['JFM', 'AMJ', 'JAS', 'OND'];
+    
+    // Build quarters array including historical quarters with data
+    const quarters: Array<{ quarter: string; resumesDelivered: number; closures: number }> = [];
+    
+    // Find the earliest year in mappings or deliveries
+    let earliestYear = currentYear;
+    mappings.forEach(m => {
+      if (m.year && m.year < earliestYear) earliestYear = m.year;
+    });
+    allDeliveries.forEach(d => {
+      if (d.appliedDate) {
+        const year = new Date(d.appliedDate).getFullYear();
+        if (year < earliestYear) earliestYear = year;
+      }
+    });
+    
+    // Generate quarters from earliest year to current quarter
+    for (let year = earliestYear; year <= currentYear; year++) {
+      const maxQuarter = year === currentYear ? currentQuarterIndex : 3;
+      
+      for (let q = 0; q <= maxQuarter; q++) {
+        const quarterLabel = `Q${q + 1} ${year}`;
+        const quarterCode = quarterCodes[q];
+        
+        // Count closures for this quarter
+        const closuresInQuarter = mappings.filter(m => 
+          m.quarter === quarterCode && m.year === year
+        ).length;
+        
+        // Calculate resumes delivered in this quarter based on application dates
+        const quarterStartMonth = q * 3;
+        const quarterEndMonth = quarterStartMonth + 2;
+        
+        const resumesInQuarter = allDeliveries.filter(delivery => {
+          if (!delivery.appliedDate) return false;
+          const date = new Date(delivery.appliedDate);
+          return date.getFullYear() === year && 
+                 date.getMonth() >= quarterStartMonth && 
+                 date.getMonth() <= quarterEndMonth;
+        }).length;
+        
+        // Only add quarters with data or the current quarter
+        if (closuresInQuarter > 0 || resumesInQuarter > 0 || (year === currentYear && q === currentQuarterIndex)) {
+          quarters.push({
+            quarter: quarterLabel,
+            resumesDelivered: resumesInQuarter,
+            closures: closuresInQuarter
+          });
+        }
+      }
+    }
+    
+    // Ensure current quarter is always shown even with no data
+    const currentQuarterLabel = `Q${currentQuarterIndex + 1} ${currentYear}`;
+    if (!quarters.find(q => q.quarter === currentQuarterLabel)) {
+      quarters.push({
+        quarter: currentQuarterLabel,
+        resumesDelivered: 0,
+        closures: 0
+      });
+    }
+    
+    return quarters;
+  }
+
+  async getRecruiterPerformanceSummary(recruiterId: string): Promise<{
+    tenure: number;
+    totalClosures: number;
+    recentClosure: string | null;
+    lastClosureMonths: number;
+    lastClosureDays: number;
+    totalRevenue: number;
+    totalIncentives: number;
+  }> {
+    // Get employee info for tenure calculation
+    const [employee] = await db.select().from(employees).where(eq(employees.id, recruiterId));
+    
+    // Calculate tenure in quarters
+    let tenure = 0;
+    if (employee?.joiningDate) {
+      const joinDate = new Date(employee.joiningDate);
+      const now = new Date();
+      const monthsDiff = (now.getFullYear() - joinDate.getFullYear()) * 12 + (now.getMonth() - joinDate.getMonth());
+      tenure = Math.floor(monthsDiff / 3);
+    }
+    
+    // Get all revenue mappings for this recruiter
+    const mappings = await db.select().from(revenueMappings)
+      .where(eq(revenueMappings.talentAdvisorId, recruiterId))
+      .orderBy(desc(revenueMappings.closureDate));
+    
+    const totalClosures = mappings.length;
+    
+    // Get most recent closure candidate name
+    const recentClosure = mappings.length > 0 ? (mappings[0].candidateName || null) : null;
+    
+    // Calculate time since last closure
+    let lastClosureMonths = 0;
+    let lastClosureDays = 0;
+    if (mappings.length > 0 && mappings[0].closureDate) {
+      const lastClosureDate = new Date(mappings[0].closureDate);
+      const now = new Date();
+      const totalDays = Math.floor((now.getTime() - lastClosureDate.getTime()) / (1000 * 60 * 60 * 24));
+      lastClosureMonths = Math.floor(totalDays / 30);
+      lastClosureDays = totalDays % 30;
+    }
+    
+    // Calculate total revenue and incentives
+    const totalRevenue = mappings.reduce((sum, m) => sum + (m.revenue || 0), 0);
+    const totalIncentives = mappings.reduce((sum, m) => sum + (m.incentive || 0), 0);
+    
+    return {
+      tenure,
+      totalClosures,
+      recentClosure,
+      lastClosureMonths,
+      lastClosureDays,
+      totalRevenue,
+      totalIncentives
+    };
   }
 }

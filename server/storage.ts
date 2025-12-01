@@ -179,6 +179,22 @@ export interface IStorage {
   deleteRevenueMapping(id: string): Promise<boolean>;
   getClientById(id: string): Promise<Client | undefined>;
   
+  // Recruiter Quarterly Performance methods
+  getRecruiterQuarterlyPerformance(recruiterId: string): Promise<Array<{
+    quarter: string;
+    resumesDelivered: number;
+    closures: number;
+  }>>;
+  getRecruiterPerformanceSummary(recruiterId: string): Promise<{
+    tenure: number;
+    totalClosures: number;
+    recentClosure: string | null;
+    lastClosureMonths: number;
+    lastClosureDays: number;
+    totalRevenue: number;
+    totalIncentives: number;
+  }>;
+  
   // Recruiter Jobs methods
   createRecruiterJob(job: InsertRecruiterJob): Promise<RecruiterJob>;
   getAllRecruiterJobs(): Promise<RecruiterJob[]>;

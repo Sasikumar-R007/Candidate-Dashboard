@@ -660,6 +660,28 @@ export default function RecruiterDashboard2() {
     queryKey: ['/api/recruiter/closure-reports'],
   });
 
+  // Fetch quarterly performance data for the performance graph
+  const { data: quarterlyPerformance = [], isLoading: isLoadingQuarterlyPerformance } = useQuery<Array<{
+    quarter: string;
+    resumesDelivered: number;
+    closures: number;
+  }>>({
+    queryKey: ['/api/recruiter/quarterly-performance'],
+  });
+
+  // Fetch performance summary (tenure, total closures, recent closure, etc.)
+  const { data: performanceSummary } = useQuery<{
+    tenure: number;
+    totalClosures: number;
+    recentClosure: string | null;
+    lastClosureMonths: number;
+    lastClosureDays: number;
+    totalRevenue: number;
+    totalIncentives: number;
+  }>({
+    queryKey: ['/api/recruiter/performance-summary'],
+  });
+
   // Calculate summary stats from real requirements data
   const requirementsSummary = useMemo(() => {
     const total = recruiterRequirements.length;
@@ -1893,31 +1915,23 @@ export default function RecruiterDashboard2() {
   };
 
   const renderPerformanceContent = () => {
-    // Quarterly performance data for individual recruiter
-    const quarterlyPerformanceData = [
-      { quarter: 'Q1 2024', resumesDelivered: 45, closures: 3 },
-      { quarter: 'Q2 2024', resumesDelivered: 62, closures: 4 },
-      { quarter: 'Q3 2024', resumesDelivered: 58, closures: 2 },
-      { quarter: 'Q4 2024', resumesDelivered: 71, closures: 5 },
-      { quarter: 'Q1 2025', resumesDelivered: 54, closures: 3 },
-      { quarter: 'Q2 2025', resumesDelivered: 48, closures: 2 },
-    ];
+    // Use quarterly performance data from API (no hardcoded sample data)
+    const quarterlyPerformanceData = quarterlyPerformance;
 
-    // Full closure details data for the modal
-    const allClosureDetails = [
-      { candidate: 'Aarav', position: 'Frontend Developer', client: 'TechCorp', offeredOn: '06-06-2025', joinedOn: '06-06-2025', quarter: 'FMA', closureValue: '1,52,500', incentive: '3000' },
-      { candidate: 'Arjun', position: 'UI/UX Designer', client: 'Designify', offeredOn: '08-06-2025', joinedOn: '08-06-2025', quarter: 'MJJ', closureValue: '4,50,000', incentive: '6000' },
-      { candidate: 'Shaurya', position: 'Backend Developer', client: 'CodeLabs', offeredOn: '20-06-2025', joinedOn: '20-06-2025', quarter: 'ASO', closureValue: '3,50,000', incentive: '3000' },
-      { candidate: 'Vihaan', position: 'QA Tester', client: 'AppLogic', offeredOn: '01-07-2025', joinedOn: '01-07-2025', quarter: 'NDJ', closureValue: '2,00,000', incentive: '3000' },
-      { candidate: 'Aditya', position: 'Mobile App Developer', client: 'Bug Catchers', offeredOn: '23-07-2025', joinedOn: '23-07-2025', quarter: 'NDJ', closureValue: '1,75,000', incentive: '3000' },
-      { candidate: 'Priya', position: 'Data Scientist', client: 'DataTech', offeredOn: '15-08-2025', joinedOn: '01-09-2025', quarter: 'ASO', closureValue: '5,25,000', incentive: '7500' },
-      { candidate: 'Rahul', position: 'DevOps Engineer', client: 'CloudSoft', offeredOn: '10-09-2025', joinedOn: '25-09-2025', quarter: 'ASO', closureValue: '4,80,000', incentive: '6000' },
-      { candidate: 'Sneha', position: 'Product Manager', client: 'InnovateTech', offeredOn: '05-10-2025', joinedOn: '20-10-2025', quarter: 'NDJ', closureValue: '6,00,000', incentive: '9000' },
-      { candidate: 'Kiran', position: 'Full Stack Developer', client: 'WebSolutions', offeredOn: '12-10-2025', joinedOn: '01-11-2025', quarter: 'NDJ', closureValue: '4,25,000', incentive: '5000' },
-      { candidate: 'Meera', position: 'Security Analyst', client: 'SecureNet', offeredOn: '18-10-2025', joinedOn: '15-11-2025', quarter: 'NDJ', closureValue: '5,50,000', incentive: '7000' },
-      { candidate: 'Amit', position: 'React Developer', client: 'TechStack', offeredOn: '22-11-2025', joinedOn: '10-12-2025', quarter: 'NDJ', closureValue: '3,75,000', incentive: '4500' },
-      { candidate: 'Divya', position: 'Machine Learning Engineer', client: 'AILabs', offeredOn: '28-11-2025', joinedOn: '15-12-2025', quarter: 'NDJ', closureValue: '7,00,000', incentive: '10000' },
-    ];
+    // Use closure reports from API for closure details (data is set by Admin via Revenue Mapping)
+    const allClosureDetails = closureReports.map(report => ({
+      candidate: report.candidate || 'N/A',
+      position: report.position || 'N/A',
+      client: report.client || 'N/A',
+      offeredOn: report.offeredOn || 'N/A',
+      joinedOn: report.joinedOn || 'N/A',
+      quarter: report.quarter || 'N/A',
+      closureValue: report.closureValue || '0',
+      incentive: report.incentive || '0'
+    }));
+
+    // Show loading state if data is being fetched
+    const isLoading = isLoadingQuarterlyPerformance || isLoadingClosureReports;
 
     return (
       <div className="flex min-h-screen">
@@ -1933,6 +1947,18 @@ export default function RecruiterDashboard2() {
                 </div>
                 <div className="p-6">
                   <div className="h-72">
+                    {isLoadingQuarterlyPerformance ? (
+                      <div className="flex items-center justify-center h-full">
+                        <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600"></div>
+                      </div>
+                    ) : quarterlyPerformanceData.length === 0 ? (
+                      <div className="flex items-center justify-center h-full text-gray-500 dark:text-gray-400">
+                        <div className="text-center">
+                          <p className="text-lg font-medium">No performance data available</p>
+                          <p className="text-sm">Data will appear when closures and deliveries are recorded</p>
+                        </div>
+                      </div>
+                    ) : (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={quarterlyPerformanceData} barGap={8}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
@@ -1992,6 +2018,7 @@ export default function RecruiterDashboard2() {
                         />
                       </BarChart>
                     </ResponsiveContainer>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2005,6 +2032,18 @@ export default function RecruiterDashboard2() {
                 
                 {/* Table Content */}
                 <div className="overflow-x-auto">
+                  {isLoadingClosureReports ? (
+                    <div className="flex items-center justify-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600"></div>
+                    </div>
+                  ) : allClosureDetails.length === 0 ? (
+                    <div className="flex items-center justify-center py-12 text-gray-500 dark:text-gray-400">
+                      <div className="text-center">
+                        <p className="text-lg font-medium">No closure data available</p>
+                        <p className="text-sm">Closures will appear here when recorded by Admin in Revenue Mapping</p>
+                      </div>
+                    </div>
+                  ) : (
                   <table className="w-full">
                     <thead className="bg-gray-50 dark:bg-gray-800">
                       <tr>
@@ -2033,6 +2072,7 @@ export default function RecruiterDashboard2() {
                       ))}
                     </tbody>
                   </table>
+                  )}
                 </div>
                 
                 {/* View More Button */}
@@ -2055,7 +2095,7 @@ export default function RecruiterDashboard2() {
               <div className="bg-blue-100 dark:bg-blue-900 rounded-lg p-4">
                 <div className="text-center">
                   <h4 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">Tenure</h4>
-                  <div className="text-4xl font-bold text-blue-600 dark:text-blue-300 mb-1">4</div>
+                  <div className="text-4xl font-bold text-blue-600 dark:text-blue-300 mb-1" data-testid="value-tenure">{performanceSummary?.tenure || 0}</div>
                   <div className="text-sm text-blue-700 dark:text-blue-200">Quarters</div>
                 </div>
               </div>
@@ -2064,7 +2104,7 @@ export default function RecruiterDashboard2() {
               <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                 <div className="text-center">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Total Closures</h4>
-                  <div className="text-4xl font-bold text-gray-800 dark:text-gray-200 mb-1">12</div>
+                  <div className="text-4xl font-bold text-gray-800 dark:text-gray-200 mb-1" data-testid="value-total-closures">{performanceSummary?.totalClosures || 0}</div>
                 </div>
               </div>
 
@@ -2072,7 +2112,7 @@ export default function RecruiterDashboard2() {
               <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                 <div className="text-center">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Recent Closure</h4>
-                  <div className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-1">Adhitya</div>
+                  <div className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-1" data-testid="value-recent-closure">{performanceSummary?.recentClosure || 'N/A'}</div>
                 </div>
               </div>
 
@@ -2080,8 +2120,8 @@ export default function RecruiterDashboard2() {
               <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
                 <div className="text-center">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Last Closure</h4>
-                  <div className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-1">1</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Month 15 days</div>
+                  <div className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-1" data-testid="value-last-closure-months">{performanceSummary?.lastClosureMonths || 0}</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Month{(performanceSummary?.lastClosureMonths || 0) !== 1 ? 's' : ''} {performanceSummary?.lastClosureDays || 0} days</div>
                 </div>
               </div>
 
@@ -2089,7 +2129,7 @@ export default function RecruiterDashboard2() {
               <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
                 <div className="text-center">
                   <h4 className="text-lg font-semibold text-green-900 dark:text-green-100 mb-2">Total Revenue</h4>
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">49,57,500</div>
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1" data-testid="value-total-revenue">{formatIndianCurrency(performanceSummary?.totalRevenue || 0)}</div>
                   <div className="text-sm text-green-700 dark:text-green-300">All time closures value</div>
                 </div>
               </div>
@@ -2098,7 +2138,7 @@ export default function RecruiterDashboard2() {
               <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
                 <div className="text-center">
                   <h4 className="text-lg font-semibold text-purple-900 dark:text-purple-100 mb-2">Total Incentives</h4>
-                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1">64,000</div>
+                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1" data-testid="value-total-incentives">{formatIndianCurrency(performanceSummary?.totalIncentives || 0)}</div>
                   <div className="text-sm text-purple-700 dark:text-purple-300">All time earned</div>
                 </div>
               </div>
