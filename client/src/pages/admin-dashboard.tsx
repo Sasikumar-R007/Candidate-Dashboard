@@ -2855,62 +2855,40 @@ export default function AdminDashboard() {
                         <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Candidate</th>
                         <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Positions</th>
                         <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Client</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Fixed CTC</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Offered Date</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Joined Date</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Location</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Experience</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Applied Date</th>
+                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">David Wilson</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Frontend Developer</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">TechCorp</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Kavitha</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">MLJ, 2025</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">12-06-2025</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">12-04-2025</td>
-                      </tr>
-                      
-                      <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Tom Anderson</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">UI/UX Designer</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Designify</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Rajesh</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">ASO, 2025</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">18-06-2025</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">05-05-2025</td>
-                      </tr>
-                      
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Robert Kim</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Backend Developer</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">CodeLabs</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Sowmya</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">MLJ, 2025</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">28-06-2025</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">19-08-2025</td>
-                      </tr>
-                      
-                      <tr className="border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Kevin Brown</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">QA Tester</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">AppLogic</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Kalaiselvi</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">FMA, 2025</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">03-07-2025</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">03-09-2025</td>
-                      </tr>
-                      
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">Mel Gibson</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Mobile App Developer</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Tesco</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Malathi</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">NDJ, 2025</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">18-07-2025</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">10-10-2025</td>
-                      </tr>
+                      {getPipelineCandidatesByStage.closure.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                            No closures yet. Candidates with 'Closure' or 'Joined' status will appear here automatically.
+                          </td>
+                        </tr>
+                      ) : (
+                        getPipelineCandidatesByStage.closure.slice(0, 5).map((candidate: any, index: number) => (
+                          <tr 
+                            key={candidate.id || index} 
+                            className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 1 ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}
+                            data-testid={`closure-row-${index}`}
+                          >
+                            <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{candidate.candidateName}</td>
+                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{candidate.roleApplied}</td>
+                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{candidate.company}</td>
+                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{candidate.location}</td>
+                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{candidate.experience}</td>
+                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{candidate.appliedOn}</td>
+                            <td className="py-3 px-3">
+                              <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                {candidate.currentStatus}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -3982,7 +3960,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Pipeline Stages - matching image 1 design */}
+                {/* Pipeline Stages - Live Data */}
                 <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                   <CardContent className="p-0">
                     <div className="overflow-x-auto admin-scrollbar">
@@ -4000,8 +3978,89 @@ export default function AdminDashboard() {
                         </thead>
                         <tbody>
                           <tr>
-                            <td colSpan={7} className="p-8 text-center text-gray-500">
-                              This section has been migrated to use live data. Please navigate to the Pipeline tab in the sidebar.
+                            <td className="p-3 align-top">
+                              <div className="space-y-2">
+                                {getPipelineCandidatesByStage.level1.map((candidate: any, index: number) => (
+                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{backgroundColor: '#E6F4EA'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
+                                    {candidate.candidateName}
+                                  </div>
+                                ))}
+                                {getPipelineCandidatesByStage.level1.length === 0 && (
+                                  <div className="text-xs text-gray-400 text-center py-2">No candidates</div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-3 align-top">
+                              <div className="space-y-2">
+                                {getPipelineCandidatesByStage.level2.map((candidate: any, index: number) => (
+                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{backgroundColor: '#D9F0E1'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
+                                    {candidate.candidateName}
+                                  </div>
+                                ))}
+                                {getPipelineCandidatesByStage.level2.length === 0 && (
+                                  <div className="text-xs text-gray-400 text-center py-2">No candidates</div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-3 align-top">
+                              <div className="space-y-2">
+                                {getPipelineCandidatesByStage.level3.map((candidate: any, index: number) => (
+                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{backgroundColor: '#C2EED0'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
+                                    {candidate.candidateName}
+                                  </div>
+                                ))}
+                                {getPipelineCandidatesByStage.level3.length === 0 && (
+                                  <div className="text-xs text-gray-400 text-center py-2">No candidates</div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-3 align-top">
+                              <div className="space-y-2">
+                                {getPipelineCandidatesByStage.finalRound.map((candidate: any, index: number) => (
+                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{backgroundColor: '#B5E1C1'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
+                                    {candidate.candidateName}
+                                  </div>
+                                ))}
+                                {getPipelineCandidatesByStage.finalRound.length === 0 && (
+                                  <div className="text-xs text-gray-400 text-center py-2">No candidates</div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-3 align-top">
+                              <div className="space-y-2">
+                                {getPipelineCandidatesByStage.hrRound.map((candidate: any, index: number) => (
+                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-white text-center cursor-default" style={{backgroundColor: '#99D9AE'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
+                                    {candidate.candidateName}
+                                  </div>
+                                ))}
+                                {getPipelineCandidatesByStage.hrRound.length === 0 && (
+                                  <div className="text-xs text-gray-400 text-center py-2">No candidates</div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-3 align-top">
+                              <div className="space-y-2">
+                                {getPipelineCandidatesByStage.offerStage.map((candidate: any, index: number) => (
+                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-white text-center cursor-default" style={{backgroundColor: '#7CCBA0'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
+                                    {candidate.candidateName}
+                                  </div>
+                                ))}
+                                {getPipelineCandidatesByStage.offerStage.length === 0 && (
+                                  <div className="text-xs text-gray-400 text-center py-2">No candidates</div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="p-3 align-top">
+                              <div className="space-y-2">
+                                {getPipelineCandidatesByStage.closure.map((candidate: any, index: number) => (
+                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-white text-center cursor-default" style={{backgroundColor: '#2F6F52'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
+                                    {candidate.candidateName}
+                                  </div>
+                                ))}
+                                {getPipelineCandidatesByStage.closure.length === 0 && (
+                                  <div className="text-xs text-gray-400 text-center py-2">No candidates</div>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         </tbody>
@@ -4010,7 +4069,7 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
 
-                {/* Closure Reports Table */}
+                {/* Closure Reports Table - Live Data */}
                 <Card className="mt-6">
                   <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                     <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Closure Reports</CardTitle>
@@ -4023,58 +4082,39 @@ export default function AdminDashboard() {
                             <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Candidate</th>
                             <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Positions</th>
                             <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Client</th>
-                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
-                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Fixed CTC</th>
-                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Offered Date</th>
-                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Joined Date</th>
+                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Location</th>
+                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Experience</th>
+                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Applied Date</th>
+                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Status</th>
                           </tr>
                         </thead>
                         <tbody>
-                          <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                            <td className="p-3 text-gray-900 dark:text-white">David Johnson</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">Frontend Developer</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">TechCorp</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">Kavitha</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">MLJ, 2025</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">12-06-2025</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">12-04-2025</td>
-                          </tr>
-                          <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                            <td className="p-3 text-gray-900 dark:text-white">Tom Anderson</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">UI/UX Designer</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">Designify</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">Rajesh</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">ASO, 2025</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">18-06-2025</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">05-05-2025</td>
-                          </tr>
-                          <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                            <td className="p-3 text-gray-900 dark:text-white">Robert Kim</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">Backend Developer</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">CodeLabs</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">Sowmiya</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">MLJ, 2025</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">28-06-2025</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">19-08-2025</td>
-                          </tr>
-                          <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                            <td className="p-3 text-gray-900 dark:text-white">Kevin Brown</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">QA Tester</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">AppLogic</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">Kalaiselvi</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">FMA, 2025</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">03-07-2025</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">03-09-2025</td>
-                          </tr>
-                          <tr className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                            <td className="p-3 text-gray-900 dark:text-white">Mel Gibson</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">Mobile App Developer</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">Tesco</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">Malathi</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">NDJ, 2025</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">18-07-2025</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">10-10-2025</td>
-                          </tr>
+                          {getPipelineCandidatesByStage.closure.length === 0 ? (
+                            <tr>
+                              <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                                No closures yet. Candidates with 'Closure' or 'Joined' status will appear here automatically.
+                              </td>
+                            </tr>
+                          ) : (
+                            getPipelineCandidatesByStage.closure.slice(0, 5).map((candidate: any, index: number) => (
+                              <tr 
+                                key={candidate.id || index} 
+                                className={`border-b border-gray-200 dark:border-gray-700 ${index % 2 === 1 ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}
+                              >
+                                <td className="p-3 text-gray-900 dark:text-white">{candidate.candidateName}</td>
+                                <td className="p-3 text-gray-600 dark:text-gray-400">{candidate.roleApplied}</td>
+                                <td className="p-3 text-gray-600 dark:text-gray-400">{candidate.company}</td>
+                                <td className="p-3 text-gray-600 dark:text-gray-400">{candidate.location}</td>
+                                <td className="p-3 text-gray-600 dark:text-gray-400">{candidate.experience}</td>
+                                <td className="p-3 text-gray-600 dark:text-gray-400">{candidate.appliedOn}</td>
+                                <td className="p-3">
+                                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                    {candidate.currentStatus}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -4094,56 +4134,56 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Right Sidebar with Stats - matching image 2 */}
+            {/* Right Sidebar with Live Stats */}
             <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700">
               <div className="p-4 space-y-1">
                 <div className="flex justify-between items-center py-3 px-4 bg-green-100 dark:bg-green-900 rounded">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SOURCED</span>
-                  <span className="text-lg font-bold text-gray-900 dark:text-white">15</span>
+                  <span className="text-lg font-bold text-gray-900 dark:text-white">{getPipelineCandidatesByStage.sourced.length}</span>
                 </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-green-200 dark:bg-green-800 rounded">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SHORTLISTED</span>
-                  <span className="text-lg font-bold text-gray-900 dark:text-white">9</span>
+                  <span className="text-lg font-bold text-gray-900 dark:text-white">{getPipelineCandidatesByStage.shortlisted.length}</span>
                 </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-green-300 dark:bg-green-700 rounded">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">INTRO CALL</span>
-                  <span className="text-lg font-bold text-gray-900 dark:text-white">7</span>
+                  <span className="text-lg font-bold text-gray-900 dark:text-white">{getPipelineCandidatesByStage.introCall.length}</span>
                 </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-green-400 dark:bg-green-600 rounded">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">ASSIGNMENT</span>
-                  <span className="text-lg font-bold text-gray-800 dark:text-white">9</span>
+                  <span className="text-lg font-bold text-gray-800 dark:text-white">{getPipelineCandidatesByStage.assignment.length}</span>
                 </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-green-500 dark:bg-green-600 rounded">
                   <span className="text-sm font-medium text-white">L1</span>
-                  <span className="text-lg font-bold text-white">15</span>
+                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.level1.length}</span>
                 </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-green-600 dark:bg-green-500 rounded">
                   <span className="text-sm font-medium text-white">L2</span>
-                  <span className="text-lg font-bold text-white">9</span>
+                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.level2.length}</span>
                 </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-green-700 dark:bg-green-500 rounded">
                   <span className="text-sm font-medium text-white">L3</span>
-                  <span className="text-lg font-bold text-white">3</span>
+                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.level3.length}</span>
                 </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-green-800 dark:bg-green-400 rounded">
                   <span className="text-sm font-medium text-white">FINAL ROUND</span>
-                  <span className="text-lg font-bold text-white">9</span>
+                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.finalRound.length}</span>
                 </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-green-900 dark:bg-green-400 rounded">
                   <span className="text-sm font-medium text-white">HR ROUND</span>
-                  <span className="text-lg font-bold text-white">9</span>
+                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.hrRound.length}</span>
                 </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-green-900 dark:bg-green-300 rounded">
                   <span className="text-sm font-medium text-white">OFFER STAGE</span>
-                  <span className="text-lg font-bold text-white">9</span>
+                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.offerStage.length}</span>
                 </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-green-950 dark:bg-green-300 rounded">
                   <span className="text-sm font-medium text-white">CLOSURE</span>
-                  <span className="text-lg font-bold text-white">3</span>
+                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.closure.length}</span>
                 </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-amber-500 dark:bg-amber-600 rounded">
                   <span className="text-sm font-medium text-white">OFFER DROP</span>
-                  <span className="text-lg font-bold text-white">3</span>
+                  <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.offerDrop.length}</span>
                 </div>
                 
                 {/* See More button moved to bottom right */}
