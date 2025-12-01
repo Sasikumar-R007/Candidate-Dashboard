@@ -1050,29 +1050,25 @@ export class DatabaseStorage implements IStorage {
     const mappings = await db.select().from(revenueMappings)
       .where(eq(revenueMappings.talentAdvisorId, recruiterId));
     
-    // Get employee to find their name for linking to requirements
+    // Get employee for name-based fallback
     const [employee] = await db.select().from(employees).where(eq(employees.id, recruiterId));
     
-    // Get all requirements assigned to this recruiter as talent advisor
-    const recruiterRequirements = employee ? await db.select().from(requirements)
-      .where(eq(requirements.talentAdvisor, employee.name)) : [];
-    
-    // Get requirement IDs for this recruiter
-    const recruiterRequirementIds = recruiterRequirements.map(r => r.id);
-    
     // Get all job applications linked to this recruiter's requirements (deliveries)
-    // Using join with requirements table to properly link to the recruiter
+    // Try ID-based linkage first via talentAdvisorId, then fallback to name-based
     let allDeliveries: Array<{ appliedDate: Date | null }> = [];
-    if (employee) {
+    
+    // Try ID-based linkage first
+    allDeliveries = await db.select({ appliedDate: jobApplications.appliedDate })
+      .from(jobApplications)
+      .innerJoin(requirements, eq(jobApplications.requirementId, requirements.id))
+      .where(eq(requirements.talentAdvisorId, recruiterId));
+    
+    // If no results with ID-based linkage, fallback to name-based
+    if (allDeliveries.length === 0 && employee) {
       allDeliveries = await db.select({ appliedDate: jobApplications.appliedDate })
         .from(jobApplications)
         .innerJoin(requirements, eq(jobApplications.requirementId, requirements.id))
-        .where(
-          and(
-            eq(requirements.talentAdvisor, employee.name),
-            eq(jobApplications.source, 'recruiter_tagged')
-          )
-        );
+        .where(eq(requirements.talentAdvisor, employee.name));
     }
     
     // Quarter code mapping (JFM=Q1, AMJ=Q2, JAS=Q3, OND=Q4)

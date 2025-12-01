@@ -195,6 +195,7 @@ export const requirements = pgTable("requirements", {
   company: text("company").notNull(),
   spoc: text("spoc").notNull(),
   talentAdvisor: text("talent_advisor"),
+  talentAdvisorId: varchar("talent_advisor_id"), // Stable ID-based linkage to employees table
   teamLead: text("team_lead"),
   status: text("status").notNull().default("open"), // open, in_progress, completed
   completedAt: text("completed_at"),
