@@ -989,6 +989,112 @@ export default function AdminDashboard() {
     queryKey: ["/api/admin/revenue-mappings"],
   });
   
+  // Fetch pipeline data from API (all applications from all recruiters)
+  const { data: pipelineApplications = [], isLoading: isLoadingPipeline } = useQuery<any[]>({
+    queryKey: ["/api/admin/pipeline"],
+  });
+  
+  // Transform pipeline applications to candidate data with status stages
+  const pipelineApplicantData = useMemo(() => {
+    if (!pipelineApplications || pipelineApplications.length === 0) return [];
+    
+    return pipelineApplications.map((app: any, index: number) => {
+      let parsedSkills: string[] = [];
+      if (app.skills) {
+        try {
+          parsedSkills = typeof app.skills === 'string' ? JSON.parse(app.skills) : app.skills;
+        } catch {
+          parsedSkills = [];
+        }
+      }
+
+      const statusMap: Record<string, string> = {
+        'In Process': 'In-Process',
+        'In-Process': 'In-Process',
+        'Shortlisted': 'Shortlisted',
+        'Rejected': 'Rejected',
+        'Reviewed': 'Reviewed',
+        'Screened Out': 'Screened Out',
+        'L1': 'L1',
+        'L2': 'L2',
+        'L3': 'L3',
+        'Final Round': 'Final Round',
+        'HR Round': 'HR Round',
+        'Selected': 'Selected',
+        'Interview Scheduled': 'L1',
+        'Applied': 'In-Process',
+        'Intro Call': 'Intro Call',
+        'Assignment': 'Assignment',
+        'Offer Stage': 'Offer Stage',
+        'Closure': 'Closure',
+        'Joined': 'Joined',
+        'Offer Drop': 'Offer Drop',
+        'Declined': 'Declined'
+      };
+
+      return {
+        id: app.id || `app-${index + 1}`,
+        appliedOn: app.appliedDate ? new Date(app.appliedDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : 'N/A',
+        candidateName: app.candidateName || 'Unknown Candidate',
+        company: app.company || 'N/A',
+        roleApplied: app.jobTitle || 'N/A',
+        currentStatus: statusMap[app.status] || app.status || 'In-Process',
+        email: app.candidateEmail || 'N/A',
+        phone: app.candidatePhone || 'N/A',
+        location: app.location || 'N/A',
+        experience: app.experience || 'N/A',
+        skills: parsedSkills,
+        resumeUrl: app.resumeUrl || null,
+        rating: 4.0
+      };
+    });
+  }, [pipelineApplications]);
+
+  // Map applicant statuses to pipeline stages (each status maps to exactly one stage)
+  const getPipelineCandidatesByStage = useMemo(() => {
+    const effectiveApplicants = pipelineApplicantData.filter((a: any) => 
+      a.currentStatus !== 'Archived' && 
+      a.currentStatus !== 'Screened Out'
+    );
+
+    const stageMapping: Record<string, string[]> = {
+      'Sourced': ['In-Process', 'Sourced'],
+      'Shortlisted': ['Shortlisted'],
+      'Intro Call': ['Intro Call'],
+      'Assignment': ['Assignment'],
+      'L1': ['L1'],
+      'L2': ['L2'],
+      'L3': ['L3'],
+      'Final Round': ['Final Round'],
+      'HR Round': ['HR Round'],
+      'Offer Stage': ['Offer Stage', 'Selected'],
+      'Closure': ['Closure', 'Joined'],
+      'Offer Drop': ['Offer Drop', 'Declined'],
+      'Rejected': ['Rejected']
+    };
+
+    const getCandidatesForStage = (stage: string) => {
+      const statusesToMatch = stageMapping[stage] || [];
+      return effectiveApplicants.filter((a: any) => statusesToMatch.includes(a.currentStatus));
+    };
+
+    return {
+      sourced: getCandidatesForStage('Sourced'),
+      shortlisted: getCandidatesForStage('Shortlisted'),
+      introCall: getCandidatesForStage('Intro Call'),
+      assignment: getCandidatesForStage('Assignment'),
+      level1: getCandidatesForStage('L1'),
+      level2: getCandidatesForStage('L2'),
+      level3: getCandidatesForStage('L3'),
+      finalRound: getCandidatesForStage('Final Round'),
+      hrRound: getCandidatesForStage('HR Round'),
+      offerStage: getCandidatesForStage('Offer Stage'),
+      closure: getCandidatesForStage('Closure'),
+      offerDrop: getCandidatesForStage('Offer Drop'),
+      rejected: getCandidatesForStage('Rejected')
+    };
+  }, [pipelineApplicantData]);
+  
   // Revenue mapping state for editing
   const [editingRevenueMapping, setEditingRevenueMapping] = useState<any>(null);
   
@@ -2506,198 +2612,241 @@ export default function AdminDashboard() {
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
             {/* Pipeline Header */}
             <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Pipeline</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white" data-testid="text-pipeline-header">Pipeline (View Only)</h2>
               <div className="flex items-center gap-4">
-                <Select value={selectedPipelineTeam} onValueChange={setSelectedPipelineTeam}>
-                  <SelectTrigger className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm w-48">
-                    <SelectValue placeholder="Arun/Anusha /All" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="arun">Arun</SelectItem>
-                    <SelectItem value="anusha">Anusha</SelectItem>
-                  </SelectContent>
-                </Select>
                 <div className="flex items-center text-gray-600 dark:text-gray-400">
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  12-Aug-2025
+                  {format(new Date(), 'dd-MMM-yyyy')}
                 </div>
               </div>
             </div>
 
-            {/* New Pipeline Design */}
-            <div className="flex gap-6">
-              {/* Left Side - Pipeline Stages */}
-              <div className="flex-1">
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="overflow-x-auto admin-scrollbar">
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="border-b border-gray-200 dark:border-gray-700">
-                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 w-32">Level 1</th>
-                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 w-32">Level 2</th>
-                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 w-32">Level 3</th>
-                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 w-32">Final Round</th>
-                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 w-32">HR Round</th>
-                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 w-32">Offer Stage</th>
-                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 w-32">Closure</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(selectedPipelineTeam === 'arun' ? pipelineDataArun : selectedPipelineTeam === 'anusha' ? pipelineDataAnusha : [...pipelineDataArun, ...pipelineDataAnusha]).map((candidate, index) => (
-                            <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
-                              <td className="p-3 w-32">
-                                {candidate.level1 && (
-                                  <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#E6F4EA'}}>
-                                    {candidate.name}
-                                  </span>
-                                )}
+            {/* Loading State */}
+            {isLoadingPipeline && (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-gray-500">Loading pipeline data...</div>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {!isLoadingPipeline && pipelineApplicantData.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Users className="h-16 w-16 text-gray-300 mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Pipeline Data</h3>
+                <p className="text-gray-500 text-center max-w-md">
+                  When recruiters tag candidates to requirements and update their statuses, they will appear here automatically.
+                </p>
+              </div>
+            )}
+
+            {/* Pipeline Data Display */}
+            {!isLoadingPipeline && pipelineApplicantData.length > 0 && (
+              <div className="flex gap-6">
+                {/* Left Side - Pipeline Stages */}
+                <div className="flex-1">
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="overflow-x-auto admin-scrollbar">
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr className="border-b border-gray-200 dark:border-gray-700">
+                              <th className="text-center p-3 font-semibold text-gray-700 dark:text-gray-300 min-w-[120px]" data-testid="header-pipeline-level1">Level 1</th>
+                              <th className="text-center p-3 font-semibold text-gray-700 dark:text-gray-300 min-w-[120px]" data-testid="header-pipeline-level2">Level 2</th>
+                              <th className="text-center p-3 font-semibold text-gray-700 dark:text-gray-300 min-w-[120px]" data-testid="header-pipeline-level3">Level 3</th>
+                              <th className="text-center p-3 font-semibold text-gray-700 dark:text-gray-300 min-w-[120px]" data-testid="header-pipeline-finalround">Final Round</th>
+                              <th className="text-center p-3 font-semibold text-gray-700 dark:text-gray-300 min-w-[120px]" data-testid="header-pipeline-hrround">HR Round</th>
+                              <th className="text-center p-3 font-semibold text-gray-700 dark:text-gray-300 min-w-[120px]" data-testid="header-pipeline-offerstage">Offer Stage</th>
+                              <th className="text-center p-3 font-semibold text-gray-700 dark:text-gray-300 min-w-[120px]" data-testid="header-pipeline-closure">Closure</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td className="p-3 align-top" data-testid="column-pipeline-level1">
+                                <div className="space-y-2">
+                                  {getPipelineCandidatesByStage.level1.map((candidate: any, index: number) => (
+                                    <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{backgroundColor: '#E6F4EA'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`} data-testid={`pipeline-l1-candidate-${index}`}>
+                                      {candidate.candidateName}
+                                    </div>
+                                  ))}
+                                  {getPipelineCandidatesByStage.level1.length === 0 && (
+                                    <div className="text-xs text-gray-400 text-center py-2">No candidates</div>
+                                  )}
+                                </div>
                               </td>
-                              <td className="p-3 w-32">
-                                {candidate.level2 && (
-                                  <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#D9F0E1'}}>
-                                    {candidate.name}
-                                  </span>
-                                )}
+                              <td className="p-3 align-top" data-testid="column-pipeline-level2">
+                                <div className="space-y-2">
+                                  {getPipelineCandidatesByStage.level2.map((candidate: any, index: number) => (
+                                    <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{backgroundColor: '#D9F0E1'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`} data-testid={`pipeline-l2-candidate-${index}`}>
+                                      {candidate.candidateName}
+                                    </div>
+                                  ))}
+                                  {getPipelineCandidatesByStage.level2.length === 0 && (
+                                    <div className="text-xs text-gray-400 text-center py-2">No candidates</div>
+                                  )}
+                                </div>
                               </td>
-                              <td className="p-3 w-32">
-                                {candidate.level3 && (
-                                  <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#C2EED0'}}>
-                                    {candidate.name}
-                                  </span>
-                                )}
+                              <td className="p-3 align-top" data-testid="column-pipeline-level3">
+                                <div className="space-y-2">
+                                  {getPipelineCandidatesByStage.level3.map((candidate: any, index: number) => (
+                                    <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{backgroundColor: '#C2EED0'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`} data-testid={`pipeline-l3-candidate-${index}`}>
+                                      {candidate.candidateName}
+                                    </div>
+                                  ))}
+                                  {getPipelineCandidatesByStage.level3.length === 0 && (
+                                    <div className="text-xs text-gray-400 text-center py-2">No candidates</div>
+                                  )}
+                                </div>
                               </td>
-                              <td className="p-3 w-32">
-                                {candidate.finalRound && (
-                                  <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-black" style={{backgroundColor: '#B5E1C1'}}>
-                                    {candidate.name}
-                                  </span>
-                                )}
+                              <td className="p-3 align-top" data-testid="column-pipeline-finalround">
+                                <div className="space-y-2">
+                                  {getPipelineCandidatesByStage.finalRound.map((candidate: any, index: number) => (
+                                    <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{backgroundColor: '#B5E1C1'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`} data-testid={`pipeline-finalround-candidate-${index}`}>
+                                      {candidate.candidateName}
+                                    </div>
+                                  ))}
+                                  {getPipelineCandidatesByStage.finalRound.length === 0 && (
+                                    <div className="text-xs text-gray-400 text-center py-2">No candidates</div>
+                                  )}
+                                </div>
                               </td>
-                              <td className="p-3 w-32">
-                                {candidate.hrRound && (
-                                  <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#99D9AE'}}>
-                                    {candidate.name}
-                                  </span>
-                                )}
+                              <td className="p-3 align-top" data-testid="column-pipeline-hrround">
+                                <div className="space-y-2">
+                                  {getPipelineCandidatesByStage.hrRound.map((candidate: any, index: number) => (
+                                    <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-white text-center cursor-default" style={{backgroundColor: '#99D9AE'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`} data-testid={`pipeline-hrround-candidate-${index}`}>
+                                      {candidate.candidateName}
+                                    </div>
+                                  ))}
+                                  {getPipelineCandidatesByStage.hrRound.length === 0 && (
+                                    <div className="text-xs text-gray-400 text-center py-2">No candidates</div>
+                                  )}
+                                </div>
                               </td>
-                              <td className="p-3 w-32">
-                                {candidate.offerStage && (
-                                  <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#7CCBA0'}}>
-                                    {candidate.name}
-                                  </span>
-                                )}
+                              <td className="p-3 align-top" data-testid="column-pipeline-offerstage">
+                                <div className="space-y-2">
+                                  {getPipelineCandidatesByStage.offerStage.map((candidate: any, index: number) => (
+                                    <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-white text-center cursor-default" style={{backgroundColor: '#7CCBA0'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`} data-testid={`pipeline-offerstage-candidate-${index}`}>
+                                      {candidate.candidateName}
+                                    </div>
+                                  ))}
+                                  {getPipelineCandidatesByStage.offerStage.length === 0 && (
+                                    <div className="text-xs text-gray-400 text-center py-2">No candidates</div>
+                                  )}
+                                </div>
                               </td>
-                              <td className="p-3 w-32">
-                                {candidate.closure && (
-                                  <span className="inline-block w-full text-center px-3 py-2 rounded text-sm text-white" style={{backgroundColor: '#2F6F52'}}>
-                                    {candidate.name}
-                                  </span>
-                                )}
+                              <td className="p-3 align-top" data-testid="column-pipeline-closure">
+                                <div className="space-y-2">
+                                  {getPipelineCandidatesByStage.closure.map((candidate: any, index: number) => (
+                                    <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-white text-center cursor-default" style={{backgroundColor: '#2F6F52'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`} data-testid={`pipeline-closure-candidate-${index}`}>
+                                      {candidate.candidateName}
+                                    </div>
+                                  ))}
+                                  {getPipelineCandidatesByStage.closure.length === 0 && (
+                                    <div className="text-xs text-gray-400 text-center py-2">No candidates</div>
+                                  )}
+                                </div>
                               </td>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
 
-              {/* Right Side - Statistics Panel */}
-              <div className="w-64">
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      {/* REJECTED */}
-                      <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#E6F4EA'}}>
-                        <span className="font-semibold text-black">R</span>
-                        <span className="text-sm text-black">EJECTED</span>
-                        <span className="font-bold text-lg text-black">9</span>
+                {/* Right Side - Statistics Panel */}
+                <div className="w-64">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        {/* REJECTED */}
+                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#FEE2E2'}}>
+                          <span className="font-semibold text-black">R</span>
+                          <span className="text-sm text-black">EJECTED</span>
+                          <span className="font-bold text-lg text-black" data-testid="count-rejected">{getPipelineCandidatesByStage.rejected.length}</span>
+                        </div>
+                        
+                        {/* SHORTLISTED */}
+                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#D9F0E1'}}>
+                          <span className="font-semibold text-black">S</span>
+                          <span className="text-sm text-black">HORTLISTED</span>
+                          <span className="font-bold text-lg text-black" data-testid="count-shortlisted">{getPipelineCandidatesByStage.shortlisted.length}</span>
+                        </div>
+                        
+                        {/* INTRO CALL */}
+                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#C2EED0'}}>
+                          <span className="font-semibold text-black">I</span>
+                          <span className="text-sm text-black">NTRO CALL</span>
+                          <span className="font-bold text-lg text-black" data-testid="count-introcall">{getPipelineCandidatesByStage.introCall.length}</span>
+                        </div>
+                        
+                        {/* ASSIGNMENT */}
+                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#B5E1C1'}}>
+                          <span className="font-semibold text-black">A</span>
+                          <span className="text-sm text-black">SSIGNMENT</span>
+                          <span className="font-bold text-lg text-black" data-testid="count-assignment">{getPipelineCandidatesByStage.assignment.length}</span>
+                        </div>
+                        
+                        {/* L1 */}
+                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#99D9AE'}}>
+                          <span className="font-semibold text-white">L1</span>
+                          <span className="text-sm text-white"></span>
+                          <span className="font-bold text-lg text-white" data-testid="count-l1">{getPipelineCandidatesByStage.level1.length}</span>
+                        </div>
+                        
+                        {/* L2 */}
+                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#7CCBA0'}}>
+                          <span className="font-semibold text-white">L2</span>
+                          <span className="text-sm text-white"></span>
+                          <span className="font-bold text-lg text-white" data-testid="count-l2">{getPipelineCandidatesByStage.level2.length}</span>
+                        </div>
+                        
+                        {/* L3 */}
+                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#6BB68C'}}>
+                          <span className="font-semibold text-white">L3</span>
+                          <span className="text-sm text-white"></span>
+                          <span className="font-bold text-lg text-white" data-testid="count-l3">{getPipelineCandidatesByStage.level3.length}</span>
+                        </div>
+                        
+                        {/* FINAL ROUND */}
+                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#56A87D'}}>
+                          <span className="font-semibold text-white">F</span>
+                          <span className="text-sm text-white">INAL ROUND</span>
+                          <span className="font-bold text-lg text-white" data-testid="count-finalround">{getPipelineCandidatesByStage.finalRound.length}</span>
+                        </div>
+                        
+                        {/* HR ROUND */}
+                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#479E72'}}>
+                          <span className="font-semibold text-white">H</span>
+                          <span className="text-sm text-white">R ROUND</span>
+                          <span className="font-bold text-lg text-white" data-testid="count-hrround">{getPipelineCandidatesByStage.hrRound.length}</span>
+                        </div>
+                        
+                        {/* OFFER STAGE */}
+                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#3F8E66'}}>
+                          <span className="font-semibold text-white">O</span>
+                          <span className="text-sm text-white">FFER STAGE</span>
+                          <span className="font-bold text-lg text-white" data-testid="count-offerstage">{getPipelineCandidatesByStage.offerStage.length}</span>
+                        </div>
+                        
+                        {/* CLOSURE */}
+                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#2F6F52'}}>
+                          <span className="font-semibold text-white">C</span>
+                          <span className="text-sm text-white">LOSURE</span>
+                          <span className="font-bold text-lg text-white" data-testid="count-closure">{getPipelineCandidatesByStage.closure.length}</span>
+                        </div>
+                        
+                        {/* OFFER DROP */}
+                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#C59445'}}>
+                          <span className="font-semibold text-white">O</span>
+                          <span className="text-sm text-white">FFER DROP</span>
+                          <span className="font-bold text-lg text-white" data-testid="count-offerdrop">{getPipelineCandidatesByStage.offerDrop.length}</span>
+                        </div>
                       </div>
-                      
-                      {/* SHORTLISTED */}
-                      <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#D9F0E1'}}>
-                        <span className="font-semibold text-black">S</span>
-                        <span className="text-sm text-black">HORTLISTED</span>
-                        <span className="font-bold text-lg text-black">3</span>
-                      </div>
-                      
-                      {/* INTEGRAL */}
-                      <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#C2EED0'}}>
-                        <span className="font-semibold text-black">I</span>
-                        <span className="text-sm text-black">NTEGRAL</span>
-                        <span className="font-bold text-lg text-black">9</span>
-                      </div>
-                      
-                      {/* ASSIGNMENT */}
-                      <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#B5E1C1'}}>
-                        <span className="font-semibold text-black">A</span>
-                        <span className="text-sm text-black">SSIGNMENT</span>
-                        <span className="font-bold text-lg text-black">15</span>
-                      </div>
-                      
-                      {/* L1 */}
-                      <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#99D9AE'}}>
-                        <span className="font-semibold text-white">L1</span>
-                        <span className="text-sm text-white"></span>
-                        <span className="font-bold text-lg text-white">9</span>
-                      </div>
-                      
-                      {/* L2 */}
-                      <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#7CCBA0'}}>
-                        <span className="font-semibold text-white">L2</span>
-                        <span className="text-sm text-white"></span>
-                        <span className="font-bold text-lg text-white">3</span>
-                      </div>
-                      
-                      {/* L3 */}
-                      <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#6BB68C'}}>
-                        <span className="font-semibold text-white">L3</span>
-                        <span className="text-sm text-white"></span>
-                        <span className="font-bold text-lg text-white">9</span>
-                      </div>
-                      
-                      {/* FINAL ROUND */}
-                      <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#56A87D'}}>
-                        <span className="font-semibold text-white">F</span>
-                        <span className="text-sm text-white">INAL ROUND</span>
-                        <span className="font-bold text-lg text-white">9</span>
-                      </div>
-                      
-                      {/* HR ROUND */}
-                      <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#479E72'}}>
-                        <span className="font-semibold text-white">H</span>
-                        <span className="text-sm text-white">R ROUND</span>
-                        <span className="font-bold text-lg text-white">9</span>
-                      </div>
-                      
-                      {/* OFFER STAGE */}
-                      <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#3F8E66'}}>
-                        <span className="font-semibold text-white">O</span>
-                        <span className="text-sm text-white">FFER STAGE</span>
-                        <span className="font-bold text-lg text-white">3</span>
-                      </div>
-                      
-                      {/* CLOSURE */}
-                      <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#2F6F52'}}>
-                        <span className="font-semibold text-white">C</span>
-                        <span className="text-sm text-white">LOSURE</span>
-                        <span className="font-bold text-lg text-white">3</span>
-                      </div>
-                      
-                      {/* OFFER DROP */}
-                      <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#C59445'}}>
-                        <span className="font-semibold text-white">O</span>
-                        <span className="text-sm text-white">FFER DROP</span>
-                        <span className="font-bold text-lg text-white">3</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Closure Reports */}
             <Card>

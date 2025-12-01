@@ -3363,6 +3363,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all job applications for Admin pipeline (view all recruiters' pipeline data)
+  app.get("/api/admin/pipeline", async (req, res) => {
+    try {
+      const applications = await storage.getAllJobApplications();
+      res.json(applications);
+    } catch (error) {
+      console.error("Get admin pipeline error:", error);
+      res.status(500).json({ message: "Failed to get pipeline data" });
+    }
+  });
+
   // Get all employees
   app.get("/api/admin/employees", async (req, res) => {
     try {
