@@ -248,28 +248,7 @@ const teamsData = [
   }
 ];
 
-// Pipeline candidate data for teams
-const pipelineDataArun = [
-  { name: "Keerthana", level1: true, level2: true, level3: true, finalRound: true, hrRound: true, offerStage: true, closure: true },
-  { name: "Vishnu Purana", level1: true, level2: true, level3: true, finalRound: true, hrRound: true, offerStage: true, closure: true },
-  { name: "Chanakya", level1: true, level2: true, level3: true, finalRound: true, hrRound: true, offerStage: false, closure: false },
-  { name: "Adhya", level1: true, level2: true, level3: true, finalRound: true, hrRound: false, offerStage: false, closure: false },
-  { name: "Vanshika", level1: true, level2: true, level3: true, finalRound: false, hrRound: false, offerStage: false, closure: false },
-  { name: "Reyansh", level1: true, level2: false, level3: false, finalRound: false, hrRound: false, offerStage: false, closure: false },
-  { name: "Shaurya", level1: true, level2: false, level3: false, finalRound: false, hrRound: false, offerStage: false, closure: false }
-];
-
-const pipelineDataAnusha = [
-  { name: "Aarav", level1: true, level2: true, level3: true, finalRound: true, hrRound: true, offerStage: true, closure: true },
-  { name: "Diya", level1: true, level2: true, level3: true, finalRound: true, hrRound: true, offerStage: true, closure: true },
-  { name: "Vihaan", level1: true, level2: true, level3: true, finalRound: true, hrRound: true, offerStage: false, closure: false },
-  { name: "Ananya", level1: true, level2: true, level3: true, finalRound: true, hrRound: false, offerStage: false, closure: false },
-  { name: "Arjun", level1: true, level2: true, level3: true, finalRound: false, hrRound: false, offerStage: false, closure: false },
-  { name: "Saanvi", level1: true, level2: false, level3: false, finalRound: false, hrRound: false, offerStage: false, closure: false },
-  { name: "Ishaan", level1: true, level2: false, level3: false, finalRound: false, hrRound: false, offerStage: false, closure: false }
-];
-
-// Removed sample data - now using real data from API
+// Removed sample pipeline data - now using real data from API
 
 // All employees list from teams data
 const allEmployees = [
@@ -4020,76 +3999,11 @@ export default function AdminDashboard() {
                           </tr>
                         </thead>
                         <tbody>
-                          {(() => {
-                            const pipelineData = selectedPipelineTeam === 'arun' ? pipelineDataArun : selectedPipelineTeam === 'anusha' ? pipelineDataAnusha : [...pipelineDataArun, ...pipelineDataAnusha];
-                            return (
-                              <tr>
-                                <td className="p-3 align-top">
-                                  <div className="flex flex-col gap-2">
-                                    {pipelineData.filter(c => c.level1).map((candidate, idx) => (
-                                      <div key={idx} className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                                        {candidate.name}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </td>
-                                <td className="p-3 align-top">
-                                  <div className="flex flex-col gap-2">
-                                    {pipelineData.filter(c => c.level2).map((candidate, idx) => (
-                                      <div key={idx} className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                                        {candidate.name}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </td>
-                                <td className="p-3 align-top">
-                                  <div className="flex flex-col gap-2">
-                                    {pipelineData.filter(c => c.level3).map((candidate, idx) => (
-                                      <div key={idx} className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                                        {candidate.name}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </td>
-                                <td className="p-3 align-top">
-                                  <div className="flex flex-col gap-2">
-                                    {pipelineData.filter(c => c.finalRound).map((candidate, idx) => (
-                                      <div key={idx} className="px-3 py-2 bg-green-500 dark:bg-green-600 rounded text-center text-sm font-medium text-white">
-                                        {candidate.name}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </td>
-                                <td className="p-3 align-top">
-                                  <div className="flex flex-col gap-2">
-                                    {pipelineData.filter(c => c.hrRound).map((candidate, idx) => (
-                                      <div key={idx} className="px-3 py-2 bg-green-600 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
-                                        {candidate.name}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </td>
-                                <td className="p-3 align-top">
-                                  <div className="flex flex-col gap-2">
-                                    {pipelineData.filter(c => c.offerStage).map((candidate, idx) => (
-                                      <div key={idx} className="px-3 py-2 bg-green-700 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
-                                        {candidate.name}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </td>
-                                <td className="p-3 align-top">
-                                  <div className="flex flex-col gap-2">
-                                    {pipelineData.filter(c => c.closure).map((candidate, idx) => (
-                                      <div key={idx} className="px-3 py-2 bg-green-800 dark:bg-green-400 rounded text-center text-sm font-medium text-white">
-                                        {candidate.name}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })()}
+                          <tr>
+                            <td colSpan={7} className="p-8 text-center text-gray-500">
+                              This section has been migrated to use live data. Please navigate to the Pipeline tab in the sidebar.
+                            </td>
+                          </tr>
                         </tbody>
                       </table>
                     </div>

@@ -53,6 +53,7 @@ Preferred communication style: Simple, everyday language.
 - **Master Database Resume Detail Drawer**: Right-side drawer for resume profiles in the Master Database. Displays candidate profile, resume viewing area (placeholder), share/download options, upload date, and a real-time comments section for collaboration.
 - **Recruiter Job Management System**: Full CRUD operations for job postings (Active, Closed, Draft statuses). Provides a responsive grid layout with filtering and search, and integration with the candidate job board.
 - **Recruiter Requirements System**: Recruiters see only requirements assigned to them by Team Leads (via the `talentAdvisor` field). The dashboard shows real delivery counts per requirement and priority distributions. Recruiters can only tag candidates to their assigned requirements via the Tag to Requirement modal.
+- **Admin Pipeline System**: Live data view of all job applications aggregated from all recruiters. Uses the `/api/admin/pipeline` endpoint to fetch data, with React Query for caching and useMemo for efficient data transformations. Pipeline stages are mapped from application statuses: L1, L2, L3, Final Round, HR Round, Offer Stage, Closure. Admin view is read-only; only recruiters can change candidate statuses. Statistics panel shows live counts for each stage including rejected and shortlisted candidates.
 
 ## Development Tools
 - **Build System**: Vite.
