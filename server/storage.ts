@@ -173,6 +173,7 @@ export interface IStorage {
   // Revenue Mapping methods
   createRevenueMapping(mapping: InsertRevenueMapping): Promise<RevenueMapping>;
   getAllRevenueMappings(): Promise<RevenueMapping[]>;
+  getRevenueMappingsByRecruiterId(recruiterId: string): Promise<RevenueMapping[]>;
   getRevenueMappingById(id: string): Promise<RevenueMapping | undefined>;
   updateRevenueMapping(id: string, updates: Partial<RevenueMapping>): Promise<RevenueMapping | undefined>;
   deleteRevenueMapping(id: string): Promise<boolean>;

@@ -1798,6 +1798,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get closure reports (revenue mappings) for the logged-in recruiter
+  app.get("/api/recruiter/closure-reports", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      // Fetch revenue mappings where this recruiter is the talent advisor
+      const revenueMappings = await storage.getRevenueMappingsByRecruiterId(session.employeeId);
+      
+      // Transform to closure report format for frontend
+      const closureReports = revenueMappings.map((mapping) => ({
+        id: mapping.id,
+        candidate: mapping.candidateName || 'N/A',
+        position: mapping.position || 'N/A',
+        client: mapping.clientName || 'N/A',
+        revenue: mapping.revenue ? mapping.revenue.toLocaleString('en-IN') : '0'
+      }));
+      
+      res.json(closureReports);
+    } catch (error) {
+      console.error('Get recruiter closure reports error:', error);
+      res.status(500).json({ message: "Failed to fetch closure reports" });
+    }
+  });
+
   app.post("/api/recruiter/upload/banner", upload.single('file'), (req, res) => {
     try {
       if (!req.file) {
@@ -2773,6 +2801,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const {
         talentAdvisorId,
         teamLeadId,
+        candidateName,
         year,
         quarter,
         position,
@@ -2816,6 +2845,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         talentAdvisorName: talentAdvisor.name,
         teamLeadId,
         teamLeadName: teamLead.name,
+        candidateName: candidateName || null,
         year: parseInt(year),
         quarter,
         position,

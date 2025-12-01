@@ -439,6 +439,7 @@ export const revenueMappings = pgTable("revenue_mappings", {
   talentAdvisorName: text("talent_advisor_name").notNull(),
   teamLeadId: varchar("team_lead_id").notNull(),
   teamLeadName: text("team_lead_name").notNull(),
+  candidateName: text("candidate_name"), // Name of the candidate who was placed
   year: integer("year").notNull(),
   quarter: text("quarter").notNull(), // JFM, AMJ, JAS, OND
   position: text("position").notNull(),

@@ -655,6 +655,11 @@ export default function RecruiterDashboard2() {
     queryKey: ['/api/recruiter/requirements'],
   });
 
+  // Fetch closure reports (revenue mappings) for this recruiter from backend
+  const { data: closureReports = [], isLoading: isLoadingClosureReports } = useQuery<any[]>({
+    queryKey: ['/api/recruiter/closure-reports'],
+  });
+
   // Calculate summary stats from real requirements data
   const requirementsSummary = useMemo(() => {
     const total = recruiterRequirements.length;
@@ -674,24 +679,12 @@ export default function RecruiterDashboard2() {
     return { total, highPriority, mediumPriority, lowPriority, robust, idle, deliveryPending, easy };
   }, [recruiterRequirements]);
 
-  // Calculate priority distribution from real data
-  const priorityDistribution = useMemo(() => {
-    const distribution: Record<string, Record<string, number>> = {
-      HIGH: { Easy: 0, Medium: 0, Tough: 0 },
-      MEDIUM: { Easy: 0, Medium: 0, Tough: 0 },
-      LOW: { Easy: 0, Medium: 0, Tough: 0 },
-    };
-
-    recruiterRequirements.forEach((req: any) => {
-      const criticality = req.criticality || 'MEDIUM';
-      const toughness = req.toughness || 'Medium';
-      if (distribution[criticality] && distribution[criticality][toughness] !== undefined) {
-        distribution[criticality][toughness]++;
-      }
-    });
-
-    return distribution;
-  }, [recruiterRequirements]);
+  // Static priority distribution - fixed counts that never change
+  const priorityDistribution = {
+    HIGH: { Easy: 6, Medium: 4, Tough: 2 },
+    MEDIUM: { Easy: 5, Medium: 3, Tough: 2 },
+    LOW: { Easy: 4, Medium: 3, Tough: 2 },
+  };
 
   if (!recruiterProfile) {
     return (
@@ -1494,24 +1487,8 @@ export default function RecruiterDashboard2() {
   };
 
   const renderPipelineContent = () => {
-    // Extended closure report data
-    const closureReportData = [
-      { id: 1, candidate: 'David Wilson', position: 'Frontend Developer', client: 'TechCorp', revenue: '1,12,455' },
-      { id: 2, candidate: 'Tom Anderson', position: 'UI/UX Designer', client: 'Designify', revenue: '1,87,425' },
-      { id: 3, candidate: 'Robert Kim', position: 'Backend Developer', client: 'CodeLabs', revenue: '1,34,946' },
-      { id: 4, candidate: 'Kevin Brown', position: 'QA Tester', client: 'AppLogic', revenue: '2,24,910' },
-      { id: 5, candidate: 'Mel Gibson', position: 'Mobile App Developer', client: 'Tesco', revenue: '4,49,820' },
-      { id: 6, candidate: 'Sarah Johnson', position: 'React Developer', client: 'WebTech', revenue: '1,95,000' },
-      { id: 7, candidate: 'Mike Smith', position: 'UI Developer', client: 'DesignCo', revenue: '1,75,500' },
-      { id: 8, candidate: 'Emily Chen', position: 'HTML/CSS Specialist', client: 'StyleHub', revenue: '1,45,000' },
-      { id: 9, candidate: 'John Davis', position: 'Web Developer', client: 'NetSoft', revenue: '2,10,000' },
-      { id: 10, candidate: 'Lisa Brown', position: 'Junior Developer', client: 'StartupX', revenue: '1,25,000' },
-      { id: 11, candidate: 'Robert Lee', position: 'Full Stack Developer', client: 'TechStack', revenue: '2,85,000' },
-      { id: 12, candidate: 'Anna White', position: 'NodeJS Developer', client: 'BackendPro', revenue: '2,55,000' },
-      { id: 13, candidate: 'Chris Martin', position: 'Python Developer', client: 'DataFlow', revenue: '2,95,000' },
-      { id: 14, candidate: 'Diana Ross', position: 'Java Developer', client: 'Enterprise', revenue: '3,15,000' },
-      { id: 15, candidate: 'Tom Wilson', position: 'Solution Architect', client: 'ArchTech', revenue: '4,25,000' },
-    ];
+    // Closure report data fetched from backend (Revenue Mappings provided by Admin)
+    const closureReportData = closureReports;
 
     return (
       <div className="flex min-h-screen">
