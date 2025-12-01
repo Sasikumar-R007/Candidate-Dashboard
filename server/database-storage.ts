@@ -1141,13 +1141,14 @@ export class DatabaseStorage implements IStorage {
   async getRecruiterPerformanceSummary(recruiterId: string): Promise<{
     tenure: number;
     totalClosures: number;
+    totalResumesDelivered: number;
     recentClosure: string | null;
     lastClosureMonths: number;
     lastClosureDays: number;
     totalRevenue: number;
     totalIncentives: number;
   }> {
-    // Get employee info for tenure calculation
+    // Get employee info for tenure calculation and name-based fallback
     const [employee] = await db.select().from(employees).where(eq(employees.id, recruiterId));
     
     // Calculate tenure in quarters
@@ -1165,6 +1166,25 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(revenueMappings.closureDate));
     
     const totalClosures = mappings.length;
+    
+    // Get total resumes delivered (same logic as quarterly performance)
+    let totalResumesDelivered = 0;
+    
+    // Try ID-based linkage first
+    let deliveries = await db.select({ id: jobApplications.id })
+      .from(jobApplications)
+      .innerJoin(requirements, eq(jobApplications.requirementId, requirements.id))
+      .where(eq(requirements.talentAdvisorId, recruiterId));
+    
+    // If no results with ID-based linkage, fallback to name-based
+    if (deliveries.length === 0 && employee) {
+      deliveries = await db.select({ id: jobApplications.id })
+        .from(jobApplications)
+        .innerJoin(requirements, eq(jobApplications.requirementId, requirements.id))
+        .where(eq(requirements.talentAdvisor, employee.name));
+    }
+    
+    totalResumesDelivered = deliveries.length;
     
     // Get most recent closure candidate name
     const recentClosure = mappings.length > 0 ? (mappings[0].candidateName || null) : null;
@@ -1187,6 +1207,7 @@ export class DatabaseStorage implements IStorage {
     return {
       tenure,
       totalClosures,
+      totalResumesDelivered,
       recentClosure,
       lastClosureMonths,
       lastClosureDays,

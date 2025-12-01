@@ -188,6 +188,7 @@ export interface IStorage {
   getRecruiterPerformanceSummary(recruiterId: string): Promise<{
     tenure: number;
     totalClosures: number;
+    totalResumesDelivered: number;
     recentClosure: string | null;
     lastClosureMonths: number;
     lastClosureDays: number;
