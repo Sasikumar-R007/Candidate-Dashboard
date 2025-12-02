@@ -1139,6 +1139,8 @@ export default function AdminDashboard() {
   const [isPerformanceDataModalOpen, setIsPerformanceDataModalOpen] = useState(false);
   const [isEditingFeedbackModal, setIsEditingFeedbackModal] = useState(false);
   const [avgDaysValueModal, setAvgDaysValueModal] = useState<string>("");
+  const [isResetPerformanceConfirmOpen, setIsResetPerformanceConfirmOpen] = useState(false);
+  const [isResetMasterDataConfirmOpen, setIsResetMasterDataConfirmOpen] = useState(false);
   
   // Search term states for modals and tables
   const [targetSearch, setTargetSearch] = useState('');
@@ -1438,6 +1440,31 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/revenue-analysis'],
   });
 
+  // Fetch monthly performance data from API for the Performance LineChart
+  const { data: monthlyPerformanceData } = useQuery<{
+    data: Array<Record<string, any>>;
+    teams: string[];
+    members: Array<{ key: string; name: string; teamLeader: string }>;
+  }>({
+    queryKey: ['/api/admin/monthly-performance'],
+  });
+
+  // Monthly Performance chart data - uses backend data or fallback data
+  const monthlyChartData = useMemo(() => {
+    if (monthlyPerformanceData?.data && monthlyPerformanceData.data.length > 0) {
+      return monthlyPerformanceData.data;
+    }
+    // Fallback data when no data from API
+    return [
+      { month: 'Jan', arunTeam: 0, anushaTeam: 0 },
+      { month: 'Feb', arunTeam: 0, anushaTeam: 0 },
+      { month: 'Mar', arunTeam: 0, anushaTeam: 0 },
+      { month: 'Apr', arunTeam: 0, anushaTeam: 0 },
+      { month: 'May', arunTeam: 0, anushaTeam: 0 },
+      { month: 'Jun', arunTeam: 0, anushaTeam: 0 }
+    ];
+  }, [monthlyPerformanceData]);
+
   // Performance chart data - uses backend data or empty array
   const performanceData = useMemo(() => {
     return teamPerformanceData.slice(0, 6).map((member) => ({
@@ -1453,6 +1480,64 @@ export default function AdminDashboard() {
       { member: 'Member 2', revenue: 0 }
     ];
   }, [revenueAnalysis]);
+
+  // Reset Performance Data mutation
+  const resetPerformanceDataMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('DELETE', '/api/admin/reset-performance-data');
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate all performance-related queries to refresh the UI
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/target-mappings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/revenue-mappings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/team-performance'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/closures-list'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/revenue-analysis'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/performance-metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/monthly-performance'] });
+      toast({
+        title: "Success",
+        description: "Performance data has been reset. All charts and tables have been refreshed.",
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to reset performance data. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Reset Master Data mutation
+  const resetMasterDataMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('DELETE', '/api/admin/reset-master-data');
+      return response.json();
+    },
+    onSuccess: () => {
+      // Invalidate all master data-related queries to refresh the UI
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/candidates'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/deliveries'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/daily-metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/master-data-totals'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/requirements'] });
+      toast({
+        title: "Success",
+        description: "Master data has been reset. All resume and candidate records have been cleared.",
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to reset master data. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
 
   // Archive requirement mutation
   const archiveRequirementMutation = useMutation({
@@ -3314,39 +3399,75 @@ export default function AdminDashboard() {
                     </div>
                     <div className="h-[260px]">
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={[
-                          { month: 'Jan', arunTeam: 600, anushaTeam: 500, sudharshan: 150, deepika: 140, dharshan: 120, kavya: 190 },
-                          { month: 'Feb', arunTeam: 650, anushaTeam: 520, sudharshan: 160, deepika: 150, dharshan: 130, kavya: 210 },
-                          { month: 'Mar', arunTeam: 580, anushaTeam: 540, sudharshan: 145, deepika: 135, dharshan: 125, kavya: 175 },
-                          { month: 'Apr', arunTeam: 520, anushaTeam: 580, sudharshan: 130, deepika: 145, dharshan: 115, kavya: 130 },
-                          { month: 'May', arunTeam: 680, anushaTeam: 620, sudharshan: 170, deepika: 165, dharshan: 140, kavya: 205 },
-                          { month: 'Jun', arunTeam: 720, anushaTeam: 660, sudharshan: 180, deepika: 175, dharshan: 155, kavya: 210 }
-                        ]}>
+                        <LineChart data={monthlyChartData}>
                           <CartesianGrid strokeDasharray="3 3" />
                           <XAxis dataKey="month" />
                           <YAxis />
-                          <Tooltip />
+                          <Tooltip formatter={(value: number) => `₹${value.toLocaleString()}`} />
                           <Legend />
                           {selectedPerformanceTeam === 'all' && (
                             <>
-                              <Line type="monotone" dataKey="arunTeam" name="Arun's Team" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
-                              <Line type="monotone" dataKey="anushaTeam" name="Anusha's Team" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444' }} />
+                              {monthlyPerformanceData?.teams?.map((team, index) => {
+                                const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6'];
+                                return (
+                                  <Line 
+                                    key={team} 
+                                    type="monotone" 
+                                    dataKey={team} 
+                                    name={team.replace(/Team$/, "'s Team")} 
+                                    stroke={colors[index % colors.length]} 
+                                    strokeWidth={2} 
+                                    dot={{ fill: colors[index % colors.length] }} 
+                                  />
+                                );
+                              }) || (
+                                <>
+                                  <Line type="monotone" dataKey="arunTeam" name="Arun's Team" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
+                                  <Line type="monotone" dataKey="anushaTeam" name="Anusha's Team" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444' }} />
+                                </>
+                              )}
                             </>
                           )}
                           {selectedPerformanceTeam === 'arun' && (
                             <>
-                              <Line type="monotone" dataKey="sudharshan" name="Sudharshan" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
-                              <Line type="monotone" dataKey="deepika" name="Deepika" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981' }} />
-                              <Line type="monotone" dataKey="dharshan" name="Dharshan" stroke="#F59E0B" strokeWidth={2} dot={{ fill: '#F59E0B' }} />
-                              <Line type="monotone" dataKey="kavya" name="Kavya" stroke="#8B5CF6" strokeWidth={2} dot={{ fill: '#8B5CF6' }} />
+                              {monthlyPerformanceData?.members
+                                ?.filter(m => m.teamLeader?.toLowerCase().includes('arun') || m.teamLeader === 'STTL001')
+                                ?.slice(0, 4)
+                                .map((member, index) => {
+                                  const colors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'];
+                                  return (
+                                    <Line 
+                                      key={member.key} 
+                                      type="monotone" 
+                                      dataKey={member.key} 
+                                      name={member.name} 
+                                      stroke={colors[index % colors.length]} 
+                                      strokeWidth={2} 
+                                      dot={{ fill: colors[index % colors.length] }} 
+                                    />
+                                  );
+                                }) || null}
                             </>
                           )}
                           {selectedPerformanceTeam === 'anusha' && (
                             <>
-                              <Line type="monotone" dataKey="sudharshan" name="Sudharshan" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
-                              <Line type="monotone" dataKey="deepika" name="Deepika" stroke="#10B981" strokeWidth={2} dot={{ fill: '#10B981' }} />
-                              <Line type="monotone" dataKey="dharshan" name="Dharshan" stroke="#F59E0B" strokeWidth={2} dot={{ fill: '#F59E0B' }} />
-                              <Line type="monotone" dataKey="kavya" name="Kavya" stroke="#8B5CF6" strokeWidth={2} dot={{ fill: '#8B5CF6' }} />
+                              {monthlyPerformanceData?.members
+                                ?.filter(m => m.teamLeader?.toLowerCase().includes('anusha'))
+                                ?.slice(0, 4)
+                                .map((member, index) => {
+                                  const colors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'];
+                                  return (
+                                    <Line 
+                                      key={member.key} 
+                                      type="monotone" 
+                                      dataKey={member.key} 
+                                      name={member.name} 
+                                      stroke={colors[index % colors.length]} 
+                                      strokeWidth={2} 
+                                      dot={{ fill: colors[index % colors.length] }} 
+                                    />
+                                  );
+                                }) || null}
                             </>
                           )}
                         </LineChart>
@@ -7786,35 +7907,54 @@ export default function AdminDashboard() {
       {/* Performance Data Modal */}
       <Dialog open={isPerformanceDataModalOpen} onOpenChange={setIsPerformanceDataModalOpen}>
         <DialogContent className="max-w-4xl w-[90vw] max-h-[85vh]">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">Performance Data - Quarter ASO-2025</DialogTitle>
+          <DialogHeader className="flex flex-row items-center justify-between gap-2">
+            <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">Performance Data - Quarter {performanceMetrics?.currentQuarter || 'Q1 2024'}</DialogTitle>
+            <Button 
+              variant="destructive" 
+              size="sm"
+              onClick={() => setIsResetPerformanceConfirmOpen(true)}
+              disabled={resetPerformanceDataMutation.isPending}
+              data-testid="button-reset-performance"
+            >
+              {resetPerformanceDataMutation.isPending ? "Resetting..." : "Reset Data"}
+            </Button>
           </DialogHeader>
           <div className="overflow-y-auto pr-2 max-h-[calc(85vh-120px)]">
-            {/* Performance Summary Cards */}
+            {/* Performance Summary Cards - Using API data */}
             <div className="grid grid-cols-2 gap-4 mb-6">
               <Card className="bg-gradient-to-br from-cyan-50 to-blue-50 dark:from-cyan-900/20 dark:to-blue-900/20 border-cyan-200 dark:border-cyan-800">
                 <CardContent className="p-4">
                   <div className="text-sm text-gray-600 dark:text-gray-400">Minimum Target</div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">₹27,00,000</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-min-target">
+                    ₹{(performanceMetrics?.minimumTarget ?? 0).toLocaleString('en-IN')}
+                  </div>
                 </CardContent>
               </Card>
               <Card className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800">
                 <CardContent className="p-4">
                   <div className="text-sm text-gray-600 dark:text-gray-400">Target Achieved</div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">₹21,00,000</div>
-                  <div className="text-sm text-green-600 dark:text-green-400 font-medium">77.78% Performance</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-achieved-target">
+                    ₹{(performanceMetrics?.targetAchieved ?? 0).toLocaleString('en-IN')}
+                  </div>
+                  <div className="text-sm text-green-600 dark:text-green-400 font-medium">
+                    {performanceMetrics?.performancePercentage ?? 0}% Performance
+                  </div>
                 </CardContent>
               </Card>
               <Card className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-200 dark:border-purple-800">
                 <CardContent className="p-4">
                   <div className="text-sm text-gray-600 dark:text-gray-400">Total Closures</div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">8</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-total-closures">
+                    {performanceMetrics?.closuresCount ?? 0}
+                  </div>
                 </CardContent>
               </Card>
               <Card className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border-amber-200 dark:border-amber-800">
                 <CardContent className="p-4">
                   <div className="text-sm text-gray-600 dark:text-gray-400">Total Incentives</div>
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">₹65,000</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-total-incentives">
+                    ₹{(performanceMetrics?.incentiveEarned ?? 0).toLocaleString('en-IN')}
+                  </div>
                 </CardContent>
               </Card>
             </div>
@@ -7876,6 +8016,56 @@ export default function AdminDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Reset Performance Data Confirmation Dialog */}
+      <AlertDialog open={isResetPerformanceConfirmOpen} onOpenChange={setIsResetPerformanceConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset Performance Data</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reset all performance data? This will permanently delete all target mappings, revenue mappings, and related data. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-reset-performance">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                resetPerformanceDataMutation.mutate();
+                setIsResetPerformanceConfirmOpen(false);
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+              data-testid="button-confirm-reset-performance"
+            >
+              Reset Performance Data
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reset Master Data Confirmation Dialog */}
+      <AlertDialog open={isResetMasterDataConfirmOpen} onOpenChange={setIsResetMasterDataConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset Master Data</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to reset all master data? This will permanently delete all resume/candidate records and deliveries. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-reset-master">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                resetMasterDataMutation.mutate();
+                setIsResetMasterDataConfirmOpen(false);
+              }}
+              className="bg-red-600 hover:bg-red-700 text-white"
+              data-testid="button-confirm-reset-master"
+            >
+              Reset Master Data
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Download Confirmation Dialog */}
       <AlertDialog open={showDownloadConfirm} onOpenChange={setShowDownloadConfirm}>

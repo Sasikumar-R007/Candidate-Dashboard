@@ -3451,6 +3451,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Monthly Performance Chart Data - Returns monthly revenue/closures by team or members
+  app.get("/api/admin/monthly-performance", async (req, res) => {
+    try {
+      const { team } = req.query; // 'all', 'arun', 'anusha', or team lead ID
+      const { employees, revenueMappings, targetMappings } = await import("@shared/schema");
+      
+      // Get all team leaders and members
+      const allEmployees = await db.select().from(employees);
+      const teamLeaders = allEmployees.filter(emp => emp.role === 'team_leader' && emp.isActive === true);
+      const recruiters = allEmployees.filter(emp => emp.role === 'recruiter' && emp.isActive === true);
+      
+      // Get revenue mappings for closures/revenue data
+      const allRevenueMappings = await db.select().from(revenueMappings);
+      
+      // Generate last 6 months
+      const months = [];
+      const now = new Date();
+      for (let i = 5; i >= 0; i--) {
+        const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push({
+          name: date.toLocaleString('default', { month: 'short' }),
+          monthNum: date.getMonth() + 1,
+          year: date.getFullYear()
+        });
+      }
+      
+      // Calculate monthly data
+      const monthlyData = months.map(month => {
+        const monthRevenueMappings = allRevenueMappings.filter(rm => {
+          if (!rm.closureDate) return false;
+          const closureDate = new Date(rm.closureDate);
+          return closureDate.getMonth() + 1 === month.monthNum && closureDate.getFullYear() === month.year;
+        });
+        
+        // Group by team leader
+        const teamData: Record<string, number> = {};
+        const memberData: Record<string, number> = {};
+        
+        teamLeaders.forEach(tl => {
+          // Get recruiters reporting to this TL
+          const teamRecruiters = recruiters.filter(r => r.reportingTo === tl.employeeId || r.reportingTo === tl.name);
+          const teamMemberIds = [tl.id, ...teamRecruiters.map(r => r.id)];
+          const teamMemberNames = [tl.name.toLowerCase(), ...teamRecruiters.map(r => r.name.toLowerCase())];
+          
+          // Calculate team revenue
+          const teamRevenue = monthRevenueMappings
+            .filter(rm => teamMemberIds.includes(rm.talentAdvisorId) || teamMemberNames.includes(rm.talentAdvisorName.toLowerCase()))
+            .reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+          
+          const tlName = tl.name.toLowerCase().includes('arun') ? 'arunTeam' : 
+                        tl.name.toLowerCase().includes('anusha') ? 'anushaTeam' : 
+                        `${tl.name.replace(/\s+/g, '')}Team`;
+          teamData[tlName] = teamRevenue;
+          
+          // Calculate individual member revenue for team detail view
+          teamRecruiters.forEach(recruiter => {
+            const memberRevenue = monthRevenueMappings
+              .filter(rm => rm.talentAdvisorId === recruiter.id || rm.talentAdvisorName.toLowerCase() === recruiter.name.toLowerCase())
+              .reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+            memberData[recruiter.name.toLowerCase().replace(/\s+/g, '')] = memberRevenue;
+          });
+        });
+        
+        return {
+          month: month.name,
+          ...teamData,
+          ...memberData
+        };
+      });
+      
+      // Get unique team and member keys
+      const teamKeys = [...new Set(teamLeaders.map(tl => 
+        tl.name.toLowerCase().includes('arun') ? 'arunTeam' : 
+        tl.name.toLowerCase().includes('anusha') ? 'anushaTeam' : 
+        `${tl.name.replace(/\s+/g, '')}Team`
+      ))];
+      
+      const memberNames = recruiters.map(r => ({
+        key: r.name.toLowerCase().replace(/\s+/g, ''),
+        name: r.name,
+        teamLeader: r.reportingTo
+      }));
+      
+      res.json({
+        data: monthlyData,
+        teams: teamKeys,
+        members: memberNames
+      });
+    } catch (error) {
+      console.error("Monthly performance error:", error);
+      res.status(500).json({ message: "Failed to get monthly performance data" });
+    }
+  });
+
+  // Reset Performance Data - Clears target and revenue mappings
+  app.delete("/api/admin/reset-performance-data", async (req, res) => {
+    try {
+      const { targetMappings, revenueMappings } = await import("@shared/schema");
+      
+      // Clear all target mappings
+      await db.delete(targetMappings);
+      
+      // Clear all revenue mappings  
+      await db.delete(revenueMappings);
+      
+      res.json({ 
+        message: "Performance data reset successfully. All target and revenue mappings have been cleared.",
+        success: true
+      });
+    } catch (error) {
+      console.error("Reset performance data error:", error);
+      res.status(500).json({ message: "Failed to reset performance data" });
+    }
+  });
+
+  // Reset Master Data - Clears resumes/candidates and related data
+  app.delete("/api/admin/reset-master-data", async (req, res) => {
+    try {
+      const { candidates, deliveries } = await import("@shared/schema");
+      
+      // Clear all deliveries first (depends on candidates)
+      await db.delete(deliveries);
+      
+      // Clear all candidates/resumes
+      await db.delete(candidates);
+      
+      res.json({ 
+        message: "Master data reset successfully. All resumes and candidates have been cleared.",
+        success: true
+      });
+    } catch (error) {
+      console.error("Reset master data error:", error);
+      res.status(500).json({ message: "Failed to reset master data" });
+    }
+  });
+
   // Get all team members list (recruiters and TAs) for dropdown selection
   app.get("/api/admin/team-members-list", async (req, res) => {
     try {
