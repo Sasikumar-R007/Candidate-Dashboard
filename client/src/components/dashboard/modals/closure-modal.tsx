@@ -1,31 +1,31 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 interface ClosureModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const closureData = [
-  { candidate: "David Wilson", position: "Frontend Developer", client: "TechCorp", quarter: "MJJ, 2025", talentAdvisor: "Kavitha", ctc: "15,00,000", revenue: "1,12,455" },
-  { candidate: "Tom Anderson", position: "UI/UX Designer", client: "Designify", quarter: "ASO, 2025", talentAdvisor: "Rajesh", ctc: "25,00,000", revenue: "1,87,425" },
-  { candidate: "Robert Kim", position: "Backend Developer", client: "CodeLabs", quarter: "MJJ, 2025", talentAdvisor: "Sowmiya", ctc: "18,00,000", revenue: "1,34,948" },
-  { candidate: "Kevin Brown", position: "QA Tester", client: "AppLogic", quarter: "FMA, 2025", talentAdvisor: "Kalaiselvi", ctc: "30,00,000", revenue: "2,24,910" },
-  { candidate: "Sarah Johnson", position: "DevOps Engineer", client: "CloudTech", quarter: "ASO, 2025", talentAdvisor: "Priya", ctc: "22,00,000", revenue: "1,65,000" },
-  { candidate: "Michael Davis", position: "Full Stack Developer", client: "WebSolutions", quarter: "MJJ, 2025", talentAdvisor: "Arjun", ctc: "20,00,000", revenue: "1,50,000" },
-  { candidate: "Emily Chen", position: "Data Scientist", client: "DataCorp", quarter: "FMA, 2025", talentAdvisor: "Meera", ctc: "35,00,000", revenue: "2,62,500" },
-  { candidate: "James Wilson", position: "Product Manager", client: "InnovateLabs", quarter: "ASO, 2025", talentAdvisor: "Nisha", ctc: "28,00,000", revenue: "2,10,000" },
-  { candidate: "Lisa Martinez", position: "Mobile Developer", client: "AppMakers", quarter: "MJJ, 2025", talentAdvisor: "Kavitha", ctc: "19,00,000", revenue: "1,42,500" },
-  { candidate: "Alex Thompson", position: "System Administrator", client: "TechServe", quarter: "FMA, 2025", talentAdvisor: "Rajesh", ctc: "16,00,000", revenue: "1,20,000" },
-  { candidate: "Jennifer Garcia", position: "Business Analyst", client: "AnalyticsPro", quarter: "ASO, 2025", talentAdvisor: "Sowmiya", ctc: "24,00,000", revenue: "1,80,000" },
-  { candidate: "Daniel Rodriguez", position: "Security Engineer", client: "SecureNet", quarter: "MJJ, 2025", talentAdvisor: "Kalaiselvi", ctc: "32,00,000", revenue: "2,40,000" }
-];
+interface ClosureData {
+  id: string;
+  candidate: string;
+  position: string;
+  client: string;
+  quarter: string;
+  talentAdvisor: string;
+  ctc: string;
+  revenue: string;
+}
 
 export default function ClosureModal({ isOpen, onClose }: ClosureModalProps) {
   const [searchTerm, setSearchTerm] = useState("");
+
+  const { data: closureData = [], isLoading } = useQuery<ClosureData[]>({
+    queryKey: ['/api/admin/closures-list'],
+  });
 
   const filteredData = useMemo(() => {
     if (!searchTerm) return closureData;
@@ -50,7 +50,7 @@ export default function ClosureModal({ isOpen, onClose }: ClosureModalProps) {
         revenue.includes(lowerSearchTerm)
       );
     });
-  }, [searchTerm]);
+  }, [searchTerm, closureData]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -89,9 +89,15 @@ export default function ClosureModal({ isOpen, onClose }: ClosureModalProps) {
                 </tr>
               </thead>
               <tbody>
-                {filteredData.length > 0 ? (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                      Loading closures data...
+                    </td>
+                  </tr>
+                ) : filteredData.length > 0 ? (
                   filteredData.map((closure, index) => (
-                    <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
+                    <tr key={closure.id || index} className="border-b border-gray-100 dark:border-gray-800">
                       <td className="py-2 px-3 text-xs text-gray-900 dark:text-white font-medium">{closure.candidate}</td>
                       <td className="py-2 px-3 text-xs text-gray-600 dark:text-gray-400">{closure.position}</td>
                       <td className="py-2 px-3 text-xs text-gray-600 dark:text-gray-400">{closure.client}</td>
@@ -101,6 +107,12 @@ export default function ClosureModal({ isOpen, onClose }: ClosureModalProps) {
                       <td className="py-2 px-3 text-xs text-gray-600 dark:text-gray-400">{closure.revenue}</td>
                     </tr>
                   ))
+                ) : closureData.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                      No closures data available
+                    </td>
+                  </tr>
                 ) : (
                   <tr>
                     <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">

@@ -1,29 +1,30 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 interface TeamPerformanceTableModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-const teamPerformanceData = [
-  { talentAdvisor: "David Wilson", joiningDate: "23-04-2023", tenure: "2 yrs,3 months", closures: 4, lastClosure: "23-04-2023", qtrsAchieved: 3 },
-  { talentAdvisor: "Tom Anderson", joiningDate: "28-04-2023", tenure: "2 yrs,3 months", closures: 8, lastClosure: "29-04-2023", qtrsAchieved: 6 },
-  { talentAdvisor: "Robert Kim", joiningDate: "04-05-2023", tenure: "2 yrs,2 months", closures: 9, lastClosure: "02-05-2023", qtrsAchieved: 11 },
-  { talentAdvisor: "Kevin Brown", joiningDate: "12-05-2023", tenure: "2 yrs,2 months", closures: 13, lastClosure: "18-05-2023", qtrsAchieved: 5 },
-  { talentAdvisor: "Sarah Johnson", joiningDate: "15-06-2023", tenure: "2 yrs,1 month", closures: 7, lastClosure: "10-07-2023", qtrsAchieved: 4 },
-  { talentAdvisor: "Michael Davis", joiningDate: "20-06-2023", tenure: "2 yrs,1 month", closures: 12, lastClosure: "15-08-2023", qtrsAchieved: 8 },
-  { talentAdvisor: "Emily Chen", joiningDate: "05-07-2023", tenure: "2 yrs", closures: 6, lastClosure: "22-08-2023", qtrsAchieved: 3 },
-  { talentAdvisor: "James Wilson", joiningDate: "10-08-2023", tenure: "1 yr,11 months", closures: 10, lastClosure: "30-08-2023", qtrsAchieved: 7 },
-  { talentAdvisor: "Lisa Martinez", joiningDate: "25-08-2023", tenure: "1 yr,10 months", closures: 5, lastClosure: "12-09-2023", qtrsAchieved: 2 },
-  { talentAdvisor: "Alex Thompson", joiningDate: "15-09-2023", tenure: "1 yr,9 months", closures: 11, lastClosure: "28-09-2023", qtrsAchieved: 9 }
-];
+interface TeamPerformanceData {
+  id: string;
+  talentAdvisor: string;
+  joiningDate: string;
+  tenure: string;
+  closures: number;
+  lastClosure: string;
+  qtrsAchieved: number;
+}
 
 export default function TeamPerformanceTableModal({ isOpen, onClose }: TeamPerformanceTableModalProps) {
   const [searchTerm, setSearchTerm] = useState("");
+
+  const { data: teamPerformanceData = [], isLoading } = useQuery<TeamPerformanceData[]>({
+    queryKey: ['/api/admin/team-performance'],
+  });
 
   const filteredData = useMemo(() => {
     if (!searchTerm) return teamPerformanceData;
@@ -46,7 +47,7 @@ export default function TeamPerformanceTableModal({ isOpen, onClose }: TeamPerfo
         qtrsAchieved.includes(lowerSearchTerm)
       );
     });
-  }, [searchTerm]);
+  }, [searchTerm, teamPerformanceData]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -84,9 +85,15 @@ export default function TeamPerformanceTableModal({ isOpen, onClose }: TeamPerfo
                 </tr>
               </thead>
               <tbody>
-                {filteredData.length > 0 ? (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                      Loading team performance data...
+                    </td>
+                  </tr>
+                ) : filteredData.length > 0 ? (
                   filteredData.map((member, index) => (
-                    <tr key={index} className="border-b border-gray-100 dark:border-gray-700">
+                    <tr key={member.id || index} className="border-b border-gray-100 dark:border-gray-700">
                       <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium">{member.talentAdvisor}</td>
                       <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{member.joiningDate}</td>
                       <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{member.tenure}</td>
@@ -95,6 +102,12 @@ export default function TeamPerformanceTableModal({ isOpen, onClose }: TeamPerfo
                       <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400">{member.qtrsAchieved}</td>
                     </tr>
                   ))
+                ) : teamPerformanceData.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                      No team performance data available
+                    </td>
+                  </tr>
                 ) : (
                   <tr>
                     <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">

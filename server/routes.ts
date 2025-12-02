@@ -3109,6 +3109,369 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===================== PERFORMANCE PAGE API ENDPOINTS =====================
+
+  // Performance Graph Data - Returns resume delivery counts by team member
+  app.get("/api/admin/performance-graph", async (req, res) => {
+    try {
+      const { teamId, dateFrom, dateTo, period } = req.query;
+      const { employees, deliveries, requirements } = await import("@shared/schema");
+      
+      // Get all recruiters/talent advisors
+      const allEmployees = await db.select().from(employees);
+      const recruiters = allEmployees.filter(emp => 
+        (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.isActive === true
+      );
+      
+      // Get all deliveries
+      const allDeliveries = await db.select().from(deliveries);
+      
+      // Filter by date range if provided
+      let filteredDeliveries = allDeliveries;
+      if (dateFrom || dateTo) {
+        filteredDeliveries = allDeliveries.filter(delivery => {
+          const deliveryDate = new Date(delivery.deliveredAt);
+          if (dateFrom && new Date(dateFrom as string) > deliveryDate) return false;
+          if (dateTo && new Date(dateTo as string) < deliveryDate) return false;
+          return true;
+        });
+      }
+      
+      // Calculate resume counts per recruiter (delivered vs required based on requirements)
+      const allRequirements = await db.select().from(requirements);
+      
+      const performanceData = recruiters.slice(0, 10).map((recruiter, index) => {
+        // Count deliveries by this recruiter
+        const recruiterDeliveries = filteredDeliveries.filter(d => 
+          d.recruiterName.toLowerCase() === recruiter.name.toLowerCase()
+        );
+        
+        // Count requirements assigned to this recruiter/TA
+        const assignedRequirements = allRequirements.filter(req => 
+          req.talentAdvisor?.toLowerCase() === recruiter.name.toLowerCase()
+        );
+        
+        // Calculate expected resumes based on criticality
+        let expectedResumes = 0;
+        assignedRequirements.forEach(req => {
+          if (req.criticality === 'HIGH') expectedResumes += 1;
+          else if (req.criticality === 'MEDIUM') expectedResumes += 3;
+          else expectedResumes += 5;
+        });
+        
+        return {
+          memberIndex: index + 1,
+          member: recruiter.name,
+          resumesA: recruiterDeliveries.length, // Delivered
+          resumesB: expectedResumes // Required
+        };
+      });
+      
+      res.json(performanceData);
+    } catch (error) {
+      console.error("Performance graph error:", error);
+      res.status(500).json({ message: "Failed to get performance graph data" });
+    }
+  });
+
+  // Default Rate (Individual) - Returns completion stats by criticality for a specific member
+  app.get("/api/admin/default-rate/:memberId", async (req, res) => {
+    try {
+      const { memberId } = req.params;
+      const { dateFrom, dateTo } = req.query;
+      const { employees, requirements } = await import("@shared/schema");
+      
+      // Get the member
+      const allEmployees = await db.select().from(employees);
+      const member = allEmployees.find(emp => emp.id === memberId || emp.name === memberId);
+      
+      if (!member) {
+        return res.json({
+          memberName: memberId,
+          stats: {}
+        });
+      }
+      
+      // Get requirements assigned to this member
+      const allRequirements = await db.select().from(requirements);
+      let memberRequirements = allRequirements.filter(req => 
+        req.talentAdvisor?.toLowerCase() === member.name.toLowerCase() ||
+        req.talentAdvisorId === member.id
+      );
+      
+      // Filter by date if provided
+      if (dateFrom || dateTo) {
+        memberRequirements = memberRequirements.filter(req => {
+          const reqDate = new Date(req.createdAt);
+          if (dateFrom && new Date(dateFrom as string) > reqDate) return false;
+          if (dateTo && new Date(dateTo as string) < reqDate) return false;
+          return true;
+        });
+      }
+      
+      // Group by criticality and toughness combination
+      const criticalityMap: Record<string, { total: number, completed: number }> = {
+        'HT': { total: 0, completed: 0 }, // High criticality, Tough
+        'HM': { total: 0, completed: 0 }, // High criticality, Medium
+        'MM': { total: 0, completed: 0 }, // Medium criticality, Medium
+        'ME': { total: 0, completed: 0 }  // Medium/Low criticality, Easy
+      };
+      
+      memberRequirements.forEach(req => {
+        let key = '';
+        if (req.criticality === 'HIGH' && req.toughness === 'Tough') key = 'HT';
+        else if (req.criticality === 'HIGH') key = 'HM';
+        else if (req.criticality === 'MEDIUM' && req.toughness !== 'Easy') key = 'MM';
+        else key = 'ME';
+        
+        if (criticalityMap[key]) {
+          criticalityMap[key].total++;
+          if (req.status === 'completed') {
+            criticalityMap[key].completed++;
+          }
+        }
+      });
+      
+      res.json({
+        memberName: member.name,
+        stats: criticalityMap
+      });
+    } catch (error) {
+      console.error("Default rate error:", error);
+      res.status(500).json({ message: "Failed to get default rate data" });
+    }
+  });
+
+  // Team Performance Data - Returns team member performance metrics
+  app.get("/api/admin/team-performance", async (req, res) => {
+    try {
+      const { employees, targetMappings, revenueMappings } = await import("@shared/schema");
+      
+      // Get all active recruiters/team members
+      const allEmployees = await db.select().from(employees);
+      const teamMembers = allEmployees.filter(emp => 
+        (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.isActive === true
+      );
+      
+      // Get all target mappings
+      const allTargetMappings = await db.select().from(targetMappings);
+      
+      // Get all revenue mappings for closures
+      const allRevenueMappings = await db.select().from(revenueMappings);
+      
+      // Build team performance data
+      const performanceData = teamMembers.map(member => {
+        // Get target mappings for this member
+        const memberTargets = allTargetMappings.filter(tm => 
+          tm.teamMemberId === member.id
+        );
+        
+        // Get closures for this member
+        const memberClosures = allRevenueMappings.filter(rm => 
+          rm.talentAdvisorId === member.id || 
+          rm.talentAdvisorName.toLowerCase() === member.name.toLowerCase()
+        );
+        
+        // Calculate tenure
+        let tenure = "N/A";
+        if (member.joiningDate) {
+          const joinDate = new Date(member.joiningDate);
+          const now = new Date();
+          const years = Math.floor((now.getTime() - joinDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+          const months = Math.floor(((now.getTime() - joinDate.getTime()) % (365.25 * 24 * 60 * 60 * 1000)) / (30.44 * 24 * 60 * 60 * 1000));
+          if (years > 0) {
+            tenure = `${years} yr${years > 1 ? 's' : ''},${months} month${months !== 1 ? 's' : ''}`;
+          } else {
+            tenure = `${months} month${months !== 1 ? 's' : ''}`;
+          }
+        }
+        
+        // Get last closure date
+        let lastClosure = "N/A";
+        if (memberClosures.length > 0) {
+          const lastClosureRecord = memberClosures.sort((a, b) => {
+            const dateA = a.closureDate ? new Date(a.closureDate).getTime() : 0;
+            const dateB = b.closureDate ? new Date(b.closureDate).getTime() : 0;
+            return dateB - dateA;
+          })[0];
+          if (lastClosureRecord.closureDate) {
+            lastClosure = lastClosureRecord.closureDate;
+          }
+        }
+        
+        // Count quarters achieved (where target was met)
+        const quartersAchieved = memberTargets.filter(tm => 
+          (tm.targetAchieved ?? 0) >= tm.minimumTarget
+        ).length;
+        
+        return {
+          id: member.id,
+          talentAdvisor: member.name,
+          joiningDate: member.joiningDate || "N/A",
+          tenure,
+          closures: memberClosures.length,
+          lastClosure,
+          qtrsAchieved: quartersAchieved
+        };
+      });
+      
+      res.json(performanceData);
+    } catch (error) {
+      console.error("Team performance error:", error);
+      res.status(500).json({ message: "Failed to get team performance data" });
+    }
+  });
+
+  // Closures List Data - Returns detailed closure information
+  app.get("/api/admin/closures-list", async (req, res) => {
+    try {
+      const { revenueMappings } = await import("@shared/schema");
+      
+      // Get all revenue mappings (closures)
+      const allRevenueMappings = await db.select().from(revenueMappings);
+      
+      // Transform to closure list format
+      const closuresList = allRevenueMappings.map(rm => ({
+        id: rm.id,
+        candidate: rm.candidateName || "N/A",
+        position: rm.position,
+        client: rm.clientName,
+        quarter: `${rm.quarter}, ${rm.year}`,
+        talentAdvisor: rm.talentAdvisorName,
+        ctc: rm.revenue ? (rm.revenue / (rm.percentage / 100)).toLocaleString('en-IN') : "N/A",
+        revenue: rm.revenue ? rm.revenue.toLocaleString('en-IN') : "0"
+      }));
+      
+      res.json(closuresList);
+    } catch (error) {
+      console.error("Closures list error:", error);
+      res.status(500).json({ message: "Failed to get closures list" });
+    }
+  });
+
+  // Revenue Analysis Data - Returns revenue by team member for chart
+  app.get("/api/admin/revenue-analysis", async (req, res) => {
+    try {
+      const { employees, revenueMappings } = await import("@shared/schema");
+      
+      // Get all active recruiters
+      const allEmployees = await db.select().from(employees);
+      const recruiters = allEmployees.filter(emp => 
+        (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.isActive === true
+      );
+      
+      // Get all revenue mappings
+      const allRevenueMappings = await db.select().from(revenueMappings);
+      
+      // Calculate total revenue per member
+      const revenueData = recruiters.slice(0, 10).map(member => {
+        const memberRevenue = allRevenueMappings
+          .filter(rm => 
+            rm.talentAdvisorId === member.id || 
+            rm.talentAdvisorName.toLowerCase() === member.name.toLowerCase()
+          )
+          .reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+        
+        return {
+          member: member.name,
+          revenue: memberRevenue
+        };
+      });
+      
+      // Calculate average for benchmark
+      const totalRevenue = revenueData.reduce((sum, d) => sum + d.revenue, 0);
+      const avgRevenue = revenueData.length > 0 ? totalRevenue / revenueData.length : 0;
+      
+      res.json({
+        data: revenueData,
+        benchmark: avgRevenue
+      });
+    } catch (error) {
+      console.error("Revenue analysis error:", error);
+      res.status(500).json({ message: "Failed to get revenue analysis data" });
+    }
+  });
+
+  // Performance Metrics - Returns current quarter targets and achievements
+  app.get("/api/admin/performance-metrics", async (req, res) => {
+    try {
+      const { targetMappings, revenueMappings } = await import("@shared/schema");
+      
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentMonth = now.getMonth() + 1;
+      
+      // Determine current quarter
+      let currentQuarter = "Q1";
+      if (currentMonth >= 1 && currentMonth <= 3) currentQuarter = "Q1";
+      else if (currentMonth >= 4 && currentMonth <= 6) currentQuarter = "Q2";
+      else if (currentMonth >= 7 && currentMonth <= 9) currentQuarter = "Q3";
+      else currentQuarter = "Q4";
+      
+      // Get target mappings for current quarter
+      const allTargetMappings = await db.select().from(targetMappings);
+      const currentQuarterTargets = allTargetMappings.filter(tm => 
+        tm.quarter === currentQuarter && tm.year === currentYear
+      );
+      
+      // Calculate totals
+      const totalMinTarget = currentQuarterTargets.reduce((sum, tm) => sum + tm.minimumTarget, 0);
+      const totalAchieved = currentQuarterTargets.reduce((sum, tm) => sum + (tm.targetAchieved ?? 0), 0);
+      const totalIncentives = currentQuarterTargets.reduce((sum, tm) => sum + (tm.incentives ?? 0), 0);
+      
+      // Get current quarter revenue from revenue mappings
+      const allRevenueMappings = await db.select().from(revenueMappings);
+      const currentQuarterClosures = allRevenueMappings.filter(rm => {
+        // Map quarter codes: JFM=Q1, AMJ=Q2, JAS=Q3, OND=Q4
+        const quarterMap: Record<string, string> = {
+          'JFM': 'Q1', 'AMJ': 'Q2', 'JAS': 'Q3', 'OND': 'Q4',
+          'Q1': 'Q1', 'Q2': 'Q2', 'Q3': 'Q3', 'Q4': 'Q4'
+        };
+        return quarterMap[rm.quarter] === currentQuarter && rm.year === currentYear;
+      });
+      
+      const totalRevenue = currentQuarterClosures.reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+      const closuresCount = currentQuarterClosures.length;
+      
+      // Calculate performance percentage for gauge
+      const performancePercentage = totalMinTarget > 0 ? Math.min((totalAchieved / totalMinTarget) * 100, 100) : 0;
+      
+      res.json({
+        currentQuarter: `${currentQuarter} ${currentYear}`,
+        minimumTarget: totalMinTarget,
+        targetAchieved: totalAchieved,
+        incentiveEarned: totalIncentives,
+        totalRevenue,
+        closuresCount,
+        performancePercentage: Math.round(performancePercentage)
+      });
+    } catch (error) {
+      console.error("Performance metrics error:", error);
+      res.status(500).json({ message: "Failed to get performance metrics" });
+    }
+  });
+
+  // Get all team members list (recruiters and TAs) for dropdown selection
+  app.get("/api/admin/team-members-list", async (req, res) => {
+    try {
+      const { employees } = await import("@shared/schema");
+      
+      const allEmployees = await db.select().from(employees);
+      const teamMembers = allEmployees
+        .filter(emp => (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.isActive === true)
+        .map(emp => ({
+          id: emp.id,
+          name: emp.name,
+          role: emp.role
+        }));
+      
+      res.json(teamMembers);
+    } catch (error) {
+      console.error("Team members list error:", error);
+      res.status(500).json({ message: "Failed to get team members list" });
+    }
+  });
+
   // ===================== RECRUITER JOBS ROUTES =====================
 
   // Create a new recruiter job posting

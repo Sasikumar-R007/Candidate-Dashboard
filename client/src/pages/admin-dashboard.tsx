@@ -1382,25 +1382,77 @@ export default function AdminDashboard() {
     rentPaid: masterDataTotals?.rentPaid ?? 0
   }), [masterDataTotals]);
 
-  // Performance chart data (memoized for reusability)
-  const performanceData = useMemo(() => [
-    { member: 'Arun', requirements: 12 },
-    { member: 'Anusha', requirements: 8 },
-    { member: 'Rajesh', requirements: 14 },
-    { member: 'Priya', requirements: 9 },
-    { member: 'Kiran', requirements: 11 },
-    { member: 'Deepa', requirements: 7 }
-  ], []);
+  // Fetch performance metrics from API
+  const { data: performanceMetrics = {
+    currentQuarter: "Q4 2025",
+    minimumTarget: 0,
+    targetAchieved: 0,
+    incentiveEarned: 0,
+    totalRevenue: 0,
+    closuresCount: 0,
+    performancePercentage: 0
+  } } = useQuery<{
+    currentQuarter: string;
+    minimumTarget: number;
+    targetAchieved: number;
+    incentiveEarned: number;
+    totalRevenue: number;
+    closuresCount: number;
+    performancePercentage: number;
+  }>({
+    queryKey: ['/api/admin/performance-metrics'],
+  });
 
-  // Revenue chart data (memoized for reusability)
-  const revenueData = useMemo(() => [
-    { member: 'Arun', revenue: 250000 },
-    { member: 'Anusha', revenue: 180000 },
-    { member: 'Rajesh', revenue: 320000 },
-    { member: 'Priya', revenue: 210000 },
-    { member: 'Kiran', revenue: 270000 },
-    { member: 'Deepa', revenue: 150000 }
-  ], []);
+  // Fetch team performance data from API
+  const { data: teamPerformanceData = [], isLoading: isLoadingTeamPerformance } = useQuery<Array<{
+    id: string;
+    talentAdvisor: string;
+    joiningDate: string;
+    tenure: string;
+    closures: number;
+    lastClosure: string;
+    qtrsAchieved: number;
+  }>>({
+    queryKey: ['/api/admin/team-performance'],
+  });
+
+  // Fetch closures list from API
+  const { data: closuresListData = [], isLoading: isLoadingClosures } = useQuery<Array<{
+    id: string;
+    candidate: string;
+    position: string;
+    client: string;
+    quarter: string;
+    talentAdvisor: string;
+    ctc: string;
+    revenue: string;
+  }>>({
+    queryKey: ['/api/admin/closures-list'],
+  });
+
+  // Fetch revenue analysis data from API
+  const { data: revenueAnalysis } = useQuery<{
+    data: Array<{ member: string; revenue: number }>;
+    benchmark: number;
+  }>({
+    queryKey: ['/api/admin/revenue-analysis'],
+  });
+
+  // Performance chart data - uses backend data or empty array
+  const performanceData = useMemo(() => {
+    return teamPerformanceData.slice(0, 6).map((member) => ({
+      member: member.talentAdvisor,
+      requirements: member.closures
+    }));
+  }, [teamPerformanceData]);
+
+  // Revenue chart data - uses backend data or defaults
+  const revenueData = useMemo(() => {
+    return revenueAnalysis?.data ?? [
+      { member: 'Member 1', revenue: 0 },
+      { member: 'Member 2', revenue: 0 }
+    ];
+  }, [revenueAnalysis]);
 
   // Archive requirement mutation
   const archiveRequirementMutation = useMutation({
@@ -3338,7 +3390,7 @@ export default function AdminDashboard() {
                   {/* Performance Gauge */}
                   <div className="xl:col-span-3 flex flex-col items-center justify-center">
                     <div className="w-full max-w-sm mx-auto">
-                      <PerformanceGauge value={77.78} />
+                      <PerformanceGauge value={performanceMetrics.performancePercentage} />
                     </div>
                     
                     <Button 
@@ -3377,38 +3429,30 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        <tr className="border-b border-gray-100 dark:border-gray-700">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">David Wilson</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">23-04-2023</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2 yrs,3 months</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">4</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">23-04-2023</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">3</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-700">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Tom Anderson</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">28-04-2023</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2 yrs,3 months</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">8</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">29-04-2023</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">6</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-700">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Robert Kim</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">04-05-2023</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2 yrs,2 months</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">9</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">02-05-2023</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">11</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-700">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Kevin Brown</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">12-05-2023</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2 yrs,2 months</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">13</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">18-05-2023</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">5</td>
-                        </tr>
+                        {isLoadingTeamPerformance ? (
+                          <tr>
+                            <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                              Loading team performance data...
+                            </td>
+                          </tr>
+                        ) : teamPerformanceData.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                              No team performance data available
+                            </td>
+                          </tr>
+                        ) : (
+                          teamPerformanceData.slice(0, 4).map((member, index) => (
+                            <tr key={member.id || index} className="border-b border-gray-100 dark:border-gray-700">
+                              <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{member.talentAdvisor}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{member.joiningDate}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{member.tenure}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{member.closures}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{member.lastClosure}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{member.qtrsAchieved}</td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -3442,42 +3486,31 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody>
-                        <tr className="border-b border-gray-100 dark:border-gray-700">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">David Wilson</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Frontend Developer</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">TechCorp</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">MJJ, 2025</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Kavitha</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">15,00,000</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">1,12,455</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-700">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Tom Anderson</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">UI/UX Designer</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Designify</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">ASO, 2025</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Rajesh</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,00,000</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">1,87,425</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-700">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Robert Kim</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Backend Developer</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">CodeLabs</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">MJJ, 2025</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Sowmiya</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">18,00,000</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">1,34,948</td>
-                        </tr>
-                        <tr className="border-b border-gray-100 dark:border-gray-700">
-                          <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Kevin Brown</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">QA Tester</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">AppLogic</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">FMA, 2025</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Kalaiselvi</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">30,00,000</td>
-                          <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2,24,910</td>
-                        </tr>
+                        {isLoadingClosures ? (
+                          <tr>
+                            <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                              Loading closures data...
+                            </td>
+                          </tr>
+                        ) : closuresListData.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                              No closures data available
+                            </td>
+                          </tr>
+                        ) : (
+                          closuresListData.slice(0, 4).map((closure, index) => (
+                            <tr key={closure.id || index} className="border-b border-gray-100 dark:border-gray-700">
+                              <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{closure.candidate}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.position}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.client}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.quarter}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.talentAdvisor}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.ctc}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.revenue}</td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -3604,35 +3637,35 @@ export default function AdminDashboard() {
               <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
                 <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">CURRENT</div>
                 <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">QUARTER</div>
-                <div className="text-right text-2xl font-bold mt-2">ASO-2025</div>
+                <div className="text-right text-2xl font-bold mt-2" data-testid="text-current-quarter">{performanceMetrics.currentQuarter}</div>
               </div>
 
               {/* Minimum Target */}
               <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
                 <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">MINIMUM</div>
                 <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">TARGET</div>
-                <div className="text-right text-2xl font-bold mt-2">27,00,000</div>
+                <div className="text-right text-2xl font-bold mt-2" data-testid="text-minimum-target">{performanceMetrics.minimumTarget.toLocaleString('en-IN')}</div>
               </div>
 
               {/* Target Achieved */}
               <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
                 <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">TARGET</div>
                 <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">ACHIEVED</div>
-                <div className="text-right text-2xl font-bold mt-2">21,00,000</div>
+                <div className="text-right text-2xl font-bold mt-2" data-testid="text-target-achieved">{performanceMetrics.targetAchieved.toLocaleString('en-IN')}</div>
               </div>
 
               {/* Closures Made */}
               <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
                 <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">CLOSURES</div>
                 <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">MADE</div>
-                <div className="text-right text-3xl font-bold mt-2">8</div>
+                <div className="text-right text-3xl font-bold mt-2" data-testid="text-closures-count">{performanceMetrics.closuresCount}</div>
               </div>
 
               {/* Incentives Made */}
               <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
                 <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">INCENTIVES</div>
                 <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">MADE</div>
-                <div className="text-right text-2xl font-bold mt-2">65,000</div>
+                <div className="text-right text-2xl font-bold mt-2" data-testid="text-incentives-earned">{performanceMetrics.incentiveEarned.toLocaleString('en-IN')}</div>
               </div>
             </div>
           </div>
@@ -4648,7 +4681,7 @@ export default function AdminDashboard() {
                   {/* Performance Gauge */}
                   <div className="xl:col-span-3 flex flex-col items-center justify-center">
                     <div className="w-full max-w-sm mx-auto">
-                      <PerformanceGauge value={77.78} />
+                      <PerformanceGauge value={performanceMetrics.performancePercentage} />
                     </div>
                     
                     <Button 
@@ -4916,35 +4949,35 @@ export default function AdminDashboard() {
               <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
                 <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">CURRENT</div>
                 <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">QUARTER</div>
-                <div className="text-right text-2xl font-bold mt-2">ASO-2025</div>
+                <div className="text-right text-2xl font-bold mt-2" data-testid="text-current-quarter">{performanceMetrics.currentQuarter}</div>
               </div>
 
               {/* Minimum Target */}
               <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
                 <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">MINIMUM</div>
                 <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">TARGET</div>
-                <div className="text-right text-2xl font-bold mt-2">27,00,000</div>
+                <div className="text-right text-2xl font-bold mt-2" data-testid="text-minimum-target">{performanceMetrics.minimumTarget.toLocaleString('en-IN')}</div>
               </div>
 
               {/* Target Achieved */}
               <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
                 <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">TARGET</div>
                 <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">ACHIEVED</div>
-                <div className="text-right text-2xl font-bold mt-2">21,00,000</div>
+                <div className="text-right text-2xl font-bold mt-2" data-testid="text-target-achieved">{performanceMetrics.targetAchieved.toLocaleString('en-IN')}</div>
               </div>
 
               {/* Closures Made */}
               <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
                 <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">CLOSURES</div>
                 <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">MADE</div>
-                <div className="text-right text-3xl font-bold mt-2">8</div>
+                <div className="text-right text-3xl font-bold mt-2" data-testid="text-closures-count">{performanceMetrics.closuresCount}</div>
               </div>
 
               {/* Incentives Made */}
               <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
                 <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">INCENTIVES</div>
                 <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">MADE</div>
-                <div className="text-right text-2xl font-bold mt-2">65,000</div>
+                <div className="text-right text-2xl font-bold mt-2" data-testid="text-incentives-earned">{performanceMetrics.incentiveEarned.toLocaleString('en-IN')}</div>
               </div>
             </div>
           </div>
