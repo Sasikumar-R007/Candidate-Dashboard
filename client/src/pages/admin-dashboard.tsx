@@ -263,15 +263,7 @@ const taList = allEmployees.filter(emp => emp.role === 'Senior Recruiter' || emp
 
 // Removed sample data for modal - now using real data from API
 
-const initialMessagesData = [
-  { name: "Arun", message: "Discuss ...", date: "12-June", status: "active", timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) },
-  { name: "Anusha", message: "Discuss ...", date: "12-June", status: "active", timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) },
-  { name: "Umar", message: "Discuss ...", date: "10-Aug", status: "pending", timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
-  { name: "Siva", message: "Discuss ...", date: "22-Sep", status: "pending", timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
-  { name: "Priya", message: "Follow up on requirements", date: "01-Oct", status: "active", timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
-  { name: "Rajesh", message: "Candidate shortlist review", date: "30-Sep", status: "active", timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) },
-  { name: "Meera", message: "Interview scheduling", date: "29-Sep", status: "pending", timestamp: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000) }
-];
+const initialMessagesData: Array<{ name: string; message: string; date: string; status: string; timestamp: Date }> = [];
 
 const deliveredData: Array<{ requirement: string; candidate: string; client: string; deliveredDate: string; status: string }> = [];
 
@@ -929,15 +921,7 @@ export default function AdminDashboard() {
   const [isClientMasterModalOpen, setIsClientMasterModalOpen] = useState(false);
   const [isEmployeeMasterModalOpen, setIsEmployeeMasterModalOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [cashoutData, setCashoutData] = useState([
-    { month: 'Jan', year: '2025', employees: 50, salary: 500000, incentive: 25000, tools: 15000, rent: 50000, others: 10000 },
-    { month: 'Feb', year: '2025', employees: 52, salary: 520000, incentive: 28000, tools: 15000, rent: 50000, others: 12000 },
-    { month: 'Mar', year: '2025', employees: 55, salary: 550000, incentive: 32000, tools: 18000, rent: 50000, others: 15000 },
-    { month: 'Apr', year: '2025', employees: 58, salary: 580000, incentive: 35000, tools: 20000, rent: 50000, others: 18000 },
-    { month: 'May', year: '2025', employees: 60, salary: 600000, incentive: 38000, tools: 22000, rent: 50000, others: 20000 },
-    { month: 'Jun', year: '2025', employees: 62, salary: 620000, incentive: 42000, tools: 25000, rent: 50000, others: 22000 },
-    { month: 'Jul', year: '2025', employees: 65, salary: 650000, incentive: 45000, tools: 28000, rent: 50000, others: 25000 },
-  ]);
+  const [cashoutData, setCashoutData] = useState<Array<{ month: string; year: string; employees: number; salary: number; incentive: number; tools: number; rent: number; others: number }>>([]);
   const [cashoutForm, setCashoutForm] = useState({
     month: '', year: '', employees: '', salary: '', incentive: '', tools: '', rent: '', others: ''
   });
@@ -1343,6 +1327,60 @@ export default function AdminDashboard() {
   }, isLoading: isLoadingMetrics } = useQuery({
     queryKey: ['/api/admin/daily-metrics'],
   });
+
+  // Fetch key aspects data from API for metrics chart
+  const { data: keyAspectsApiData } = useQuery<{
+    growthMoM: number;
+    growthYoY: number;
+    burnRate: number;
+    churnRate: number;
+    attrition: number;
+    netProfit: number;
+    revenuePerEmployee: number;
+    clientAcquisitionCost: number;
+    chartData: Array<{ name: string; growthMoM: number; burnRate: number; churnRate: number; attrition: number }>;
+  }>({
+    queryKey: ['/api/admin/key-aspects'],
+  });
+
+  // Key Aspects data with defaults (connected to Key Metrics chart)
+  const keyAspectsData = useMemo(() => ({
+    growthMoM: keyAspectsApiData?.growthMoM ?? 0,
+    growthYoY: keyAspectsApiData?.growthYoY ?? 0,
+    burnRate: keyAspectsApiData?.burnRate ?? 0,
+    churnRate: keyAspectsApiData?.churnRate ?? 0,
+    attrition: keyAspectsApiData?.attrition ?? 0,
+    netProfit: keyAspectsApiData?.netProfit ?? 0,
+    revenuePerEmployee: keyAspectsApiData?.revenuePerEmployee ?? 0,
+    clientAcquisitionCost: keyAspectsApiData?.clientAcquisitionCost ?? 0,
+    chartData: keyAspectsApiData?.chartData ?? []
+  }), [keyAspectsApiData]);
+
+  // Fetch master data totals from API
+  const { data: masterDataTotals } = useQuery<{
+    directUploads: number;
+    recruiterUploads: number;
+    resumes: number;
+    headCount: number;
+    salaryPaid: number;
+    otherExpenses: number;
+    toolsAndDatabases: number;
+    rentPaid: number;
+  }>({
+    queryKey: ['/api/admin/master-data-totals'],
+  });
+
+  // Master Data totals with defaults
+  const masterTotals = useMemo(() => ({
+    directUploads: masterDataTotals?.directUploads ?? 0,
+    recruiterUploads: masterDataTotals?.recruiterUploads ?? 0,
+    resumes: masterDataTotals?.resumes ?? 0,
+    headCount: masterDataTotals?.headCount ?? 0,
+    salaryPaid: masterDataTotals?.salaryPaid ?? 0,
+    otherExpenses: masterDataTotals?.otherExpenses ?? 0,
+    toolsAndDatabases: masterDataTotals?.toolsAndDatabases ?? 0,
+    rentPaid: masterDataTotals?.rentPaid ?? 0
+  }), [masterDataTotals]);
 
   // Performance chart data (memoized for reusability)
   const performanceData = useMemo(() => [
@@ -4396,42 +4434,42 @@ export default function AdminDashboard() {
               <div className="space-y-4">
                 <div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">DIRECT UPLOADS</div>
-                  <div className="text-3xl font-bold text-gray-900 dark:text-white">5,000</div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-direct-uploads">{masterTotals.directUploads.toLocaleString()}</div>
                 </div>
                 
                 <div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">RECRUITER UPLOADS</div>
-                  <div className="text-3xl font-bold text-gray-900 dark:text-white">50,000</div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-recruiter-uploads">{masterTotals.recruiterUploads.toLocaleString()}</div>
                 </div>
                 
                 <div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">RESUMES</div>
-                  <div className="text-3xl font-bold text-gray-900 dark:text-white">55,000</div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-resumes">{masterTotals.resumes.toLocaleString()}</div>
                 </div>
                 
                 <div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">HEAD COUNT</div>
-                  <div className="text-3xl font-bold text-gray-900 dark:text-white">50</div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-head-count">{masterTotals.headCount.toLocaleString()}</div>
                 </div>
                 
                 <div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">SALARY PAID</div>
-                  <div className="text-3xl font-bold text-gray-900 dark:text-white">65,000</div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-salary-paid">{masterTotals.salaryPaid.toLocaleString()}</div>
                 </div>
                 
                 <div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">OTHER EXPENSES</div>
-                  <div className="text-3xl font-bold text-gray-900 dark:text-white">65,000</div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-other-expenses">{masterTotals.otherExpenses.toLocaleString()}</div>
                 </div>
                 
                 <div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">TOOLS & DATABASES</div>
-                  <div className="text-3xl font-bold text-gray-900 dark:text-white">65,000</div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-tools-databases">{masterTotals.toolsAndDatabases.toLocaleString()}</div>
                 </div>
                 
                 <div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">RENT PAID</div>
-                  <div className="text-3xl font-bold text-gray-900 dark:text-white">65,000</div>
+                  <div className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-rent-paid">{masterTotals.rentPaid.toLocaleString()}</div>
                 </div>
               </div>
             </div>
@@ -5372,16 +5410,7 @@ export default function AdminDashboard() {
                       <div className="h-48 sm:h-64 mb-4">
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart
-                            data={[
-                              { name: 'Jan', growthMoM: 12, burnRate: 4.2, churnRate: 11, attrition: 4.5 },
-                              { name: 'Feb', growthMoM: 13, burnRate: 3.8, churnRate: 10, attrition: 3.8 },
-                              { name: 'Mar', growthMoM: 14, burnRate: 3.5, churnRate: 9.5, attrition: 3.2 },
-                              { name: 'Apr', growthMoM: 13.5, burnRate: 3.3, churnRate: 9.8, attrition: 3.5 },
-                              { name: 'May', growthMoM: 14.5, burnRate: 3.1, churnRate: 9.2, attrition: 3.0 },
-                              { name: 'Jun', growthMoM: 14.8, burnRate: 3.0, churnRate: 9.0, attrition: 2.8 },
-                              { name: 'Jul', growthMoM: 15.2, burnRate: 2.9, churnRate: 8.8, attrition: 2.9 },
-                              { name: 'Aug', growthMoM: 15, burnRate: 3, churnRate: 9, attrition: 3 },
-                            ]}
+                            data={keyAspectsData.chartData}
                             margin={{
                               top: 5,
                               right: 15,
@@ -5675,7 +5704,7 @@ export default function AdminDashboard() {
                         <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
                           GROWTH<span className="text-xs align-super ml-0.5">MoM</span>
                         </div>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-white">15%</div>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-growth-mom">{keyAspectsData.growthMoM}%</div>
                       </div>
                       
                       {/* Growth YoY */}
@@ -5683,7 +5712,7 @@ export default function AdminDashboard() {
                         <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
                           GROWTH<span className="text-xs align-super ml-0.5">YoY</span>
                         </div>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-white">9%</div>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-growth-yoy">{keyAspectsData.growthYoY}%</div>
                       </div>
                       
                       {/* Burn Rate */}
@@ -5691,7 +5720,7 @@ export default function AdminDashboard() {
                         <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
                           BURN<span className="text-xs align-super ml-0.5">RATE</span>
                         </div>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-white">3%</div>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-burn-rate">{keyAspectsData.burnRate}%</div>
                       </div>
                       
                       {/* Churn Rate */}
@@ -5699,19 +5728,19 @@ export default function AdminDashboard() {
                         <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
                           CHURN<span className="text-xs align-super ml-0.5">RATE</span>
                         </div>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-white">9%</div>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-churn-rate">{keyAspectsData.churnRate}%</div>
                       </div>
                       
                       {/* Attrition */}
                       <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
                         <div className="text-sm font-bold text-gray-700 dark:text-gray-300">ATTRITION</div>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-white">3%</div>
+                        <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-attrition">{keyAspectsData.attrition}%</div>
                       </div>
                       
                       {/* Net Profit */}
                       <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
                         <div className="text-sm font-bold text-gray-700 dark:text-gray-300">NET PROFIT</div>
-                        <div className="text-xl font-bold text-gray-900 dark:text-white">3,50,000</div>
+                        <div className="text-xl font-bold text-gray-900 dark:text-white" data-testid="text-net-profit">{keyAspectsData.netProfit.toLocaleString()}</div>
                       </div>
                       
                       {/* Revenue */}
@@ -5719,7 +5748,7 @@ export default function AdminDashboard() {
                         <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
                           REVENUE<span className="text-xs align-super ml-0.5">PER EMPLOYEE</span>
                         </div>
-                        <div className="text-xl font-bold text-gray-900 dark:text-white">75,000</div>
+                        <div className="text-xl font-bold text-gray-900 dark:text-white" data-testid="text-revenue-per-employee">{keyAspectsData.revenuePerEmployee.toLocaleString()}</div>
                       </div>
                       
                       {/* Client Acquisition Cost */}
@@ -5727,7 +5756,7 @@ export default function AdminDashboard() {
                         <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
                           CLIENT<span className="text-xs align-super ml-0.5">ACQUISITION COST</span>
                         </div>
-                        <div className="text-xl font-bold text-gray-900 dark:text-white">75,000</div>
+                        <div className="text-xl font-bold text-gray-900 dark:text-white" data-testid="text-client-acquisition-cost">{keyAspectsData.clientAcquisitionCost.toLocaleString()}</div>
                       </div>
                     </div>
                   </CardContent>

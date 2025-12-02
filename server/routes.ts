@@ -2212,6 +2212,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Key Aspects API endpoint for Key Metrics chart data
+  app.get("/api/admin/key-aspects", async (req, res) => {
+    try {
+      // For now, return default values of 0 (will be populated from actual data sources later)
+      // These metrics would typically come from financial data, HR data, and business analytics
+      res.json({
+        growthMoM: 0,
+        growthYoY: 0,
+        burnRate: 0,
+        churnRate: 0,
+        attrition: 0,
+        netProfit: 0,
+        revenuePerEmployee: 0,
+        clientAcquisitionCost: 0,
+        chartData: [] // Empty chart data - will be populated from historical records
+      });
+    } catch (error) {
+      console.error('Key aspects error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Master Data Totals API endpoint
+  app.get("/api/admin/master-data-totals", async (req, res) => {
+    try {
+      const { requirements, employees, candidates, clients } = await import("@shared/schema");
+      
+      // Get counts from database
+      const allEmployees = await db.select().from(employees);
+      const allCandidates = await db.select().from(candidates);
+      
+      // Calculate totals
+      const headCount = allEmployees.filter(emp => emp.isActive === true).length;
+      const resumes = allCandidates.length;
+      
+      // For now, return 0 for financial data (would come from finance/expense tables)
+      res.json({
+        directUploads: 0,
+        recruiterUploads: resumes, // Using candidate count as recruiter uploads
+        resumes: resumes,
+        headCount: headCount,
+        salaryPaid: 0,
+        otherExpenses: 0,
+        toolsAndDatabases: 0,
+        rentPaid: 0
+      });
+    } catch (error) {
+      console.error('Master data totals error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Employer forgot password endpoint
   app.post("/api/employer/forgot-password", async (req, res) => {
     try {
