@@ -4701,12 +4701,12 @@ export default function AdminDashboard() {
                     <div className="h-[260px]">
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={[
-                          { month: 'Jan', arunTeam: 600, anushaTeam: 500, sudharshan: 150, deepika: 140, dharshan: 120, kavya: 190 },
-                          { month: 'Feb', arunTeam: 650, anushaTeam: 520, sudharshan: 160, deepika: 150, dharshan: 130, kavya: 210 },
-                          { month: 'Mar', arunTeam: 580, anushaTeam: 540, sudharshan: 145, deepika: 135, dharshan: 125, kavya: 175 },
-                          { month: 'Apr', arunTeam: 520, anushaTeam: 580, sudharshan: 130, deepika: 145, dharshan: 115, kavya: 130 },
-                          { month: 'May', arunTeam: 680, anushaTeam: 620, sudharshan: 170, deepika: 165, dharshan: 140, kavya: 205 },
-                          { month: 'Jun', arunTeam: 720, anushaTeam: 660, sudharshan: 180, deepika: 175, dharshan: 155, kavya: 210 }
+                          { month: 'Jan', arunTeam: 0, anushaTeam: 0, sudharshan: 0, deepika: 0, dharshan: 0, kavya: 0 },
+                          { month: 'Feb', arunTeam: 0, anushaTeam: 0, sudharshan: 0, deepika: 0, dharshan: 0, kavya: 0 },
+                          { month: 'Mar', arunTeam: 0, anushaTeam: 0, sudharshan: 0, deepika: 0, dharshan: 0, kavya: 0 },
+                          { month: 'Apr', arunTeam: 0, anushaTeam: 0, sudharshan: 0, deepika: 0, dharshan: 0, kavya: 0 },
+                          { month: 'May', arunTeam: 0, anushaTeam: 0, sudharshan: 0, deepika: 0, dharshan: 0, kavya: 0 },
+                          { month: 'Jun', arunTeam: 0, anushaTeam: 0, sudharshan: 0, deepika: 0, dharshan: 0, kavya: 0 }
                         ]}>
                           <defs>
                             <linearGradient id="colorArunTeam" x1="0" y1="0" x2="0" y2="1">
@@ -4843,38 +4843,24 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="border-b border-gray-100 dark:border-gray-700">
-                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">David Wilson</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">23-04-2023</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2 yrs,3 months</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">4</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">23-04-2023</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">3</td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-700">
-                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Tom Anderson</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">28-04-2023</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2 yrs,3 months</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">8</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">29-04-2023</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">6</td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-700">
-                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Robert Kim</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">04-05-2023</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2 yrs,2 months</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">9</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">02-05-2023</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">11</td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-700">
-                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Kevin Brown</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">12-05-2023</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2 yrs,2 months</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">13</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">18-05-2023</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">5</td>
-                      </tr>
+                      {teamPerformanceData.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                            No team performance data available
+                          </td>
+                        </tr>
+                      ) : (
+                        teamPerformanceData.slice(0, 4).map((member, index) => (
+                          <tr key={member.id || index} className="border-b border-gray-100 dark:border-gray-700">
+                            <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{member.talentAdvisor}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{member.joiningDate}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{member.tenure}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{member.closures}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{member.lastClosure}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{member.qtrsAchieved}</td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -4908,42 +4894,25 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="border-b border-gray-100 dark:border-gray-700">
-                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">David Wilson</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Frontend Developer</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">TechCorp</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">MJJ, 2025</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Kavitha</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">15,00,000</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">1,12,455</td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-700">
-                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Tom Anderson</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">UI/UX Designer</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Designify</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">ASO, 2025</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Rajesh</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">25,00,000</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">1,87,425</td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-700">
-                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Robert Kim</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Backend Developer</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">CodeLabs</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">MJJ, 2025</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Sowmiya</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">18,00,000</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">1,34,948</td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-700">
-                        <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">Kevin Brown</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">QA Tester</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">AppLogic</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">FMA, 2025</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">Kalaiselvi</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">30,00,000</td>
-                        <td className="py-3 px-4 text-gray-600 dark:text-gray-400">2,24,910</td>
-                      </tr>
+                      {closuresListData.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                            No closures data available
+                          </td>
+                        </tr>
+                      ) : (
+                        closuresListData.slice(0, 4).map((closure, index) => (
+                          <tr key={closure.id || index} className="border-b border-gray-100 dark:border-gray-700">
+                            <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{closure.candidate}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.position}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.client}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.quarter}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.talentAdvisor}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.ctc}</td>
+                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.revenue}</td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>

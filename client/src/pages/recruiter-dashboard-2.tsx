@@ -2344,15 +2344,15 @@ export default function RecruiterDashboard2() {
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center p-4 bg-green-50 rounded">
-                <div className="text-2xl font-bold text-green-600">85%</div>
+                <div className="text-2xl font-bold text-green-600" data-testid="text-success-rate">0%</div>
                 <div className="text-sm text-gray-600">Success Rate</div>
               </div>
               <div className="text-center p-4 bg-blue-50 rounded">
-                <div className="text-2xl font-bold text-blue-600">12</div>
+                <div className="text-2xl font-bold text-blue-600" data-testid="text-total-closures">0</div>
                 <div className="text-sm text-gray-600">Total Closures</div>
               </div>
               <div className="text-center p-4 bg-purple-50 rounded">
-                <div className="text-2xl font-bold text-purple-600">45,000</div>
+                <div className="text-2xl font-bold text-purple-600" data-testid="text-total-incentives">0</div>
                 <div className="text-sm text-gray-600">Total Incentives</div>
               </div>
             </div>
