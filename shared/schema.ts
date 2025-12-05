@@ -305,6 +305,14 @@ export const candidates = pgTable("candidates", {
   portfolioUrl: text("portfolio_url"),
   websiteUrl: text("website_url"),
   linkedinUrl: text("linkedin_url"),
+  // Pipeline tracking fields
+  pipelineStatus: text("pipeline_status").default("New"), // New, L1, L2, L3, Final Round, HR Round, Offer Stage, Closure
+  addedBy: text("added_by"), // Recruiter name who added the candidate
+  assignedTo: text("assigned_to"), // Recruiter name assigned to work on this candidate
+  ctc: text("ctc"), // Current CTC
+  ectc: text("ectc"), // Expected CTC
+  noticePeriod: text("notice_period"), // Notice period
+  position: text("position"), // Position applied for
   isActive: boolean("is_active").default(true),
   isVerified: boolean("is_verified").default(false),
   createdAt: text("created_at").notNull(),

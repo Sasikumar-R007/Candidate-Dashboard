@@ -261,6 +261,11 @@ export default function TeamLeaderDashboard() {
     queryKey: ['/api/team-leader/meetings'],
   });
 
+  const { data: detailedMeetings = [], isLoading: isLoadingDetailedMeetings } = useQuery<any[]>({
+    queryKey: ['/api/team-leader/meetings/details'],
+    enabled: !!employee,
+  });
+
   const { data: ceoComments = [], isLoading: isLoadingCeoComments, isError: isErrorCeoComments } = useQuery<any[]>({
     queryKey: ['/api/team-leader/ceo-comments'],
   });
@@ -3122,27 +3127,42 @@ export default function TeamLeaderDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { meetingType: "TL's Meeting", date: "15-Aug-2025", time: "10:00 AM", person: "Kavitha", agenda: "Monthly Review", status: "Scheduled" },
-                    { meetingType: "TL's Meeting", date: "16-Aug-2025", time: "2:00 PM", person: "Rajesh", agenda: "Performance Discussion", status: "Pending" }
-                  ].map((meeting, index) => (
-                    <tr key={index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
-                      <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{meeting.meetingType}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.date}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.time}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.person}</td>
-                      <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.agenda}</td>
-                      <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
-                        <span className={`px-2 py-1 rounded-full text-sm font-medium ${
-                          meeting.status === 'Confirmed' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
-                          meeting.status === 'Scheduled' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' :
-                          'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
-                        }`}>
-                          {meeting.status}
-                        </span>
+                  {isLoadingDetailedMeetings ? (
+                    <tr>
+                      <td colSpan={6} className="py-6 text-center text-gray-500">
+                        <div className="flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-blue-600 mr-2"></div>
+                          Loading meetings...
+                        </div>
                       </td>
                     </tr>
-                  ))}
+                  ) : detailedMeetings.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-6 text-center text-gray-500">
+                        No meetings scheduled
+                      </td>
+                    </tr>
+                  ) : (
+                    detailedMeetings.map((meeting: any, index: number) => (
+                      <tr key={meeting.id || index} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
+                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{meeting.meetingType}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.date}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.time}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.person}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.agenda}</td>
+                        <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
+                          <span className={`px-2 py-1 rounded-full text-sm font-medium ${
+                            meeting.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' :
+                            meeting.status === 'scheduled' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400' :
+                            meeting.status === 'cancelled' ? 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400' :
+                            'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                          }`}>
+                            {meeting.status?.charAt(0).toUpperCase() + meeting.status?.slice(1) || 'Pending'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -3169,23 +3189,27 @@ export default function TeamLeaderDashboard() {
           </DialogHeader>
           <div className="p-4">
             <div className="space-y-4">
-              {[
-                { id: 1, message: "Discuss with Shri Ragavi on her production", time: "12-Aug-2025 09:30 AM" },
-                { id: 2, message: "Discuss with Kavya about her leaves", time: "12-Aug-2025 10:15 AM" },
-                { id: 3, message: "Discuss with Umar for data", time: "12-Aug-2025 11:00 AM" },
-                { id: 4, message: "Review team performance metrics for Q3", time: "11-Aug-2025 02:30 PM" },
-                { id: 5, message: "Schedule one-on-one meetings with underperforming team members", time: "11-Aug-2025 03:45 PM" },
-                { id: 6, message: "Implement new recruitment strategy for senior roles", time: "10-Aug-2025 09:00 AM" },
-                { id: 7, message: "Address client feedback on recent placements", time: "10-Aug-2025 04:20 PM" },
-                { id: 8, message: "Organize team building activities for better collaboration", time: "09-Aug-2025 11:30 AM" }
-              ].map((comment) => (
-                <div key={comment.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                  <div className="flex items-start justify-between mb-2">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">{comment.time}</span>
+              {isLoadingCeoComments ? (
+                <div className="text-center py-6 text-gray-500">
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-blue-600 mr-2"></div>
+                    Loading commands...
                   </div>
-                  <p className="text-gray-900 dark:text-white text-sm font-medium">{comment.message}</p>
                 </div>
-              ))}
+              ) : ceoComments.length === 0 ? (
+                <div className="text-center py-6 text-gray-500">
+                  No CEO commands at the moment
+                </div>
+              ) : (
+                ceoComments.map((comment: any) => (
+                  <div key={comment.id} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-start justify-between mb-2">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">{comment.date}</span>
+                    </div>
+                    <p className="text-gray-900 dark:text-white text-sm font-medium">{comment.comment}</p>
+                  </div>
+                ))
+              )}
             </div>
             <div className="mt-6 flex justify-end">
               <Button 

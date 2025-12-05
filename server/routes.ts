@@ -1457,6 +1457,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Team leader detailed meetings endpoint for modal
+  app.get("/api/team-leader/meetings/details", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      if (employee.role !== 'team_leader') {
+        return res.status(403).json({ message: "Access denied. Team Leader role required." });
+      }
+
+      const allMeetings = await db.select().from(meetings).orderBy(desc(meetings.createdAt));
+      const teamLeaderMeetings = allMeetings.filter(m => 
+        m.personId === employee.id || m.person === employee.name
+      );
+
+      const formattedMeetings = teamLeaderMeetings.map(m => ({
+        id: m.id,
+        meetingType: m.meetingType,
+        date: m.meetingDate,
+        time: m.meetingTime,
+        person: m.person,
+        agenda: m.agenda,
+        status: m.status || 'Pending'
+      }));
+      
+      res.json(formattedMeetings);
+    } catch (error) {
+      console.error('Get team leader detailed meetings error:', error);
+      res.status(500).json({ message: "Failed to fetch detailed meetings" });
+    }
+  });
+
   app.get("/api/team-leader/ceo-comments", requireEmployeeAuth, async (req, res) => {
     try {
       const session = req.session as any;
