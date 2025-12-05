@@ -1504,14 +1504,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamRecruiters = allEmployees.filter(
         emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
       );
-      const teamRecruiterIds = teamRecruiters.map(r => r.id);
-      const teamRecruiterNames = teamRecruiters.map(r => r.name);
+      const teamRecruiterNames = teamRecruiters.map(r => r.name.toLowerCase());
 
-      // Get all candidates and filter by team members
+      // Get all candidates and filter by team members using name-based matching
+      // Candidates are linked via addedBy (string name) or assignedTo (string name)
       const allCandidates = await db.select().from(candidates).orderBy(desc(candidates.createdAt));
-      const teamCandidates = allCandidates.filter(c => 
-        teamRecruiterIds.includes(c.recruiterId!) || teamRecruiterNames.includes(c.addedBy || '')
-      );
+      const teamCandidates = allCandidates.filter(c => {
+        const addedByMatch = c.addedBy && teamRecruiterNames.includes(c.addedBy.toLowerCase());
+        const assignedToMatch = c.assignedTo && teamRecruiterNames.includes(c.assignedTo.toLowerCase());
+        return addedByMatch || assignedToMatch;
+      });
 
       // Format pipeline data
       const pipelineData = teamCandidates.map((candidate: any) => ({
@@ -1520,7 +1522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         company: candidate.company || '-',
         position: candidate.position || '-',
         status: candidate.pipelineStatus || candidate.status || 'New',
-        recruiter: candidate.addedBy || teamRecruiters.find(r => r.id === candidate.recruiterId)?.name || '-',
+        recruiter: candidate.addedBy || candidate.assignedTo || '-',
         ctc: candidate.ctc || '-',
         ectc: candidate.ectc || '-',
         noticePeriod: candidate.noticePeriod || '-',

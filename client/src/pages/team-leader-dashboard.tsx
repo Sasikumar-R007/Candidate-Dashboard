@@ -367,7 +367,7 @@ export default function TeamLeaderDashboard() {
     queryKey: ['/api/team-leader/daily-metrics'],
   });
 
-  const { data: meetings } = useQuery({
+  const { data: meetings, isLoading: isLoadingMeetings, isError: isErrorMeetings } = useQuery({
     queryKey: ['/api/team-leader/meetings'],
   });
 
@@ -383,7 +383,7 @@ export default function TeamLeaderDashboard() {
     );
   }, [aggregatedTargets, targetSearch]);
 
-  const { data: ceoComments } = useQuery({
+  const { data: ceoComments, isLoading: isLoadingCeoComments, isError: isErrorCeoComments } = useQuery({
     queryKey: ['/api/team-leader/ceo-comments'],
   });
   
@@ -770,7 +770,16 @@ export default function TeamLeaderDashboard() {
                   </CardHeader>
                   <CardContent className="p-4 pt-0">
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                      {Array.isArray(meetings) && meetings.length > 0 ? (
+                      {isLoadingMeetings ? (
+                        <div className="text-center py-4 text-gray-500">
+                          <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-blue-600 mx-auto mb-2"></div>
+                          Loading meetings...
+                        </div>
+                      ) : isErrorMeetings ? (
+                        <div className="text-center py-4 text-red-500">
+                          Failed to load meetings
+                        </div>
+                      ) : Array.isArray(meetings) && meetings.length > 0 ? (
                         <div className="grid grid-cols-2 gap-6">
                           {meetings.map((meeting: any, index: number) => (
                             <div key={meeting.id || index} className={`text-center ${index > 0 ? 'border-l border-gray-300 pl-6' : ''}`}>
@@ -813,7 +822,16 @@ export default function TeamLeaderDashboard() {
                   </CardHeader>
                   <CardContent className="p-4 pt-0">
                     <div className="bg-slate-800 rounded-lg p-6 text-white space-y-4">
-                      {Array.isArray(ceoComments) && ceoComments.length > 0 ? (
+                      {isLoadingCeoComments ? (
+                        <div className="text-center py-2 text-cyan-300/60">
+                          <div className="animate-spin rounded-full h-6 w-6 border-2 border-cyan-300/30 border-t-cyan-300 mx-auto mb-2"></div>
+                          Loading commands...
+                        </div>
+                      ) : isErrorCeoComments ? (
+                        <div className="text-center py-2 text-red-400">
+                          Failed to load commands
+                        </div>
+                      ) : Array.isArray(ceoComments) && ceoComments.length > 0 ? (
                         ceoComments.slice(0, 3).map((comment: any, index: number) => (
                           <div key={comment.id || index} className="text-cyan-300 text-sm font-medium" data-testid={`text-ceo-comment-${index}`}>
                             {comment.comment}
