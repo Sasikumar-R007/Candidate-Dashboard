@@ -289,7 +289,7 @@ export default function TeamLeaderDashboard() {
   });
 
   // Fetch closures data from API
-  const { data: closureData = [] } = useQuery<any[]>({
+  const { data: closureData = [], isLoading: isLoadingClosures } = useQuery<any[]>({
     queryKey: ['/api/team-leader/closures'],
     enabled: !!employee,
   });
@@ -1300,78 +1300,61 @@ export default function TeamLeaderDashboard() {
                 <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Closure Reports</CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <div className="overflow-x-auto admin-scrollbar">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Candidate</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Positions</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Client</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Fixed CTC</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Offered Date</th>
-                        <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Joined Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <td className="p-3 text-gray-900 dark:text-white">David Johnson</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">Frontend Developer</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">TechCorp</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">Kavitha</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">MLJ, 2025</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">12-06-2025</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">12-04-2025</td>
-                      </tr>
-                      <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <td className="p-3 text-gray-900 dark:text-white">Tom Anderson</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">UI/UX Designer</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">Designify</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">Rajesh</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">ASO, 2025</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">18-06-2025</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">05-05-2025</td>
-                      </tr>
-                      <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <td className="p-3 text-gray-900 dark:text-white">Robert Kim</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">Backend Developer</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">CodeLabs</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">Sowmiya</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">MLJ, 2025</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">28-06-2025</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">19-08-2025</td>
-                      </tr>
-                      <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <td className="p-3 text-gray-900 dark:text-white">Kevin Brown</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">QA Tester</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">AppLogic</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">Kalaiselvi</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">FMA, 2025</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">03-07-2025</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">03-09-2025</td>
-                      </tr>
-                      <tr className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <td className="p-3 text-gray-900 dark:text-white">Mel Gibson</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">Mobile App Developer</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">Tesco</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">Malathi</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">NDJ, 2025</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">18-07-2025</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">10-10-2025</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                  <div className="flex justify-end">
-                    <Button 
-                      onClick={() => setIsClosureDetailsModalOpen(true)}
-                      data-testid="button-see-more-closure"
-                    >
-                      See More
-                    </Button>
+                {isLoadingClosures ? (
+                  <div className="p-8 flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-blue-600"></div>
+                    <span className="ml-2 text-gray-500 dark:text-gray-400">Loading closure reports...</span>
                   </div>
-                </div>
+                ) : closureData.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                    No closure reports available yet.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto admin-scrollbar">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Candidate</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Position</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Client</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Package</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Closure Month</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Revenue</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {closureData.slice(0, 5).map((closure: any, index: number) => (
+                          <tr 
+                            key={`closure-pipeline-${index}`} 
+                            className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 ${index === closureData.slice(0, 5).length - 1 ? '' : ''}`}
+                            data-testid={`row-closure-${index}`}
+                          >
+                            <td className="p-3 text-gray-900 dark:text-white">{closure.name}</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">{closure.position}</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">{closure.company}</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">{closure.talentAdvisor}</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">{closure.package}</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">{closure.closureMonth}</td>
+                            <td className="p-3 text-gray-600 dark:text-gray-400">{closure.revenue}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                {closureData.length > 0 && (
+                  <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+                    <div className="flex justify-end">
+                      <Button 
+                        onClick={() => setIsClosureDetailsModalOpen(true)}
+                        data-testid="button-see-more-closure"
+                      >
+                        See More
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -2813,98 +2796,52 @@ export default function TeamLeaderDashboard() {
             <DialogTitle>Detailed Closure Reports</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Candidate</th>
-                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Position</th>
-                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Client</th>
-                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
-                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Package</th>
-                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Status</th>
-                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Revenue</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="p-3 text-gray-900 dark:text-white">David Johnson</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Frontend Developer</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">TechCorp</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Kavitha</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹12,00,000</td>
-                    <td className="p-3"><span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Joined</span></td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹89,892</td>
-                  </tr>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="p-3 text-gray-900 dark:text-white">Tom Anderson</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">UI/UX Designer</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Designify</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Rajesh</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹8,00,000</td>
-                    <td className="p-3"><span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Joined</span></td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹59,928</td>
-                  </tr>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="p-3 text-gray-900 dark:text-white">Robert Kim</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Backend Developer</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">CodeLabs</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Sowmiya</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹18,00,000</td>
-                    <td className="p-3"><span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">Pending</span></td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹1,34,946</td>
-                  </tr>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="p-3 text-gray-900 dark:text-white">Sarah Wilson</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Data Scientist</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">DataTech</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Malathi</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹22,00,000</td>
-                    <td className="p-3"><span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Joined</span></td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹1,64,934</td>
-                  </tr>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="p-3 text-gray-900 dark:text-white">Michael Chen</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">DevOps Engineer</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">CloudSoft</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Kalaiselvi</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹15,00,000</td>
-                    <td className="p-3"><span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Joined</span></td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹1,12,455</td>
-                  </tr>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="p-3 text-gray-900 dark:text-white">Lisa Rodriguez</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Product Manager</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">InnovateHub</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Kavitha</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹25,00,000</td>
-                    <td className="p-3"><span className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">Offer Declined</span></td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹0</td>
-                  </tr>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="p-3 text-gray-900 dark:text-white">James Martinez</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Full Stack Developer</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">WebSolutions</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Rajesh</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹14,00,000</td>
-                    <td className="p-3"><span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">Joined</span></td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹1,04,916</td>
-                  </tr>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="p-3 text-gray-900 dark:text-white">Emma Thompson</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">QA Lead</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">QualityFirst</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Sowmiya</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹16,00,000</td>
-                    <td className="p-3"><span className="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">Offer Extended</span></td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹0</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            {isLoadingClosures ? (
+              <div className="p-8 flex items-center justify-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-blue-600"></div>
+                <span className="ml-2 text-gray-500 dark:text-gray-400">Loading closure reports...</span>
+              </div>
+            ) : closureData.length === 0 ? (
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                No closure reports available yet.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
+                      <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Candidate</th>
+                      <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Position</th>
+                      <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Client</th>
+                      <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
+                      <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Package</th>
+                      <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Closure Month</th>
+                      <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {closureData.map((closure: any, index: number) => (
+                      <tr 
+                        key={`closure-modal-${index}`} 
+                        className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                        data-testid={`row-closure-modal-${index}`}
+                      >
+                        <td className="p-3 text-gray-900 dark:text-white">{closure.name}</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">{closure.position}</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">{closure.company}</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">{closure.talentAdvisor}</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">{closure.package}</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">{closure.closureMonth}</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">{closure.revenue}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
             <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
               <div className="text-sm text-gray-600 dark:text-gray-400">
-                Total Closures: 8 | Total Revenue: ₹7,66,071
+                Total Closures: {closureData.length} | Total Revenue: {closureData.reduce((sum: number, c: any) => sum + (parseFloat(c.revenue?.replace(/,/g, '') || '0')), 0).toLocaleString('en-IN')}
               </div>
               <Button 
                 variant="outline" 
