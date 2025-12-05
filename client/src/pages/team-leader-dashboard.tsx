@@ -386,6 +386,48 @@ export default function TeamLeaderDashboard() {
   const { data: ceoComments, isLoading: isLoadingCeoComments, isError: isErrorCeoComments } = useQuery({
     queryKey: ['/api/team-leader/ceo-comments'],
   });
+
+  // Fetch pipeline data for team leader
+  const { data: pipelineData, isLoading: isLoadingPipeline, isError: isErrorPipeline } = useQuery({
+    queryKey: ['/api/team-leader/pipeline'],
+    enabled: !!employee,
+  });
+
+  // Group pipeline candidates by status for the pipeline view
+  const groupedPipelineCandidates = useMemo(() => {
+    if (!Array.isArray(pipelineData)) return {};
+    
+    const stages: Record<string, any[]> = {
+      'L1': [],
+      'L2': [],
+      'L3': [],
+      'Final Round': [],
+      'HR Round': [],
+      'Offer Stage': [],
+      'Closure': []
+    };
+    
+    pipelineData.forEach((candidate: any) => {
+      const status = (candidate.status || '').toLowerCase();
+      if (status.includes('l1') || status === 'level 1' || status === 'l1 interview') {
+        stages['L1'].push(candidate);
+      } else if (status.includes('l2') || status === 'level 2' || status === 'l2 interview') {
+        stages['L2'].push(candidate);
+      } else if (status.includes('l3') || status === 'level 3' || status === 'l3 interview') {
+        stages['L3'].push(candidate);
+      } else if (status.includes('final') || status === 'final round') {
+        stages['Final Round'].push(candidate);
+      } else if (status.includes('hr') || status === 'hr round') {
+        stages['HR Round'].push(candidate);
+      } else if (status.includes('offer') && !status.includes('drop')) {
+        stages['Offer Stage'].push(candidate);
+      } else if (status.includes('clos') || status === 'closed' || status === 'closure') {
+        stages['Closure'].push(candidate);
+      }
+    });
+    
+    return stages;
+  }, [pipelineData]);
   
   // Check authentication - wait for loading to complete
   useEffect(() => {
@@ -1084,10 +1126,16 @@ export default function TeamLeaderDashboard() {
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Pipeline</h2>
               <div className="flex items-center gap-4">
-                {/* Simple Arun box instead of dropdown */}
-                <div className="w-48 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white text-sm input-styled btn-rounded">
-                  Arun
-                </div>
+                {/* Team member selector - shows all recruiters */}
+                <select 
+                  className="w-48 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white text-sm"
+                  data-testid="select-pipeline-recruiter"
+                >
+                  <option value="">All Team Members</option>
+                  {Array.isArray(teamMembers) && teamMembers.map((member: any) => (
+                    <option key={member.id} value={member.name}>{member.name}</option>
+                  ))}
+                </select>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="btn-rounded input-styled">
@@ -1110,140 +1158,127 @@ export default function TeamLeaderDashboard() {
             {/* Pipeline Stages - matching admin design */}
             <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
               <CardContent className="p-0">
-                <div className="overflow-x-auto admin-scrollbar">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr>
-                        <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Level 1</th>
-                        <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Level 2</th>
-                        <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Level 3</th>
-                        <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Final Round</th>
-                        <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">HR Round</th>
-                        <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Offer Stage</th>
-                        <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Closure</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td className="p-3 align-top">
-                          <div className="flex flex-col gap-2">
-                            <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                              Keerthana
+                {isLoadingPipeline ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600"></div>
+                    <span className="ml-3 text-gray-600">Loading pipeline data...</span>
+                  </div>
+                ) : isErrorPipeline ? (
+                  <div className="text-center py-12 text-red-500">
+                    Failed to load pipeline data
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto admin-scrollbar">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr>
+                          <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Level 1</th>
+                          <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Level 2</th>
+                          <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Level 3</th>
+                          <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Final Round</th>
+                          <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">HR Round</th>
+                          <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Offer Stage</th>
+                          <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Closure</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td className="p-3 align-top">
+                            <div className="flex flex-col gap-2">
+                              {(groupedPipelineCandidates['L1'] || []).length > 0 ? (
+                                groupedPipelineCandidates['L1'].map((candidate: any) => (
+                                  <div key={candidate.id} className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200" data-testid={`pipeline-l1-${candidate.id}`}>
+                                    {candidate.name}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="text-gray-400 text-sm text-center py-2">No candidates</div>
+                              )}
                             </div>
-                            <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                              Vishnu Purana
+                          </td>
+                          <td className="p-3 align-top">
+                            <div className="flex flex-col gap-2">
+                              {(groupedPipelineCandidates['L2'] || []).length > 0 ? (
+                                groupedPipelineCandidates['L2'].map((candidate: any) => (
+                                  <div key={candidate.id} className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200" data-testid={`pipeline-l2-${candidate.id}`}>
+                                    {candidate.name}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="text-gray-400 text-sm text-center py-2">No candidates</div>
+                              )}
                             </div>
-                            <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                              Chanakya
+                          </td>
+                          <td className="p-3 align-top">
+                            <div className="flex flex-col gap-2">
+                              {(groupedPipelineCandidates['L3'] || []).length > 0 ? (
+                                groupedPipelineCandidates['L3'].map((candidate: any) => (
+                                  <div key={candidate.id} className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200" data-testid={`pipeline-l3-${candidate.id}`}>
+                                    {candidate.name}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="text-gray-400 text-sm text-center py-2">No candidates</div>
+                              )}
                             </div>
-                            <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                              Adhya
+                          </td>
+                          <td className="p-3 align-top">
+                            <div className="flex flex-col gap-2">
+                              {(groupedPipelineCandidates['Final Round'] || []).length > 0 ? (
+                                groupedPipelineCandidates['Final Round'].map((candidate: any) => (
+                                  <div key={candidate.id} className="px-3 py-2 bg-green-500 dark:bg-green-600 rounded text-center text-sm font-medium text-white" data-testid={`pipeline-final-${candidate.id}`}>
+                                    {candidate.name}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="text-gray-400 text-sm text-center py-2">No candidates</div>
+                              )}
                             </div>
-                            <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                              Vanshika
+                          </td>
+                          <td className="p-3 align-top">
+                            <div className="flex flex-col gap-2">
+                              {(groupedPipelineCandidates['HR Round'] || []).length > 0 ? (
+                                groupedPipelineCandidates['HR Round'].map((candidate: any) => (
+                                  <div key={candidate.id} className="px-3 py-2 bg-green-600 dark:bg-green-500 rounded text-center text-sm font-medium text-white" data-testid={`pipeline-hr-${candidate.id}`}>
+                                    {candidate.name}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="text-gray-400 text-sm text-center py-2">No candidates</div>
+                              )}
                             </div>
-                            <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                              Reyansh
+                          </td>
+                          <td className="p-3 align-top">
+                            <div className="flex flex-col gap-2">
+                              {(groupedPipelineCandidates['Offer Stage'] || []).length > 0 ? (
+                                groupedPipelineCandidates['Offer Stage'].map((candidate: any) => (
+                                  <div key={candidate.id} className="px-3 py-2 bg-green-700 dark:bg-green-500 rounded text-center text-sm font-medium text-white" data-testid={`pipeline-offer-${candidate.id}`}>
+                                    {candidate.name}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="text-gray-400 text-sm text-center py-2">No candidates</div>
+                              )}
                             </div>
-                            <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                              Shaurya
+                          </td>
+                          <td className="p-3 align-top">
+                            <div className="flex flex-col gap-2">
+                              {(groupedPipelineCandidates['Closure'] || []).length > 0 ? (
+                                groupedPipelineCandidates['Closure'].map((candidate: any) => (
+                                  <div key={candidate.id} className="px-3 py-2 bg-green-800 dark:bg-green-400 rounded text-center text-sm font-medium text-white" data-testid={`pipeline-closure-${candidate.id}`}>
+                                    {candidate.name}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="text-gray-400 text-sm text-center py-2">No candidates</div>
+                              )}
                             </div>
-                            <div className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                              Vihana
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-3 align-top">
-                          <div className="flex flex-col gap-2">
-                            <div className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                              Keerthana
-                            </div>
-                            <div className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                              Vishnu Purana
-                            </div>
-                            <div className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                              Chanakya
-                            </div>
-                            <div className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                              Adhya
-                            </div>
-                            <div className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                              Vanshika
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-3 align-top">
-                          <div className="flex flex-col gap-2">
-                            <div className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                              Keerthana
-                            </div>
-                            <div className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                              Vishnu Purana
-                            </div>
-                            <div className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                              Chanakya
-                            </div>
-                            <div className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                              Adhya
-                            </div>
-                            <div className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200">
-                              Vanshika
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-3 align-top">
-                          <div className="flex flex-col gap-2">
-                            <div className="px-3 py-2 bg-green-500 dark:bg-green-600 rounded text-center text-sm font-medium text-white">
-                              Keerthana
-                            </div>
-                            <div className="px-3 py-2 bg-green-500 dark:bg-green-600 rounded text-center text-sm font-medium text-white">
-                              Vishnu Purana
-                            </div>
-                            <div className="px-3 py-2 bg-green-500 dark:bg-green-600 rounded text-center text-sm font-medium text-white">
-                              Chanakya
-                            </div>
-                            <div className="px-3 py-2 bg-green-500 dark:bg-green-600 rounded text-center text-sm font-medium text-white">
-                              Adhya
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-3 align-top">
-                          <div className="flex flex-col gap-2">
-                            <div className="px-3 py-2 bg-green-600 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
-                              Keerthana
-                            </div>
-                            <div className="px-3 py-2 bg-green-600 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
-                              Vishnu Purana
-                            </div>
-                            <div className="px-3 py-2 bg-green-600 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
-                              Chanakya
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-3 align-top">
-                          <div className="flex flex-col gap-2">
-                            <div className="px-3 py-2 bg-green-700 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
-                              Keerthana
-                            </div>
-                            <div className="px-3 py-2 bg-green-700 dark:bg-green-500 rounded text-center text-sm font-medium text-white">
-                              Vishnu Purana
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-3 align-top">
-                          <div className="flex flex-col gap-2">
-                            <div className="px-3 py-2 bg-green-800 dark:bg-green-400 rounded text-center text-sm font-medium text-white">
-                              Keerthana
-                            </div>
-                            <div className="px-3 py-2 bg-green-800 dark:bg-green-400 rounded text-center text-sm font-medium text-white">
-                              Vishnu Purana
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
