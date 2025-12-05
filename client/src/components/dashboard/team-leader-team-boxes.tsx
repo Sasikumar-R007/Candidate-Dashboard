@@ -1,25 +1,44 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Shield } from "lucide-react";
 import PerformanceGauge from "./performance-gauge";
 import TeamLeaderProfileModal from "./modals/team-leader-profile-modal";
 
-const teamLeader = {
-  id: "arun-ks",
-  name: "Arun KS",
-  image: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=150&h=150",
-  members: 4,
-  tenure: "4.3",
-  qtrsAchieved: 6,
-  nextMilestone: "+3",
-  email: "arun.ks@gumlat.com",
-  position: "Team Leader",
-  department: "Recruitment",
-  performanceScore: 77.8
-};
+interface TeamLeaderProfile {
+  id: string;
+  name: string;
+  image: string | null;
+  members: number;
+  tenure: string;
+  qtrsAchieved: number;
+  nextMilestone: string;
+  email: string;
+  position: string;
+  department: string;
+  performanceScore: number;
+}
 
 export default function TeamLeaderTeamBoxes() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
+  const { data: teamLeaderStats } = useQuery<TeamLeaderProfile>({
+    queryKey: ['/api/team-leader/stats'],
+  });
+
+  const teamLeader = teamLeaderStats || {
+    id: "",
+    name: "-",
+    image: null,
+    members: 0,
+    tenure: "0",
+    qtrsAchieved: 0,
+    nextMilestone: "0",
+    email: "-",
+    position: "Team Leader",
+    department: "Recruitment",
+    performanceScore: 0
+  };
 
   return (
     <>
@@ -72,12 +91,23 @@ export default function TeamLeaderTeamBoxes() {
 
               {/* Right Section - Profile Picture */}
               <div className="relative flex-shrink-0">
-                <img 
-                  src={teamLeader.image} 
-                  alt={teamLeader.name}
-                  className="w-20 h-20 rounded-lg object-cover border-2 border-blue-500"
-                  data-testid="img-team-leader-avatar"
-                />
+                {teamLeader.image ? (
+                  <img 
+                    src={teamLeader.image} 
+                    alt={teamLeader.name}
+                    className="w-20 h-20 rounded-lg object-cover border-2 border-blue-500"
+                    data-testid="img-team-leader-avatar"
+                  />
+                ) : (
+                  <div 
+                    className="w-20 h-20 rounded-lg bg-blue-100 border-2 border-blue-500 flex items-center justify-center"
+                    data-testid="img-team-leader-avatar"
+                  >
+                    <span className="text-2xl font-bold text-blue-600">
+                      {teamLeader.name?.charAt(0) || 'T'}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>

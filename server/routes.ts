@@ -1284,16 +1284,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Team Leader Dashboard API routes
-  app.get("/api/team-leader/team-members", (req, res) => {
-    const teamMembers = [
-      { id: "tm-001", name: "Sudharshan", salary: "2,95,000 INR", year: "2024-2025", profilesCount: "10" },
-      { id: "tm-002", name: "Deepika", salary: "1,95,000 INR", year: "2024-2025", profilesCount: "5" },
-      { id: "tm-003", name: "Dharshan", salary: "1,80,000 INR", year: "2024-2025", profilesCount: "4" },
-      { id: "tm-004", name: "Kavya", salary: "2,30,000 INR", year: "2024-2025", profilesCount: "2" },
-      { id: "tm-005", name: "Thamarai Selvi", salary: "2,50,000 INR", year: "2024-2025", profilesCount: "3" },
-      { id: "tm-006", name: "Karthikayan", salary: "2,50,000 INR", year: "2024-2025", profilesCount: "2" }
-    ];
-    res.json(teamMembers);
+  app.get("/api/team-leader/team-members", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee || employee.role !== 'team_leader') {
+        return res.status(403).json({ message: "Access denied. Team Leader role required." });
+      }
+
+      const allEmployees = await storage.getAllEmployees();
+      const recruiters = allEmployees.filter(
+        emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
+      );
+
+      const year = new Date().getFullYear();
+      const teamMembers = await Promise.all(recruiters.map(async (rec) => {
+        const revenueMappings = await storage.getRevenueMappingsByRecruiterId(rec.id);
+        const totalRevenue = revenueMappings.reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+        
+        return {
+          id: rec.id,
+          name: rec.name,
+          salary: totalRevenue > 0 ? `${totalRevenue.toLocaleString('en-IN')} INR` : "0 INR",
+          year: `${year}-${year + 1}`,
+          profilesCount: String(revenueMappings.length)
+        };
+      }));
+
+      res.json(teamMembers);
+    } catch (error) {
+      console.error('Get team leader team members error:', error);
+      res.status(500).json({ message: "Failed to fetch team members" });
+    }
   });
 
   // Legacy endpoint - returns 0 defaults for backward compatibility
@@ -1329,47 +1351,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/team-leader/daily-metrics", (req, res) => {
-    const dailyMetrics = {
-      id: "daily-001",
-      date: "12-Aug-2025",
-      totalRequirements: 0,
-      completedRequirements: 0,
-      avgResumesPerRequirement: "0.00",
-      requirementsPerRecruiter: "0.00",
-      totalResumes: 0,
-      totalResumesDelivered: 0,
-      totalResumesRequired: 0,
-      dailyDeliveryDelivered: 0,
-      dailyDeliveryDefaulted: 0,
-      overallPerformance: "G",
-      deliveredItems: [],
-      defaultedItems: [],
-      performanceData: [
-        { member: "Sudharshan", requirements: 0 },
-        { member: "Deepika", requirements: 0 },
-        { member: "Dharshan", requirements: 0 },
-        { member: "Kavya", requirements: 0 }
-      ]
-    };
-    res.json(dailyMetrics);
+  app.get("/api/team-leader/daily-metrics", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee || employee.role !== 'team_leader') {
+        return res.status(403).json({ message: "Access denied. Team Leader role required." });
+      }
+
+      const requirements = await storage.getRequirementsByTeamLead(employee.name);
+      
+      const allEmployees = await storage.getAllEmployees();
+      const teamRecruiters = allEmployees.filter(
+        emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
+      );
+
+      const performanceData = await Promise.all(teamRecruiters.map(async (rec) => {
+        const recReqs = await storage.getRequirementsByTalentAdvisor(rec.name);
+        return { member: rec.name, requirements: recReqs.length };
+      }));
+
+      const totalRequirements = requirements.length;
+      const avgResumesPerRequirement = totalRequirements > 0 ? "0.00" : "0.00";
+      const requirementsPerRecruiter = teamRecruiters.length > 0 
+        ? (totalRequirements / teamRecruiters.length).toFixed(2) 
+        : "0.00";
+
+      const dailyMetrics = {
+        id: `daily-tl-${employee.id}`,
+        date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
+        totalRequirements,
+        completedRequirements: 0,
+        avgResumesPerRequirement,
+        requirementsPerRecruiter,
+        totalResumes: 0,
+        totalResumesDelivered: 0,
+        totalResumesRequired: 0,
+        dailyDeliveryDelivered: 0,
+        dailyDeliveryDefaulted: 0,
+        overallPerformance: "G",
+        deliveredItems: [],
+        defaultedItems: [],
+        performanceData
+      };
+      res.json(dailyMetrics);
+    } catch (error) {
+      console.error('Get team leader daily metrics error:', error);
+      res.status(500).json({ message: "Failed to fetch daily metrics" });
+    }
   });
 
-  app.get("/api/team-leader/meetings", (req, res) => {
-    const meetings = [
-      { id: "meeting-001", type: "TL's Meeting", count: "3" },
-      { id: "meeting-002", type: "CEO's Meeting", count: "1" }
-    ];
-    res.json(meetings);
+  app.get("/api/team-leader/meetings", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      if (employee.role !== 'team_leader') {
+        return res.status(403).json({ message: "Access denied. Team Leader role required." });
+      }
+
+      const allMeetings = await db.select().from(meetings).orderBy(desc(meetings.createdAt));
+      const teamLeaderMeetings = allMeetings.filter(m => 
+        m.personId === employee.id || m.person === employee.name
+      );
+
+      const meetingSummary = [];
+      const tlMeetings = teamLeaderMeetings.filter(m => m.meetingType === "TL's Meeting");
+      const ceoMeetings = teamLeaderMeetings.filter(m => m.meetingType === "CEO's Meeting");
+      
+      if (tlMeetings.length > 0) {
+        meetingSummary.push({ id: "meeting-tl", type: "TL's Meeting", count: String(tlMeetings.length) });
+      }
+      if (ceoMeetings.length > 0) {
+        meetingSummary.push({ id: "meeting-ceo", type: "CEO's Meeting", count: String(ceoMeetings.length) });
+      }
+      
+      res.json(meetingSummary);
+    } catch (error) {
+      console.error('Get team leader meetings error:', error);
+      res.status(500).json({ message: "Failed to fetch meetings" });
+    }
   });
 
-  app.get("/api/team-leader/ceo-comments", (req, res) => {
-    const comments = [
-      { id: "comment-001", comment: "Discuss with Shri Ragavi on her production", date: "12-Aug-2025" },
-      { id: "comment-002", comment: "Discuss with Kavya about her leaves", date: "12-Aug-2025" },
-      { id: "comment-003", comment: "Discuss with Umar for data", date: "12-Aug-2025" }
-    ];
-    res.json(comments);
+  app.get("/api/team-leader/ceo-comments", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      if (employee.role !== 'team_leader') {
+        return res.status(403).json({ message: "Access denied. Team Leader role required." });
+      }
+
+      const commands = await db.select().from(recruiterCommands)
+        .where(eq(recruiterCommands.recruiterId, employee.id))
+        .orderBy(desc(recruiterCommands.createdAt));
+      
+      const comments = commands.map((cmd: any) => ({
+        id: cmd.id,
+        comment: cmd.command,
+        date: cmd.commandDate || new Date(cmd.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-')
+      }));
+      
+      res.json(comments);
+    } catch (error) {
+      console.error('Get team leader ceo comments error:', error);
+      res.status(500).json({ message: "Failed to fetch CEO comments" });
+    }
   });
 
   // Team leader requirements endpoint - fetch requirements assigned to logged-in TL
@@ -1428,10 +1521,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied. This requirement is not assigned to you." });
       }
 
-      // Validate talent advisor value (list of allowed advisors)
-      const allowedTalentAdvisors = ['Kavitha', 'Rajesh', 'Sowmiya', 'Kalaiselvi', 'Malathi'];
+      // Validate that talent advisor is one of the TL's team members
+      const allEmployees = await storage.getAllEmployees();
+      const teamRecruiters = allEmployees.filter(
+        emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
+      );
+      const allowedTalentAdvisors = teamRecruiters.map(rec => rec.name);
+      
       if (!allowedTalentAdvisors.includes(talentAdvisor)) {
-        return res.status(400).json({ message: "Invalid Talent Advisor. Must be one of: " + allowedTalentAdvisors.join(', ') });
+        return res.status(400).json({ 
+          message: allowedTalentAdvisors.length > 0 
+            ? "Invalid Talent Advisor. Must be one of your team members: " + allowedTalentAdvisors.join(', ')
+            : "No team members available to assign. Please add recruiters to your team first."
+        });
       }
 
       // Update the requirement with the talent advisor
@@ -1516,6 +1618,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     };
     
     res.json(teamLeaderProfile);
+  });
+
+  // Team Leader stats endpoint - returns profile data for the team boxes component
+  app.get("/api/team-leader/stats", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee || employee.role !== 'team_leader') {
+        return res.status(403).json({ message: "Access denied. Team Leader role required." });
+      }
+
+      const allEmployees = await storage.getAllEmployees();
+      const teamMembers = allEmployees.filter(
+        emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
+      );
+
+      let joiningDate = employee.joiningDate;
+      let tenure = "0";
+      if (joiningDate) {
+        try {
+          const date = new Date(joiningDate);
+          if (!isNaN(date.getTime())) {
+            const now = new Date();
+            tenure = ((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24 * 365)).toFixed(1);
+          }
+        } catch (e) {
+          tenure = "0";
+        }
+      }
+
+      const revenueMappings = await storage.getRevenueMappingsByTeamLeaderId(employee.id);
+      const qtrsAchieved = new Set(revenueMappings.map(rm => rm.quarter)).size;
+      const nextMilestone = qtrsAchieved > 0 ? `+${Math.ceil(qtrsAchieved / 4) * 4 - qtrsAchieved}` : "0";
+      const totalRevenue = revenueMappings.reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+      const performanceScore = teamMembers.length > 0 ? Math.min(100, (revenueMappings.length / teamMembers.length) * 20) : 0;
+
+      res.json({
+        id: employee.id,
+        name: employee.name,
+        image: null,
+        members: teamMembers.length,
+        tenure: tenure,
+        qtrsAchieved,
+        nextMilestone,
+        email: employee.email,
+        position: "Team Leader",
+        department: employee.department || "Recruitment",
+        performanceScore: Math.round(performanceScore * 10) / 10
+      });
+    } catch (error) {
+      console.error('Get team leader stats error:', error);
+      res.status(500).json({ message: "Failed to fetch team leader stats" });
+    }
   });
 
   // Admin Dashboard API routes and file uploads
@@ -1704,25 +1859,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/recruiter/daily-metrics", (req, res) => {
-    const dailyMetrics = {
-      id: "daily-rec-001",
-      date: "21-Aug-2025",
-      totalRequirements: 3,
-      completedRequirements: 0,
-      totalResumes: 0,
-      totalResumesDelivered: 4,
-      totalResumesRequired: 9,
-      dailyDeliveryDelivered: 0,
-      dailyDeliveryDefaulted: 0,
-      overallPerformance: "G",
-      requirements: [
-        { criticality: "HH", required: 2, delivered: 1 },
-        { criticality: "MM", required: 3, delivered: 2 },
-        { criticality: "LE", required: 4, delivered: 1 }
-      ]
-    };
-    res.json(dailyMetrics);
+  app.get("/api/recruiter/daily-metrics", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      const requirements = await storage.getRequirementsByTalentAdvisor(employee.name);
+      
+      const hhReqs = requirements.filter(r => r.criticality === 'HIGH');
+      const mmReqs = requirements.filter(r => r.criticality === 'MEDIUM');
+      const leReqs = requirements.filter(r => r.criticality === 'LOW');
+      
+      let hhDelivered = 0, mmDelivered = 0, leDelivered = 0;
+      let hhRequired = 0, mmRequired = 0, leRequired = 0;
+      
+      for (const req of requirements) {
+        const applications = await storage.getJobApplicationsByRequirementId(req.id);
+        const deliveredCount = applications.length;
+        const reqTarget = 3;
+        
+        if (req.criticality === 'HIGH') {
+          hhDelivered += deliveredCount;
+          hhRequired += reqTarget;
+        } else if (req.criticality === 'MEDIUM') {
+          mmDelivered += deliveredCount;
+          mmRequired += reqTarget;
+        } else {
+          leDelivered += deliveredCount;
+          leRequired += reqTarget;
+        }
+      }
+      
+      const completedRequirements = requirements.filter(r => 
+        r.talentAdvisor !== null && r.talentAdvisor !== ''
+      ).length;
+      
+      const totalResumesDelivered = hhDelivered + mmDelivered + leDelivered;
+      const totalResumesRequired = hhRequired + mmRequired + leRequired;
+      
+      const dailyMetrics = {
+        id: `daily-rec-${employee.id}`,
+        date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
+        totalRequirements: requirements.length,
+        completedRequirements,
+        totalResumes: totalResumesDelivered,
+        totalResumesDelivered,
+        totalResumesRequired,
+        dailyDeliveryDelivered: totalResumesDelivered,
+        dailyDeliveryDefaulted: Math.max(0, totalResumesRequired - totalResumesDelivered),
+        overallPerformance: totalResumesDelivered >= totalResumesRequired ? "G" : "R",
+        requirements: [
+          { criticality: "HH", required: hhRequired, delivered: hhDelivered },
+          { criticality: "MM", required: mmRequired, delivered: mmDelivered },
+          { criticality: "LE", required: leRequired, delivered: leDelivered }
+        ]
+      };
+      res.json(dailyMetrics);
+    } catch (error) {
+      console.error('Get recruiter daily metrics error:', error);
+      res.status(500).json({ message: "Failed to fetch daily metrics" });
+    }
   });
 
   app.get("/api/recruiter/meetings", requireEmployeeAuth, async (req, res) => {
