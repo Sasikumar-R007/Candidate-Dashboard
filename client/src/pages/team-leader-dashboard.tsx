@@ -258,8 +258,13 @@ export default function TeamLeaderDashboard() {
     enabled: !!employee, // Only fetch if logged in
   });
 
-  // Available talent advisors
-  const talentAdvisors = ['Kavitha', 'Rajesh', 'Sowmiya', 'Kalaiselvi', 'Malathi'];
+  // Get available talent advisors dynamically from team members
+  const talentAdvisors = useMemo(() => {
+    if (Array.isArray(teamMembers) && teamMembers.length > 0) {
+      return teamMembers.map((member: any) => member.name);
+    }
+    return [];
+  }, [teamMembers]);
   
   // Calculate priority distribution dynamically from real data
   const priorityDistribution = useMemo(() => {
@@ -481,7 +486,7 @@ export default function TeamLeaderDashboard() {
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
           <AdminTopHeader 
-            userName="John Mathew" 
+            userName={(teamLeaderProfile as any)?.name || employee?.name || 'Team Leader'} 
             companyName="Gumlat Marketing Private Limited" 
             onHelpClick={() => setIsHelpChatOpen(true)}
           />
@@ -765,39 +770,37 @@ export default function TeamLeaderDashboard() {
                   </CardHeader>
                   <CardContent className="p-4 pt-0">
                     <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-                      <div className="grid grid-cols-2 gap-6">
-                        <div className="text-center">
-                          <h3 className="text-sm font-medium text-gray-700 mb-3">TL's Meeting</h3>
-                          <div className="text-4xl font-bold text-gray-900 mb-4">3</div>
-                          <Button 
-                            size="sm" 
-                            className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded text-sm font-medium"
-                            onClick={() => setIsMeetingsModalOpen(true)}
-                            data-testid="button-view-meetings-tl"
-                          >
-                            View
-                          </Button>
+                      {Array.isArray(meetings) && meetings.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-6">
+                          {meetings.map((meeting: any, index: number) => (
+                            <div key={meeting.id || index} className={`text-center ${index > 0 ? 'border-l border-gray-300 pl-6' : ''}`}>
+                              <h3 className="text-sm font-medium text-gray-700 mb-3">{meeting.type}</h3>
+                              <div className="text-4xl font-bold text-gray-900 mb-4" data-testid={`text-meeting-count-${index}`}>
+                                {meeting.count}
+                              </div>
+                              <Button 
+                                size="sm" 
+                                className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded text-sm font-medium"
+                                onClick={() => setIsMeetingsModalOpen(true)}
+                                data-testid={`button-view-meetings-${index}`}
+                              >
+                                View
+                              </Button>
+                            </div>
+                          ))}
                         </div>
-                        <div className="text-center border-l border-gray-300 pl-6">
-                          <h3 className="text-sm font-medium text-gray-700 mb-3">CEO's Meeting</h3>
-                          <div className="text-4xl font-bold text-gray-900 mb-4">1</div>
-                          <Button 
-                            size="sm" 
-                            className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded text-sm font-medium"
-                            onClick={() => setIsMeetingsModalOpen(true)}
-                            data-testid="button-view-meetings-ceo"
-                          >
-                            View
-                          </Button>
+                      ) : (
+                        <div className="text-center py-4 text-gray-500">
+                          No pending meetings
                         </div>
-                      </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
 
                 {/* CEO Commands */}
                 <Card className="bg-white border border-gray-200">
-                  <CardHeader className="pb-3 pt-4 flex flex-row items-center justify-between">
+                  <CardHeader className="pb-3 pt-4 flex flex-row items-center justify-between gap-2">
                     <CardTitle className="text-lg font-semibold text-gray-900">CEO Commands</CardTitle>
                     <Button 
                       variant="link" 
@@ -810,15 +813,17 @@ export default function TeamLeaderDashboard() {
                   </CardHeader>
                   <CardContent className="p-4 pt-0">
                     <div className="bg-slate-800 rounded-lg p-6 text-white space-y-4">
-                      <div className="text-cyan-300 text-sm font-medium">
-                        Discuss with Shri Ragavi on her production
-                      </div>
-                      <div className="text-cyan-300 text-sm font-medium">
-                        Discuss with Kavya about her leaves
-                      </div>
-                      <div className="text-cyan-300 text-sm font-medium">
-                        Discuss with Umar for data
-                      </div>
+                      {Array.isArray(ceoComments) && ceoComments.length > 0 ? (
+                        ceoComments.slice(0, 3).map((comment: any, index: number) => (
+                          <div key={comment.id || index} className="text-cyan-300 text-sm font-medium" data-testid={`text-ceo-comment-${index}`}>
+                            {comment.comment}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-cyan-300/60 text-sm">
+                          No CEO commands at the moment
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -840,7 +845,7 @@ export default function TeamLeaderDashboard() {
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
           <AdminTopHeader 
-            userName="John Mathew" 
+            userName={(teamLeaderProfile as any)?.name || employee?.name || 'Team Leader'} 
             companyName="Gumlat Marketing Private Limited" 
             onHelpClick={() => setIsHelpChatOpen(true)}
           />
@@ -1445,7 +1450,7 @@ export default function TeamLeaderDashboard() {
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
           <AdminTopHeader 
-            userName="John Mathew" 
+            userName={(teamLeaderProfile as any)?.name || employee?.name || 'Team Leader'} 
             companyName="Gumlat Marketing Private Limited" 
             onHelpClick={() => setIsHelpChatOpen(true)}
           />
@@ -1509,7 +1514,7 @@ export default function TeamLeaderDashboard() {
           {/* Main Chat Area */}
           <div className="flex-1 flex flex-col">
             <AdminTopHeader 
-              userName="John Mathew" 
+              userName={(teamLeaderProfile as any)?.name || employee?.name || 'Team Leader'} 
               companyName="Gumlat Marketing Private Limited" 
               onHelpClick={() => setIsHelpChatOpen(true)}
             />

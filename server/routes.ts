@@ -1302,12 +1302,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const revenueMappings = await storage.getRevenueMappingsByRecruiterId(rec.id);
         const totalRevenue = revenueMappings.reduce((sum, rm) => sum + (rm.revenue || 0), 0);
         
+        let tenure = "0";
+        if (rec.joiningDate) {
+          try {
+            const joinDate = new Date(rec.joiningDate);
+            if (!isNaN(joinDate.getTime())) {
+              const now = new Date();
+              tenure = ((now.getTime() - joinDate.getTime()) / (1000 * 60 * 60 * 24 * 365)).toFixed(1);
+            }
+          } catch (e) {
+            tenure = "0";
+          }
+        }
+        
         return {
           id: rec.id,
           name: rec.name,
+          email: rec.email,
+          position: rec.designation || 'Recruiter',
+          department: rec.department || 'Recruitment',
           salary: totalRevenue > 0 ? `${totalRevenue.toLocaleString('en-IN')} INR` : "0 INR",
           year: `${year}-${year + 1}`,
-          profilesCount: String(revenueMappings.length)
+          profilesCount: String(revenueMappings.length),
+          closures: revenueMappings.filter(rm => rm.status === 'closed').length,
+          joiningDate: rec.joiningDate ? new Date(rec.joiningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-',
+          tenure: tenure,
+          status: 'online',
+          profilePicture: rec.profilePicture || null
         };
       }));
 
@@ -1465,6 +1486,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Team leader pipeline endpoint - fetch candidates from team members
+  app.get("/api/team-leader/pipeline", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      if (employee.role !== 'team_leader') {
+        return res.status(403).json({ message: "Access denied. Team Leader role required." });
+      }
+
+      // Get team members (recruiters reporting to this TL)
+      const allEmployees = await storage.getAllEmployees();
+      const teamRecruiters = allEmployees.filter(
+        emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
+      );
+      const teamRecruiterIds = teamRecruiters.map(r => r.id);
+      const teamRecruiterNames = teamRecruiters.map(r => r.name);
+
+      // Get all candidates and filter by team members
+      const allCandidates = await db.select().from(candidates).orderBy(desc(candidates.createdAt));
+      const teamCandidates = allCandidates.filter(c => 
+        teamRecruiterIds.includes(c.recruiterId!) || teamRecruiterNames.includes(c.addedBy || '')
+      );
+
+      // Format pipeline data
+      const pipelineData = teamCandidates.map((candidate: any) => ({
+        id: candidate.id,
+        name: candidate.name,
+        company: candidate.company || '-',
+        position: candidate.position || '-',
+        status: candidate.pipelineStatus || candidate.status || 'New',
+        recruiter: candidate.addedBy || teamRecruiters.find(r => r.id === candidate.recruiterId)?.name || '-',
+        ctc: candidate.ctc || '-',
+        ectc: candidate.ectc || '-',
+        noticePeriod: candidate.noticePeriod || '-',
+        createdAt: candidate.createdAt
+      }));
+      
+      res.json(pipelineData);
+    } catch (error) {
+      console.error('Get team leader pipeline error:', error);
+      res.status(500).json({ message: "Failed to fetch pipeline data" });
+    }
+  });
+
   // Team leader requirements endpoint - fetch requirements assigned to logged-in TL
   app.get("/api/team-leader/requirements", requireEmployeeAuth, async (req, res) => {
     try {
@@ -1586,38 +1655,85 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // In-memory storage for team leader profile to persist changes
-  let teamLeaderProfile = {
-    id: "tl-001",
-    name: "John Mathew",
-    role: "Team Leader",
-    employeeId: "STL01",
-    phone: "90347 59092",
-    email: "john@scalingtheory.com",
-    joiningDate: "03-March-2021",
-    department: "Talent Advisory",
-    reportingTo: "Yatna Prakash",
-    totalContribution: "2,50,000",
-    bannerImage: null,
-    profilePicture: null
-  };
+  // Get team leader profile from database based on logged-in user
+  app.get("/api/team-leader/profile", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
 
-  // Update the existing GET endpoint to use stored profile
-  app.get("/api/team-leader/profile", (req, res) => {
-    res.json(teamLeaderProfile);
+      if (employee.role !== 'team_leader') {
+        return res.status(403).json({ message: "Access denied. Team Leader role required." });
+      }
+
+      // Get team members count
+      const allEmployees = await storage.getAllEmployees();
+      const teamMembers = allEmployees.filter(
+        emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
+      );
+
+      // Get revenue mappings for total contribution calculation
+      const revenueMappings = await storage.getRevenueMappingsByTeamLeaderId(employee.id);
+      const totalContribution = revenueMappings.reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+
+      // Find reporting manager's name
+      let reportingToName = '-';
+      if (employee.reportingTo) {
+        const manager = allEmployees.find(emp => emp.employeeId === employee.reportingTo);
+        if (manager) {
+          reportingToName = manager.name;
+        }
+      }
+
+      const profile = {
+        id: employee.id,
+        name: employee.name,
+        role: "Team Leader",
+        employeeId: employee.employeeId,
+        phone: employee.phoneNumber || '-',
+        email: employee.email,
+        joiningDate: employee.joiningDate ? new Date(employee.joiningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }).replace(/ /g, '-') : '-',
+        department: employee.department || 'Talent Advisory',
+        reportingTo: reportingToName,
+        totalContribution: totalContribution.toLocaleString('en-IN'),
+        bannerImage: null,
+        profilePicture: employee.profilePicture || null,
+        teamMembersCount: teamMembers.length
+      };
+
+      res.json(profile);
+    } catch (error) {
+      console.error('Get team leader profile error:', error);
+      res.status(500).json({ message: "Failed to fetch profile" });
+    }
   });
 
   // Team Leader profile update endpoint
-  app.patch("/api/team-leader/profile", (req, res) => {
-    const updates = req.body;
-    
-    // Merge updates with existing profile to preserve other fields
-    teamLeaderProfile = {
-      ...teamLeaderProfile,
-      ...updates
-    };
-    
-    res.json(teamLeaderProfile);
+  app.patch("/api/team-leader/profile", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      if (employee.role !== 'team_leader') {
+        return res.status(403).json({ message: "Access denied. Team Leader role required." });
+      }
+
+      const updates = req.body;
+      
+      // Update employee record if needed
+      // For now, return the updated profile data
+      res.json({ ...updates, id: employee.id });
+    } catch (error) {
+      console.error('Update team leader profile error:', error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
   });
 
   // Team Leader stats endpoint - returns profile data for the team boxes component
