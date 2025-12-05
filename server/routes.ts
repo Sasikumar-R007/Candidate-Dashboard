@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import session from "express-session";
 import fs from "fs";
 import { storage } from "./storage";
-import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema, insertRecruiterCommandSchema, recruiterCommands, employees } from "@shared/schema";
+import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema, insertRecruiterCommandSchema, recruiterCommands, employees, candidates } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import multer from "multer";

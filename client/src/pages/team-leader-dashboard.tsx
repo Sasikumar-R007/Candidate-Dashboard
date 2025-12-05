@@ -252,6 +252,41 @@ export default function TeamLeaderDashboard() {
     return 'Chat';
   };
 
+  // Use API data - declare queries before useMemo hooks that depend on them
+  const { data: teamLeaderProfile } = useQuery({
+    queryKey: ['/api/team-leader/profile'],
+  });
+
+  const { data: teamMembers = [] } = useQuery<any[]>({
+    queryKey: ['/api/team-leader/team-members'],
+  });
+
+  const { data: targetMetrics } = useQuery({
+    queryKey: ['/api/team-leader/target-metrics'],
+  });
+
+  const { data: aggregatedTargets } = useQuery<any>({
+    queryKey: ['/api/team-leader/aggregated-targets'],
+  });
+
+  const { data: dailyMetrics } = useQuery<any>({
+    queryKey: ['/api/team-leader/daily-metrics'],
+  });
+
+  const { data: meetings = [], isLoading: isLoadingMeetings, isError: isErrorMeetings } = useQuery<any[]>({
+    queryKey: ['/api/team-leader/meetings'],
+  });
+
+  const { data: ceoComments = [], isLoading: isLoadingCeoComments, isError: isErrorCeoComments } = useQuery<any[]>({
+    queryKey: ['/api/team-leader/ceo-comments'],
+  });
+
+  // Fetch pipeline data for team leader
+  const { data: pipelineData = [], isLoading: isLoadingPipeline, isError: isErrorPipeline } = useQuery<any[]>({
+    queryKey: ['/api/team-leader/pipeline'],
+    enabled: !!employee,
+  });
+
   // Fetch requirements from API
   const { data: requirementsData = [], isLoading: isLoadingRequirements } = useQuery<Requirement[]>({
     queryKey: ['/api/team-leader/requirements'],
@@ -346,31 +381,6 @@ export default function TeamLeaderDashboard() {
     'Vihana': 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200'
   };
 
-  // Use API data
-  const { data: teamLeaderProfile } = useQuery({
-    queryKey: ['/api/team-leader/profile'],
-  });
-
-  const { data: teamMembers } = useQuery({
-    queryKey: ['/api/team-leader/team-members'],
-  });
-
-  const { data: targetMetrics } = useQuery({
-    queryKey: ['/api/team-leader/target-metrics'],
-  });
-
-  const { data: aggregatedTargets } = useQuery({
-    queryKey: ['/api/team-leader/aggregated-targets'],
-  });
-
-  const { data: dailyMetrics } = useQuery({
-    queryKey: ['/api/team-leader/daily-metrics'],
-  });
-
-  const { data: meetings, isLoading: isLoadingMeetings, isError: isErrorMeetings } = useQuery({
-    queryKey: ['/api/team-leader/meetings'],
-  });
-
   // Memoized filtered targets for the modal
   const filteredTargets = useMemo(() => {
     if (!aggregatedTargets?.allQuarters) return [];
@@ -382,16 +392,6 @@ export default function TeamLeaderDashboard() {
       quarter.status.toLowerCase().includes(targetSearch.toLowerCase())
     );
   }, [aggregatedTargets, targetSearch]);
-
-  const { data: ceoComments, isLoading: isLoadingCeoComments, isError: isErrorCeoComments } = useQuery({
-    queryKey: ['/api/team-leader/ceo-comments'],
-  });
-
-  // Fetch pipeline data for team leader
-  const { data: pipelineData, isLoading: isLoadingPipeline, isError: isErrorPipeline } = useQuery({
-    queryKey: ['/api/team-leader/pipeline'],
-    enabled: !!employee,
-  });
 
   // Group pipeline candidates by status for the pipeline view
   const groupedPipelineCandidates = useMemo(() => {
@@ -528,7 +528,6 @@ export default function TeamLeaderDashboard() {
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
           <AdminTopHeader 
-            userName={(teamLeaderProfile as any)?.name || employee?.name || 'Team Leader'} 
             companyName="Gumlat Marketing Private Limited" 
             onHelpClick={() => setIsHelpChatOpen(true)}
           />
@@ -905,7 +904,6 @@ export default function TeamLeaderDashboard() {
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
           <AdminTopHeader 
-            userName={(teamLeaderProfile as any)?.name || employee?.name || 'Team Leader'} 
             companyName="Gumlat Marketing Private Limited" 
             onHelpClick={() => setIsHelpChatOpen(true)}
           />
@@ -1503,7 +1501,6 @@ export default function TeamLeaderDashboard() {
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
           <AdminTopHeader 
-            userName={(teamLeaderProfile as any)?.name || employee?.name || 'Team Leader'} 
             companyName="Gumlat Marketing Private Limited" 
             onHelpClick={() => setIsHelpChatOpen(true)}
           />
@@ -1567,7 +1564,6 @@ export default function TeamLeaderDashboard() {
           {/* Main Chat Area */}
           <div className="flex-1 flex flex-col">
             <AdminTopHeader 
-              userName={(teamLeaderProfile as any)?.name || employee?.name || 'Team Leader'} 
               companyName="Gumlat Marketing Private Limited" 
               onHelpClick={() => setIsHelpChatOpen(true)}
             />
@@ -2229,9 +2225,8 @@ export default function TeamLeaderDashboard() {
                           requirement.position.toLowerCase().includes(requirementSearch.toLowerCase()) ||
                           requirement.criticality.toLowerCase().includes(requirementSearch.toLowerCase()) ||
                           requirement.company.toLowerCase().includes(requirementSearch.toLowerCase()) ||
-                          requirement.contact.toLowerCase().includes(requirementSearch.toLowerCase()) ||
-                          requirement.talentAdvisor.toLowerCase().includes(requirementSearch.toLowerCase()) ||
-                          (requirement.recruiter && requirement.recruiter.toLowerCase().includes(requirementSearch.toLowerCase()))
+                          (requirement.spoc && requirement.spoc.toLowerCase().includes(requirementSearch.toLowerCase())) ||
+                          (requirement.talentAdvisor && requirement.talentAdvisor.toLowerCase().includes(requirementSearch.toLowerCase()))
                         )
                         .map((requirement) => (
                         <tr key={requirement.id} className="border-b border-gray-100 dark:border-gray-800">
@@ -2248,11 +2243,11 @@ export default function TeamLeaderDashboard() {
                             </span>
                           </td>
                           <td className="py-4 px-4 text-gray-600 dark:text-gray-400">{requirement.company}</td>
-                          <td className="py-4 px-4 text-gray-600 dark:text-gray-400">{requirement.contact}</td>
-                          <td className="py-4 px-4 text-gray-600 dark:text-gray-400">{requirement.talentAdvisor}</td>
+                          <td className="py-4 px-4 text-gray-600 dark:text-gray-400">{requirement.spoc || '-'}</td>
+                          <td className="py-4 px-4 text-gray-600 dark:text-gray-400">{requirement.talentAdvisor || '-'}</td>
                           <td className="py-4 px-4">
-                            {requirement.recruiter ? (
-                              <span className="text-gray-600 dark:text-gray-400">{requirement.recruiter}</span>
+                            {requirement.talentAdvisor ? (
+                              <span className="text-gray-600 dark:text-gray-400">{requirement.talentAdvisor}</span>
                             ) : (
                               <Button 
                                 size="sm" 
@@ -2264,7 +2259,7 @@ export default function TeamLeaderDashboard() {
                             )}
                           </td>
                           <td className="py-4 px-4">
-                            {requirement.recruiter && (
+                            {requirement.talentAdvisor && (
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
@@ -2961,13 +2956,13 @@ export default function TeamLeaderDashboard() {
                         </span>
                       </td>
                       <td className="p-3 text-gray-900 border border-gray-300">{requirement.company}</td>
-                      <td className="p-3 text-gray-900 border border-gray-300">{requirement.contact}</td>
+                      <td className="p-3 text-gray-900 border border-gray-300">{requirement.spoc || '-'}</td>
                       <td className="p-3 text-gray-900 border border-gray-300">{requirement.talentAdvisor || 'Unassigned'}</td>
                       <td className="p-3 border border-gray-300">
                         <span className={`text-xs font-semibold px-2 py-1 rounded ${
-                          requirement.recruiter ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                          requirement.talentAdvisor ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                         }`}>
-                          {requirement.recruiter ? 'Assigned' : 'Open'}
+                          {requirement.talentAdvisor ? 'Assigned' : 'Open'}
                         </span>
                       </td>
                     </tr>
