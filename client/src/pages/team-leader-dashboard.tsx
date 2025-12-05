@@ -8,6 +8,7 @@ import AddRequirementModal from '@/components/dashboard/modals/add-requirement-m
 import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-modal';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -123,23 +124,6 @@ export default function TeamLeaderDashboard() {
   const [targetSearch, setTargetSearch] = useState('');
   const [requirementSearch, setRequirementSearch] = useState('');
   
-  // Team members for team chat (5 members)
-  const chatTeamMembers = [
-    { id: 'kavitha', name: 'Kavitha', role: 'Senior Recruiter', status: 'online' },
-    { id: 'rajesh', name: 'Rajesh', role: 'Technical Recruiter', status: 'online' },
-    { id: 'sowmiya', name: 'Sowmiya', role: 'Senior Recruiter', status: 'online' },
-    { id: 'kalaiselvi', name: 'Kalaiselvi', role: 'Recruiter', status: 'away' },
-    { id: 'malathi', name: 'Malathi', role: 'Junior Recruiter', status: 'online' }
-  ];
-
-  // Individual contacts for private chat (4 contacts)
-  const individualContacts = [
-    { id: 'arun-hr', name: 'Arun Kumar', role: 'HR Manager', status: 'online' },
-    { id: 'priya-client', name: 'Priya Singh', role: 'Client Manager', status: 'online' },
-    { id: 'david-ceo', name: 'David Johnson', role: 'CEO', status: 'away' },
-    { id: 'sarah-ops', name: 'Sarah Williams', role: 'Operations Head', status: 'online' }
-  ];
-
   const [teamChatMessages, setTeamChatMessages] = useState([
     { id: 1, sender: "John Mathew", message: "Good morning team! Please review the requirements for today", time: "9:00 AM", isOwn: true },
     { id: 2, sender: "Kavitha", message: "Good morning sir. I've reviewed the Frontend Developer position. Ready to proceed.", time: "9:05 AM", isOwn: false },
@@ -293,6 +277,18 @@ export default function TeamLeaderDashboard() {
     enabled: !!employee, // Only fetch if logged in
   });
 
+  // Fetch team performance data from API
+  const { data: teamPerformanceData = [] } = useQuery<any[]>({
+    queryKey: ['/api/team-leader/team-performance'],
+    enabled: !!employee,
+  });
+
+  // Fetch closures data from API
+  const { data: closureData = [] } = useQuery<any[]>({
+    queryKey: ['/api/team-leader/closures'],
+    enabled: !!employee,
+  });
+
   // Get available talent advisors dynamically from team members
   const talentAdvisors = useMemo(() => {
     if (Array.isArray(teamMembers) && teamMembers.length > 0) {
@@ -316,6 +312,19 @@ export default function TeamLeaderDashboard() {
       total: requirementsData.length
     };
   }, [requirementsData]);
+
+  // Chat team members are derived from real team members query
+  const chatTeamMembers = useMemo(() => {
+    return (teamMembers || []).map((member: any) => ({
+      id: String(member.id),
+      name: member.name,
+      role: member.position || 'Recruiter',
+      status: member.status || 'online'
+    }));
+  }, [teamMembers]);
+
+  // Individual contacts - currently empty, could be populated from other API
+  const individualContacts: { id: string; name: string; role: string; status: string }[] = [];
 
   // Mutation to assign talent advisor to requirement
   const assignTalentAdvisorMutation = useMutation({
@@ -1469,33 +1478,7 @@ export default function TeamLeaderDashboard() {
   };
 
   const renderPerformanceContent = () => {
-    // Team performance data
-    const teamPerformanceData = [
-      { name: "Kavitha", joiningDate: "Jan 2022", tenure: "2y 11m", closures: 15, lastClosure: "15-Dec-24", qtrsAchieved: 3 },
-      { name: "Rajesh", joiningDate: "Mar 2021", tenure: "3y 9m", closures: 23, lastClosure: "20-Dec-24", qtrsAchieved: 4 },
-      { name: "Sowmiya", joiningDate: "Aug 2023", tenure: "1y 4m", closures: 8, lastClosure: "12-Dec-24", qtrsAchieved: 2 },
-      { name: "Kalaiselvi", joiningDate: "Nov 2022", tenure: "2y 1m", closures: 12, lastClosure: "18-Dec-24", qtrsAchieved: 3 },
-      { name: "Malathi", joiningDate: "Feb 2024", tenure: "11m", closures: 5, lastClosure: "22-Dec-24", qtrsAchieved: 1 },
-      { name: "Priya", joiningDate: "Jun 2023", tenure: "1y 6m", closures: 9, lastClosure: "10-Dec-24", qtrsAchieved: 2 },
-      { name: "Arun", joiningDate: "Sep 2022", tenure: "2y 3m", closures: 14, lastClosure: "25-Dec-24", qtrsAchieved: 3 },
-      { name: "Divya", joiningDate: "Apr 2024", tenure: "8m", closures: 3, lastClosure: "05-Dec-24", qtrsAchieved: 1 },
-      { name: "Venkat", joiningDate: "Dec 2021", tenure: "3y", closures: 19, lastClosure: "28-Dec-24", qtrsAchieved: 4 },
-      { name: "Deepika", joiningDate: "Jul 2023", tenure: "1y 5m", closures: 7, lastClosure: "14-Dec-24", qtrsAchieved: 2 }
-    ];
-
-    // Closure data
-    const closureData = [
-      { name: "Emily Davis", position: "Frontend Developer", company: "TechCorp", closureMonth: "JFM, 2025", talentAdvisor: "Kavitha", package: "12,00,000", revenue: "89,892" },
-      { name: "Michael Brown", position: "UI/UX Designer", company: "Designify", closureMonth: "AMJ, 2025", talentAdvisor: "Rajesh", package: "8,00,000", revenue: "59,928" },
-      { name: "Sarah Wilson", position: "Backend Developer", company: "CodeLabs", closureMonth: "MJJ, 2025", talentAdvisor: "Sowmiya", package: "18,00,000", revenue: "1,34,946" },
-      { name: "Kevin Brown", position: "QA Tester", company: "AppLogic", closureMonth: "PMA, 2025", talentAdvisor: "Kalaiselvi", package: "30,00,000", revenue: "2,24,910" },
-      { name: "Lisa Wang", position: "Mobile Developer", company: "Tesco", closureMonth: "JAS, 2025", talentAdvisor: "Malathi", package: "15,00,000", revenue: "1,12,467" },
-      { name: "David Kumar", position: "DevOps Engineer", company: "CloudTech", closureMonth: "OND, 2024", talentAdvisor: "Priya", package: "22,00,000", revenue: "1,64,916" },
-      { name: "Anna Smith", position: "Data Scientist", company: "DataFlow", closureMonth: "JFM, 2025", talentAdvisor: "Arun", package: "25,00,000", revenue: "1,87,467" },
-      { name: "Robert Lee", position: "Security Expert", company: "SecureNet", closureMonth: "AMJ, 2025", talentAdvisor: "Divya", package: "28,00,000", revenue: "2,09,916" },
-      { name: "Maria Garcia", position: "Product Manager", company: "InnovateLab", closureMonth: "MJJ, 2025", talentAdvisor: "Venkat", package: "35,00,000", revenue: "2,62,467" },
-      { name: "James Wilson", position: "Full Stack Dev", company: "WebCorp", closureMonth: "PMA, 2025", talentAdvisor: "Deepika", package: "19,00,000", revenue: "1,42,467" }
-    ];
+    // Use real data from API queries (teamPerformanceData and closureData defined at component level)
 
     return (
       <div className="flex min-h-screen">
@@ -1519,34 +1502,38 @@ export default function TeamLeaderDashboard() {
                 </Button>
               </CardHeader>
               <CardContent className="p-3">
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse bg-white rounded">
-                    <thead>
-                      <tr className="bg-gray-200">
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Name</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Position</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Company</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Closure Month</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Talent Advisor</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Package</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Revenue</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {closureData.slice(0, 5).map((closure, index) => (
-                        <tr key={closure.name} className={index % 2 === 0 ? "bg-blue-50" : "bg-white"}>
-                          <td className="py-3 px-4 text-gray-900 font-medium">{closure.name}</td>
-                          <td className="py-3 px-4 text-gray-600">{closure.position}</td>
-                          <td className="py-3 px-4 text-gray-600">{closure.company}</td>
-                          <td className="py-3 px-4 text-gray-600">{closure.closureMonth}</td>
-                          <td className="py-3 px-4 text-gray-600">{closure.talentAdvisor}</td>
-                          <td className="py-3 px-4 text-gray-600">{closure.package}</td>
-                          <td className="py-3 px-4 text-gray-600">{closure.revenue}</td>
+                {closureData.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">No closures recorded yet.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse bg-white rounded">
+                      <thead>
+                        <tr className="bg-gray-200">
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Name</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Position</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Company</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Closure Month</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Talent Advisor</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Package</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Revenue</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {closureData.slice(0, 5).map((closure: any, index: number) => (
+                          <tr key={`${closure.name}-${index}`} className={index % 2 === 0 ? "bg-blue-50" : "bg-white"}>
+                            <td className="py-3 px-4 text-gray-900 font-medium">{closure.name}</td>
+                            <td className="py-3 px-4 text-gray-600">{closure.position}</td>
+                            <td className="py-3 px-4 text-gray-600">{closure.company}</td>
+                            <td className="py-3 px-4 text-gray-600">{closure.closureMonth}</td>
+                            <td className="py-3 px-4 text-gray-600">{closure.talentAdvisor}</td>
+                            <td className="py-3 px-4 text-gray-600">{closure.package}</td>
+                            <td className="py-3 px-4 text-gray-600">{closure.revenue}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -1891,32 +1878,40 @@ export default function TeamLeaderDashboard() {
   };
 
   const renderTeamSidebar = () => {
-    const teamData = [
-      { name: "Deepika", salary: "3,50,000 INR", year: "2024-2025", count: 6 },
-      { name: "Priyanka", salary: "4,30,000 INR", year: "2024-2025", count: 12 },
-      { name: "Thamarai Selvi", salary: "1,00,000 INR", year: "2022-2025", count: 7 },
-      { name: "Kavya", salary: "5,50,000 INR", year: "2020-2025", count: 2 },
-      { name: "Karthikayan", salary: "3,00,000 INR", year: "2024-2025", count: 11 },
-      { name: "Vishnu Priya", salary: "4,50,000 INR", year: "2018-2025", count: 3 },
-      { name: "Helen", salary: "5,50,000 INR", year: "2017-2025", count: 10 },
-      { name: "Kavin", salary: "2,00,000 INR", year: "2022-2025", count: 12 },
-      { name: "Thrisha", salary: "3,50,000 INR", year: "2024-2025", count: 6 },
-      { name: "Megna", salary: "8,30,000 INR", year: "2022-2025", count: 12 }
-    ];
+    // Use real team members from API
+    const teamData = (teamMembers || []).map((member: any) => ({
+      name: member.name,
+      salary: member.salary || '0 INR',
+      year: member.year || `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`,
+      count: parseInt(member.profilesCount) || 0,
+      profilePicture: member.profilePicture
+    }));
+
+    if (teamData.length === 0) {
+      return (
+        <div className="p-6">
+          <div className="bg-blue-50 rounded-lg p-4 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">My Team</h3>
+            <p className="text-sm text-gray-500">No team members assigned yet.</p>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="p-6">
         <div className="bg-blue-50 rounded-lg p-4 mb-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">My Team</h3>
           <div className="space-y-4">
-            {teamData.map((member, index) => (
+            {teamData.map((member: any, index: number) => (
               <div key={index} className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <img 
-                    src={`https://images.unsplash.com/photo-150${7 + index}003211169-0a1dd7228f2d?auto=format&fit=crop&w=32&h=32`}
-                    alt={member.name}
-                    className="w-8 h-8 rounded-full"
-                  />
+                  <Avatar className="w-8 h-8">
+                    <AvatarImage src={member.profilePicture || undefined} alt={member.name} />
+                    <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
+                      {member.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || 'U'}
+                    </AvatarFallback>
+                  </Avatar>
                   <div>
                     <div className="font-medium text-sm text-gray-900">{member.name}</div>
                     <div className="text-xs text-blue-600">{member.salary}</div>

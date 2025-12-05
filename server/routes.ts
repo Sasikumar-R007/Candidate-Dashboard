@@ -1791,6 +1791,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Team Leader team performance endpoint
+  app.get("/api/team-leader/team-performance", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee || employee.role !== 'team_leader') {
+        return res.status(403).json({ message: "Access denied. Team Leader role required." });
+      }
+
+      const allEmployees = await storage.getAllEmployees();
+      const recruiters = allEmployees.filter(
+        emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
+      );
+
+      const performanceData = await Promise.all(recruiters.map(async (rec) => {
+        const revenueMappings = await storage.getRevenueMappingsByRecruiterId(rec.id);
+        const closures = revenueMappings.filter(rm => rm.status === 'closed').length;
+        
+        let tenure = "0";
+        if (rec.joiningDate) {
+          try {
+            const joinDate = new Date(rec.joiningDate);
+            if (!isNaN(joinDate.getTime())) {
+              const now = new Date();
+              const years = Math.floor((now.getTime() - joinDate.getTime()) / (1000 * 60 * 60 * 24 * 365));
+              const months = Math.floor(((now.getTime() - joinDate.getTime()) % (1000 * 60 * 60 * 24 * 365)) / (1000 * 60 * 60 * 24 * 30));
+              tenure = years > 0 ? `${years}y ${months}m` : `${months}m`;
+            }
+          } catch (e) {
+            tenure = "0";
+          }
+        }
+
+        // Count unique quarters with closures
+        const closedMappings = revenueMappings.filter(rm => rm.status === 'closed');
+        const qtrsAchieved = new Set(closedMappings.map(rm => rm.quarter)).size;
+        
+        // Find last closure date
+        const lastClosure = closedMappings.length > 0 
+          ? closedMappings.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())[0]
+          : null;
+
+        return {
+          name: rec.name,
+          joiningDate: rec.joiningDate ? new Date(rec.joiningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-',
+          tenure,
+          closures,
+          lastClosure: lastClosure ? new Date(lastClosure.createdAt || Date.now()).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }) : '-',
+          qtrsAchieved
+        };
+      }));
+
+      res.json(performanceData);
+    } catch (error) {
+      console.error('Get team leader team performance error:', error);
+      res.status(500).json({ message: "Failed to fetch team performance" });
+    }
+  });
+
+  // Team Leader closures list endpoint
+  app.get("/api/team-leader/closures", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee || employee.role !== 'team_leader') {
+        return res.status(403).json({ message: "Access denied. Team Leader role required." });
+      }
+
+      const allEmployees = await storage.getAllEmployees();
+      const recruiters = allEmployees.filter(
+        emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
+      );
+
+      const closures: any[] = [];
+      for (const rec of recruiters) {
+        const revenueMappings = await storage.getRevenueMappingsByRecruiterId(rec.id);
+        const closedMappings = revenueMappings.filter(rm => rm.status === 'closed');
+        
+        for (const mapping of closedMappings) {
+          closures.push({
+            name: mapping.candidateName || 'Unknown',
+            position: mapping.position || 'Unknown Position',
+            company: mapping.company || 'Unknown Company',
+            closureMonth: mapping.quarter || 'N/A',
+            talentAdvisor: rec.name,
+            package: mapping.package ? `${Number(mapping.package).toLocaleString('en-IN')}` : '0',
+            revenue: mapping.revenue ? `${Number(mapping.revenue).toLocaleString('en-IN')}` : '0'
+          });
+        }
+      }
+
+      res.json(closures);
+    } catch (error) {
+      console.error('Get team leader closures error:', error);
+      res.status(500).json({ message: "Failed to fetch closures" });
+    }
+  });
+
   // Admin Dashboard API routes and file uploads
   // In-memory storage for admin profile to persist changes
   let adminProfile = {
