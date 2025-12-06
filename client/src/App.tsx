@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/contexts/theme-context";
 import { AuthProvider } from "@/contexts/auth-context";
+import { ProtectedRoute } from "@/components/protected-route";
 import Landing from "@/pages/landing";
 import EmployerLogin from "@/pages/employer-login";
 import CandidateLogin from "@/pages/candidate-login";
@@ -37,19 +38,85 @@ function Router() {
       <Route path="/support-login" component={SupportLogin} />
       <Route path="/candidate-login" component={CandidateLogin} />
       <Route path="/candidate-registration" component={CandidateRegistration} />
-      <Route path="/dashboard-selection" component={DashboardSelection} />
-      <Route path="/candidate" component={Dashboard} />
-      <Route path="/team-leader" component={TeamLeaderDashboard} />
-      <Route path="/admin" component={AdminDashboard} />
-      <Route path="/recruiter-login-2" component={RecruiterDashboard2} />
-      <Route path="/client" component={ClientDashboard} />
-      <Route path="/chat" component={ChatPage} />
-      <Route path="/source-resume" component={SourceResume} />
-      <Route path="/recruiter-active-jobs" component={RecruiterActiveJobs} />
-      <Route path="/recruiter-new-applications" component={RecruiterNewApplications} />
-      <Route path="/archives" component={Archives} />
-      <Route path="/master-database" component={MasterDatabase} />
-      <Route path="/support-dashboard" component={SupportDashboard} />
+      
+      <Route path="/dashboard-selection">
+        <ProtectedRoute userType="employee">
+          <DashboardSelection />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/candidate">
+        <ProtectedRoute userType="candidate" redirectTo="/candidate-login">
+          <Dashboard />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/team-leader">
+        <ProtectedRoute userType="employee" allowedRoles={["teamLead", "team_leader"]}>
+          <TeamLeaderDashboard />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/admin">
+        <ProtectedRoute userType="employee" allowedRoles={["admin"]}>
+          <AdminDashboard />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/recruiter-login-2">
+        <ProtectedRoute userType="employee" allowedRoles={["recruiter", "talent_advisor"]}>
+          <RecruiterDashboard2 />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/client">
+        <ProtectedRoute userType="employee" allowedRoles={["client"]}>
+          <ClientDashboard />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/chat">
+        <ProtectedRoute userType="employee">
+          <ChatPage />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/source-resume">
+        <ProtectedRoute userType="employee" allowedRoles={["recruiter", "talent_advisor", "teamLead", "team_leader", "admin"]}>
+          <SourceResume />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/recruiter-active-jobs">
+        <ProtectedRoute userType="employee" allowedRoles={["recruiter", "talent_advisor", "teamLead", "team_leader", "admin"]}>
+          <RecruiterActiveJobs />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/recruiter-new-applications">
+        <ProtectedRoute userType="employee" allowedRoles={["recruiter", "talent_advisor", "teamLead", "team_leader", "admin"]}>
+          <RecruiterNewApplications />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/archives">
+        <ProtectedRoute userType="employee" allowedRoles={["recruiter", "talent_advisor", "teamLead", "team_leader", "admin"]}>
+          <Archives />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/master-database">
+        <ProtectedRoute userType="employee" allowedRoles={["admin"]}>
+          <MasterDatabase />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/support-dashboard">
+        <ProtectedRoute userType="employee" allowedRoles={["support"]} redirectTo="/support-login">
+          <SupportDashboard />
+        </ProtectedRoute>
+      </Route>
+      
       <Route component={NotFound} />
     </Switch>
   );

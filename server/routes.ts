@@ -146,6 +146,55 @@ function requireSupportAuth(req: Request, res: Response, next: NextFunction) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Session Verification Route - Check if user session is valid and return user data
+  app.get("/api/auth/verify-session", async (req, res) => {
+    try {
+      // Check for employee session
+      if (req.session.employeeId) {
+        const employee = await storage.getEmployeeById(req.session.employeeId);
+        if (employee && employee.isActive) {
+          const { password: _, ...employeeData } = employee;
+          return res.json({
+            authenticated: true,
+            userType: 'employee',
+            user: employeeData
+          });
+        }
+      }
+      
+      // Check for candidate session
+      if (req.session.candidateId) {
+        const candidate = await storage.getCandidateByCandidateId(req.session.candidateId);
+        if (candidate) {
+          const { password: _, ...candidateData } = candidate;
+          return res.json({
+            authenticated: true,
+            userType: 'candidate',
+            user: candidateData
+          });
+        }
+      }
+      
+      // No valid session
+      return res.json({ authenticated: false });
+    } catch (error) {
+      console.error('Session verification error:', error);
+      return res.json({ authenticated: false });
+    }
+  });
+
+  // Logout Route - Clear session and redirect
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        console.error('Logout error:', err);
+        return res.status(500).json({ message: "Logout failed" });
+      }
+      res.clearCookie('connect.sid');
+      res.json({ success: true, message: "Logged out successfully" });
+    });
+  });
+
   // Employee Authentication Routes
   app.post("/api/auth/employee-login", async (req, res) => {
     try {
