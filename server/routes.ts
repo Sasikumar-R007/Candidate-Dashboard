@@ -2538,6 +2538,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertRequirementSchema.parse(req.body);
       const requirement = await storage.createRequirement(validatedData);
+      
+      logRequirementAdded(
+        storage,
+        'admin',
+        'Admin',
+        'admin',
+        requirement.position,
+        requirement.company,
+        requirement.id
+      );
+      
       res.status(201).json(requirement);
     } catch (error) {
       res.status(400).json({ message: "Invalid requirement data" });
@@ -3613,6 +3624,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const revenueMapping = await storage.createRevenueMapping(revenueMappingData);
 
+      logClosureMade(
+        storage,
+        talentAdvisorId,
+        talentAdvisor.name,
+        'recruiter',
+        candidateName || 'Candidate',
+        position,
+        client.brandName,
+        revenueMapping.id
+      );
+
       res.status(201).json({
         message: "Revenue mapping created successfully",
         revenueMapping,
@@ -4537,6 +4559,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const application = await storage.createJobApplication(applicationData);
+      
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      logCandidateSubmitted(
+        storage,
+        req.session.employeeId || 'unknown',
+        employee?.name || 'Recruiter',
+        'recruiter',
+        candidateName.trim(),
+        jobTitle.trim(),
+        application.id
+      );
+      
       res.status(201).json({ message: "Application created successfully", application });
     } catch (error) {
       console.error("Create recruiter application error:", error);
@@ -4554,10 +4588,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Status is required" });
       }
       
+      const existingApplication = await storage.getJobApplicationById(id);
+      const previousStatus = existingApplication?.status;
+      
       const application = await storage.updateJobApplicationStatus(id, status);
       if (!application) {
         return res.status(404).json({ message: "Application not found" });
       }
+      
+      if (previousStatus && previousStatus !== status) {
+        logCandidatePipelineChanged(
+          storage,
+          'system',
+          'System',
+          'system',
+          application.candidateName || 'Candidate',
+          previousStatus,
+          status,
+          application.id
+        );
+      }
+      
       res.json({ message: "Application status updated", application });
     } catch (error) {
       console.error("Update application status error:", error);

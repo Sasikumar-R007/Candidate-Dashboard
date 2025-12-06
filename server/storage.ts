@@ -214,6 +214,7 @@ export interface IStorage {
   
   // Applicant methods (for job applications from job board and recruiter tags)
   getAllJobApplications(): Promise<JobApplication[]>;
+  getJobApplicationById(id: string): Promise<JobApplication | undefined>;
   getJobApplicationsByRecruiterJobId(recruiterJobId: string): Promise<JobApplication[]>;
   getJobApplicationsByRequirementId(requirementId: string): Promise<JobApplication[]>;
   createRecruiterJobApplication(application: InsertJobApplication & { profileId: string }): Promise<JobApplication>;
@@ -848,6 +849,10 @@ export class MemStorage implements IStorage {
     const application: JobApplication = { ...insertApplication, id };
     this.jobApplications.set(id, application);
     return application;
+  }
+
+  async getJobApplicationById(id: string): Promise<JobApplication | undefined> {
+    return this.jobApplications.get(id);
   }
 
   async getSavedJobsByProfile(profileId: string): Promise<SavedJob[]> {
