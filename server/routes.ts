@@ -1380,12 +1380,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied. Team Leader role required." });
       }
 
-      const requirements = await storage.getRequirementsByTeamLead(employee.name);
-      
+      // Get filter parameter (member name or 'overall')
+      const memberFilter = req.query.member as string | undefined;
+
       const allEmployees = await storage.getAllEmployees();
       const teamRecruiters = allEmployees.filter(
         emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
       );
+
+      // Get requirements based on filter
+      let requirements;
+      let filteredRecruiters = teamRecruiters;
+      
+      if (memberFilter && memberFilter !== 'overall') {
+        // Filter by specific member
+        const selectedRecruiter = teamRecruiters.find(r => r.name.toLowerCase() === memberFilter.toLowerCase());
+        if (selectedRecruiter) {
+          requirements = await storage.getRequirementsByTalentAdvisor(selectedRecruiter.name);
+          filteredRecruiters = [selectedRecruiter];
+        } else {
+          requirements = await storage.getRequirementsByTeamLead(employee.name);
+        }
+      } else {
+        // Overall - get all requirements for the team
+        requirements = await storage.getRequirementsByTeamLead(employee.name);
+      }
 
       const performanceData = await Promise.all(teamRecruiters.map(async (rec) => {
         const recReqs = await storage.getRequirementsByTalentAdvisor(rec.name);
@@ -1394,8 +1413,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const totalRequirements = requirements.length;
       const avgResumesPerRequirement = totalRequirements > 0 ? "0.00" : "0.00";
-      const requirementsPerRecruiter = teamRecruiters.length > 0 
-        ? (totalRequirements / teamRecruiters.length).toFixed(2) 
+      const requirementsPerRecruiter = filteredRecruiters.length > 0 
+        ? (totalRequirements / filteredRecruiters.length).toFixed(2) 
         : "0.00";
 
       const dailyMetrics = {
@@ -1413,7 +1432,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         overallPerformance: "G",
         deliveredItems: [],
         defaultedItems: [],
-        performanceData
+        performanceData,
+        teamMembers: teamRecruiters.map(r => ({ id: r.id, name: r.name }))
       };
       res.json(dailyMetrics);
     } catch (error) {
@@ -1568,6 +1588,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get team leader pipeline error:', error);
       res.status(500).json({ message: "Failed to fetch pipeline data" });
+    }
+  });
+
+  // Team leader pipeline counts endpoint - get counts for each pipeline stage
+  app.get("/api/team-leader/pipeline-counts", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      if (employee.role !== 'team_leader') {
+        return res.status(403).json({ message: "Access denied. Team Leader role required." });
+      }
+
+      // Get team members (recruiters reporting to this TL)
+      const allEmployees = await storage.getAllEmployees();
+      const teamRecruiters = allEmployees.filter(
+        emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
+      );
+      const teamRecruiterNames = teamRecruiters.map(r => r.name.toLowerCase());
+
+      // Get all candidates and filter by team members
+      const allCandidates = await db.select().from(candidates).orderBy(desc(candidates.createdAt));
+      const teamCandidates = allCandidates.filter(c => {
+        const addedByMatch = c.addedBy && teamRecruiterNames.includes(c.addedBy.toLowerCase());
+        const assignedToMatch = c.assignedTo && teamRecruiterNames.includes(c.assignedTo.toLowerCase());
+        return addedByMatch || assignedToMatch;
+      });
+
+      // Count candidates by pipeline status
+      const stageCounts: Record<string, number> = {
+        SOURCED: 0,
+        SHORTLISTED: 0,
+        INTRO_CALL: 0,
+        ASSIGNMENT: 0,
+        L1: 0,
+        L2: 0,
+        L3: 0,
+        FINAL_ROUND: 0,
+        HR_ROUND: 0,
+        OFFER_STAGE: 0,
+        CLOSURE: 0,
+        OFFER_DROP: 0
+      };
+
+      teamCandidates.forEach((candidate: any) => {
+        const status = (candidate.pipelineStatus || candidate.status || 'SOURCED').toUpperCase();
+        // Map various status values to our stage keys
+        const statusMapping: Record<string, string> = {
+          'NEW': 'SOURCED',
+          'SOURCED': 'SOURCED',
+          'SHORTLISTED': 'SHORTLISTED',
+          'INTRO CALL': 'INTRO_CALL',
+          'INTRO_CALL': 'INTRO_CALL',
+          'ASSIGNMENT': 'ASSIGNMENT',
+          'L1': 'L1',
+          'L2': 'L2',
+          'L3': 'L3',
+          'FINAL ROUND': 'FINAL_ROUND',
+          'FINAL_ROUND': 'FINAL_ROUND',
+          'HR ROUND': 'HR_ROUND',
+          'HR_ROUND': 'HR_ROUND',
+          'OFFER STAGE': 'OFFER_STAGE',
+          'OFFER_STAGE': 'OFFER_STAGE',
+          'CLOSURE': 'CLOSURE',
+          'CLOSED': 'CLOSURE',
+          'OFFER DROP': 'OFFER_DROP',
+          'OFFER_DROP': 'OFFER_DROP',
+          'REJECTED': 'OFFER_DROP'
+        };
+        const mappedStatus = statusMapping[status] || 'SOURCED';
+        if (stageCounts.hasOwnProperty(mappedStatus)) {
+          stageCounts[mappedStatus]++;
+        }
+      });
+
+      res.json(stageCounts);
+    } catch (error) {
+      console.error('Get team leader pipeline counts error:', error);
+      res.status(500).json({ message: "Failed to fetch pipeline counts" });
     }
   });
 

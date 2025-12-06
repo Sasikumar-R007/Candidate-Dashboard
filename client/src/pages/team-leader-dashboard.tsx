@@ -255,7 +255,18 @@ export default function TeamLeaderDashboard() {
   });
 
   const { data: dailyMetrics } = useQuery<any>({
-    queryKey: ['/api/team-leader/daily-metrics'],
+    queryKey: ['/api/team-leader/daily-metrics', selectedDailyMetricsFilter],
+    queryFn: async () => {
+      const response = await fetch(`/api/team-leader/daily-metrics?member=${selectedDailyMetricsFilter}`);
+      if (!response.ok) throw new Error('Failed to fetch daily metrics');
+      return response.json();
+    },
+  });
+
+  // Fetch pipeline counts for the right sidebar
+  const { data: pipelineCounts = {} } = useQuery<Record<string, number>>({
+    queryKey: ['/api/team-leader/pipeline-counts'],
+    enabled: !!employee,
   });
 
   const { data: meetings = [], isLoading: isLoadingMeetings, isError: isErrorMeetings } = useQuery<any[]>({
@@ -1380,7 +1391,7 @@ export default function TeamLeaderDashboard() {
               data-testid="button-pipeline-sourced"
             >
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SOURCED</span>
-              <span className="text-lg font-bold text-gray-900 dark:text-white">15</span>
+              <span className="text-lg font-bold text-gray-900 dark:text-white">{pipelineCounts.SOURCED || 0}</span>
             </button>
             <button 
               onClick={() => handlePipelineStageClick('SHORTLISTED')}
@@ -1388,7 +1399,7 @@ export default function TeamLeaderDashboard() {
               data-testid="button-pipeline-shortlisted"
             >
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SHORTLISTED</span>
-              <span className="text-lg font-bold text-gray-900 dark:text-white">9</span>
+              <span className="text-lg font-bold text-gray-900 dark:text-white">{pipelineCounts.SHORTLISTED || 0}</span>
             </button>
             <button 
               onClick={() => handlePipelineStageClick('INTRO_CALL')}
@@ -1396,7 +1407,7 @@ export default function TeamLeaderDashboard() {
               data-testid="button-pipeline-intro-call"
             >
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">INTRO CALL</span>
-              <span className="text-lg font-bold text-gray-900 dark:text-white">7</span>
+              <span className="text-lg font-bold text-gray-900 dark:text-white">{pipelineCounts.INTRO_CALL || 0}</span>
             </button>
             <button 
               onClick={() => handlePipelineStageClick('ASSIGNMENT')}
@@ -1404,7 +1415,7 @@ export default function TeamLeaderDashboard() {
               data-testid="button-pipeline-assignment"
             >
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">ASSIGNMENT</span>
-              <span className="text-lg font-bold text-gray-800 dark:text-white">9</span>
+              <span className="text-lg font-bold text-gray-800 dark:text-white">{pipelineCounts.ASSIGNMENT || 0}</span>
             </button>
             <button 
               onClick={() => handlePipelineStageClick('L1')}
@@ -1412,7 +1423,7 @@ export default function TeamLeaderDashboard() {
               data-testid="button-pipeline-l1"
             >
               <span className="text-sm font-medium text-white">L1</span>
-              <span className="text-lg font-bold text-white">15</span>
+              <span className="text-lg font-bold text-white">{pipelineCounts.L1 || 0}</span>
             </button>
             <button 
               onClick={() => handlePipelineStageClick('L2')}
@@ -1420,7 +1431,7 @@ export default function TeamLeaderDashboard() {
               data-testid="button-pipeline-l2"
             >
               <span className="text-sm font-medium text-white">L2</span>
-              <span className="text-lg font-bold text-white">9</span>
+              <span className="text-lg font-bold text-white">{pipelineCounts.L2 || 0}</span>
             </button>
             <button 
               onClick={() => handlePipelineStageClick('L3')}
@@ -1428,7 +1439,7 @@ export default function TeamLeaderDashboard() {
               data-testid="button-pipeline-l3"
             >
               <span className="text-sm font-medium text-white">L3</span>
-              <span className="text-lg font-bold text-white">3</span>
+              <span className="text-lg font-bold text-white">{pipelineCounts.L3 || 0}</span>
             </button>
             <button 
               onClick={() => handlePipelineStageClick('FINAL_ROUND')}
@@ -1436,7 +1447,7 @@ export default function TeamLeaderDashboard() {
               data-testid="button-pipeline-final-round"
             >
               <span className="text-sm font-medium text-white">FINAL ROUND</span>
-              <span className="text-lg font-bold text-white">9</span>
+              <span className="text-lg font-bold text-white">{pipelineCounts.FINAL_ROUND || 0}</span>
             </button>
             <button 
               onClick={() => handlePipelineStageClick('HR_ROUND')}
@@ -1444,7 +1455,7 @@ export default function TeamLeaderDashboard() {
               data-testid="button-pipeline-hr-round"
             >
               <span className="text-sm font-medium text-white">HR ROUND</span>
-              <span className="text-lg font-bold text-white">9</span>
+              <span className="text-lg font-bold text-white">{pipelineCounts.HR_ROUND || 0}</span>
             </button>
             <button 
               onClick={() => handlePipelineStageClick('OFFER_STAGE')}
@@ -1452,7 +1463,7 @@ export default function TeamLeaderDashboard() {
               data-testid="button-pipeline-offer-stage"
             >
               <span className="text-sm font-medium text-white">OFFER STAGE</span>
-              <span className="text-lg font-bold text-white">9</span>
+              <span className="text-lg font-bold text-white">{pipelineCounts.OFFER_STAGE || 0}</span>
             </button>
             <button 
               onClick={() => handlePipelineStageClick('CLOSURE')}
@@ -1460,7 +1471,7 @@ export default function TeamLeaderDashboard() {
               data-testid="button-pipeline-closure"
             >
               <span className="text-sm font-medium text-white">CLOSURE</span>
-              <span className="text-lg font-bold text-white">3</span>
+              <span className="text-lg font-bold text-white">{pipelineCounts.CLOSURE || 0}</span>
             </button>
             <button 
               onClick={() => handlePipelineStageClick('OFFER_DROP')}
@@ -1468,7 +1479,7 @@ export default function TeamLeaderDashboard() {
               data-testid="button-pipeline-offer-drop"
             >
               <span className="text-sm font-medium text-white">OFFER DROP</span>
-              <span className="text-lg font-bold text-white">3</span>
+              <span className="text-lg font-bold text-white">{pipelineCounts.OFFER_DROP || 0}</span>
             </button>
           </div>
         </div>
@@ -1487,6 +1498,79 @@ export default function TeamLeaderDashboard() {
             onHelpClick={() => setIsHelpChatOpen(true)}
           />
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
+            
+            {/* Team Performance Graph Section */}
+            <Card className="bg-white dark:bg-gray-800">
+              <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between gap-2">
+                <CardTitle className="text-lg text-gray-900 dark:text-white">Team Performance Graph</CardTitle>
+                <Select
+                  value={selectedPerformanceMember}
+                  onValueChange={setSelectedPerformanceMember}
+                >
+                  <SelectTrigger className="w-48" data-testid="select-performance-member">
+                    <SelectValue placeholder="Select Team Member" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Team Members</SelectItem>
+                    {performanceGraphData?.members?.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardHeader>
+              <CardContent className="p-4">
+                {isLoadingPerformanceGraph ? (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600"></div>
+                  </div>
+                ) : performanceGraphData?.chartData && performanceGraphData.chartData.length > 0 ? (
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={performanceGraphData.chartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis 
+                          dataKey="quarter" 
+                          stroke="#6b7280" 
+                          style={{ fontSize: '12px' }}
+                          tick={{ fill: '#6b7280' }}
+                        />
+                        <YAxis 
+                          stroke="#6b7280" 
+                          style={{ fontSize: '12px' }}
+                          tick={{ fill: '#6b7280' }}
+                        />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: '#ffffff', 
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px'
+                          }}
+                        />
+                        <Legend />
+                        <Bar 
+                          dataKey="resumesDelivered" 
+                          name="Resumes Delivered" 
+                          fill="#3b82f6" 
+                          radius={[4, 4, 0, 0]}
+                        />
+                        <Bar 
+                          dataKey="closures" 
+                          name="Closures" 
+                          fill="#22c55e" 
+                          radius={[4, 4, 0, 0]}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-64 text-gray-500">
+                    No performance data available
+                  </div>
+                )}
+              </CardContent>
+            </Card>
             
             {/* List of Closures Section */}
             <Card className="bg-gray-50">
