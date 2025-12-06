@@ -71,12 +71,22 @@ export default function CandidateLogin() {
           title: "Verification Required",
           description: response.message,
         });
-      } else {
+      } else if (response.success && response.candidate) {
+        // Update auth context with candidate data FIRST
+        setUser({
+          type: 'candidate',
+          data: response.candidate
+        });
+
         toast({
           title: "Login Successful",
           description: "Welcome back!",
         });
-        setLocation('/candidate');
+
+        // Use setTimeout to ensure state update completes before navigation
+        setTimeout(() => {
+          setLocation('/candidate');
+        }, 100);
       }
     },
     onError: (error: any) => {
@@ -119,12 +129,24 @@ export default function CandidateLogin() {
       const res = await apiRequest('POST', '/api/auth/candidate-verify-otp', { email: currentEmail, otp: data.otp });
       return await res.json();
     },
-    onSuccess: () => {
-      toast({
-        title: "Verification Successful",
-        description: "Your account has been verified!",
-      });
-      setLocation('/candidate');
+    onSuccess: (response) => {
+      if (response.success && response.candidate) {
+        // Update auth context with candidate data FIRST
+        setUser({
+          type: 'candidate',
+          data: response.candidate
+        });
+
+        toast({
+          title: "Verification Successful",
+          description: "Your account has been verified!",
+        });
+
+        // Use setTimeout to ensure state update completes before navigation
+        setTimeout(() => {
+          setLocation('/candidate');
+        }, 100);
+      }
     },
     onError: (error: any) => {
       toast({
