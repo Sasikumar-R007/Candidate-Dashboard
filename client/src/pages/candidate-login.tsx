@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { BrainCircuit } from "lucide-react";
+import { useAuth } from "@/contexts/auth-context";
 
 interface LoginForm {
   email: string;
@@ -29,6 +30,7 @@ export default function CandidateLogin() {
   const [isLogin, setIsLogin] = useState(true);
   const [showOTP, setShowOTP] = useState(false);
   const [, setLocation] = useLocation();
+  const { setUser } = useAuth();
 
   const {
     register: registerLogin,
