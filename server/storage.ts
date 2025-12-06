@@ -73,6 +73,7 @@ export interface IStorage {
   getRequirements(): Promise<Requirement[]>;
   getRequirementsByTeamLead(teamLeadName: string): Promise<Requirement[]>;
   getRequirementsByTalentAdvisor(talentAdvisorName: string): Promise<Requirement[]>;
+  getRequirementsByTalentAdvisorId(talentAdvisorId: string): Promise<Requirement[]>;
   createRequirement(requirement: InsertRequirement): Promise<Requirement>;
   updateRequirement(id: string, updates: Partial<Requirement>): Promise<Requirement | undefined>;
   archiveRequirement(id: string): Promise<ArchivedRequirement | undefined>;
@@ -902,6 +903,12 @@ export class MemStorage implements IStorage {
   async getRequirementsByTalentAdvisor(talentAdvisorName: string): Promise<Requirement[]> {
     return Array.from(this.requirements.values()).filter(req => 
       !req.isArchived && req.talentAdvisor === talentAdvisorName
+    );
+  }
+
+  async getRequirementsByTalentAdvisorId(talentAdvisorId: string): Promise<Requirement[]> {
+    return Array.from(this.requirements.values()).filter(req => 
+      !req.isArchived && req.talentAdvisorId === talentAdvisorId
     );
   }
 
