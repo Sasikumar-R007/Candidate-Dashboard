@@ -1885,6 +1885,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Team Leader team member performance graph data endpoint
+  app.get("/api/team-leader/team-performance-graph", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee || employee.role !== 'team_leader') {
+        return res.status(403).json({ message: "Access denied. Team Leader role required." });
+      }
+
+      const memberId = req.query.memberId as string | undefined;
+      const allEmployees = await storage.getAllEmployees();
+      const recruiters = allEmployees.filter(
+        emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
+      );
+
+      // Get members list for filter dropdown
+      const members = recruiters.map(rec => ({
+        id: rec.id,
+        name: rec.name
+      }));
+
+      // Calculate performance data per quarter for each member
+      const performanceByMember: Record<string, { resumesDelivered: number; closures: number }[]> = {};
+      const quarterlyData: Record<string, { resumesDelivered: number; closures: number }> = {};
+
+      // Filter recruiters if memberId is specified
+      const targetRecruiters = memberId && memberId !== 'all' 
+        ? recruiters.filter(rec => rec.id === memberId)
+        : recruiters;
+
+      for (const rec of targetRecruiters) {
+        const revenueMappings = await storage.getRevenueMappingsByRecruiterId(rec.id);
+        
+        for (const rm of revenueMappings) {
+          const quarter = rm.quarter || 'Unknown';
+          if (!quarterlyData[quarter]) {
+            quarterlyData[quarter] = { resumesDelivered: 0, closures: 0 };
+          }
+          
+          // Count resumes delivered (all mappings count as resumes)
+          quarterlyData[quarter].resumesDelivered += 1;
+          
+          // Count closures (only closed status)
+          if (rm.status === 'closed') {
+            quarterlyData[quarter].closures += 1;
+          }
+        }
+      }
+
+      // Convert to array format for chart
+      const chartData = Object.entries(quarterlyData).map(([quarter, data]) => ({
+        quarter,
+        resumesDelivered: data.resumesDelivered,
+        closures: data.closures
+      })).sort((a, b) => {
+        // Sort by quarter (e.g., "Q1 2024" < "Q2 2024")
+        return a.quarter.localeCompare(b.quarter);
+      });
+
+      res.json({
+        members,
+        chartData,
+        selectedMemberId: memberId || 'all'
+      });
+    } catch (error) {
+      console.error('Get team leader team performance graph error:', error);
+      res.status(500).json({ message: "Failed to fetch team performance graph data" });
+    }
+  });
+
   // Team Leader closures list endpoint
   app.get("/api/team-leader/closures", requireEmployeeAuth, async (req, res) => {
     try {

@@ -21,7 +21,7 @@ import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { ChatDock } from '@/components/chat/chat-dock';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ComposedChart } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ComposedChart, BarChart, Bar, Legend } from 'recharts';
 import { SearchBar } from '@/components/ui/search-bar';
 import { useAuth, useEmployeeAuth } from '@/contexts/auth-context';
 import type { Requirement, Employee } from '@shared/schema';
@@ -123,6 +123,7 @@ export default function TeamLeaderDashboard() {
   const [selectedDailyMetricsFilter, setSelectedDailyMetricsFilter] = useState('overall');
   const [targetSearch, setTargetSearch] = useState('');
   const [requirementSearch, setRequirementSearch] = useState('');
+  const [selectedPerformanceMember, setSelectedPerformanceMember] = useState<string>('all');
   
   const [teamChatMessages, setTeamChatMessages] = useState([
     { id: 1, sender: "John Mathew", message: "Good morning team! Please review the requirements for today", time: "9:00 AM", isOwn: true },
@@ -291,6 +292,16 @@ export default function TeamLeaderDashboard() {
   // Fetch closures data from API
   const { data: closureData = [], isLoading: isLoadingClosures } = useQuery<any[]>({
     queryKey: ['/api/team-leader/closures'],
+    enabled: !!employee,
+  });
+
+  // Fetch team performance graph data
+  const { data: performanceGraphData, isLoading: isLoadingPerformanceGraph } = useQuery<{
+    members: { id: string; name: string }[];
+    chartData: { quarter: string; resumesDelivered: number; closures: number }[];
+    selectedMemberId: string;
+  }>({
+    queryKey: ['/api/team-leader/team-performance-graph', selectedPerformanceMember],
     enabled: !!employee,
   });
 
@@ -2632,6 +2643,91 @@ export default function TeamLeaderDashboard() {
       case 'performance':
         return (
           <div className="px-6 py-6 space-y-6">
+            {/* Team Performance Graph */}
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between gap-4">
+                <CardTitle>Team Performance Graph</CardTitle>
+                <Select
+                  value={selectedPerformanceMember}
+                  onValueChange={setSelectedPerformanceMember}
+                >
+                  <SelectTrigger className="w-[200px]" data-testid="select-performance-member">
+                    <SelectValue placeholder="Select Member" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Members</SelectItem>
+                    {performanceGraphData?.members?.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardHeader>
+              <CardContent>
+                {isLoadingPerformanceGraph ? (
+                  <div className="h-[300px] flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600"></div>
+                  </div>
+                ) : performanceGraphData?.chartData && performanceGraphData.chartData.length > 0 ? (
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={performanceGraphData.chartData} barGap={8}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                        <XAxis 
+                          dataKey="quarter" 
+                          stroke="#6b7280" 
+                          style={{ fontSize: '12px' }}
+                          tick={{ fill: '#6b7280' }}
+                        />
+                        <YAxis 
+                          yAxisId="left"
+                          stroke="#6b7280"
+                          style={{ fontSize: '12px' }}
+                          tick={{ fill: '#6b7280' }}
+                          label={{ value: 'Resumes', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: '#6b7280' } }}
+                        />
+                        <YAxis 
+                          yAxisId="right"
+                          orientation="right"
+                          stroke="#6b7280"
+                          style={{ fontSize: '12px' }}
+                          tick={{ fill: '#6b7280' }}
+                          label={{ value: 'Closures', angle: 90, position: 'insideRight', style: { textAnchor: 'middle', fill: '#6b7280' } }}
+                        />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: '#ffffff', 
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '8px'
+                          }}
+                        />
+                        <Legend />
+                        <Bar 
+                          yAxisId="left" 
+                          dataKey="resumesDelivered" 
+                          fill="#3b82f6" 
+                          radius={[4, 4, 0, 0]} 
+                          name="Resumes Delivered"
+                        />
+                        <Bar 
+                          yAxisId="right" 
+                          dataKey="closures" 
+                          fill="#22c55e" 
+                          radius={[4, 4, 0, 0]} 
+                          name="Closures"
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center text-gray-500 dark:text-gray-400">
+                    No performance data available
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Team Performance Table */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
