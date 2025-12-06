@@ -867,6 +867,12 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(revenueMappings.createdAt));
   }
 
+  async getRevenueMappingsByTalentAdvisorId(talentAdvisorId: string): Promise<RevenueMapping[]> {
+    return await db.select().from(revenueMappings)
+      .where(eq(revenueMappings.talentAdvisorId, talentAdvisorId))
+      .orderBy(desc(revenueMappings.createdAt));
+  }
+
   async getRevenueMappingsByTeamLeaderId(teamLeaderId: string): Promise<RevenueMapping[]> {
     return await db.select().from(revenueMappings)
       .where(eq(revenueMappings.teamLeadId, teamLeaderId))

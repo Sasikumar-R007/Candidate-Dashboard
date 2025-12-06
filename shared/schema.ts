@@ -277,6 +277,10 @@ export const employees = pgTable("employees", {
   reportingTo: text("reporting_to"),
   isActive: boolean("is_active").default(true),
   createdAt: text("created_at").notNull(),
+  
+  // Profile media (for dashboard display)
+  profilePicture: text("profile_picture"),
+  bannerImage: text("banner_image"),
 });
 
 export const candidates = pgTable("candidates", {

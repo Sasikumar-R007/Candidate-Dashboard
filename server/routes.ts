@@ -2215,36 +2215,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Recruiter Dashboard API routes
-  // In-memory storage for recruiter profile to persist changes
-  let recruiterProfile = {
-    id: "rec-001",
-    name: "Kumaravel R",
-    role: "Talent Advisor",
-    employeeId: "STTA005",
-    phone: "9998887770",
-    email: "kumaravel@scaling.com",
-    joiningDate: "5/11/2023",
-    department: "Talent Advisory",
-    reportingTo: "Prakash Raj Raja",
-    totalContribution: "0",
-    bannerImage: null,
-    profilePicture: null
-  };
+  // Get recruiter profile from database based on logged-in user (session-based)
+  app.get("/api/recruiter/profile", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
 
-  app.get("/api/recruiter/profile", (req, res) => {
-    res.json(recruiterProfile);
+      if (employee.role !== 'recruiter') {
+        return res.status(403).json({ message: "Access denied. Recruiter role required." });
+      }
+
+      // Get all employees to find reporting manager's name
+      const allEmployees = await storage.getAllEmployees();
+      let reportingToName = '-';
+      if (employee.reportingTo) {
+        const manager = allEmployees.find(emp => emp.employeeId === employee.reportingTo);
+        if (manager) {
+          reportingToName = manager.name;
+        }
+      }
+
+      // Get revenue mappings for total contribution calculation
+      const revenueMappings = await storage.getRevenueMappingsByTalentAdvisorId(employee.id);
+      const totalContribution = revenueMappings.reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+
+      const profile = {
+        id: employee.id,
+        name: employee.name,
+        role: "Talent Advisor",
+        employeeId: employee.employeeId,
+        phone: employee.phone || '-',
+        email: employee.email,
+        joiningDate: employee.joiningDate ? new Date(employee.joiningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }).replace(/ /g, '-') : '-',
+        department: employee.department || 'Talent Advisory',
+        reportingTo: reportingToName,
+        totalContribution: totalContribution.toLocaleString('en-IN'),
+        bannerImage: employee.bannerImage || null,
+        profilePicture: employee.profilePicture || null
+      };
+
+      res.json(profile);
+    } catch (error) {
+      console.error('Get recruiter profile error:', error);
+      res.status(500).json({ message: "Failed to fetch profile" });
+    }
   });
 
-  app.patch("/api/recruiter/profile", (req, res) => {
-    const updates = req.body;
-    
-    // Merge updates with existing profile to preserve other fields
-    recruiterProfile = {
-      ...recruiterProfile,
-      ...updates
-    };
-    
-    res.json(recruiterProfile);
+  // Recruiter profile update endpoint - updates the employee record in database
+  app.patch("/api/recruiter/profile", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      if (employee.role !== 'recruiter') {
+        return res.status(403).json({ message: "Access denied. Recruiter role required." });
+      }
+
+      const updates = req.body;
+      
+      // Map profile fields to employee fields for database update
+      const employeeUpdates: any = {};
+      if (updates.name) employeeUpdates.name = updates.name;
+      if (updates.phone) employeeUpdates.phone = updates.phone;
+      if (updates.email) employeeUpdates.email = updates.email;
+      if (updates.department) employeeUpdates.department = updates.department;
+      if (updates.bannerImage !== undefined) employeeUpdates.bannerImage = updates.bannerImage;
+      if (updates.profilePicture !== undefined) employeeUpdates.profilePicture = updates.profilePicture;
+      
+      // Update employee record in database
+      const updatedEmployee = await storage.updateEmployee(employee.id, employeeUpdates);
+      
+      if (!updatedEmployee) {
+        return res.status(500).json({ message: "Failed to update profile" });
+      }
+
+      // Return the updated profile in the expected format
+      const allEmployees = await storage.getAllEmployees();
+      let reportingToName = '-';
+      if (updatedEmployee.reportingTo) {
+        const manager = allEmployees.find(emp => emp.employeeId === updatedEmployee.reportingTo);
+        if (manager) {
+          reportingToName = manager.name;
+        }
+      }
+
+      const revenueMappings = await storage.getRevenueMappingsByTalentAdvisorId(updatedEmployee.id);
+      const totalContribution = revenueMappings.reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+
+      const profile = {
+        id: updatedEmployee.id,
+        name: updatedEmployee.name,
+        role: "Talent Advisor",
+        employeeId: updatedEmployee.employeeId,
+        phone: updatedEmployee.phone || '-',
+        email: updatedEmployee.email,
+        joiningDate: updatedEmployee.joiningDate ? new Date(updatedEmployee.joiningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }).replace(/ /g, '-') : '-',
+        department: updatedEmployee.department || 'Talent Advisory',
+        reportingTo: reportingToName,
+        totalContribution: totalContribution.toLocaleString('en-IN'),
+        bannerImage: updatedEmployee.bannerImage || null,
+        profilePicture: updatedEmployee.profilePicture || null
+      };
+
+      res.json(profile);
+    } catch (error) {
+      console.error('Update recruiter profile error:', error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
   });
 
   // Recruiter file upload endpoints
