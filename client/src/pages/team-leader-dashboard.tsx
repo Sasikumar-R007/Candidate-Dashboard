@@ -301,7 +301,7 @@ export default function TeamLeaderDashboard() {
     chartData: { quarter: string; resumesDelivered: number; closures: number }[];
     selectedMemberId: string;
   }>({
-    queryKey: ['/api/team-leader/team-performance-graph', selectedPerformanceMember],
+    queryKey: [`/api/team-leader/team-performance-graph?memberId=${selectedPerformanceMember}`],
     enabled: !!employee,
   });
 
