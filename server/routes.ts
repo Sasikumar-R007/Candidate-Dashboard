@@ -12,6 +12,7 @@ import path from "path";
 import "./types"; // Import session types
 import { db } from "./db";
 import { eq, desc, sql } from "drizzle-orm";
+import { logRequirementAdded, logCandidateSubmitted, logClosureMade, logCandidatePipelineChanged } from "./activity-logger";
 
 // Ensure uploads directory exists
 const uploadsDir = 'uploads';
@@ -2962,6 +2963,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Mark notification as read error:', error);
       res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
+  // Get user activities for role (Admin/TL/Recruiter notifications)
+  app.get("/api/user-activities/:role", async (req, res) => {
+    try {
+      const { role } = req.params;
+      const limit = parseInt(req.query.limit as string) || 5;
+      const activities = await storage.getUserActivities(role, limit);
+      res.json(activities);
+    } catch (error) {
+      console.error('Get user activities error:', error);
+      res.status(500).json({ message: "Failed to get user activities" });
+    }
+  });
+
+  // Create user activity (for logging actions)
+  app.post("/api/user-activities", async (req, res) => {
+    try {
+      const activityData = {
+        ...req.body,
+        createdAt: new Date().toISOString()
+      };
+      const activity = await storage.createUserActivity(activityData);
+      res.status(201).json(activity);
+    } catch (error) {
+      console.error('Create user activity error:', error);
+      res.status(500).json({ message: "Failed to create user activity" });
     }
   });
 

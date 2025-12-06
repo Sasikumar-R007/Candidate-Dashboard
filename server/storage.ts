@@ -34,7 +34,9 @@ import {
   type RevenueMapping,
   type InsertRevenueMapping,
   type RecruiterJob,
-  type InsertRecruiterJob
+  type InsertRecruiterJob,
+  type UserActivity,
+  type InsertUserActivity
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
@@ -112,6 +114,10 @@ export interface IStorage {
   getNotificationsByUserId(userId: string): Promise<Notification[]>;
   markNotificationAsRead(id: string): Promise<Notification | undefined>;
   deleteNotification(id: string): Promise<boolean>;
+  
+  // User Activity methods (for Admin/TL/Recruiter notifications)
+  createUserActivity(activity: InsertUserActivity): Promise<UserActivity>;
+  getUserActivities(role: string, limit?: number): Promise<UserActivity[]>;
   
   // Client methods
   generateNextClientCode(): Promise<string>;
@@ -229,6 +235,7 @@ export class MemStorage implements IStorage {
   private candidateLoginAttempts: Map<string, CandidateLoginAttempts>;
   private otpStorage: Map<string, { otp: string; expiry: Date; email: string }>;
   private notifications: Map<string, Notification>;
+  private userActivities: Map<string, UserActivity>;
 
   constructor() {
     this.users = new Map();
@@ -245,6 +252,7 @@ export class MemStorage implements IStorage {
     this.candidateLoginAttempts = new Map();
     this.otpStorage = new Map();
     this.notifications = new Map();
+    this.userActivities = new Map();
     
     // Initialize with sample data (async)
     this.initSampleData().catch(console.error);
@@ -1253,6 +1261,38 @@ export class MemStorage implements IStorage {
 
   async deleteNotification(id: string): Promise<boolean> {
     return this.notifications.delete(id);
+  }
+
+  // User Activity methods
+  async createUserActivity(activity: InsertUserActivity): Promise<UserActivity> {
+    const id = randomUUID();
+    const newActivity: UserActivity = {
+      id,
+      actorId: activity.actorId,
+      actorName: activity.actorName,
+      actorRole: activity.actorRole,
+      type: activity.type,
+      title: activity.title,
+      description: activity.description,
+      targetRole: activity.targetRole || null,
+      relatedId: activity.relatedId || null,
+      relatedType: activity.relatedType || null,
+      createdAt: activity.createdAt
+    };
+    this.userActivities.set(id, newActivity);
+    return newActivity;
+  }
+
+  async getUserActivities(role: string, limit: number = 5): Promise<UserActivity[]> {
+    const activities = Array.from(this.userActivities.values())
+      .filter(activity => {
+        // Show to the specified role or if targetRole includes the role or is null (visible to all)
+        if (!activity.targetRole) return true;
+        return activity.targetRole.includes(role) || activity.targetRole === 'all';
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
+    return activities;
   }
 
   // Client methods (stub - not implemented in MemStorage)

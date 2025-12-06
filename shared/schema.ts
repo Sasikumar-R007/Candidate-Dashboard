@@ -683,6 +683,25 @@ export const recruiterJobs = pgTable("recruiter_jobs", {
   createdAt: text("created_at").notNull(),
 });
 
+// User activities table for Admin/TL/Recruiter notifications
+export const userActivities = pgTable("user_activities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  actorId: text("actor_id").notNull(), // Employee ID who performed the action
+  actorName: text("actor_name").notNull(), // Name of the person who performed the action
+  actorRole: text("actor_role").notNull(), // admin, team_leader, recruiter
+  type: text("type").notNull(), // requirement_added, candidate_pipeline_changed, closure_made, candidate_submitted, interview_scheduled
+  title: text("title").notNull(), // Short title for the activity
+  description: text("description").notNull(), // Detailed description
+  targetRole: text("target_role"), // Which roles should see this: admin, team_leader, recruiter, or comma-separated
+  relatedId: text("related_id"), // Related entity ID (requirement, candidate, etc.)
+  relatedType: text("related_type"), // Type of related entity (requirement, candidate, closure, etc.)
+  createdAt: text("created_at").notNull(),
+});
+
+export const insertUserActivitySchema = createInsertSchema(userActivities).omit({
+  id: true,
+});
+
 export const insertSupportConversationSchema = createInsertSchema(supportConversations).omit({
   id: true,
 });
@@ -818,3 +837,5 @@ export type InsertRecruiterCommand = z.infer<typeof insertRecruiterCommandSchema
 export type RecruiterCommand = typeof recruiterCommands.$inferSelect;
 export type InsertRecruiterJob = z.infer<typeof insertRecruiterJobSchema>;
 export type RecruiterJob = typeof recruiterJobs.$inferSelect;
+export type InsertUserActivity = z.infer<typeof insertUserActivitySchema>;
+export type UserActivity = typeof userActivities.$inferSelect;

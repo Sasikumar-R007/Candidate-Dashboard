@@ -1,16 +1,49 @@
 import { useState, useEffect } from "react";
-import { ChevronDown, User, Settings, LogOut, HelpCircle, Bell, MessageCircle, Briefcase } from "lucide-react";
+import { ChevronDown, User, Settings, LogOut, HelpCircle, Bell, MessageCircle, Briefcase, Users, CheckCircle, Calendar } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth, useEmployeeAuth } from "@/contexts/auth-context";
 import { SignOutDialog } from "@/components/ui/sign-out-dialog";
 import { ProfileSettingsModal } from "@/components/dashboard/modals/profile-settings-modal";
+import type { UserActivity } from "@shared/schema";
 
 interface AdminTopHeaderProps {
   companyName?: string;
   onHelpClick?: () => void;
+}
+
+function getActivityIcon(type: string) {
+  switch (type) {
+    case 'requirement_added':
+      return { icon: Briefcase, bgClass: 'bg-blue-100 dark:bg-blue-900', textClass: 'text-blue-600 dark:text-blue-400' };
+    case 'candidate_pipeline_changed':
+      return { icon: Users, bgClass: 'bg-purple-100 dark:bg-purple-900', textClass: 'text-purple-600 dark:text-purple-400' };
+    case 'closure_made':
+      return { icon: CheckCircle, bgClass: 'bg-green-100 dark:bg-green-900', textClass: 'text-green-600 dark:text-green-400' };
+    case 'candidate_submitted':
+      return { icon: MessageCircle, bgClass: 'bg-orange-100 dark:bg-orange-900', textClass: 'text-orange-600 dark:text-orange-400' };
+    case 'interview_scheduled':
+      return { icon: Calendar, bgClass: 'bg-cyan-100 dark:bg-cyan-900', textClass: 'text-cyan-600 dark:text-cyan-400' };
+    default:
+      return { icon: Bell, bgClass: 'bg-gray-100 dark:bg-gray-800', textClass: 'text-gray-600 dark:text-gray-400' };
+  }
+}
+
+function getRelativeTime(dateString: string): string {
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+  return date.toLocaleDateString();
 }
 
 export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpClick }: AdminTopHeaderProps) {
@@ -23,7 +56,18 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
   const { logout } = useAuth();
   const employee = useEmployeeAuth();
   
-  // Load role-specific profile data
+  const userRole = employee?.role || 'admin';
+  
+  const { data: activities = [], isLoading: activitiesLoading } = useQuery<UserActivity[]>({
+    queryKey: ['/api/user-activities', userRole],
+    queryFn: async () => {
+      const response = await fetch(`/api/user-activities/${userRole}?limit=5`);
+      if (!response.ok) throw new Error('Failed to fetch activities');
+      return response.json();
+    },
+    refetchInterval: 30000,
+  });
+  
   useEffect(() => {
     const loadProfileData = async () => {
       if (!employee?.role) return;
@@ -63,7 +107,6 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
   const userName = profileData?.name || employee?.name || "Admin User";
   const displayCompanyName = companyName;
   
-  // Logout mutation for employees (admin)
   const logoutMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest('POST', '/api/auth/employee-logout', {});
@@ -78,7 +121,6 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
       navigate('/');
     },
     onError: (error: any) => {
-      // Even if API fails, clear the session to ensure user is logged out
       logout();
       toast({
         title: "Logged out",
@@ -105,16 +147,13 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
 
   return (
     <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 h-16 flex items-center justify-between px-6 ml-16 relative z-30 sticky top-0">
-      {/* Left - Company Name */}
       <div className="flex items-center">
         <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           {companyName}
         </h1>
       </div>
 
-      {/* Right - Help and User Dropdown */}
       <div className="flex items-center gap-4">
-        {/* Help Button */}
         <button 
           onClick={onHelpClick}
           className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
@@ -124,7 +163,6 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
           <span className="text-sm">Help</span>
         </button>
 
-        {/* User Dropdown */}
         <div className="relative">
           <button
             onClick={() => setShowUserDropdown(!showUserDropdown)}
@@ -142,10 +180,8 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
             />
           </button>
 
-          {/* Dropdown Menu */}
           {showUserDropdown && (
             <div className="absolute right-0 top-full mt-2 w-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-4 z-50">
-              {/* Notifications Header */}
               <div className="px-4 pb-3 border-b border-gray-200 dark:border-gray-600">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                   <Bell size={18} />
@@ -153,53 +189,51 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
                 </h3>
               </div>
               
-              {/* Notifications List */}
               <div className="max-h-96 overflow-y-auto">
-                {/* New Requirement Notification */}
-                <div className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-full">
-                      <Briefcase size={16} className="text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">New requirement added</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Senior Full Stack Developer at TechCorp</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">1 hour ago</p>
-                    </div>
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                {activitiesLoading ? (
+                  <div className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
+                    <div className="animate-spin w-6 h-6 border-2 border-gray-300 border-t-blue-600 rounded-full mx-auto mb-2"></div>
+                    Loading activities...
                   </div>
-                </div>
-
-                {/* Team Update Notification */}
-                <div className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-green-100 dark:bg-green-900 rounded-full">
-                      <MessageCircle size={16} className="text-green-600 dark:text-green-400" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Team member message</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">New candidate submitted by Kavitha</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">3 hours ago</p>
-                    </div>
+                ) : activities.length === 0 ? (
+                  <div className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
+                    <Bell size={24} className="mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No recent activities</p>
+                    <p className="text-xs mt-1">Activities will appear here when actions are taken</p>
                   </div>
-                </div>
-
-                {/* Pipeline Update */}
-                <div className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-full">
-                      <Briefcase size={16} className="text-purple-600 dark:text-purple-400" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Pipeline update</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">3 candidates moved to final round</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">5 hours ago</p>
-                    </div>
-                  </div>
-                </div>
+                ) : (
+                  activities.map((activity, index) => {
+                    const { icon: IconComponent, bgClass, textClass } = getActivityIcon(activity.type);
+                    const isLast = index === activities.length - 1;
+                    
+                    return (
+                      <div 
+                        key={activity.id} 
+                        className={`px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${!isLast ? 'border-b border-gray-100 dark:border-gray-700' : ''}`}
+                        data-testid={`activity-item-${activity.id}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`p-2 ${bgClass} rounded-full`}>
+                            <IconComponent size={16} className={textClass} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                              {activity.title}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                              {activity.description}
+                            </p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                              {getRelativeTime(activity.createdAt)} {activity.actorName && `by ${activity.actorName}`}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
               
-              {/* Menu Items */}
               <div className="py-2 border-t border-gray-200 dark:border-gray-600 mt-2">
                 <button 
                   onClick={handleProfileSettings}
