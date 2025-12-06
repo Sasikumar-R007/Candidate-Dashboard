@@ -105,7 +105,25 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
   }, [employee?.role]);
   
   const userName = profileData?.name || employee?.name || "Admin User";
+  const userEmail = profileData?.email || employee?.email || "";
   const displayCompanyName = companyName;
+  
+  const getRoleDisplayName = (role: string): string => {
+    switch (role) {
+      case 'admin':
+        return 'Admin';
+      case 'team_leader':
+        return 'Team Leader';
+      case 'recruiter':
+        return 'Recruiter';
+      case 'client':
+        return 'Client';
+      default:
+        return role.charAt(0).toUpperCase() + role.slice(1).replace('_', ' ');
+    }
+  };
+  
+  const displayRole = getRoleDisplayName(userRole);
   
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -167,13 +185,16 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
           <button
             onClick={() => setShowUserDropdown(!showUserDropdown)}
             onBlur={() => setTimeout(() => setShowUserDropdown(false), 150)}
-            className="flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+            className="flex items-center gap-3 px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
             data-testid="button-user-dropdown"
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white text-sm font-medium">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white text-sm font-medium">
               {userName.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
             </div>
-            <span className="text-sm font-medium">{userName}</span>
+            <div className="flex flex-col items-start">
+              <span className="text-sm font-medium" data-testid="text-profile-name">{userName}</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400" data-testid="text-profile-role">{displayRole}</span>
+            </div>
             <ChevronDown 
               size={16} 
               className={`transition-transform duration-200 ${showUserDropdown ? 'rotate-180' : ''}`} 
@@ -183,8 +204,27 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
           {showUserDropdown && (
             <div className="absolute right-0 top-full mt-2 w-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-4 z-50">
               <div className="px-4 pb-3 border-b border-gray-200 dark:border-gray-600">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                  <Bell size={18} />
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white text-lg font-medium">
+                    {userName.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate" data-testid="text-dropdown-name">
+                      {userName}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate" data-testid="text-dropdown-email">
+                      {userEmail}
+                    </p>
+                    <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300" data-testid="text-dropdown-role-badge">
+                      {displayRole}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-600">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <Bell size={16} />
                   Notifications
                 </h3>
               </div>
