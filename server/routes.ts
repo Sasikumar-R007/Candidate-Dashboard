@@ -2376,7 +2376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
 
-      const requirements = await storage.getRequirementsByTalentAdvisor(employee.name);
+      const requirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
       
       const hhReqs = requirements.filter(r => r.criticality === 'HIGH');
       const mmReqs = requirements.filter(r => r.criticality === 'MEDIUM');
@@ -2485,8 +2485,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
 
-      // Fetch requirements assigned to this recruiter/talent advisor
-      const recruiterRequirements = await storage.getRequirementsByTalentAdvisor(employee.name);
+      // Fetch requirements assigned to this recruiter/talent advisor (using ID-based lookup)
+      const recruiterRequirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
       
       // Also get job applications for each requirement to calculate delivery counts
       const requirementsWithCounts = await Promise.all(
@@ -4452,10 +4452,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all recruiter jobs
+  // Get recruiter jobs (filtered by logged-in user if authenticated)
   app.get("/api/recruiter/jobs", async (req, res) => {
     try {
-      const jobs = await storage.getAllRecruiterJobs();
+      const session = req.session as any;
+      let jobs;
+      
+      // If user is authenticated, filter jobs by their ID for multi-tenant support
+      if (session?.employeeId) {
+        jobs = await storage.getRecruiterJobsByRecruiterId(session.employeeId);
+      } else {
+        // Fallback to all jobs for unauthenticated requests (job board view)
+        jobs = await storage.getAllRecruiterJobs();
+      }
+      
       res.json(jobs);
     } catch (error) {
       console.error("Get recruiter jobs error:", error);
