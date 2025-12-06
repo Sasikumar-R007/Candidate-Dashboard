@@ -1353,15 +1353,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get aggregated target data for team leader
-  app.get("/api/team-leader/aggregated-targets", async (req, res) => {
+  app.get("/api/team-leader/aggregated-targets", requireEmployeeAuth, async (req, res) => {
     try {
       const session = req.session as any;
-      if (!session?.user?.id) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-
-      const employee = await storage.getEmployeeById(session.user.id);
-      if (!employee || employee.role !== "Team Leader") {
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee || employee.role !== 'team_leader') {
         return res.status(403).json({ message: "Access denied - Team Leaders only" });
       }
 
@@ -1381,34 +1377,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied. Team Leader role required." });
       }
 
-      // Get filter parameter (member name or 'overall')
-      const memberFilter = req.query.member as string | undefined;
+      // Get filter parameter - now uses member ID instead of name for security
+      const memberIdFilter = req.query.memberId as string | undefined;
 
       const allEmployees = await storage.getAllEmployees();
       const teamRecruiters = allEmployees.filter(
         emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
       );
+      const teamRecruiterIds = teamRecruiters.map(r => r.id);
 
-      // Get requirements based on filter
-      let requirements;
+      // Get requirements based on filter - using strict ID-based lookup
+      let requirements: any[] = [];
       let filteredRecruiters = teamRecruiters;
       
-      if (memberFilter && memberFilter !== 'overall') {
-        // Filter by specific member
-        const selectedRecruiter = teamRecruiters.find(r => r.name.toLowerCase() === memberFilter.toLowerCase());
+      if (memberIdFilter && memberIdFilter !== 'overall') {
+        // Validate that memberId belongs to this TL's team (ID-based security check)
+        if (!teamRecruiterIds.includes(memberIdFilter)) {
+          return res.status(403).json({ message: "Access denied. Member does not belong to your team." });
+        }
+        const selectedRecruiter = teamRecruiters.find(r => r.id === memberIdFilter);
         if (selectedRecruiter) {
-          requirements = await storage.getRequirementsByTalentAdvisor(selectedRecruiter.name);
+          requirements = await storage.getRequirementsByTalentAdvisorId(selectedRecruiter.id);
           filteredRecruiters = [selectedRecruiter];
-        } else {
-          requirements = await storage.getRequirementsByTeamLead(employee.name);
         }
       } else {
-        // Overall - get all requirements for the team
-        requirements = await storage.getRequirementsByTeamLead(employee.name);
+        // Overall - get all requirements for team members using their IDs
+        for (const rec of teamRecruiters) {
+          const recReqs = await storage.getRequirementsByTalentAdvisorId(rec.id);
+          requirements.push(...recReqs);
+        }
       }
 
       const performanceData = await Promise.all(teamRecruiters.map(async (rec) => {
-        const recReqs = await storage.getRequirementsByTalentAdvisor(rec.name);
+        const recReqs = await storage.getRequirementsByTalentAdvisorId(rec.id);
         return { member: rec.name, requirements: recReqs.length };
       }));
 
@@ -1688,9 +1689,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied. Team Leader role required." });
       }
 
-      // Fetch requirements assigned to this team leader
-      const requirements = await storage.getRequirementsByTeamLead(employee.name);
-      res.json(requirements);
+      // Get all team members (recruiters reporting to this TL) - ID-based lookup
+      const allEmployees = await storage.getAllEmployees();
+      const teamRecruiters = allEmployees.filter(
+        emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
+      );
+
+      // Fetch requirements for each team member using ID-based lookup
+      const allRequirements: any[] = [];
+      for (const recruiter of teamRecruiters) {
+        const recruiterRequirements = await storage.getRequirementsByTalentAdvisorId(recruiter.id);
+        allRequirements.push(...recruiterRequirements);
+      }
+
+      res.json(allRequirements);
     } catch (error) {
       console.error('Get team leader requirements error:', error);
       res.status(500).json({ message: "Internal server error" });
@@ -1718,7 +1730,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied. Team Leader role required." });
       }
 
-      // Get the requirement and verify it's assigned to this team leader
+      // Get team members first (recruiters reporting to this TL) - ID-based lookup
+      const allEmployees = await storage.getAllEmployees();
+      const teamRecruiters = allEmployees.filter(
+        emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
+      );
+      const teamRecruiterIds = teamRecruiters.map(rec => rec.id);
+      const allowedTalentAdvisors = teamRecruiters.map(rec => rec.name);
+
+      // Get the requirement and verify it belongs to this TL's team (ID-based check)
       const requirements = await storage.getRequirements();
       const requirement = requirements.find(r => r.id === id);
       
@@ -1726,16 +1746,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Requirement not found" });
       }
 
-      if (requirement.teamLead !== employee.name) {
-        return res.status(403).json({ message: "Access denied. This requirement is not assigned to you." });
+      // Check if requirement belongs to this TL's team (ID-based)
+      // Requirement must either have talentAdvisorId belonging to this TL's team,
+      // OR be unassigned and have teamLead matching this TL's name (legacy fallback)
+      const belongsToTeam = requirement.talentAdvisorId 
+        ? teamRecruiterIds.includes(requirement.talentAdvisorId)
+        : requirement.teamLead === employee.name;
+      
+      if (!belongsToTeam) {
+        return res.status(403).json({ message: "Access denied. This requirement is not assigned to your team." });
       }
-
-      // Validate that talent advisor is one of the TL's team members
-      const allEmployees = await storage.getAllEmployees();
-      const teamRecruiters = allEmployees.filter(
-        emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
-      );
-      const allowedTalentAdvisors = teamRecruiters.map(rec => rec.name);
       
       if (!allowedTalentAdvisors.includes(talentAdvisor)) {
         return res.status(400).json({ 
@@ -2098,36 +2118,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin Dashboard API routes and file uploads
-  // In-memory storage for admin profile to persist changes
-  let adminProfile = {
-    id: "admin-001",
-    name: "John Mathew",
-    role: "CEO",
-    employeeId: "ADM01",
-    phone: "90347 59099",
-    email: "john@scalingtheory.com",
-    joiningDate: "01-Jan-2020",
-    department: "Administration",
-    reportingTo: "Board of Directors",
-    totalContribution: "5,00,000",
-    bannerImage: null,
-    profilePicture: null
-  };
+  // Session-based admin profile endpoint - fetches from database based on logged-in user
+  app.get("/api/admin/profile", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
 
-  app.get("/api/admin/profile", (req, res) => {
-    res.json(adminProfile);
+      if (employee.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied. Admin role required." });
+      }
+
+      // Get all revenue mappings for total contribution calculation (admin sees all)
+      const allRevenueMappings = await storage.getAllRevenueMappings();
+      const totalContribution = allRevenueMappings.reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+
+      const profile = {
+        id: employee.id,
+        name: employee.name,
+        role: employee.designation || "CEO",
+        employeeId: employee.employeeId,
+        phone: employee.phone || '-',
+        email: employee.email,
+        joiningDate: employee.joiningDate ? new Date(employee.joiningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }).replace(/ /g, '-') : '-',
+        department: employee.department || 'Administration',
+        reportingTo: 'Board of Directors',
+        totalContribution: totalContribution.toLocaleString('en-IN'),
+        bannerImage: employee.bannerImage || null,
+        profilePicture: employee.profilePicture || null
+      };
+
+      res.json(profile);
+    } catch (error) {
+      console.error('Get admin profile error:', error);
+      res.status(500).json({ message: "Failed to fetch profile" });
+    }
   });
 
-  app.patch("/api/admin/profile", (req, res) => {
-    const updates = req.body;
-    
-    // Merge updates with existing profile to preserve other fields
-    adminProfile = {
-      ...adminProfile,
-      ...updates
-    };
-    
-    res.json(adminProfile);
+  app.patch("/api/admin/profile", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      if (employee.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied. Admin role required." });
+      }
+
+      const updates = req.body;
+      
+      // Update the employee record in database
+      const updatedEmployee = await storage.updateEmployee(employee.id, {
+        phone: updates.phone !== undefined ? updates.phone : employee.phone,
+        bannerImage: updates.bannerImage !== undefined ? updates.bannerImage : employee.bannerImage,
+        profilePicture: updates.profilePicture !== undefined ? updates.profilePicture : employee.profilePicture,
+        department: updates.department !== undefined ? updates.department : employee.department
+      });
+
+      if (!updatedEmployee) {
+        return res.status(500).json({ message: "Failed to update profile" });
+      }
+
+      // Get all revenue mappings for total contribution calculation
+      const allRevenueMappings = await storage.getAllRevenueMappings();
+      const totalContribution = allRevenueMappings.reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+
+      const profile = {
+        id: updatedEmployee.id,
+        name: updatedEmployee.name,
+        role: updatedEmployee.designation || "CEO",
+        employeeId: updatedEmployee.employeeId,
+        phone: updatedEmployee.phone || '-',
+        email: updatedEmployee.email,
+        joiningDate: updatedEmployee.joiningDate ? new Date(updatedEmployee.joiningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }).replace(/ /g, '-') : '-',
+        department: updatedEmployee.department || 'Administration',
+        reportingTo: 'Board of Directors',
+        totalContribution: totalContribution.toLocaleString('en-IN'),
+        bannerImage: updatedEmployee.bannerImage || null,
+        profilePicture: updatedEmployee.profilePicture || null
+      };
+
+      res.json(profile);
+    } catch (error) {
+      console.error('Update admin profile error:', error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
   });
 
   // Admin file upload endpoints

@@ -257,7 +257,7 @@ export default function TeamLeaderDashboard() {
   const { data: dailyMetrics } = useQuery<any>({
     queryKey: ['/api/team-leader/daily-metrics', selectedDailyMetricsFilter],
     queryFn: async () => {
-      const response = await fetch(`/api/team-leader/daily-metrics?member=${selectedDailyMetricsFilter}`);
+      const response = await fetch(`/api/team-leader/daily-metrics?memberId=${selectedDailyMetricsFilter}`);
       if (!response.ok) throw new Error('Failed to fetch daily metrics');
       return response.json();
     },
@@ -696,7 +696,7 @@ export default function TeamLeaderDashboard() {
                       <SelectContent>
                         <SelectItem value="overall">Overall</SelectItem>
                         {Array.isArray(teamMembers) && teamMembers.map((member: any) => (
-                          <SelectItem key={member.id} value={member.name}>{member.name}</SelectItem>
+                          <SelectItem key={member.id} value={member.id}>{member.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
