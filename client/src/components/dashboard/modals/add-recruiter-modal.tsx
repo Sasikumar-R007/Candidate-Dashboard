@@ -70,7 +70,9 @@ export default function AddRecruiterModal({ isOpen, onClose, editData, onSubmit 
       ...formData,
       id: editData?.id || `STA${String(Date.now()).slice(-3)}`,
       name: `${formData.firstName} ${formData.lastName}`.trim(),
-      role: "Recruiter"
+      role: "Recruiter",
+      reportingTo: formData.reportingTo,
+      dbId: editData?.dbId
     };
     
     onSubmit(submitData);

@@ -2020,7 +2020,8 @@ export default function AdminDashboard() {
       phone: userData.phoneNumber || '',
       department: '',
       joiningDate: userData.joiningDate || '',
-      age: ''
+      age: '',
+      reportingTo: userData.reportingTo || ''
     };
     
     // Save to database using the employee mutation
@@ -2067,7 +2068,8 @@ export default function AdminDashboard() {
       phone: userData.phoneNumber || '',
       department: '',
       joiningDate: userData.joiningDate || '',
-      age: ''
+      age: '',
+      reportingTo: userData.reportingTo || ''
     };
     
     updateEmployeeMutation.mutate({ 
