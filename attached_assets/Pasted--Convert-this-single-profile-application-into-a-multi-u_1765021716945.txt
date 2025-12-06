@@ -1,0 +1,54 @@
+"Convert this single-profile application into a multi-user/multi-tenant SaaS platform where:
+
+User Isolation: Each user (Recruiter, Team Leader, Admin, etc.) has their own unique account with separate login credentials
+Data Ownership: All data (requirements, closures, resumes, revenue, performance metrics, candidates, etc.) is tied to the specific user who owns it
+Profile Uniqueness: When Recruiter "John" logs in, only John's dashboard, name, stats, and data appear - not shared with Recruiter "Ken"
+Session-Based Data Access: All API endpoints should fetch and store data based on the currently logged-in user's session (employeeId)
+Eliminate Shared State: Remove all hardcoded static profiles and in-memory storage that is shared across users"
+Root Cause of the Current Problem
+Looking at your code, I found the issue. In server/routes.ts, there's a static in-memory object for the recruiter profile:
+
+// Line 2218-2232 in routes.ts
+let recruiterProfile = {
+  id: "rec-001",
+  name: "Kumaravel R",  // ← This is SHARED for ALL recruiters!
+  role: "Talent Advisor",
+  employeeId: "STTA005",
+  // ...
+};
+
+When ANY recruiter calls /api/recruiter/profile, they ALL get this same object. When one updates it, EVERYONE sees the update.
+
+Implementation Plan (Step-by-Step)
+Phase 1: Foundation - Fix Profile-Based Data Access
+Step	Task	Description
+1.1	Remove static profiles	Delete the hardcoded recruiterProfile and similar static objects
+1.2	Use session-based lookups	Modify /api/recruiter/profile to fetch from employees table using req.session.employeeId
+1.3	Add user-scoped profile updates	When updating profile, update the specific employee's record in the database
+Phase 2: Data Ownership - Link All Data to Users
+Step	Task	Description
+2.1	Verify schema relationships	Ensure tables like requirements, revenueMappings, targetMappings have proper talentAdvisorId or recruiterId foreign keys
+2.2	Filter data by logged-in user	Modify all API endpoints to filter data using WHERE talentAdvisorId = :loggedInEmployeeId
+2.3	Store data with user ownership	When creating new records, automatically attach the logged-in user's ID
+Phase 3: Dashboard Data Isolation
+Step	Task	Description
+3.1	Recruiter Dashboard	Metrics (closures, revenue, performance) filtered to current recruiter
+3.2	Team Leader Dashboard	See only their own team members and aggregated data
+3.3	Admin Dashboard	Can see all users and has cross-user visibility
+Phase 4: Frontend Session Handling
+Step	Task	Description
+4.1	Auth Context	Store logged-in user info in React context after login
+4.2	Protected Routes	Redirect to login if session expired
+4.3	Display User Info	Show logged-in user's name/role in header/sidebar
+How It Will Work After Implementation
+John (Recruiter) logs in:
+├── Session stores: employeeId = "john-uuid-123"
+├── GET /api/recruiter/profile → Returns John's data from employees table
+├── GET /api/requirements → Returns requirements WHERE talentAdvisorId = "john-uuid-123"
+├── POST /api/requirements → Creates with talentAdvisorId = "john-uuid-123"
+└── Dashboard shows: "John" + John's stats only
+Ken (Recruiter) logs in:
+├── Session stores: employeeId = "ken-uuid-456"
+├── GET /api/recruiter/profile → Returns Ken's data from employees table
+├── GET /api/requirements → Returns requirements WHERE talentAdvisorId = "ken-uuid-456"
+└── Dashboard shows: "Ken" + Ken's stats only
