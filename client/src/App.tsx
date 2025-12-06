@@ -39,41 +39,17 @@ function Router() {
       <Route path="/candidate-login" component={CandidateLogin} />
       <Route path="/candidate-registration" component={CandidateRegistration} />
       
-      <Route path="/dashboard-selection">
-        <ProtectedRoute userType="employee">
-          <DashboardSelection />
-        </ProtectedRoute>
-      </Route>
+      <Route path="/dashboard-selection" component={DashboardSelection} />
       
-      <Route path="/candidate">
-        <ProtectedRoute userType="candidate" redirectTo="/candidate-login">
-          <Dashboard />
-        </ProtectedRoute>
-      </Route>
+      <Route path="/candidate" component={Dashboard} />
       
-      <Route path="/team-leader">
-        <ProtectedRoute userType="employee" allowedRoles={["teamLead", "team_leader"]}>
-          <TeamLeaderDashboard />
-        </ProtectedRoute>
-      </Route>
+      <Route path="/team-leader" component={TeamLeaderDashboard} />
       
-      <Route path="/admin">
-        <ProtectedRoute userType="employee" allowedRoles={["admin"]}>
-          <AdminDashboard />
-        </ProtectedRoute>
-      </Route>
+      <Route path="/admin" component={AdminDashboard} />
       
-      <Route path="/recruiter-login-2">
-        <ProtectedRoute userType="employee" allowedRoles={["recruiter", "talent_advisor"]}>
-          <RecruiterDashboard2 />
-        </ProtectedRoute>
-      </Route>
+      <Route path="/recruiter-login-2" component={RecruiterDashboard2} />
       
-      <Route path="/client">
-        <ProtectedRoute userType="employee" allowedRoles={["client"]}>
-          <ClientDashboard />
-        </ProtectedRoute>
-      </Route>
+      <Route path="/client" component={ClientDashboard} />
       
       <Route path="/chat">
         <ProtectedRoute userType="employee">
