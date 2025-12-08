@@ -13,6 +13,7 @@ import "./types"; // Import session types
 import { db } from "./db";
 import { eq, desc, sql } from "drizzle-orm";
 import { logRequirementAdded, logCandidateSubmitted, logClosureMade, logCandidatePipelineChanged } from "./activity-logger";
+import { sendEmployeeWelcomeEmail, sendCandidateWelcomeEmail } from "./email-service";
 
 // Ensure uploads directory exists
 const uploadsDir = 'uploads';
@@ -386,6 +387,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Store OTP with expiry (10 minutes)
       await storage.storeOTP(candidateData.email, otp);
+      
+      // Send welcome email to new candidate
+      const loginUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+        : 'http://localhost:5000';
+      
+      await sendCandidateWelcomeEmail({
+        fullName: newCandidate.fullName,
+        email: newCandidate.email,
+        candidateId: newCandidate.candidateId,
+        loginUrl
+      });
       
       // For demo purposes, show OTP in alert as requested by user
       // In production, this would be sent via email
@@ -3738,8 +3751,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date().toISOString(),
       });
       
+      // Store raw password for email before it gets hashed
+      const rawPassword = employeeData.password || 'StaffOS@123';
+      
       // Password will be hashed by storage layer
       const employee = await storage.createEmployee(employeeData);
+      
+      // Send welcome email to new employee
+      if (employee.email && rawPassword) {
+        const loginUrl = process.env.REPLIT_DEV_DOMAIN 
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+          : 'http://localhost:5000';
+        
+        await sendEmployeeWelcomeEmail({
+          name: employee.name,
+          email: employee.email,
+          employeeId: employee.employeeId,
+          role: employee.role,
+          password: rawPassword,
+          loginUrl
+        });
+      }
       
       res.status(201).json({ message: "Employee created successfully", employee });
     } catch (error: any) {
@@ -3801,6 +3833,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create employee profile for client login
       // Note: storage.createEmployee will hash the password, so pass raw password
+      const rawPassword = validatedData.password;
       const employeeData = {
         employeeId: clientCode,
         name: validatedData.brandName,
@@ -3815,7 +3848,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date().toISOString(),
       };
       
-      await storage.createEmployee(employeeData);
+      const createdEmployee = await storage.createEmployee(employeeData);
+      
+      // Send welcome email to client
+      if (createdEmployee.email && rawPassword) {
+        const loginUrl = process.env.REPLIT_DEV_DOMAIN 
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+          : 'http://localhost:5000';
+        
+        await sendEmployeeWelcomeEmail({
+          name: createdEmployee.name,
+          email: createdEmployee.email,
+          employeeId: createdEmployee.employeeId,
+          role: createdEmployee.role,
+          password: rawPassword,
+          loginUrl
+        });
+      }
       
       res.status(201).json({ message: "Client profile created successfully", client });
     } catch (error: any) {
