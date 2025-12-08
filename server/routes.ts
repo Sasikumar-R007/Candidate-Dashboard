@@ -146,6 +146,19 @@ function requireSupportAuth(req: Request, res: Response, next: NextFunction) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint for Render and monitoring
+  app.get("/api/health", async (req, res) => {
+    try {
+      res.status(200).json({ 
+        status: "healthy", 
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || "development"
+      });
+    } catch (error) {
+      res.status(500).json({ status: "unhealthy", error: "Health check failed" });
+    }
+  });
+
   // Session Verification Route - Check if user session is valid and return user data
   app.get("/api/auth/verify-session", async (req, res) => {
     try {

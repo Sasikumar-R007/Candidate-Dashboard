@@ -1,24 +1,20 @@
 services:
   - type: web
-    name: job-portal-backend
+    name: staffos-backend
     env: node
     plan: starter
-    buildCommand: npm run build:backend
+    region: oregon
+    buildCommand: npm install && npm run build:backend
     startCommand: npm run start:backend
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
+      - key: NODE_VERSION
+        value: 20.10.0
       - key: FRONTEND_URL
         sync: false
-      - key: BACKEND_URL
-        sync: false
       - key: DATABASE_URL
-        fromDatabase:
-          name: staffos-db
-          property: connectionString
-
-databases:
-  - name: staffos-db
-    databaseName: staffos
-    user: staffos_user
-    plan: starter
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
