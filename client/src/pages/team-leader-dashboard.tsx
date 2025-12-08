@@ -324,20 +324,31 @@ export default function TeamLeaderDashboard() {
     return [];
   }, [teamMembers]);
   
-  // Calculate priority distribution dynamically from real data
+  // Calculate priority distribution dynamically from real data with toughness breakdown
+  // Handle cases where toughness may be undefined - default to 'Medium'
   const priorityDistribution = useMemo(() => {
-    const distribution = requirementsData.reduce((acc, req) => {
-      const crit = req.criticality;
-      if (crit === 'HIGH') acc.high++;
-      else if (crit === 'MEDIUM') acc.medium++;
-      else if (crit === 'LOW') acc.low++;
-      return acc;
-    }, { high: 0, medium: 0, low: 0 });
-    
-    return {
-      ...distribution,
-      total: requirementsData.length
+    const getToughness = (req: any) => req.toughness || 'Medium';
+    const HIGH = {
+      Easy: requirementsData.filter((req: any) => req.criticality === 'HIGH' && getToughness(req) === 'Easy').length,
+      Medium: requirementsData.filter((req: any) => req.criticality === 'HIGH' && getToughness(req) === 'Medium').length,
+      Tough: requirementsData.filter((req: any) => req.criticality === 'HIGH' && getToughness(req) === 'Tough').length,
     };
+    const MEDIUM = {
+      Easy: requirementsData.filter((req: any) => req.criticality === 'MEDIUM' && getToughness(req) === 'Easy').length,
+      Medium: requirementsData.filter((req: any) => req.criticality === 'MEDIUM' && getToughness(req) === 'Medium').length,
+      Tough: requirementsData.filter((req: any) => req.criticality === 'MEDIUM' && getToughness(req) === 'Tough').length,
+    };
+    const LOW = {
+      Easy: requirementsData.filter((req: any) => req.criticality === 'LOW' && getToughness(req) === 'Easy').length,
+      Medium: requirementsData.filter((req: any) => req.criticality === 'LOW' && getToughness(req) === 'Medium').length,
+      Tough: requirementsData.filter((req: any) => req.criticality === 'LOW' && getToughness(req) === 'Tough').length,
+    };
+    const high = requirementsData.filter((req: any) => req.criticality === 'HIGH').length;
+    const medium = requirementsData.filter((req: any) => req.criticality === 'MEDIUM').length;
+    const low = requirementsData.filter((req: any) => req.criticality === 'LOW').length;
+    const total = requirementsData.length;
+    
+    return { HIGH, MEDIUM, LOW, high, medium, low, total };
   }, [requirementsData]);
 
   // Chat team members are derived from real team members query
@@ -1037,45 +1048,78 @@ export default function TeamLeaderDashboard() {
               </div>
 
               {/* Right Section - Priority Distribution (Dynamic) */}
-              <div className="w-80 flex-shrink-0">
-                <div className="bg-white border border-gray-200 rounded-lg sticky top-0">
-                  <div className="px-6 py-4 border-b border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900">Priority Distribution</h3>
-                  </div>
+              <div className="w-80 bg-white border-l border-gray-200 px-6 py-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Priority Distribution</h3>
                   
-                  <div className="px-6 py-4 space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <div className="text-5xl font-bold text-red-600">H</div>
-                        <div className="text-sm text-gray-600 uppercase">IGH</div>
+                  <Card className="bg-white border border-gray-200">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        {/* HIGH Priority Group */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between bg-red-50 px-3 py-2 rounded">
+                            <span className="text-sm font-semibold text-red-800">HIGH</span>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600">Easy</span>
+                              <span className="text-sm font-semibold text-red-600">{priorityDistribution.HIGH.Easy}</span>
+                            </div>
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600">Med</span>
+                              <span className="text-sm font-semibold text-red-600">{priorityDistribution.HIGH.Medium}</span>
+                            </div>
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600">Tough</span>
+                              <span className="text-sm font-semibold text-red-600">{priorityDistribution.HIGH.Tough}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* MED Priority Group */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between bg-yellow-50 px-3 py-2 rounded">
+                            <span className="text-sm font-semibold text-yellow-800">MED</span>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600">Easy</span>
+                              <span className="text-sm font-semibold text-yellow-600">{priorityDistribution.MEDIUM.Easy}</span>
+                            </div>
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600">Med</span>
+                              <span className="text-sm font-semibold text-yellow-600">{priorityDistribution.MEDIUM.Medium}</span>
+                            </div>
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600">Tough</span>
+                              <span className="text-sm font-semibold text-yellow-600">{priorityDistribution.MEDIUM.Tough}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* LOW Priority Group */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between bg-green-50 px-3 py-2 rounded">
+                            <span className="text-sm font-semibold text-green-800">LOW</span>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600">Easy</span>
+                              <span className="text-sm font-semibold text-green-600">{priorityDistribution.LOW.Easy}</span>
+                            </div>
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600">Med</span>
+                              <span className="text-sm font-semibold text-green-600">{priorityDistribution.LOW.Medium}</span>
+                            </div>
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600">Tough</span>
+                              <span className="text-sm font-semibold text-green-600">{priorityDistribution.LOW.Tough}</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-4xl font-bold text-red-600">{priorityDistribution.high}</div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between p-4 bg-cyan-50 rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <div className="text-5xl font-bold text-cyan-600">M</div>
-                        <div className="text-sm text-gray-600 uppercase">EDIUM</div>
-                      </div>
-                      <div className="text-4xl font-bold text-cyan-600">{priorityDistribution.medium}</div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <div className="text-5xl font-bold text-gray-600">L</div>
-                        <div className="text-sm text-gray-600 uppercase">OW</div>
-                      </div>
-                      <div className="text-4xl font-bold text-gray-600">{priorityDistribution.low}</div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between p-4 bg-slate-100 rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <div className="text-5xl font-bold text-gray-900">T</div>
-                        <div className="text-sm text-gray-600 uppercase">OTAL</div>
-                      </div>
-                      <div className="text-4xl font-bold text-gray-900">{priorityDistribution.total}</div>
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
             </div>

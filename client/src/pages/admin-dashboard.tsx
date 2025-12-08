@@ -1899,14 +1899,31 @@ export default function AdminDashboard() {
     }
   };
 
-  // Calculate priority distribution from requirements
+  // Calculate priority distribution from requirements with toughness breakdown
+  // Handle cases where toughness may be undefined - default to 'Medium'
   const priorityDistribution = useMemo(() => {
+    const getToughness = (req: any) => req.toughness || 'Medium';
+    const HIGH = {
+      Easy: requirements.filter((req: any) => req.criticality === 'HIGH' && getToughness(req) === 'Easy').length,
+      Medium: requirements.filter((req: any) => req.criticality === 'HIGH' && getToughness(req) === 'Medium').length,
+      Tough: requirements.filter((req: any) => req.criticality === 'HIGH' && getToughness(req) === 'Tough').length,
+    };
+    const MEDIUM = {
+      Easy: requirements.filter((req: any) => req.criticality === 'MEDIUM' && getToughness(req) === 'Easy').length,
+      Medium: requirements.filter((req: any) => req.criticality === 'MEDIUM' && getToughness(req) === 'Medium').length,
+      Tough: requirements.filter((req: any) => req.criticality === 'MEDIUM' && getToughness(req) === 'Tough').length,
+    };
+    const LOW = {
+      Easy: requirements.filter((req: any) => req.criticality === 'LOW' && getToughness(req) === 'Easy').length,
+      Medium: requirements.filter((req: any) => req.criticality === 'LOW' && getToughness(req) === 'Medium').length,
+      Tough: requirements.filter((req: any) => req.criticality === 'LOW' && getToughness(req) === 'Tough').length,
+    };
     const high = requirements.filter((req: any) => req.criticality === 'HIGH').length;
     const medium = requirements.filter((req: any) => req.criticality === 'MEDIUM').length;
     const low = requirements.filter((req: any) => req.criticality === 'LOW').length;
     const total = requirements.length;
     
-    return { high, medium, low, total };
+    return { HIGH, MEDIUM, LOW, high, medium, low, total };
   }, [requirements]);
 
   const handleMemberClick = (member: any) => {
@@ -2719,45 +2736,78 @@ export default function AdminDashboard() {
               </div>
 
               {/* Right Section - Priority Distribution */}
-              <div className="w-60">
-                <div className="bg-white dark:bg-gray-900  border border-gray-200 dark:border-gray-700 px-6 pb-6">
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Priority Distribution</h3>
-                  </div>
+              <div className="w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 px-6 py-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Priority Distribution</h3>
                   
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 ">
-                      <div className="flex items-center space-x-2">
-                        <div className="text-4xl font-bold text-red-600 dark:text-red-400">H</div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">IGH</div>
+                  <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        {/* HIGH Priority Group */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded">
+                            <span className="text-sm font-semibold text-red-800 dark:text-red-400">HIGH</span>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">Easy</span>
+                              <span className="text-sm font-semibold text-red-600 dark:text-red-400">{priorityDistribution.HIGH.Easy}</span>
+                            </div>
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">Med</span>
+                              <span className="text-sm font-semibold text-red-600 dark:text-red-400">{priorityDistribution.HIGH.Medium}</span>
+                            </div>
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">Tough</span>
+                              <span className="text-sm font-semibold text-red-600 dark:text-red-400">{priorityDistribution.HIGH.Tough}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* MED Priority Group */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 rounded">
+                            <span className="text-sm font-semibold text-yellow-800 dark:text-yellow-400">MED</span>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">Easy</span>
+                              <span className="text-sm font-semibold text-yellow-600 dark:text-yellow-400">{priorityDistribution.MEDIUM.Easy}</span>
+                            </div>
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">Med</span>
+                              <span className="text-sm font-semibold text-yellow-600 dark:text-yellow-400">{priorityDistribution.MEDIUM.Medium}</span>
+                            </div>
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">Tough</span>
+                              <span className="text-sm font-semibold text-yellow-600 dark:text-yellow-400">{priorityDistribution.MEDIUM.Tough}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* LOW Priority Group */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded">
+                            <span className="text-sm font-semibold text-green-800 dark:text-green-400">LOW</span>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">Easy</span>
+                              <span className="text-sm font-semibold text-green-600 dark:text-green-400">{priorityDistribution.LOW.Easy}</span>
+                            </div>
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">Med</span>
+                              <span className="text-sm font-semibold text-green-600 dark:text-green-400">{priorityDistribution.LOW.Medium}</span>
+                            </div>
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">Tough</span>
+                              <span className="text-sm font-semibold text-green-600 dark:text-green-400">{priorityDistribution.LOW.Tough}</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-2xl font-bold text-red-600 dark:text-red-400">{priorityDistribution.high}</div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 ">
-                      <div className="flex items-center space-x-2">
-                        <div className="text-4xl font-bold text-blue-600 dark:text-blue-400">M</div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">EDIUM</div>
-                      </div>
-                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{priorityDistribution.medium}</div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 ">
-                      <div className="flex items-center space-x-2">
-                        <div className="text-4xl font-bold text-gray-600 dark:text-gray-400">L</div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">OW</div>
-                      </div>
-                      <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">{priorityDistribution.low}</div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between p-3 bg-slate-100 dark:bg-slate-800 ">
-                      <div className="flex items-center space-x-2">
-                        <div className="text-4xl font-bold text-gray-900 dark:text-white">T</div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">OTAL</div>
-                      </div>
-                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{priorityDistribution.total}</div>
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
             </div>
@@ -4071,45 +4121,78 @@ export default function AdminDashboard() {
               </div>
 
               {/* Right Section - Priority Distribution */}
-              <div className="w-60">
-                <div className="bg-white dark:bg-gray-900  border border-gray-200 dark:border-gray-700 px-6 pb-6">
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Priority Distribution</h3>
-                  </div>
+              <div className="w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 px-6 py-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Priority Distribution</h3>
                   
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 ">
-                      <div className="flex items-center space-x-2">
-                        <div className="text-4xl font-bold text-red-600 dark:text-red-400">H</div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">IGH</div>
+                  <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                    <CardContent className="p-4">
+                      <div className="space-y-3">
+                        {/* HIGH Priority Group */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between bg-red-50 dark:bg-red-900/20 px-3 py-2 rounded">
+                            <span className="text-sm font-semibold text-red-800 dark:text-red-400">HIGH</span>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">Easy</span>
+                              <span className="text-sm font-semibold text-red-600 dark:text-red-400">{priorityDistribution.HIGH.Easy}</span>
+                            </div>
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">Med</span>
+                              <span className="text-sm font-semibold text-red-600 dark:text-red-400">{priorityDistribution.HIGH.Medium}</span>
+                            </div>
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">Tough</span>
+                              <span className="text-sm font-semibold text-red-600 dark:text-red-400">{priorityDistribution.HIGH.Tough}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* MED Priority Group */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 rounded">
+                            <span className="text-sm font-semibold text-yellow-800 dark:text-yellow-400">MED</span>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">Easy</span>
+                              <span className="text-sm font-semibold text-yellow-600 dark:text-yellow-400">{priorityDistribution.MEDIUM.Easy}</span>
+                            </div>
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">Med</span>
+                              <span className="text-sm font-semibold text-yellow-600 dark:text-yellow-400">{priorityDistribution.MEDIUM.Medium}</span>
+                            </div>
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">Tough</span>
+                              <span className="text-sm font-semibold text-yellow-600 dark:text-yellow-400">{priorityDistribution.MEDIUM.Tough}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* LOW Priority Group */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded">
+                            <span className="text-sm font-semibold text-green-800 dark:text-green-400">LOW</span>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">Easy</span>
+                              <span className="text-sm font-semibold text-green-600 dark:text-green-400">{priorityDistribution.LOW.Easy}</span>
+                            </div>
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">Med</span>
+                              <span className="text-sm font-semibold text-green-600 dark:text-green-400">{priorityDistribution.LOW.Medium}</span>
+                            </div>
+                            <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">Tough</span>
+                              <span className="text-sm font-semibold text-green-600 dark:text-green-400">{priorityDistribution.LOW.Tough}</span>
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-2xl font-bold text-red-600 dark:text-red-400">{priorityDistribution.high}</div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 ">
-                      <div className="flex items-center space-x-2">
-                        <div className="text-4xl font-bold text-blue-600 dark:text-blue-400">M</div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">EDIUM</div>
-                      </div>
-                      <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{priorityDistribution.medium}</div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 ">
-                      <div className="flex items-center space-x-2">
-                        <div className="text-4xl font-bold text-gray-600 dark:text-gray-400">L</div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">OW</div>
-                      </div>
-                      <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">{priorityDistribution.low}</div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between p-3 bg-slate-100 dark:bg-slate-800 ">
-                      <div className="flex items-center space-x-2">
-                        <div className="text-4xl font-bold text-gray-900 dark:text-white">T</div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400">OTAL</div>
-                      </div>
-                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{priorityDistribution.total}</div>
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
             </div>
