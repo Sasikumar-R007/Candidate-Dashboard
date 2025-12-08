@@ -2477,7 +2477,7 @@ export default function AdminDashboard() {
                       <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                     </Button>
                   </div>
-                  <div className="text-4xl font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900 w-16 h-16 rounded-sm flex items-center justify-center">
+                  <div className={`text-4xl font-bold ${dailyMetricsData.overallPerformance === 'G' ? 'text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900' : 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900'} w-16 h-16 rounded-sm flex items-center justify-center`} data-testid="indicator-performance">
                     {dailyMetricsData.overallPerformance}
                   </div>
                 </div>

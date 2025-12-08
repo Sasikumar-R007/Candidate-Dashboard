@@ -987,14 +987,14 @@ export default function RecruiterDashboard2() {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="text-center">
                           <div className="text-sm text-gray-300 mb-2">Delivered</div>
-                          <div className="text-4xl font-bold text-white mb-3">0</div>
+                          <div className="text-4xl font-bold text-white mb-3" data-testid="text-delivered-count">{dailyMetrics?.dailyDeliveryDelivered ?? 0}</div>
                           <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white" onClick={() => setIsDeliveredModalOpen(true)} data-testid="button-view-delivered">
                             View
                           </Button>
                         </div>
                         <div className="text-center">
                           <div className="text-sm text-gray-300 mb-2">Defaulted</div>
-                          <div className="text-4xl font-bold text-white mb-3">0</div>
+                          <div className="text-4xl font-bold text-white mb-3" data-testid="text-defaulted-count">{dailyMetrics?.dailyDeliveryDefaulted ?? 0}</div>
                           <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white" onClick={() => setIsDefaultedModalOpen(true)} data-testid="button-view-defaulted">
                             View
                           </Button>
@@ -1005,8 +1005,8 @@ export default function RecruiterDashboard2() {
                     {/* Right section - Performance */}
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                          <span className="text-green-700 font-bold text-lg">G</span>
+                        <div className={`w-12 h-12 ${dailyMetrics?.overallPerformance === 'G' ? 'bg-green-100' : 'bg-red-100'} rounded-full flex items-center justify-center`} data-testid="indicator-performance">
+                          <span className={`${dailyMetrics?.overallPerformance === 'G' ? 'text-green-700' : 'text-red-700'} font-bold text-lg`}>{dailyMetrics?.overallPerformance ?? 'R'}</span>
                         </div>
                         <div className="text-right">
                           <Button size="sm" variant="link" className="text-blue-600 p-0" onClick={() => setIsPerformanceModalOpen(true)} data-testid="button-view-more-performance">
