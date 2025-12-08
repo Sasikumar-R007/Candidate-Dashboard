@@ -298,12 +298,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateEmployee(id: string, updates: Partial<Employee>): Promise<Employee | undefined> {
-    // If password is being updated, hash it
-    if (updates.password) {
-      const saltRounds = 10;
-      updates.password = await bcrypt.hash(updates.password, saltRounds);
-    }
-
+    // Note: Password hashing is handled in the routes before calling this method
     const [employee] = await db
       .update(employees)
       .set(updates)

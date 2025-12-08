@@ -5171,7 +5171,8 @@ export default function AdminDashboard() {
             lastLogin: "N/A",
             phoneNumber: emp.phone || '',
             joiningDate: emp.joiningDate || '',
-            password: emp.password
+            password: emp.password,
+            reportingTo: emp.reportingTo || ''
           }));
 
         // Filter users based on search term
