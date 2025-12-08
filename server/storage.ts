@@ -36,11 +36,18 @@ import {
   type RecruiterJob,
   type InsertRecruiterJob,
   type UserActivity,
-  type InsertUserActivity
+  type InsertUserActivity,
+  type RequirementAssignment,
+  type InsertRequirementAssignment,
+  type ResumeSubmission,
+  type InsertResumeSubmission,
+  type DailyMetricsSnapshot,
+  type InsertDailyMetricsSnapshot
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
 import { DatabaseStorage } from "./database-storage";
+import { getResumeTarget } from "@shared/constants";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -221,6 +228,30 @@ export interface IStorage {
   getJobApplicationsByRequirementId(requirementId: string): Promise<JobApplication[]>;
   createRecruiterJobApplication(application: InsertJobApplication & { profileId: string }): Promise<JobApplication>;
   updateJobApplicationStatus(id: string, status: string): Promise<JobApplication | undefined>;
+  
+  // Requirement Assignment methods
+  createRequirementAssignment(assignment: InsertRequirementAssignment): Promise<RequirementAssignment>;
+  getRequirementAssignmentsByRecruiterId(recruiterId: string): Promise<RequirementAssignment[]>;
+  getRequirementAssignmentsByTeamLeadId(teamLeadId: string): Promise<RequirementAssignment[]>;
+  getRequirementAssignmentsByDate(date: string): Promise<RequirementAssignment[]>;
+  getActiveRequirementAssignments(): Promise<RequirementAssignment[]>;
+  updateRequirementAssignment(id: string, updates: Partial<RequirementAssignment>): Promise<RequirementAssignment | undefined>;
+  
+  // Resume Submission methods
+  createResumeSubmission(submission: InsertResumeSubmission): Promise<ResumeSubmission>;
+  getResumeSubmissionsByRecruiterId(recruiterId: string): Promise<ResumeSubmission[]>;
+  getResumeSubmissionsByRequirementId(requirementId: string): Promise<ResumeSubmission[]>;
+  getResumeSubmissionsByDate(date: string): Promise<ResumeSubmission[]>;
+  getResumeSubmissionsCountByRecruiterAndDate(recruiterId: string, date: string): Promise<number>;
+  
+  // Daily Metrics Snapshot methods
+  createDailyMetricsSnapshot(snapshot: InsertDailyMetricsSnapshot): Promise<DailyMetricsSnapshot>;
+  getDailyMetricsSnapshot(date: string, scopeType: string, scopeId?: string): Promise<DailyMetricsSnapshot | undefined>;
+  getDailyMetricsSnapshotsByDateRange(startDate: string, endDate: string, scopeType: string, scopeId?: string): Promise<DailyMetricsSnapshot[]>;
+  updateDailyMetricsSnapshot(id: string, updates: Partial<DailyMetricsSnapshot>): Promise<DailyMetricsSnapshot | undefined>;
+  calculateRecruiterDailyMetrics(recruiterId: string, date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }>;
+  calculateTeamDailyMetrics(teamLeadId: string, date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }>;
+  calculateOrgDailyMetrics(date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }>;
 }
 
 export class MemStorage implements IStorage {
@@ -239,6 +270,9 @@ export class MemStorage implements IStorage {
   private otpStorage: Map<string, { otp: string; expiry: Date; email: string }>;
   private notifications: Map<string, Notification>;
   private userActivities: Map<string, UserActivity>;
+  private requirementAssignments: Map<string, RequirementAssignment>;
+  private resumeSubmissions: Map<string, ResumeSubmission>;
+  private dailyMetricsSnapshots: Map<string, DailyMetricsSnapshot>;
 
   constructor() {
     this.users = new Map();
@@ -256,6 +290,9 @@ export class MemStorage implements IStorage {
     this.otpStorage = new Map();
     this.notifications = new Map();
     this.userActivities = new Map();
+    this.requirementAssignments = new Map();
+    this.resumeSubmissions = new Map();
+    this.dailyMetricsSnapshots = new Map();
     
     // Initialize with sample data (async)
     this.initSampleData().catch(console.error);
@@ -1352,6 +1389,187 @@ export class MemStorage implements IStorage {
 
   async deleteImpactMetrics(id: string): Promise<boolean> {
     throw new Error("Impact Metrics methods not implemented in MemStorage. Use DatabaseStorage.");
+  }
+
+  // Requirement Assignment methods
+  async createRequirementAssignment(assignment: InsertRequirementAssignment): Promise<RequirementAssignment> {
+    const id = randomUUID();
+    const newAssignment: RequirementAssignment = {
+      id,
+      requirementId: assignment.requirementId,
+      recruiterId: assignment.recruiterId,
+      recruiterName: assignment.recruiterName,
+      teamLeadId: assignment.teamLeadId || null,
+      teamLeadName: assignment.teamLeadName || null,
+      assignedDate: assignment.assignedDate,
+      dueDate: assignment.dueDate || null,
+      status: assignment.status || "active",
+      createdAt: new Date().toISOString()
+    };
+    this.requirementAssignments.set(id, newAssignment);
+    return newAssignment;
+  }
+
+  async getRequirementAssignmentsByRecruiterId(recruiterId: string): Promise<RequirementAssignment[]> {
+    return Array.from(this.requirementAssignments.values()).filter(a => a.recruiterId === recruiterId);
+  }
+
+  async getRequirementAssignmentsByTeamLeadId(teamLeadId: string): Promise<RequirementAssignment[]> {
+    return Array.from(this.requirementAssignments.values()).filter(a => a.teamLeadId === teamLeadId);
+  }
+
+  async getRequirementAssignmentsByDate(date: string): Promise<RequirementAssignment[]> {
+    return Array.from(this.requirementAssignments.values()).filter(a => a.assignedDate === date);
+  }
+
+  async getActiveRequirementAssignments(): Promise<RequirementAssignment[]> {
+    return Array.from(this.requirementAssignments.values()).filter(a => a.status === "active");
+  }
+
+  async updateRequirementAssignment(id: string, updates: Partial<RequirementAssignment>): Promise<RequirementAssignment | undefined> {
+    const existing = this.requirementAssignments.get(id);
+    if (!existing) return undefined;
+    const updated: RequirementAssignment = { ...existing, ...updates };
+    this.requirementAssignments.set(id, updated);
+    return updated;
+  }
+
+  // Resume Submission methods
+  async createResumeSubmission(submission: InsertResumeSubmission): Promise<ResumeSubmission> {
+    const id = randomUUID();
+    const newSubmission: ResumeSubmission = {
+      id,
+      requirementId: submission.requirementId,
+      assignmentId: submission.assignmentId || null,
+      recruiterId: submission.recruiterId,
+      recruiterName: submission.recruiterName,
+      candidateId: submission.candidateId || null,
+      candidateName: submission.candidateName,
+      candidateEmail: submission.candidateEmail || null,
+      submittedAt: submission.submittedAt,
+      status: submission.status || "submitted",
+      notes: submission.notes || null,
+      createdAt: new Date().toISOString()
+    };
+    this.resumeSubmissions.set(id, newSubmission);
+    return newSubmission;
+  }
+
+  async getResumeSubmissionsByRecruiterId(recruiterId: string): Promise<ResumeSubmission[]> {
+    return Array.from(this.resumeSubmissions.values()).filter(s => s.recruiterId === recruiterId);
+  }
+
+  async getResumeSubmissionsByRequirementId(requirementId: string): Promise<ResumeSubmission[]> {
+    return Array.from(this.resumeSubmissions.values()).filter(s => s.requirementId === requirementId);
+  }
+
+  async getResumeSubmissionsByDate(date: string): Promise<ResumeSubmission[]> {
+    return Array.from(this.resumeSubmissions.values()).filter(s => s.submittedAt.startsWith(date));
+  }
+
+  async getResumeSubmissionsCountByRecruiterAndDate(recruiterId: string, date: string): Promise<number> {
+    return Array.from(this.resumeSubmissions.values())
+      .filter(s => s.recruiterId === recruiterId && s.submittedAt.startsWith(date))
+      .length;
+  }
+
+  // Daily Metrics Snapshot methods
+  async createDailyMetricsSnapshot(snapshot: InsertDailyMetricsSnapshot): Promise<DailyMetricsSnapshot> {
+    const id = randomUUID();
+    const newSnapshot: DailyMetricsSnapshot = {
+      id,
+      date: snapshot.date,
+      scopeType: snapshot.scopeType,
+      scopeId: snapshot.scopeId || null,
+      scopeName: snapshot.scopeName || null,
+      delivered: snapshot.delivered ?? 0,
+      defaulted: snapshot.defaulted ?? 0,
+      requirementCount: snapshot.requirementCount ?? 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: snapshot.updatedAt || null
+    };
+    this.dailyMetricsSnapshots.set(id, newSnapshot);
+    return newSnapshot;
+  }
+
+  async getDailyMetricsSnapshot(date: string, scopeType: string, scopeId?: string): Promise<DailyMetricsSnapshot | undefined> {
+    return Array.from(this.dailyMetricsSnapshots.values()).find(s => 
+      s.date === date && s.scopeType === scopeType && (scopeId ? s.scopeId === scopeId : !s.scopeId)
+    );
+  }
+
+  async getDailyMetricsSnapshotsByDateRange(startDate: string, endDate: string, scopeType: string, scopeId?: string): Promise<DailyMetricsSnapshot[]> {
+    return Array.from(this.dailyMetricsSnapshots.values()).filter(s => 
+      s.date >= startDate && s.date <= endDate && 
+      s.scopeType === scopeType && 
+      (scopeId ? s.scopeId === scopeId : !s.scopeId)
+    );
+  }
+
+  async updateDailyMetricsSnapshot(id: string, updates: Partial<DailyMetricsSnapshot>): Promise<DailyMetricsSnapshot | undefined> {
+    const existing = this.dailyMetricsSnapshots.get(id);
+    if (!existing) return undefined;
+    const updated: DailyMetricsSnapshot = { ...existing, ...updates, updatedAt: new Date().toISOString() };
+    this.dailyMetricsSnapshots.set(id, updated);
+    return updated;
+  }
+
+  async calculateRecruiterDailyMetrics(recruiterId: string, date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }> {
+    const assignments = Array.from(this.requirementAssignments.values())
+      .filter(a => a.recruiterId === recruiterId && a.status === "active");
+    
+    let required = 0;
+    for (const assignment of assignments) {
+      const requirement = this.requirements.get(assignment.requirementId);
+      if (requirement) {
+        required += getResumeTarget(requirement.criticality, requirement.toughness);
+      }
+    }
+    
+    const delivered = await this.getResumeSubmissionsCountByRecruiterAndDate(recruiterId, date);
+    const defaulted = Math.max(0, required - delivered);
+    
+    return { delivered, defaulted, required, requirementCount: assignments.length };
+  }
+
+  async calculateTeamDailyMetrics(teamLeadId: string, date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }> {
+    const teamMembers = Array.from(this.employees.values())
+      .filter(e => e.reportingTo === teamLeadId || e.id === teamLeadId);
+    
+    let totalDelivered = 0;
+    let totalRequired = 0;
+    let totalRequirements = 0;
+    
+    for (const member of teamMembers) {
+      const metrics = await this.calculateRecruiterDailyMetrics(member.id, date);
+      totalDelivered += metrics.delivered;
+      totalRequired += metrics.required;
+      totalRequirements += metrics.requirementCount;
+    }
+    
+    const totalDefaulted = Math.max(0, totalRequired - totalDelivered);
+    
+    return { delivered: totalDelivered, defaulted: totalDefaulted, required: totalRequired, requirementCount: totalRequirements };
+  }
+
+  async calculateOrgDailyMetrics(date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }> {
+    const recruiters = Array.from(this.employees.values())
+      .filter(e => e.role === "recruiter" || e.role === "team_leader");
+    
+    let totalDelivered = 0;
+    let totalRequired = 0;
+    let totalRequirements = 0;
+    
+    for (const recruiter of recruiters) {
+      const metrics = await this.calculateRecruiterDailyMetrics(recruiter.id, date);
+      totalDelivered += metrics.delivered;
+      totalRequired += metrics.required;
+      totalRequirements += metrics.requirementCount;
+    }
+    
+    const totalDefaulted = Math.max(0, totalRequired - totalDelivered);
+    
+    return { delivered: totalDelivered, defaulted: totalDefaulted, required: totalRequired, requirementCount: totalRequirements };
   }
 }
 

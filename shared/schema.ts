@@ -702,6 +702,62 @@ export const userActivities = pgTable("user_activities", {
   createdAt: text("created_at").notNull(),
 });
 
+export const requirementAssignments = pgTable("requirement_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requirementId: varchar("requirement_id").notNull(),
+  recruiterId: varchar("recruiter_id").notNull(),
+  recruiterName: text("recruiter_name").notNull(),
+  teamLeadId: varchar("team_lead_id"),
+  teamLeadName: text("team_lead_name"),
+  assignedDate: text("assigned_date").notNull(),
+  dueDate: text("due_date"),
+  status: text("status").notNull().default("active"),
+  createdAt: text("created_at").notNull(),
+});
+
+export const resumeSubmissions = pgTable("resume_submissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requirementId: varchar("requirement_id").notNull(),
+  assignmentId: varchar("assignment_id"),
+  recruiterId: varchar("recruiter_id").notNull(),
+  recruiterName: text("recruiter_name").notNull(),
+  candidateId: varchar("candidate_id"),
+  candidateName: text("candidate_name").notNull(),
+  candidateEmail: text("candidate_email"),
+  submittedAt: text("submitted_at").notNull(),
+  status: text("status").notNull().default("submitted"),
+  notes: text("notes"),
+  createdAt: text("created_at").notNull(),
+});
+
+export const dailyMetricsSnapshots = pgTable("daily_metrics_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  date: text("date").notNull(),
+  scopeType: text("scope_type").notNull(),
+  scopeId: varchar("scope_id"),
+  scopeName: text("scope_name"),
+  delivered: integer("delivered").notNull().default(0),
+  defaulted: integer("defaulted").notNull().default(0),
+  requirementCount: integer("requirement_count").notNull().default(0),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at"),
+});
+
+export const insertRequirementAssignmentSchema = createInsertSchema(requirementAssignments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertResumeSubmissionSchema = createInsertSchema(resumeSubmissions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDailyMetricsSnapshotSchema = createInsertSchema(dailyMetricsSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertUserActivitySchema = createInsertSchema(userActivities).omit({
   id: true,
 });
@@ -843,3 +899,9 @@ export type InsertRecruiterJob = z.infer<typeof insertRecruiterJobSchema>;
 export type RecruiterJob = typeof recruiterJobs.$inferSelect;
 export type InsertUserActivity = z.infer<typeof insertUserActivitySchema>;
 export type UserActivity = typeof userActivities.$inferSelect;
+export type InsertRequirementAssignment = z.infer<typeof insertRequirementAssignmentSchema>;
+export type RequirementAssignment = typeof requirementAssignments.$inferSelect;
+export type InsertResumeSubmission = z.infer<typeof insertResumeSubmissionSchema>;
+export type ResumeSubmission = typeof resumeSubmissions.$inferSelect;
+export type InsertDailyMetricsSnapshot = z.infer<typeof insertDailyMetricsSnapshotSchema>;
+export type DailyMetricsSnapshot = typeof dailyMetricsSnapshots.$inferSelect;

@@ -43,6 +43,12 @@ import {
   type RecruiterCommand,
   type InsertRecruiterCommand,
   type Meeting,
+  type RequirementAssignment,
+  type InsertRequirementAssignment,
+  type ResumeSubmission,
+  type InsertResumeSubmission,
+  type DailyMetricsSnapshot,
+  type InsertDailyMetricsSnapshot,
   users,
   profiles,
   jobPreferences,
@@ -64,8 +70,12 @@ import {
   revenueMappings,
   recruiterJobs,
   recruiterCommands,
-  meetings
+  meetings,
+  requirementAssignments,
+  resumeSubmissions,
+  dailyMetricsSnapshots
 } from "@shared/schema";
+import { getResumeTarget } from "@shared/constants";
 import { db } from "./db";
 import { eq, and, desc, sql, count, inArray } from "drizzle-orm";
 import bcrypt from "bcrypt";
@@ -1235,5 +1245,186 @@ export class DatabaseStorage implements IStorage {
       totalRevenue,
       totalIncentives
     };
+  }
+
+  // Requirement Assignment methods
+  async createRequirementAssignment(assignment: InsertRequirementAssignment): Promise<RequirementAssignment> {
+    const [result] = await db.insert(requirementAssignments).values({
+      ...assignment,
+      createdAt: new Date().toISOString()
+    }).returning();
+    return result;
+  }
+
+  async getRequirementAssignmentsByRecruiterId(recruiterId: string): Promise<RequirementAssignment[]> {
+    return await db.select().from(requirementAssignments).where(eq(requirementAssignments.recruiterId, recruiterId));
+  }
+
+  async getRequirementAssignmentsByTeamLeadId(teamLeadId: string): Promise<RequirementAssignment[]> {
+    return await db.select().from(requirementAssignments).where(eq(requirementAssignments.teamLeadId, teamLeadId));
+  }
+
+  async getRequirementAssignmentsByDate(date: string): Promise<RequirementAssignment[]> {
+    return await db.select().from(requirementAssignments).where(eq(requirementAssignments.assignedDate, date));
+  }
+
+  async getActiveRequirementAssignments(): Promise<RequirementAssignment[]> {
+    return await db.select().from(requirementAssignments).where(eq(requirementAssignments.status, "active"));
+  }
+
+  async updateRequirementAssignment(id: string, updates: Partial<RequirementAssignment>): Promise<RequirementAssignment | undefined> {
+    const [result] = await db.update(requirementAssignments).set(updates).where(eq(requirementAssignments.id, id)).returning();
+    return result || undefined;
+  }
+
+  // Resume Submission methods
+  async createResumeSubmission(submission: InsertResumeSubmission): Promise<ResumeSubmission> {
+    const [result] = await db.insert(resumeSubmissions).values({
+      ...submission,
+      createdAt: new Date().toISOString()
+    }).returning();
+    return result;
+  }
+
+  async getResumeSubmissionsByRecruiterId(recruiterId: string): Promise<ResumeSubmission[]> {
+    return await db.select().from(resumeSubmissions).where(eq(resumeSubmissions.recruiterId, recruiterId));
+  }
+
+  async getResumeSubmissionsByRequirementId(requirementId: string): Promise<ResumeSubmission[]> {
+    return await db.select().from(resumeSubmissions).where(eq(resumeSubmissions.requirementId, requirementId));
+  }
+
+  async getResumeSubmissionsByDate(date: string): Promise<ResumeSubmission[]> {
+    return await db.select().from(resumeSubmissions).where(sql`${resumeSubmissions.submittedAt} LIKE ${date + '%'}`);
+  }
+
+  async getResumeSubmissionsCountByRecruiterAndDate(recruiterId: string, date: string): Promise<number> {
+    const result = await db.select({ count: count() })
+      .from(resumeSubmissions)
+      .where(and(
+        eq(resumeSubmissions.recruiterId, recruiterId),
+        sql`${resumeSubmissions.submittedAt} LIKE ${date + '%'}`
+      ));
+    return result[0]?.count || 0;
+  }
+
+  // Daily Metrics Snapshot methods
+  async createDailyMetricsSnapshot(snapshot: InsertDailyMetricsSnapshot): Promise<DailyMetricsSnapshot> {
+    const [result] = await db.insert(dailyMetricsSnapshots).values({
+      ...snapshot,
+      createdAt: new Date().toISOString()
+    }).returning();
+    return result;
+  }
+
+  async getDailyMetricsSnapshot(date: string, scopeType: string, scopeId?: string): Promise<DailyMetricsSnapshot | undefined> {
+    let query;
+    if (scopeId) {
+      query = await db.select().from(dailyMetricsSnapshots)
+        .where(and(
+          eq(dailyMetricsSnapshots.date, date),
+          eq(dailyMetricsSnapshots.scopeType, scopeType),
+          eq(dailyMetricsSnapshots.scopeId, scopeId)
+        ));
+    } else {
+      query = await db.select().from(dailyMetricsSnapshots)
+        .where(and(
+          eq(dailyMetricsSnapshots.date, date),
+          eq(dailyMetricsSnapshots.scopeType, scopeType),
+          sql`${dailyMetricsSnapshots.scopeId} IS NULL`
+        ));
+    }
+    return query[0] || undefined;
+  }
+
+  async getDailyMetricsSnapshotsByDateRange(startDate: string, endDate: string, scopeType: string, scopeId?: string): Promise<DailyMetricsSnapshot[]> {
+    if (scopeId) {
+      return await db.select().from(dailyMetricsSnapshots)
+        .where(and(
+          sql`${dailyMetricsSnapshots.date} >= ${startDate}`,
+          sql`${dailyMetricsSnapshots.date} <= ${endDate}`,
+          eq(dailyMetricsSnapshots.scopeType, scopeType),
+          eq(dailyMetricsSnapshots.scopeId, scopeId)
+        ))
+        .orderBy(desc(dailyMetricsSnapshots.date));
+    } else {
+      return await db.select().from(dailyMetricsSnapshots)
+        .where(and(
+          sql`${dailyMetricsSnapshots.date} >= ${startDate}`,
+          sql`${dailyMetricsSnapshots.date} <= ${endDate}`,
+          eq(dailyMetricsSnapshots.scopeType, scopeType),
+          sql`${dailyMetricsSnapshots.scopeId} IS NULL`
+        ))
+        .orderBy(desc(dailyMetricsSnapshots.date));
+    }
+  }
+
+  async updateDailyMetricsSnapshot(id: string, updates: Partial<DailyMetricsSnapshot>): Promise<DailyMetricsSnapshot | undefined> {
+    const [result] = await db.update(dailyMetricsSnapshots)
+      .set({ ...updates, updatedAt: new Date().toISOString() })
+      .where(eq(dailyMetricsSnapshots.id, id))
+      .returning();
+    return result || undefined;
+  }
+
+  async calculateRecruiterDailyMetrics(recruiterId: string, date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }> {
+    const assignments = await db.select().from(requirementAssignments)
+      .where(and(
+        eq(requirementAssignments.recruiterId, recruiterId),
+        eq(requirementAssignments.status, "active")
+      ));
+    
+    let required = 0;
+    for (const assignment of assignments) {
+      const [requirement] = await db.select().from(requirements).where(eq(requirements.id, assignment.requirementId));
+      if (requirement) {
+        required += getResumeTarget(requirement.criticality, requirement.toughness);
+      }
+    }
+    
+    const delivered = await this.getResumeSubmissionsCountByRecruiterAndDate(recruiterId, date);
+    const defaulted = Math.max(0, required - delivered);
+    
+    return { delivered, defaulted, required, requirementCount: assignments.length };
+  }
+
+  async calculateTeamDailyMetrics(teamLeadId: string, date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }> {
+    const teamMembers = await db.select().from(employees)
+      .where(sql`${employees.reportingTo} = ${teamLeadId} OR ${employees.id} = ${teamLeadId}`);
+    
+    let totalDelivered = 0;
+    let totalRequired = 0;
+    let totalRequirements = 0;
+    
+    for (const member of teamMembers) {
+      const metrics = await this.calculateRecruiterDailyMetrics(member.id, date);
+      totalDelivered += metrics.delivered;
+      totalRequired += metrics.required;
+      totalRequirements += metrics.requirementCount;
+    }
+    
+    const totalDefaulted = Math.max(0, totalRequired - totalDelivered);
+    
+    return { delivered: totalDelivered, defaulted: totalDefaulted, required: totalRequired, requirementCount: totalRequirements };
+  }
+
+  async calculateOrgDailyMetrics(date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }> {
+    const recruiters = await db.select().from(employees)
+      .where(sql`${employees.role} IN ('recruiter', 'team_leader')`);
+    
+    let totalDelivered = 0;
+    let totalRequired = 0;
+    let totalRequirements = 0;
+    
+    for (const recruiter of recruiters) {
+      const metrics = await this.calculateRecruiterDailyMetrics(recruiter.id, date);
+      totalDelivered += metrics.delivered;
+      totalRequired += metrics.required;
+      totalRequirements += metrics.requirementCount;
+    }
+    
+    const totalDefaulted = Math.max(0, totalRequired - totalDelivered);
+    
+    return { delivered: totalDelivered, defaulted: totalDefaulted, required: totalRequired, requirementCount: totalRequirements };
   }
 }

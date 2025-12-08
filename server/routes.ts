@@ -2551,60 +2551,207 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
 
+      const dateParam = req.query.date as string | undefined;
+      const today = dateParam || new Date().toISOString().split('T')[0];
+      
+      // Use new metrics calculation algorithm
+      const metrics = await storage.calculateRecruiterDailyMetrics(employee.id, today);
+      
+      // Also get requirement breakdown for backwards compatibility
       const requirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
-      
-      const hhReqs = requirements.filter(r => r.criticality === 'HIGH');
-      const mmReqs = requirements.filter(r => r.criticality === 'MEDIUM');
-      const leReqs = requirements.filter(r => r.criticality === 'LOW');
-      
-      let hhDelivered = 0, mmDelivered = 0, leDelivered = 0;
-      let hhRequired = 0, mmRequired = 0, leRequired = 0;
-      
-      for (const req of requirements) {
-        const applications = await storage.getJobApplicationsByRequirementId(req.id);
-        const deliveredCount = applications.length;
-        const reqTarget = 3;
-        
-        if (req.criticality === 'HIGH') {
-          hhDelivered += deliveredCount;
-          hhRequired += reqTarget;
-        } else if (req.criticality === 'MEDIUM') {
-          mmDelivered += deliveredCount;
-          mmRequired += reqTarget;
-        } else {
-          leDelivered += deliveredCount;
-          leRequired += reqTarget;
-        }
-      }
-      
       const completedRequirements = requirements.filter(r => 
         r.talentAdvisor !== null && r.talentAdvisor !== ''
       ).length;
       
-      const totalResumesDelivered = hhDelivered + mmDelivered + leDelivered;
-      const totalResumesRequired = hhRequired + mmRequired + leRequired;
-      
       const dailyMetrics = {
         id: `daily-rec-${employee.id}`,
-        date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
-        totalRequirements: requirements.length,
+        date: new Date(today).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
+        totalRequirements: metrics.requirementCount,
         completedRequirements,
-        totalResumes: totalResumesDelivered,
-        totalResumesDelivered,
-        totalResumesRequired,
-        dailyDeliveryDelivered: totalResumesDelivered,
-        dailyDeliveryDefaulted: Math.max(0, totalResumesRequired - totalResumesDelivered),
-        overallPerformance: totalResumesDelivered >= totalResumesRequired ? "G" : "R",
-        requirements: [
-          { criticality: "HH", required: hhRequired, delivered: hhDelivered },
-          { criticality: "MM", required: mmRequired, delivered: mmDelivered },
-          { criticality: "LE", required: leRequired, delivered: leDelivered }
-        ]
+        totalResumes: metrics.delivered,
+        totalResumesDelivered: metrics.delivered,
+        totalResumesRequired: metrics.required,
+        dailyDeliveryDelivered: metrics.delivered,
+        dailyDeliveryDefaulted: metrics.defaulted,
+        overallPerformance: metrics.delivered >= metrics.required ? "G" : "R",
+        delivered: metrics.delivered,
+        defaulted: metrics.defaulted,
+        required: metrics.required,
+        requirementCount: metrics.requirementCount
       };
       res.json(dailyMetrics);
     } catch (error) {
       console.error('Get recruiter daily metrics error:', error);
       res.status(500).json({ message: "Failed to fetch daily metrics" });
+    }
+  });
+
+  // Calculate and store daily metrics snapshot for recruiter
+  app.post("/api/recruiter/daily-metrics/calculate", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      const { date } = req.body;
+      const targetDate = date || new Date().toISOString().split('T')[0];
+      
+      const metrics = await storage.calculateRecruiterDailyMetrics(employee.id, targetDate);
+      
+      // Check if snapshot exists and update, otherwise create
+      const existingSnapshot = await storage.getDailyMetricsSnapshot(targetDate, 'recruiter', employee.id);
+      
+      let snapshot;
+      if (existingSnapshot) {
+        snapshot = await storage.updateDailyMetricsSnapshot(existingSnapshot.id, {
+          delivered: metrics.delivered,
+          defaulted: metrics.defaulted,
+          requirementCount: metrics.requirementCount
+        });
+      } else {
+        snapshot = await storage.createDailyMetricsSnapshot({
+          date: targetDate,
+          scopeType: 'recruiter',
+          scopeId: employee.id,
+          scopeName: employee.name,
+          delivered: metrics.delivered,
+          defaulted: metrics.defaulted,
+          requirementCount: metrics.requirementCount
+        });
+      }
+      
+      res.json({ ...metrics, snapshot });
+    } catch (error) {
+      console.error('Calculate recruiter daily metrics error:', error);
+      res.status(500).json({ message: "Failed to calculate daily metrics" });
+    }
+  });
+
+  // Get daily metrics history for recruiter (for charts)
+  app.get("/api/recruiter/daily-metrics/history", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      const { startDate, endDate } = req.query;
+      const today = new Date().toISOString().split('T')[0];
+      const start = (startDate as string) || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const end = (endDate as string) || today;
+      
+      const snapshots = await storage.getDailyMetricsSnapshotsByDateRange(start, end, 'recruiter', employee.id);
+      res.json(snapshots);
+    } catch (error) {
+      console.error('Get recruiter daily metrics history error:', error);
+      res.status(500).json({ message: "Failed to fetch daily metrics history" });
+    }
+  });
+
+  // Team Lead daily metrics - aggregated team view
+  app.get("/api/team-leader/daily-metrics", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee || employee.role !== 'team_leader') {
+        return res.status(403).json({ message: "Access denied. Team Leader role required." });
+      }
+
+      const dateParam = req.query.date as string | undefined;
+      const today = dateParam || new Date().toISOString().split('T')[0];
+      
+      const metrics = await storage.calculateTeamDailyMetrics(employee.id, today);
+      
+      res.json({
+        id: `daily-team-${employee.id}`,
+        date: new Date(today).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
+        delivered: metrics.delivered,
+        defaulted: metrics.defaulted,
+        required: metrics.required,
+        requirementCount: metrics.requirementCount,
+        performanceRatio: metrics.required > 0 ? (metrics.delivered / metrics.required * 100).toFixed(1) : '100',
+        overallPerformance: metrics.delivered >= metrics.required ? "G" : "R"
+      });
+    } catch (error) {
+      console.error('Get team leader daily metrics error:', error);
+      res.status(500).json({ message: "Failed to fetch team daily metrics" });
+    }
+  });
+
+  // Team Lead daily metrics history (for charts)
+  app.get("/api/team-leader/daily-metrics/history", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee || employee.role !== 'team_leader') {
+        return res.status(403).json({ message: "Access denied. Team Leader role required." });
+      }
+
+      const { startDate, endDate } = req.query;
+      const today = new Date().toISOString().split('T')[0];
+      const start = (startDate as string) || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const end = (endDate as string) || today;
+      
+      const snapshots = await storage.getDailyMetricsSnapshotsByDateRange(start, end, 'team', employee.id);
+      res.json(snapshots);
+    } catch (error) {
+      console.error('Get team leader daily metrics history error:', error);
+      res.status(500).json({ message: "Failed to fetch team daily metrics history" });
+    }
+  });
+
+  // Admin org-wide daily metrics (new algorithm-based)
+  app.get("/api/admin/daily-metrics/new", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee || (employee.role !== 'admin' && employee.role !== 'manager')) {
+        return res.status(403).json({ message: "Access denied. Admin role required." });
+      }
+
+      const dateParam = req.query.date as string | undefined;
+      const today = dateParam || new Date().toISOString().split('T')[0];
+      
+      const metrics = await storage.calculateOrgDailyMetrics(today);
+      
+      res.json({
+        id: `daily-org-${today}`,
+        date: new Date(today).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
+        delivered: metrics.delivered,
+        defaulted: metrics.defaulted,
+        required: metrics.required,
+        requirementCount: metrics.requirementCount,
+        performanceRatio: metrics.required > 0 ? (metrics.delivered / metrics.required * 100).toFixed(1) : '100',
+        overallPerformance: metrics.delivered >= metrics.required ? "G" : "R"
+      });
+    } catch (error) {
+      console.error('Get admin daily metrics error:', error);
+      res.status(500).json({ message: "Failed to fetch org daily metrics" });
+    }
+  });
+
+  // Admin daily metrics history (for charts)
+  app.get("/api/admin/daily-metrics/history", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee || (employee.role !== 'admin' && employee.role !== 'manager')) {
+        return res.status(403).json({ message: "Access denied. Admin role required." });
+      }
+
+      const { startDate, endDate } = req.query;
+      const today = new Date().toISOString().split('T')[0];
+      const start = (startDate as string) || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const end = (endDate as string) || today;
+      
+      const snapshots = await storage.getDailyMetricsSnapshotsByDateRange(start, end, 'organization');
+      res.json(snapshots);
+    } catch (error) {
+      console.error('Get admin daily metrics history error:', error);
+      res.status(500).json({ message: "Failed to fetch org daily metrics history" });
     }
   });
 
