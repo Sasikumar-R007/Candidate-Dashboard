@@ -14,43 +14,44 @@ export function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
+// DEVELOPMENT-ONLY: Never load Vite in production
 export async function setupVite(app: Express, server: Server) {
-  // Dynamic import of vite - only loaded in development
+  if (process.env.NODE_ENV === "production") {
+    return; // Do nothing in production
+  }
+
+  // Load Vite lazily ONLY in dev mode
   const { createServer: createViteServer, createLogger } = await import("vite");
   const { default: viteConfig } = await import("../vite.config");
   const { nanoid } = await import("nanoid");
-  
-  const viteLogger = createLogger();
 
-  const serverOptions = {
-    middlewareMode: true,
-    hmr: {
-      server: server,
-    },
-    host: "0.0.0.0",
-    allowedHosts: true as const,
-    cors: true,
-  };
+  const viteLogger = createLogger();
 
   const vite = await createViteServer({
     ...viteConfig,
     configFile: false,
+    server: {
+      middlewareMode: true,
+      hmr: { server },
+      host: "0.0.0.0",
+      cors: true,
+    },
+    appType: "custom",
     customLogger: {
       ...viteLogger,
-      error: (msg, options) => {
-        viteLogger.error(msg, options);
+      error: (msg, opts) => {
+        viteLogger.error(msg, opts);
         process.exit(1);
       },
     },
-    server: serverOptions,
-    appType: "custom",
   });
 
   app.use(vite.middlewares);
-  app.use("*", async (req, res, next) => {
-    const url = req.originalUrl;
 
+  app.use("*", async (req, res, next) => {
     try {
+      const url = req.originalUrl;
+
       const clientTemplate = path.resolve(
         import.meta.dirname,
         "..",
@@ -58,33 +59,33 @@ export async function setupVite(app: Express, server: Server) {
         "index.html",
       );
 
-      // always reload the index.html file from disk incase it changes
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
+
       const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
+
     } catch (e) {
-      vite.ssrFixStacktrace(e as Error);
       next(e);
     }
   });
 }
 
+// PRODUCTION STATIC FILES
 export function serveStatic(app: Express) {
   const distPath = path.resolve(import.meta.dirname, "public");
 
   if (!fs.existsSync(distPath)) {
     throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
+      `❌ Build directory not found: ${distPath}. Did you run the frontend build?`
     );
   }
 
   app.use(express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"));
   });
