@@ -1439,6 +1439,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied. Team Leader role required." });
       }
 
+      // Import getResumeTarget for calculations
+      const { getResumeTarget } = await import("@shared/constants");
+
       // Get filter parameter - now uses member ID instead of name for security
       const memberIdFilter = req.query.memberId as string | undefined;
 
@@ -1470,13 +1473,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Get all resume submissions by team recruiters
+      const { resumeSubmissions } = await import("@shared/schema");
+      const recruiterIds = filteredRecruiters.map(r => r.id);
+      const allSubmissions = await db.select().from(resumeSubmissions);
+      const teamSubmissions = allSubmissions.filter(s => recruiterIds.includes(s.recruiterId));
+      
+      // Calculate metrics for all requirements
+      let totalResumesRequired = 0;
+      let totalResumesDelivered = 0;
+      let completedRequirements = 0;
+      
+      for (const req of requirements) {
+        const target = getResumeTarget(req.criticality, req.toughness);
+        totalResumesRequired += target;
+        
+        // Count resumes submitted for this requirement
+        const deliveredForReq = teamSubmissions.filter(s => s.requirementId === req.id).length;
+        totalResumesDelivered += deliveredForReq;
+        
+        // Check if this requirement is fully delivered
+        if (deliveredForReq >= target) {
+          completedRequirements++;
+        }
+      }
+
       const performanceData = await Promise.all(teamRecruiters.map(async (rec) => {
         const recReqs = await storage.getRequirementsByTalentAdvisorId(rec.id);
         return { member: rec.name, requirements: recReqs.length };
       }));
 
       const totalRequirements = requirements.length;
-      const avgResumesPerRequirement = totalRequirements > 0 ? "0.00" : "0.00";
+      
+      // Calculate averages
+      const avgResumesPerRequirement = totalRequirements > 0 
+        ? (totalResumesDelivered / totalRequirements).toFixed(2) 
+        : "0.00";
       const requirementsPerRecruiter = filteredRecruiters.length > 0 
         ? (totalRequirements / filteredRecruiters.length).toFixed(2) 
         : "0.00";
@@ -1485,15 +1517,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         id: `daily-tl-${employee.id}`,
         date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
         totalRequirements,
-        completedRequirements: 0,
+        completedRequirements,
         avgResumesPerRequirement,
         requirementsPerRecruiter,
-        totalResumes: 0,
-        totalResumesDelivered: 0,
-        totalResumesRequired: 0,
-        dailyDeliveryDelivered: 0,
-        dailyDeliveryDefaulted: 0,
-        overallPerformance: "G",
+        totalResumes: totalResumesDelivered,
+        totalResumesDelivered,
+        totalResumesRequired,
+        dailyDeliveryDelivered: totalResumesDelivered,
+        dailyDeliveryDefaulted: Math.max(0, totalResumesRequired - totalResumesDelivered),
+        overallPerformance: totalResumesDelivered >= totalResumesRequired ? "G" : "R",
         deliveredItems: [],
         defaultedItems: [],
         performanceData,
@@ -2554,30 +2586,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const dateParam = req.query.date as string | undefined;
       const today = dateParam || new Date().toISOString().split('T')[0];
       
-      // Use new metrics calculation algorithm
-      const metrics = await storage.calculateRecruiterDailyMetrics(employee.id, today);
+      // Import getResumeTarget for calculations
+      const { getResumeTarget } = await import("@shared/constants");
       
-      // Also get requirement breakdown for backwards compatibility
+      // Get requirements assigned to this recruiter directly from requirements table
       const requirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
-      const completedRequirements = requirements.filter(r => 
-        r.talentAdvisor !== null && r.talentAdvisor !== ''
-      ).length;
+      const totalRequirements = requirements.length;
+      
+      // Calculate total required resumes and track per-requirement delivery
+      let totalResumesRequired = 0;
+      let totalResumesDelivered = 0;
+      let completedRequirements = 0;
+      
+      // Get all resume submissions by this recruiter for their requirements
+      const { resumeSubmissions } = await import("@shared/schema");
+      const allSubmissions = await db.select().from(resumeSubmissions)
+        .where(eq(resumeSubmissions.recruiterId, employee.id));
+      
+      for (const req of requirements) {
+        const target = getResumeTarget(req.criticality, req.toughness);
+        totalResumesRequired += target;
+        
+        // Count resumes submitted for this requirement
+        const deliveredForReq = allSubmissions.filter(s => s.requirementId === req.id).length;
+        totalResumesDelivered += deliveredForReq;
+        
+        // Check if this requirement is fully delivered
+        if (deliveredForReq >= target) {
+          completedRequirements++;
+        }
+      }
       
       const dailyMetrics = {
         id: `daily-rec-${employee.id}`,
         date: new Date(today).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
-        totalRequirements: metrics.requirementCount,
+        totalRequirements,
         completedRequirements,
-        totalResumes: metrics.delivered,
-        totalResumesDelivered: metrics.delivered,
-        totalResumesRequired: metrics.required,
-        dailyDeliveryDelivered: metrics.delivered,
-        dailyDeliveryDefaulted: metrics.defaulted,
-        overallPerformance: metrics.delivered >= metrics.required ? "G" : "R",
-        delivered: metrics.delivered,
-        defaulted: metrics.defaulted,
-        required: metrics.required,
-        requirementCount: metrics.requirementCount
+        totalResumes: totalResumesDelivered,
+        totalResumesDelivered,
+        totalResumesRequired,
+        dailyDeliveryDelivered: totalResumesDelivered,
+        dailyDeliveryDefaulted: Math.max(0, totalResumesRequired - totalResumesDelivered),
+        overallPerformance: totalResumesDelivered >= totalResumesRequired ? "G" : "R",
+        delivered: totalResumesDelivered,
+        defaulted: Math.max(0, totalResumesRequired - totalResumesDelivered),
+        required: totalResumesRequired,
+        requirementCount: totalRequirements
       };
       res.json(dailyMetrics);
     } catch (error) {
@@ -3164,74 +3218,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Daily Metrics API endpoint
   app.get("/api/admin/daily-metrics", async (req, res) => {
     try {
-      const { date } = req.query;
-      const targetDate = date ? new Date(date as string) : new Date();
-      
-      // Get start and end of day in ISO format
-      const startOfDay = new Date(targetDate);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(targetDate);
-      endOfDay.setHours(23, 59, 59, 999);
-      
-      const startISO = startOfDay.toISOString();
-      const endISO = endOfDay.toISOString();
+      // Import getResumeTarget for calculations
+      const { getResumeTarget } = await import("@shared/constants");
       
       // Import schema tables
       const { requirements, employees, candidates } = await import("@shared/schema");
       
-      // Get all requirements (createdAt is stored as text, so we filter in JavaScript)
-      const allRequirements = await db.select().from(requirements);
+      // Get all active (non-archived) requirements
+      const allRequirements = await db.select().from(requirements)
+        .where(eq(requirements.isArchived, false));
       
-      // Filter requirements created today
-      const requirementsCreatedToday = allRequirements.filter(req => {
-        const createdDate = new Date(req.createdAt);
-        return createdDate >= startOfDay && createdDate <= endOfDay;
-      });
+      const totalRequirements = allRequirements.length;
       
-      // 1. Total Requirements - count from Requirements table with TODAY's date
-      const totalRequirements = requirementsCreatedToday.length;
+      // Get all resume submissions for calculating delivery
+      const { resumeSubmissions } = await import("@shared/schema");
+      const allSubmissions = await db.select().from(resumeSubmissions);
       
-      // 2. Avg. Resumes per Requirement - calculate based on criticality
-      // HIGH=1, MEDIUM=3, LOW/EASY=5
-      let totalExpectedResumes = 0;
-      requirementsCreatedToday.forEach(req => {
-        if (req.criticality === 'HIGH') {
-          totalExpectedResumes += 1;
-        } else if (req.criticality === 'MEDIUM') {
-          totalExpectedResumes += 3;
-        } else { // LOW or EASY
-          totalExpectedResumes += 5;
+      // Calculate metrics for all requirements
+      let totalResumesRequired = 0;
+      let totalResumesDelivered = 0;
+      let completedRequirements = 0;
+      
+      for (const req of allRequirements) {
+        const target = getResumeTarget(req.criticality, req.toughness);
+        totalResumesRequired += target;
+        
+        // Count resumes submitted for this requirement
+        const deliveredForReq = allSubmissions.filter(s => s.requirementId === req.id).length;
+        totalResumesDelivered += deliveredForReq;
+        
+        // Check if this requirement is fully delivered
+        if (deliveredForReq >= target) {
+          completedRequirements++;
         }
-      });
+      }
+      
+      // Calculate averages
       const avgResumesPerRequirement = totalRequirements > 0 
-        ? (totalExpectedResumes / totalRequirements).toFixed(2)
+        ? (totalResumesDelivered / totalRequirements).toFixed(2)
         : "0.00";
       
-      // 3. Requirements per Recruiter - get count of active recruiters
+      // Get count of active recruiters for requirements per recruiter calculation
       const allEmployees = await db.select().from(employees);
       const activeRecruiters = allEmployees.filter(emp => 
-        emp.role === 'recruiter' && emp.isActive === true
+        (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.isActive === true
       );
       const recruiterCount = activeRecruiters.length;
       const requirementsPerRecruiter = recruiterCount > 0
         ? (totalRequirements / recruiterCount).toFixed(2)
         : "0.00";
-      
-      // 4. Completed Requirements - count requirements completed today (based on completedAt, not createdAt)
-      const requirementsCompletedToday = allRequirements.filter(req => {
-        if (!req.completedAt || req.status !== 'completed') return false;
-        const completedDate = new Date(req.completedAt);
-        return completedDate >= startOfDay && completedDate <= endOfDay;
-      });
-      const completedRequirements = requirementsCompletedToday.length;
-      
-      // 5. Total Resumes - count candidates (resumes) created today
-      const allCandidates = await db.select().from(candidates);
-      const candidatesCreatedToday = allCandidates.filter(candidate => {
-        const createdDate = new Date(candidate.createdAt);
-        return createdDate >= startOfDay && createdDate <= endOfDay;
-      });
-      const totalResumes = candidatesCreatedToday.length;
       
       // Return the calculated metrics
       res.json({
@@ -3239,13 +3274,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         avgResumesPerRequirement,
         requirementsPerRecruiter,
         completedRequirements,
-        totalResumes,
-        totalResumesDelivered: totalResumes,
-        totalResumesRequired: totalExpectedResumes,
-        // These would come from other sources - for now returning 0
-        dailyDeliveryDelivered: 0,
-        dailyDeliveryDefaulted: 0,
-        overallPerformance: "G" // This would need separate calculation logic
+        totalResumes: totalResumesDelivered,
+        totalResumesDelivered,
+        totalResumesRequired,
+        dailyDeliveryDelivered: totalResumesDelivered,
+        dailyDeliveryDefaulted: Math.max(0, totalResumesRequired - totalResumesDelivered),
+        overallPerformance: totalResumesDelivered >= totalResumesRequired ? "G" : "R"
       });
     } catch (error) {
       console.error('Daily metrics error:', error);
