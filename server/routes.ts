@@ -1746,9 +1746,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Fetch requirements for each team member using ID-based lookup
       const allRequirements: any[] = [];
+      const addedIds = new Set<string>();
+      
       for (const recruiter of teamRecruiters) {
         const recruiterRequirements = await storage.getRequirementsByTalentAdvisorId(recruiter.id);
-        allRequirements.push(...recruiterRequirements);
+        for (const req of recruiterRequirements) {
+          if (!addedIds.has(req.id)) {
+            allRequirements.push(req);
+            addedIds.add(req.id);
+          }
+        }
+      }
+
+      // Also fetch requirements assigned to this TL but not yet assigned to any recruiter
+      // These are "unassigned" requirements where teamLead matches TL's name but talentAdvisorId is null
+      const allReqs = await storage.getRequirements();
+      const unassignedTLRequirements = allReqs.filter(req => 
+        req.teamLead === employee.name && 
+        !req.talentAdvisorId && 
+        !req.isArchived
+      );
+      
+      for (const req of unassignedTLRequirements) {
+        if (!addedIds.has(req.id)) {
+          allRequirements.push(req);
+          addedIds.add(req.id);
+        }
       }
 
       res.json(allRequirements);
@@ -1814,8 +1837,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Update the requirement with the talent advisor
-      const updated = await storage.updateRequirement(id, { talentAdvisor });
+      // Find the recruiter's ID to set talentAdvisorId
+      const recruiter = teamRecruiters.find(rec => rec.name === talentAdvisor);
+      if (!recruiter) {
+        return res.status(400).json({ message: "Could not find recruiter ID for assignment" });
+      }
+
+      // Update the requirement with both talentAdvisor name and talentAdvisorId
+      const updated = await storage.updateRequirement(id, { 
+        talentAdvisor,
+        talentAdvisorId: recruiter.id
+      });
       if (!updated) {
         return res.status(404).json({ message: "Requirement not found" });
       }
