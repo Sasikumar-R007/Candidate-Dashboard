@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import session from "express-session";
 import fs from "fs";
+import passport from "passport";
 import { storage } from "./storage";
 import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema, insertRecruiterCommandSchema, recruiterCommands, employees, candidates } from "@shared/schema";
 import { z } from "zod";
@@ -14,6 +15,7 @@ import { db } from "./db";
 import { eq, desc, sql } from "drizzle-orm";
 import { logRequirementAdded, logCandidateSubmitted, logClosureMade, logCandidatePipelineChanged } from "./activity-logger";
 import { sendEmployeeWelcomeEmail, sendCandidateWelcomeEmail } from "./email-service";
+import { setupGoogleAuth } from "./passport-google";
 
 // Ensure uploads directory exists
 const uploadsDir = 'uploads';
@@ -147,6 +149,43 @@ function requireSupportAuth(req: Request, res: Response, next: NextFunction) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize Passport for Google OAuth
+  app.use(passport.initialize());
+  app.use(passport.session());
+  
+  // Setup Google OAuth (will only work if credentials are configured)
+  const googleAuthEnabled = setupGoogleAuth();
+  
+  // Google OAuth routes for candidates
+  app.get("/api/auth/google", (req, res, next) => {
+    if (!googleAuthEnabled) {
+      return res.status(503).json({ 
+        message: "Google login is not configured. Please contact the administrator." 
+      });
+    }
+    passport.authenticate("google", { 
+      scope: ["profile", "email"] 
+    })(req, res, next);
+  });
+
+  app.get("/api/auth/google/callback", (req, res, next) => {
+    if (!googleAuthEnabled) {
+      return res.redirect("/candidate-login?error=google_not_configured");
+    }
+    passport.authenticate("google", { 
+      failureRedirect: "/candidate-login?error=google_auth_failed" 
+    })(req, res, () => {
+      const candidate = req.user as any;
+      if (candidate && candidate.candidateId) {
+        req.session.candidateId = candidate.candidateId;
+        req.session.userType = 'candidate';
+        res.redirect("/candidate");
+      } else {
+        res.redirect("/candidate-login?error=authentication_failed");
+      }
+    });
+  });
+
   // Health check endpoint for Render and monitoring
   app.get("/api/health", async (req, res) => {
     try {

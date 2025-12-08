@@ -525,6 +525,7 @@ export default function CandidateLogin() {
                   variant="outline"
                   className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 text-base font-medium rounded-xl flex items-center justify-center transition-all"
                   data-testid="button-google-login"
+                  onClick={() => window.location.href = '/api/auth/google'}
                 >
                   <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>

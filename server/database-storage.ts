@@ -348,10 +348,32 @@ export class DatabaseStorage implements IStorage {
     return candidate || undefined;
   }
 
+  async getCandidateByGoogleId(googleId: string): Promise<Candidate | undefined> {
+    const [candidate] = await db.select().from(candidates).where(eq(candidates.googleId, googleId));
+    return candidate || undefined;
+  }
+
+  async createCandidateWithGoogle(candidateData: { candidateId: string; fullName: string; email: string; googleId: string; profilePicture?: string; isActive: boolean; isVerified: boolean; createdAt: string }): Promise<Candidate> {
+    const [candidate] = await db.insert(candidates).values({
+      candidateId: candidateData.candidateId,
+      fullName: candidateData.fullName,
+      email: candidateData.email,
+      googleId: candidateData.googleId,
+      profilePicture: candidateData.profilePicture,
+      isActive: candidateData.isActive,
+      isVerified: candidateData.isVerified,
+      createdAt: candidateData.createdAt
+    }).returning();
+    return candidate;
+  }
+
   async createCandidate(insertCandidate: InsertCandidate): Promise<Candidate> {
-    // Hash password before storing
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(insertCandidate.password, saltRounds);
+    // Hash password before storing (if provided)
+    let hashedPassword: string | null = null;
+    if (insertCandidate.password) {
+      const saltRounds = 10;
+      hashedPassword = await bcrypt.hash(insertCandidate.password, saltRounds);
+    }
     
     const candidateData = {
       ...insertCandidate,

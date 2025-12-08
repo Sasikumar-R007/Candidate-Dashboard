@@ -100,7 +100,9 @@ export interface IStorage {
   // Candidate methods
   getCandidateByEmail(email: string): Promise<Candidate | undefined>;
   getCandidateByCandidateId(candidateId: string): Promise<Candidate | undefined>;
+  getCandidateByGoogleId(googleId: string): Promise<Candidate | undefined>;
   createCandidate(candidate: InsertCandidate): Promise<Candidate>;
+  createCandidateWithGoogle(candidateData: { candidateId: string; fullName: string; email: string; googleId: string; profilePicture?: string; isActive: boolean; isVerified: boolean; createdAt: string }): Promise<Candidate>;
   getAllCandidates(): Promise<Candidate[]>;
   updateCandidate(id: string, updates: Partial<Candidate>): Promise<Candidate | undefined>;
   deleteCandidate(id: string): Promise<boolean>;

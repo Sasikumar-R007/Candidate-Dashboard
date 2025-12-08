@@ -288,7 +288,8 @@ export const candidates = pgTable("candidates", {
   candidateId: text("candidate_id").notNull().unique(), // STCA001 format
   fullName: text("full_name").notNull(),
   email: text("email").notNull().unique(),
-  password: text("password").notNull(),
+  password: text("password"), // Optional for Google OAuth users
+  googleId: text("google_id").unique(), // Google OAuth ID
   // Additional candidate details
   phone: text("phone"),
   company: text("company"),
