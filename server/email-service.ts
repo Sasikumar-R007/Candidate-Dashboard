@@ -1,4 +1,4 @@
-import { Resend } from 'resend';
+import { getUncachableResendClient } from './resend-client';
 
 interface EmployeeWelcomeEmailData {
   name: string;
@@ -16,20 +16,9 @@ interface CandidateWelcomeEmailData {
   loginUrl: string;
 }
 
-function getResendClient() {
-  if (!process.env.RESEND_API_KEY) {
-    return null;
-  }
-  return new Resend(process.env.RESEND_API_KEY);
-}
-
 export async function sendEmployeeWelcomeEmail(data: EmployeeWelcomeEmailData): Promise<boolean> {
   try {
-    const resend = getResendClient();
-    if (!resend) {
-      console.warn('RESEND_API_KEY not configured. Skipping email send.');
-      return false;
-    }
+    const { client: resend, fromEmail } = await getUncachableResendClient();
 
     const emailContent = `
 Hi ${data.name},
@@ -122,14 +111,14 @@ Team StaffOS
     `.trim();
 
     await resend.emails.send({
-      from: process.env.FROM_EMAIL || 'StaffOS <onboarding@staffos.com>',
+      from: fromEmail || 'StaffOS <onboarding@resend.dev>',
       to: data.email,
       subject: 'Welcome to StaffOS - Your Account is Ready!',
       text: emailContent,
       html: htmlContent,
     });
 
-    console.log(`Welcome email sent successfully to ${data.email}`);
+    console.log(`Welcome email sent successfully to ${data.email} from ${fromEmail}`);
     return true;
   } catch (error) {
     console.error('Error sending employee welcome email:', error);
@@ -139,11 +128,7 @@ Team StaffOS
 
 export async function sendCandidateWelcomeEmail(data: CandidateWelcomeEmailData): Promise<boolean> {
   try {
-    const resend = getResendClient();
-    if (!resend) {
-      console.warn('RESEND_API_KEY not configured. Skipping email send.');
-      return false;
-    }
+    const { client: resend, fromEmail } = await getUncachableResendClient();
 
     const emailContent = `
 Hi ${data.fullName},
@@ -257,14 +242,14 @@ Team StaffOS
     `.trim();
 
     await resend.emails.send({
-      from: process.env.FROM_EMAIL || 'StaffOS <welcome@staffos.com>',
+      from: fromEmail || 'StaffOS <onboarding@resend.dev>',
       to: data.email,
       subject: 'Welcome to StaffOS - Start Your Career Journey!',
       text: emailContent,
       html: htmlContent,
     });
 
-    console.log(`Welcome email sent successfully to ${data.email}`);
+    console.log(`Welcome email sent successfully to ${data.email} from ${fromEmail}`);
     return true;
   } catch (error) {
     console.error('Error sending candidate welcome email:', error);
