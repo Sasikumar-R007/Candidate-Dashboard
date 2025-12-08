@@ -110,15 +110,16 @@ Team StaffOS
 </html>
     `.trim();
 
+    const senderEmail = 'StaffOS <onboarding@resend.dev>';
     await resend.emails.send({
-      from: fromEmail || 'StaffOS <onboarding@resend.dev>',
+      from: senderEmail,
       to: data.email,
       subject: 'Welcome to StaffOS - Your Account is Ready!',
       text: emailContent,
       html: htmlContent,
     });
 
-    console.log(`Welcome email sent successfully to ${data.email} from ${fromEmail}`);
+    console.log(`Welcome email sent successfully to ${data.email} from ${senderEmail}`);
     return true;
   } catch (error) {
     console.error('Error sending employee welcome email:', error);
@@ -241,15 +242,16 @@ Team StaffOS
 </html>
     `.trim();
 
+    const senderEmail = 'StaffOS <onboarding@resend.dev>';
     await resend.emails.send({
-      from: fromEmail || 'StaffOS <onboarding@resend.dev>',
+      from: senderEmail,
       to: data.email,
       subject: 'Welcome to StaffOS - Start Your Career Journey!',
       text: emailContent,
       html: htmlContent,
     });
 
-    console.log(`Welcome email sent successfully to ${data.email} from ${fromEmail}`);
+    console.log(`Welcome email sent successfully to ${data.email} from ${senderEmail}`);
     return true;
   } catch (error) {
     console.error('Error sending candidate welcome email:', error);
