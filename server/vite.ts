@@ -1,4 +1,6 @@
 import { type Express } from "express";
+import fs from "fs";
+import path from "path";
 
 // Simple logger for both dev & prod
 export function log(message: string, source = "express") {
@@ -24,13 +26,41 @@ export async function setupVite(app: Express, server: any) {
   const vite = await createViteServer({
     ...viteConfig,
     server: {
+      ...viteConfig.server,
       middlewareMode: true,
       hmr: { server },
+      allowedHosts: true,
     },
     appType: "custom",
   });
 
   app.use(vite.middlewares);
+
+  // Serve index.html for all non-API routes (SPA fallback)
+  app.use("*", async (req, res, next) => {
+    const url = req.originalUrl;
+
+    // Skip API routes
+    if (url.startsWith("/api")) {
+      return next();
+    }
+
+    try {
+      // Read index.html from the client directory
+      let template = fs.readFileSync(
+        path.resolve(process.cwd(), "client", "index.html"),
+        "utf-8"
+      );
+
+      // Apply Vite HTML transforms (injects HMR client, etc.)
+      template = await vite.transformIndexHtml(url, template);
+
+      res.status(200).set({ "Content-Type": "text/html" }).end(template);
+    } catch (e) {
+      vite.ssrFixStacktrace(e as Error);
+      next(e);
+    }
+  });
 
   log("Vite dev server active", "vite");
 }
