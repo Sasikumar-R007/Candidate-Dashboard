@@ -1,7 +1,5 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 interface EmployeeWelcomeEmailData {
   name: string;
   email: string;
@@ -18,9 +16,17 @@ interface CandidateWelcomeEmailData {
   loginUrl: string;
 }
 
+function getResendClient() {
+  if (!process.env.RESEND_API_KEY) {
+    return null;
+  }
+  return new Resend(process.env.RESEND_API_KEY);
+}
+
 export async function sendEmployeeWelcomeEmail(data: EmployeeWelcomeEmailData): Promise<boolean> {
   try {
-    if (!process.env.RESEND_API_KEY) {
+    const resend = getResendClient();
+    if (!resend) {
       console.warn('RESEND_API_KEY not configured. Skipping email send.');
       return false;
     }
@@ -133,7 +139,8 @@ Team StaffOS
 
 export async function sendCandidateWelcomeEmail(data: CandidateWelcomeEmailData): Promise<boolean> {
   try {
-    if (!process.env.RESEND_API_KEY) {
+    const resend = getResendClient();
+    if (!resend) {
       console.warn('RESEND_API_KEY not configured. Skipping email send.');
       return false;
     }
