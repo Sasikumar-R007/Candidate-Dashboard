@@ -71,3 +71,21 @@ Preferred communication style: Simple, everyday language.
 - **Icons**: Font Awesome, Lucide React
 - **Date Handling**: date-fns
 - **Validation**: Zod
+- **Email Service**: Resend (transactional emails)
+
+## Email Configuration
+
+The application uses Resend for sending welcome emails to employees and candidates.
+
+### Environment Variables Required:
+- `RESEND_API_KEY` - Your Resend API key (stored as secret)
+- `FROM_EMAIL` - Sender email address (default: `StaffOS <onboarding@resend.dev>`)
+
+### Email Functionality:
+1. **Admin Setup (`/setup-admin`)**: When a new admin is created via the bootstrap process, a welcome email is sent with login credentials.
+2. **Employee Creation**: When employees are created via `/api/admin/employees`, welcome emails are sent automatically.
+3. **Candidate Registration**: When candidates register via `/api/auth/candidate-register`, welcome emails are sent automatically.
+
+### Email Service Files:
+- `server/resend-client.ts` - Resend client configuration
+- `server/email-service.ts` - Email sending functions (sendEmployeeWelcomeEmail, sendCandidateWelcomeEmail)

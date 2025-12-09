@@ -104,3 +104,8 @@ externalPort = 6000
 [agent]
 expertMode = true
 integrations = ["javascript_database:1.0.0", "resend:1.0.0"]
+
+[userenv]
+
+[userenv.shared]
+FROM_EMAIL = "StaffOS <onboarding@resend.dev>"
