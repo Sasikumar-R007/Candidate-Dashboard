@@ -148,6 +148,14 @@ function requireSupportAuth(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+// Authentication middleware for admin routes ONLY
+function requireAdminAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.session.employeeId || req.session.employeeRole !== 'admin') {
+    return res.status(403).json({ message: "Access denied. Admin authentication required." });
+  }
+  next();
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize Passport for Google OAuth
   app.use(passport.initialize());
@@ -2427,7 +2435,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin team leaders endpoint - fetch all team leaders with their recruiter counts
-  app.get("/api/admin/team-leaders", async (req, res) => {
+  app.get("/api/admin/team-leaders", requireAdminAuth, async (req, res) => {
     try {
       const allEmployees = await storage.getAllEmployees();
       
@@ -3038,7 +3046,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Requirements API endpoints
-  app.get("/api/admin/requirements", async (req, res) => {
+  app.get("/api/admin/requirements", requireAdminAuth, async (req, res) => {
     try {
       const requirements = await storage.getRequirements();
       res.json(requirements);
@@ -3047,7 +3055,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/requirements", async (req, res) => {
+  app.post("/api/admin/requirements", requireAdminAuth, async (req, res) => {
     try {
       const validatedData = insertRequirementSchema.parse(req.body);
       const requirement = await storage.createRequirement(validatedData);
@@ -3068,7 +3076,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/requirements/:id", async (req, res) => {
+  app.patch("/api/admin/requirements/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const updatedRequirement = await storage.updateRequirement(id, req.body);
@@ -3081,7 +3089,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/requirements/:id/archive", async (req, res) => {
+  app.post("/api/admin/requirements/:id/archive", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const archivedRequirement = await storage.archiveRequirement(id);
@@ -3094,7 +3102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/archived-requirements", async (req, res) => {
+  app.get("/api/admin/archived-requirements", requireAdminAuth, async (req, res) => {
     try {
       const archivedRequirements = await storage.getArchivedRequirements();
       res.json(archivedRequirements);
@@ -3104,7 +3112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Meetings API endpoints
-  app.get("/api/admin/meetings", async (req, res) => {
+  app.get("/api/admin/meetings", requireAdminAuth, async (req, res) => {
     try {
       const { category } = req.query;
       const allMeetings = await db.select().from(meetings).orderBy(meetings.createdAt);
@@ -3121,7 +3129,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/meetings", async (req, res) => {
+  app.post("/api/admin/meetings", requireAdminAuth, async (req, res) => {
     try {
       const validatedData = insertMeetingSchema.parse(req.body);
       
@@ -3139,7 +3147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/meetings/:id", async (req, res) => {
+  app.patch("/api/admin/meetings/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const updateData = insertMeetingSchema.partial().parse(req.body);
@@ -3163,7 +3171,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/meetings/:id", async (req, res) => {
+  app.delete("/api/admin/meetings/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -3183,7 +3191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Recruiter Commands API endpoints for Admin
-  app.get("/api/admin/recruiter-commands", async (req, res) => {
+  app.get("/api/admin/recruiter-commands", requireAdminAuth, async (req, res) => {
     try {
       const allCommands = await db.select().from(recruiterCommands).orderBy(desc(recruiterCommands.createdAt));
       res.json(allCommands);
@@ -3193,7 +3201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/recruiter-commands", async (req, res) => {
+  app.post("/api/admin/recruiter-commands", requireAdminAuth, async (req, res) => {
     try {
       const validatedData = insertRecruiterCommandSchema.parse(req.body);
       
@@ -3211,7 +3219,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/recruiter-commands/:id", async (req, res) => {
+  app.patch("/api/admin/recruiter-commands/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const updateData = insertRecruiterCommandSchema.partial().parse(req.body);
@@ -3235,7 +3243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/recruiter-commands/:id", async (req, res) => {
+  app.delete("/api/admin/recruiter-commands/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -3255,7 +3263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all recruiters for admin selection (when assigning commands/meetings)
-  app.get("/api/admin/recruiters", async (req, res) => {
+  app.get("/api/admin/recruiters", requireAdminAuth, async (req, res) => {
     try {
       const allRecruiters = await db.select().from(employees)
         .where(eq(employees.role, 'recruiter'))
@@ -3268,7 +3276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Daily Metrics API endpoint
-  app.get("/api/admin/daily-metrics", async (req, res) => {
+  app.get("/api/admin/daily-metrics", requireAdminAuth, async (req, res) => {
     try {
       // Import getResumeTarget for calculations
       const { getResumeTarget } = await import("@shared/constants");
@@ -3340,7 +3348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Key Aspects API endpoint for Key Metrics chart data
-  app.get("/api/admin/key-aspects", async (req, res) => {
+  app.get("/api/admin/key-aspects", requireAdminAuth, async (req, res) => {
     try {
       // For now, return default values of 0 (will be populated from actual data sources later)
       // These metrics would typically come from financial data, HR data, and business analytics
@@ -3362,7 +3370,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Master Data Totals API endpoint
-  app.get("/api/admin/master-data-totals", async (req, res) => {
+  app.get("/api/admin/master-data-totals", requireAdminAuth, async (req, res) => {
     try {
       const { requirements, employees, candidates, clients } = await import("@shared/schema");
       
@@ -3802,7 +3810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create employee
-  app.post("/api/admin/employees", async (req, res) => {
+  app.post("/api/admin/employees", requireAdminAuth, async (req, res) => {
     try {
       // Always generate employee ID on backend (SCE001, SCE002, etc.)
       const employeeId = await storage.generateNextEmployeeId(req.body.role || 'employee');
@@ -3849,7 +3857,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create client
-  app.post("/api/admin/clients", async (req, res) => {
+  app.post("/api/admin/clients", requireAdminAuth, async (req, res) => {
     try {
       const clientSchema = z.object({
         clientCode: z.string().optional(),
@@ -3942,7 +3950,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create client credentials (simplified - for User Management)
-  app.post("/api/admin/clients/credentials", async (req, res) => {
+  app.post("/api/admin/clients/credentials", requireAdminAuth, async (req, res) => {
     try {
       const credentialsSchema = z.object({
         firstName: z.string().min(1),
@@ -4007,7 +4015,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Create target mapping
-  app.post("/api/admin/target-mappings", async (req, res) => {
+  app.post("/api/admin/target-mappings", requireAdminAuth, async (req, res) => {
     try {
       // Validate only the required fields from client
       const { teamLeadId, teamMemberId, quarter, year, minimumTarget } = req.body;
@@ -4072,7 +4080,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all target mappings with joined employee data
-  app.get("/api/admin/target-mappings", async (req, res) => {
+  app.get("/api/admin/target-mappings", requireAdminAuth, async (req, res) => {
     try {
       const targetMappings = await storage.getAllTargetMappings();
       
@@ -4101,7 +4109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Revenue Mappings CRUD operations
   
   // Create revenue mapping
-  app.post("/api/admin/revenue-mappings", async (req, res) => {
+  app.post("/api/admin/revenue-mappings", requireAdminAuth, async (req, res) => {
     try {
       const {
         talentAdvisorId,
@@ -4204,7 +4212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all revenue mappings
-  app.get("/api/admin/revenue-mappings", async (req, res) => {
+  app.get("/api/admin/revenue-mappings", requireAdminAuth, async (req, res) => {
     try {
       const revenueMappings = await storage.getAllRevenueMappings();
       res.json(revenueMappings);
@@ -4215,7 +4223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update revenue mapping
-  app.put("/api/admin/revenue-mappings/:id", async (req, res) => {
+  app.put("/api/admin/revenue-mappings/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const {
@@ -4318,7 +4326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete revenue mapping
-  app.delete("/api/admin/revenue-mappings/:id", async (req, res) => {
+  app.delete("/api/admin/revenue-mappings/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteRevenueMapping(id);
@@ -4337,7 +4345,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===================== PERFORMANCE PAGE API ENDPOINTS =====================
 
   // Performance Graph Data - Returns resume delivery counts by team member
-  app.get("/api/admin/performance-graph", async (req, res) => {
+  app.get("/api/admin/performance-graph", requireAdminAuth, async (req, res) => {
     try {
       const { teamId, dateFrom, dateTo, period } = req.query;
       const { employees, deliveries, requirements } = await import("@shared/schema");
@@ -4400,7 +4408,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Default Rate (Individual) - Returns completion stats by criticality for a specific member
-  app.get("/api/admin/default-rate/:memberId", async (req, res) => {
+  app.get("/api/admin/default-rate/:memberId", requireAdminAuth, async (req, res) => {
     try {
       const { memberId } = req.params;
       const { dateFrom, dateTo } = req.query;
@@ -4468,7 +4476,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Team Performance Data - Returns team member performance metrics
-  app.get("/api/admin/team-performance", async (req, res) => {
+  app.get("/api/admin/team-performance", requireAdminAuth, async (req, res) => {
     try {
       const { employees, targetMappings, revenueMappings } = await import("@shared/schema");
       
@@ -4548,7 +4556,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Closures List Data - Returns detailed closure information
-  app.get("/api/admin/closures-list", async (req, res) => {
+  app.get("/api/admin/closures-list", requireAdminAuth, async (req, res) => {
     try {
       const { revenueMappings } = await import("@shared/schema");
       
@@ -4575,7 +4583,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Revenue Analysis Data - Returns revenue by team member for chart
-  app.get("/api/admin/revenue-analysis", async (req, res) => {
+  app.get("/api/admin/revenue-analysis", requireAdminAuth, async (req, res) => {
     try {
       const { employees, revenueMappings } = await import("@shared/schema");
       
@@ -4618,7 +4626,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Performance Metrics - Returns current quarter targets and achievements
-  app.get("/api/admin/performance-metrics", async (req, res) => {
+  app.get("/api/admin/performance-metrics", requireAdminAuth, async (req, res) => {
     try {
       const { targetMappings, revenueMappings } = await import("@shared/schema");
       
@@ -4677,7 +4685,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Monthly Performance Chart Data - Returns monthly revenue/closures by team or members
-  app.get("/api/admin/monthly-performance", async (req, res) => {
+  app.get("/api/admin/monthly-performance", requireAdminAuth, async (req, res) => {
     try {
       const { team } = req.query; // 'all', 'arun', 'anusha', or team lead ID
       const { employees, revenueMappings, targetMappings } = await import("@shared/schema");
@@ -4771,7 +4779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reset Performance Data - Clears target and revenue mappings
-  app.delete("/api/admin/reset-performance-data", async (req, res) => {
+  app.delete("/api/admin/reset-performance-data", requireAdminAuth, async (req, res) => {
     try {
       const { targetMappings, revenueMappings } = await import("@shared/schema");
       
@@ -4792,7 +4800,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Reset Master Data - Clears resumes/candidates and related data
-  app.delete("/api/admin/reset-master-data", async (req, res) => {
+  app.delete("/api/admin/reset-master-data", requireAdminAuth, async (req, res) => {
     try {
       const { candidates, deliveries } = await import("@shared/schema");
       
@@ -4813,7 +4821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all team members list (recruiters and TAs) for dropdown selection
-  app.get("/api/admin/team-members-list", async (req, res) => {
+  app.get("/api/admin/team-members-list", requireAdminAuth, async (req, res) => {
     try {
       const { employees } = await import("@shared/schema");
       
@@ -5253,7 +5261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all job applications for Admin pipeline (view all recruiters' pipeline data)
-  app.get("/api/admin/pipeline", async (req, res) => {
+  app.get("/api/admin/pipeline", requireAdminAuth, async (req, res) => {
     try {
       const applications = await storage.getAllJobApplications();
       res.json(applications);
@@ -5264,7 +5272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all employees
-  app.get("/api/admin/employees", async (req, res) => {
+  app.get("/api/admin/employees", requireAdminAuth, async (req, res) => {
     try {
       const employees = await storage.getAllEmployees();
       res.json(employees);
@@ -5275,7 +5283,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all clients
-  app.get("/api/admin/clients", async (req, res) => {
+  app.get("/api/admin/clients", requireAdminAuth, async (req, res) => {
     try {
       const clients = await storage.getAllClients();
       res.json(clients);
@@ -5286,7 +5294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update employee
-  app.put("/api/admin/employees/:id", async (req, res) => {
+  app.put("/api/admin/employees/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -5319,7 +5327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete employee
-  app.delete("/api/admin/employees/:id", async (req, res) => {
+  app.delete("/api/admin/employees/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteEmployee(id);
@@ -5336,7 +5344,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update client
-  app.put("/api/admin/clients/:id", async (req, res) => {
+  app.put("/api/admin/clients/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -5384,7 +5392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete client
-  app.delete("/api/admin/clients/:id", async (req, res) => {
+  app.delete("/api/admin/clients/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteClient(id);
@@ -5401,7 +5409,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Seed database endpoint - call once to populate initial data
-  app.post("/api/admin/seed-database", async (req, res) => {
+  app.post("/api/admin/seed-database", requireAdminAuth, async (req, res) => {
     try {
       // Check if employees already exist
       const existingEmployees = await storage.getAllEmployees();
@@ -5494,7 +5502,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Impact Metrics routes
   // Create impact metrics
-  app.post("/api/admin/impact-metrics", async (req, res) => {
+  app.post("/api/admin/impact-metrics", requireAdminAuth, async (req, res) => {
     try {
       const validatedData = insertImpactMetricsSchema.parse(req.body);
       const metrics = await storage.createImpactMetrics(validatedData);
@@ -5509,7 +5517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all impact metrics
-  app.get("/api/admin/impact-metrics", async (req, res) => {
+  app.get("/api/admin/impact-metrics", requireAdminAuth, async (req, res) => {
     try {
       const { clientId } = req.query;
       
@@ -5530,7 +5538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update impact metrics
-  app.put("/api/admin/impact-metrics/:id", async (req, res) => {
+  app.put("/api/admin/impact-metrics/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
       
@@ -5565,7 +5573,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete impact metrics
-  app.delete("/api/admin/impact-metrics/:id", async (req, res) => {
+  app.delete("/api/admin/impact-metrics/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteImpactMetrics(id);
