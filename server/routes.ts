@@ -4940,10 +4940,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get job counts for dashboard
-  app.get("/api/recruiter/jobs/counts", async (req, res) => {
+  // Get job counts for dashboard (scoped by recruiter)
+  app.get("/api/recruiter/jobs/counts", requireEmployeeAuth, async (req, res) => {
     try {
-      const counts = await storage.getRecruiterJobCounts();
+      const session = req.session as any;
+      // Get jobs for this specific recruiter
+      const jobs = await storage.getRecruiterJobsByRecruiterId(session.employeeId);
+      const counts = {
+        total: jobs.length,
+        active: jobs.filter(j => j.status === "Active").length,
+        closed: jobs.filter(j => j.status === "Closed").length,
+        draft: jobs.filter(j => j.status === "Draft").length
+      };
       res.json(counts);
     } catch (error) {
       console.error("Get job counts error:", error);
@@ -4951,10 +4959,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get candidate counts for dashboard
-  app.get("/api/recruiter/candidates/counts", async (req, res) => {
+  // Get candidate counts for dashboard (scoped by recruiter's job applications)
+  app.get("/api/recruiter/candidates/counts", requireEmployeeAuth, async (req, res) => {
     try {
-      const counts = await storage.getCandidateCounts();
+      const session = req.session as any;
+      // Get this recruiter's jobs
+      const jobs = await storage.getRecruiterJobsByRecruiterId(session.employeeId);
+      const jobIds = jobs.map(j => j.id);
+      
+      // Get applications for recruiter's jobs only
+      const allApplications = await storage.getAllJobApplications();
+      const recruiterApplications = allApplications.filter(app => 
+        app.recruiterJobId && jobIds.includes(app.recruiterJobId)
+      );
+      
+      // Count unique candidates from these applications
+      const candidateIds = new Set(recruiterApplications.map(app => app.profileId));
+      const counts = {
+        total: candidateIds.size,
+        active: candidateIds.size, // All are considered active for this recruiter
+        inactive: 0
+      };
       res.json(counts);
     } catch (error) {
       console.error("Get candidate counts error:", error);
@@ -4962,13 +4987,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get a specific job by ID
-  app.get("/api/recruiter/jobs/:id", async (req, res) => {
+  // Get a specific job by ID (with ownership check)
+  app.get("/api/recruiter/jobs/:id", requireEmployeeAuth, async (req, res) => {
     try {
       const { id } = req.params;
+      const session = req.session as any;
       const job = await storage.getRecruiterJobById(id);
       if (!job) {
         return res.status(404).json({ message: "Job not found" });
+      }
+      // Verify ownership - job must belong to this recruiter
+      if (job.recruiterId !== session.employeeId) {
+        return res.status(403).json({ message: "Access denied. This job does not belong to you." });
       }
       res.json(job);
     } catch (error) {
@@ -4977,20 +5007,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update a recruiter job
-  app.put("/api/recruiter/jobs/:id", async (req, res) => {
+  // Update a recruiter job (with ownership check)
+  app.put("/api/recruiter/jobs/:id", requireEmployeeAuth, async (req, res) => {
     try {
       const { id } = req.params;
+      const session = req.session as any;
       const updates = req.body;
+      
+      // Verify ownership first
+      const existingJob = await storage.getRecruiterJobById(id);
+      if (!existingJob) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+      if (existingJob.recruiterId !== session.employeeId) {
+        return res.status(403).json({ message: "Access denied. This job does not belong to you." });
+      }
       
       if (updates.skills && typeof updates.skills === 'string') {
         updates.skills = updates.skills.split(',').map((s: string) => s.trim());
       }
       
       const job = await storage.updateRecruiterJob(id, updates);
-      if (!job) {
-        return res.status(404).json({ message: "Job not found" });
-      }
       res.json({ message: "Job updated successfully", job });
     } catch (error) {
       console.error("Update recruiter job error:", error);
@@ -4998,14 +5035,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete a recruiter job
-  app.delete("/api/recruiter/jobs/:id", async (req, res) => {
+  // Delete a recruiter job (with ownership check)
+  app.delete("/api/recruiter/jobs/:id", requireEmployeeAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      const deleted = await storage.deleteRecruiterJob(id);
-      if (!deleted) {
+      const session = req.session as any;
+      
+      // Verify ownership first
+      const existingJob = await storage.getRecruiterJobById(id);
+      if (!existingJob) {
         return res.status(404).json({ message: "Job not found" });
       }
+      if (existingJob.recruiterId !== session.employeeId) {
+        return res.status(403).json({ message: "Access denied. This job does not belong to you." });
+      }
+      
+      const deleted = await storage.deleteRecruiterJob(id);
       res.json({ message: "Job deleted successfully" });
     } catch (error) {
       console.error("Delete recruiter job error:", error);
@@ -5013,17 +5058,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Close a recruiter job (mark as Closed)
-  app.post("/api/recruiter/jobs/:id/close", async (req, res) => {
+  // Close a recruiter job (mark as Closed) (with ownership check)
+  app.post("/api/recruiter/jobs/:id/close", requireEmployeeAuth, async (req, res) => {
     try {
       const { id } = req.params;
+      const session = req.session as any;
+      
+      // Verify ownership first
+      const existingJob = await storage.getRecruiterJobById(id);
+      if (!existingJob) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+      if (existingJob.recruiterId !== session.employeeId) {
+        return res.status(403).json({ message: "Access denied. This job does not belong to you." });
+      }
+      
       const job = await storage.updateRecruiterJob(id, { 
         status: "Closed",
         closedDate: new Date()
       });
-      if (!job) {
-        return res.status(404).json({ message: "Job not found" });
-      }
       res.json({ message: "Job closed successfully", job });
     } catch (error) {
       console.error("Close recruiter job error:", error);
@@ -5046,21 +5099,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===================== JOB APPLICATIONS ROUTES =====================
 
-  // Get all job applications (for recruiter dashboard)
-  app.get("/api/recruiter/applications", async (req, res) => {
+  // Get job applications (scoped to recruiter's jobs only)
+  app.get("/api/recruiter/applications", requireEmployeeAuth, async (req, res) => {
     try {
-      const applications = await storage.getAllJobApplications();
-      res.json(applications);
+      const session = req.session as any;
+      // Get this recruiter's jobs
+      const jobs = await storage.getRecruiterJobsByRecruiterId(session.employeeId);
+      const jobIds = jobs.map(j => j.id);
+      
+      // Get all applications and filter to only those for recruiter's jobs
+      const allApplications = await storage.getAllJobApplications();
+      const recruiterApplications = allApplications.filter(app => 
+        app.recruiterJobId && jobIds.includes(app.recruiterJobId)
+      );
+      
+      res.json(recruiterApplications);
     } catch (error) {
       console.error("Get applications error:", error);
       res.status(500).json({ message: "Failed to get applications" });
     }
   });
 
-  // Get applications for a specific job
-  app.get("/api/recruiter/jobs/:id/applications", async (req, res) => {
+  // Get applications for a specific job (with ownership check)
+  app.get("/api/recruiter/jobs/:id/applications", requireEmployeeAuth, async (req, res) => {
     try {
       const { id } = req.params;
+      const session = req.session as any;
+      
+      // Verify job ownership first
+      const job = await storage.getRecruiterJobById(id);
+      if (!job) {
+        return res.status(404).json({ message: "Job not found" });
+      }
+      if (job.recruiterId !== session.employeeId) {
+        return res.status(403).json({ message: "Access denied. This job does not belong to you." });
+      }
+      
       const applications = await storage.getJobApplicationsByRecruiterJobId(id);
       res.json(applications);
     } catch (error) {
