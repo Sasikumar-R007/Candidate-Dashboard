@@ -3526,6 +3526,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validatedData = bootstrapAdminSchema.parse(req.body);
 
+      // Store raw password for email before it gets hashed
+      const rawPassword = validatedData.password;
+
       // Generate admin employee ID
       const employeeId = await storage.generateNextEmployeeId('admin');
       
@@ -3538,6 +3541,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Password will be hashed by storage layer
       const admin = await storage.createEmployee(employeeData);
+      
+      // Send welcome email to new admin
+      const loginUrl = process.env.REPLIT_DEV_DOMAIN 
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+        : (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'http://localhost:5000');
+      
+      try {
+        await sendEmployeeWelcomeEmail({
+          name: admin.name,
+          email: admin.email,
+          employeeId: admin.employeeId,
+          role: admin.role,
+          password: rawPassword,
+          loginUrl
+        });
+        console.log(`Welcome email sent to admin: ${admin.email}`);
+      } catch (emailError) {
+        console.error('Failed to send welcome email to admin:', emailError);
+        // Continue with success response - email failure shouldn't block admin creation
+      }
       
       res.status(201).json({ 
         message: "Admin account created successfully",

@@ -110,7 +110,7 @@ Team StaffOS
 </html>
     `.trim();
 
-    const senderEmail = 'StaffOS <onboarding@resend.dev>';
+    const senderEmail = fromEmail || 'StaffOS <onboarding@resend.dev>';
     await resend.emails.send({
       from: senderEmail,
       to: data.email,
@@ -242,7 +242,7 @@ Team StaffOS
 </html>
     `.trim();
 
-    const senderEmail = 'StaffOS <onboarding@resend.dev>';
+    const senderEmail = fromEmail || 'StaffOS <onboarding@resend.dev>';
     await resend.emails.send({
       from: senderEmail,
       to: data.email,
