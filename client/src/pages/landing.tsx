@@ -108,19 +108,6 @@ export default function Landing() {
             Candidates See Progress, Employers See Performance—All on StaffOS
           </p>
           
-          {/* Get Early Access CTA - Moved to Top */}
-          <div className="mb-8">
-            <Link href="/dashboard-selection" data-testid="link-get-early-access">
-              <Button 
-                size="lg" 
-                className="bg-gray-900 hover:bg-gray-800 text-white px-12 py-6 text-lg font-semibold rounded shadow-2xl"
-                data-testid="button-get-early-access"
-              >
-                Get Early Access
-              </Button>
-            </Link>
-          </div>
-          
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
             <Link href="/candidate-login" data-testid="link-find-jobs">
