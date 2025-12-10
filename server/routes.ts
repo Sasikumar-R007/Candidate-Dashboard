@@ -5107,18 +5107,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===================== JOB APPLICATIONS ROUTES =====================
 
-  // Get job applications (scoped to recruiter's jobs only)
+  // Get job applications (scoped to recruiter's jobs AND tagged requirements)
   app.get("/api/recruiter/applications", requireEmployeeAuth, async (req, res) => {
     try {
       const session = req.session as any;
+      
       // Get this recruiter's jobs
       const jobs = await storage.getRecruiterJobsByRecruiterId(session.employeeId);
       const jobIds = jobs.map(j => j.id);
       
-      // Get all applications and filter to only those for recruiter's jobs
+      // Get this recruiter's assigned requirements
+      const requirements = await storage.getRequirementsByTalentAdvisorId(session.employeeId);
+      const requirementIds = requirements.map(r => r.id);
+      
+      // Get all applications and filter to those for recruiter's jobs OR tagged requirements
       const allApplications = await storage.getAllJobApplications();
       const recruiterApplications = allApplications.filter(app => 
-        app.recruiterJobId && jobIds.includes(app.recruiterJobId)
+        (app.recruiterJobId && jobIds.includes(app.recruiterJobId)) ||
+        (app.requirementId && requirementIds.includes(app.requirementId))
       );
       
       res.json(recruiterApplications);
