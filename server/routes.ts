@@ -5299,6 +5299,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all candidates (for Master Database)
+  app.get("/api/admin/candidates", requireAdminAuth, async (req, res) => {
+    try {
+      const candidatesList = await storage.getAllCandidates();
+      res.json(candidatesList);
+    } catch (error) {
+      console.error('Get candidates error:', error);
+      res.status(500).json({ message: "Failed to get candidates" });
+    }
+  });
+
   // Update employee
   app.put("/api/admin/employees/:id", requireAdminAuth, async (req, res) => {
     try {

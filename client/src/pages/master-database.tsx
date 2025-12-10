@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -7,16 +8,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Filter, Search, Trash2, X, Share2, Download } from "lucide-react";
+import { ArrowLeft, Filter, Search, Trash2, X, Share2, Download, Loader2 } from "lucide-react";
 
 type ProfileType = 'resume' | 'employee' | 'client';
 
-type ResumeStatus = 'Inbound' | 'Existed' | 'Archived' | 'Looking for Jobs' | 'In working';
+type ResumeStatus = 'Inbound' | 'Existed' | 'Archived' | 'Looking for Jobs' | 'In working' | 'New' | 'Active';
 type EmployeeStatus = 'Active' | 'On Leave' | 'Inactive' | 'Resigned';
-type ClientStatus = 'Active' | 'Inactive' | 'On Hold' | 'Terminated';
+type ClientStatus = 'Active' | 'Inactive' | 'On Hold' | 'Terminated' | 'frozen' | 'churned';
 
 interface ResumeData {
-  id: number;
+  id: string;
   name: string;
   position: string;
   experience: string;
@@ -24,10 +25,14 @@ interface ResumeData {
   source: string;
   status: ResumeStatus;
   uploadedDate: string;
+  email?: string;
+  phone?: string;
+  location?: string;
+  resumeFile?: string;
 }
 
 interface EmployeeData {
-  id: number;
+  id: string;
   name: string;
   position: string;
   experience: string;
@@ -35,10 +40,13 @@ interface EmployeeData {
   source: string;
   status: EmployeeStatus;
   uploadedDate: string;
+  email?: string;
+  phone?: string;
+  department?: string;
 }
 
 interface ClientData {
-  id: number;
+  id: string;
   name: string;
   position: string;
   experience: string;
@@ -46,6 +54,9 @@ interface ClientData {
   source: string;
   status: ClientStatus;
   uploadedDate: string;
+  email?: string;
+  website?: string;
+  location?: string;
 }
 
 export default function MasterDatabase() {
@@ -56,16 +67,16 @@ export default function MasterDatabase() {
   const [isResumeDrawerOpen, setIsResumeDrawerOpen] = useState(false);
   const [selectedResume, setSelectedResume] = useState<ResumeData | EmployeeData | ClientData | null>(null);
   const [deletedIds, setDeletedIds] = useState<{
-    resume: number[];
-    employee: number[];
-    client: number[];
+    resume: string[];
+    employee: string[];
+    client: string[];
   }>({
     resume: [],
     employee: [],
     client: []
   });
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState<{id: number, name: string, profileType: ProfileType} | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{id: string, name: string, profileType: ProfileType} | null>(null);
   
   // Advanced filter state
   const [advancedFilters, setAdvancedFilters] = useState({
@@ -77,42 +88,99 @@ export default function MasterDatabase() {
     source: ""
   });
 
-  // Sample data for resumes
-  const resumeData: ResumeData[] = [
-    { id: 1, name: "Adhitya", position: "Software Engineer", experience: "1 year", skills: "Python, Java, React", source: "LinkedIn", status: "Inbound", uploadedDate: "12-10-25" },
-    { id: 2, name: "kavin", position: "Project Manager", experience: "1 year, 2 moths", skills: "Agile, Scrum, Leadership", source: "Naukri", status: "Existed", uploadedDate: "11-10-25" },
-    { id: 3, name: "Pravin Kumar", position: "Financial Analyst", experience: "3 years", skills: "Excel, Financial Modeling, SQL", source: "Indeed", status: "Existed", uploadedDate: "07-10-25" },
-    { id: 4, name: "Vimal", position: "Sales Executive", experience: "2 years", skills: "Salesforce, CRM, Negotiation", source: "Referral", status: "Inbound", uploadedDate: "01-10-25" },
-    { id: 5, name: "Keerthana", position: "Content Writer", experience: "1 year", skills: "WordPress, SEO, Copywriting", source: "LinkedIn", status: "Existed", uploadedDate: "30-09-25" },
-    { id: 6, name: "Shivani", position: "Graphic Designer", experience: "5 years", skills: "Figma, Adobe XD, Illustrator", source: "Behance", status: "Inbound", uploadedDate: "22-09-25" },
-    { id: 7, name: "Adhitya", position: "Software Engineer", experience: "1 year", skills: "Python, Java, React", source: "LinkedIn", status: "Inbound", uploadedDate: "12-10-25" },
-    { id: 8, name: "Vaishnavi", position: "Project Manager", experience: "4 years", skills: "Slack, Jira, Agile", source: "Monster", status: "Existed", uploadedDate: "12-09-25" },
-    { id: 9, name: "Pravin Kumar", position: "Financial Analyst", experience: "3 years", skills: "Excel, Financial Modeling, SQL", source: "Indeed", status: "Existed", uploadedDate: "07-10-25" },
-    { id: 10, name: "kavin", position: "Project Manager", experience: "1 year, 2 moths", skills: "Agile, Scrum, Leadership", source: "Naukri", status: "Existed", uploadedDate: "11-10-25" },
-  ];
+  // Fetch candidates (resumes) from API
+  const { data: candidatesRaw = [], isLoading: isLoadingCandidates } = useQuery<any[]>({
+    queryKey: ['/api/admin/candidates'],
+  });
 
-  // Sample data for employees
-  const employeeData: EmployeeData[] = [
-    { id: 1, name: "Priya Sharma", position: "Talent Advisor", experience: "2 years", skills: "Recruitment, Sourcing", source: "Direct", status: "Active", uploadedDate: "01-04-23" },
-    { id: 2, name: "Amit Kumar", position: "Talent Advisor", experience: "3 years", skills: "Hiring, Screening", source: "Direct", status: "Active", uploadedDate: "15-03-23" },
-    { id: 3, name: "Kumaravel R", position: "Team Leader", experience: "5 years", skills: "Leadership, Management", source: "Direct", status: "Active", uploadedDate: "10-02-23" },
-    { id: 4, name: "Rajesh Mehta", position: "Client Manager", experience: "4 years", skills: "Client Relations, Sales", source: "Direct", status: "Active", uploadedDate: "20-01-23" },
-    { id: 5, name: "Sowmiya Ravi", position: "Talent Advisor", experience: "1 year", skills: "Recruitment, LinkedIn", source: "Direct", status: "On Leave", uploadedDate: "05-05-23" },
-    { id: 6, name: "Deepak Singh", position: "HR Manager", experience: "6 years", skills: "HR Operations, Payroll", source: "Direct", status: "Active", uploadedDate: "12-06-23" },
-    { id: 7, name: "Ananya Desai", position: "Recruiter", experience: "2 years", skills: "Campus Hiring, Screening", source: "Direct", status: "Inactive", uploadedDate: "18-07-23" },
-    { id: 8, name: "Vikram Patel", position: "Operations Head", experience: "8 years", skills: "Operations, Strategy", source: "Direct", status: "Active", uploadedDate: "22-08-23" },
-  ];
+  // Fetch employees from API
+  const { data: employeesRaw = [], isLoading: isLoadingEmployees } = useQuery<any[]>({
+    queryKey: ['/api/admin/employees'],
+  });
 
-  // Sample data for clients
-  const clientData: ClientData[] = [
-    { id: 1, name: "TechCorp Ltd", position: "Technology", experience: "10 years", skills: "Software Development", source: "Referral", status: "Active", uploadedDate: "05-01-24" },
-    { id: 2, name: "FinServe Inc", position: "Finance", experience: "15 years", skills: "Financial Services", source: "Direct", status: "Active", uploadedDate: "12-02-24" },
-    { id: 3, name: "HealthPlus", position: "Healthcare", experience: "8 years", skills: "Medical Services", source: "Marketing", status: "On Hold", uploadedDate: "20-03-24" },
-    { id: 4, name: "EduLearn", position: "Education", experience: "5 years", skills: "E-Learning", source: "Referral", status: "Active", uploadedDate: "15-04-24" },
-    { id: 5, name: "RetailMax", position: "Retail", experience: "12 years", skills: "E-commerce", source: "Direct", status: "Inactive", uploadedDate: "10-05-24" },
-    { id: 6, name: "BuildPro", position: "Construction", experience: "20 years", skills: "Infrastructure", source: "Partnership", status: "Active", uploadedDate: "25-06-24" },
-    { id: 7, name: "FoodHub", position: "Food & Beverage", experience: "6 years", skills: "Restaurant Chain", source: "Marketing", status: "Active", uploadedDate: "08-07-24" },
-  ];
+  // Fetch clients from API
+  const { data: clientsRaw = [], isLoading: isLoadingClients } = useQuery<any[]>({
+    queryKey: ['/api/admin/clients'],
+  });
+
+  // Helper function to format date
+  const formatDate = (dateStr: string | null | undefined): string => {
+    if (!dateStr) return '-';
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return dateStr;
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = String(date.getFullYear()).slice(-2);
+      return `${day}-${month}-${year}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
+  // Map candidates to ResumeData format
+  const resumeData: ResumeData[] = useMemo(() => {
+    return candidatesRaw.map((candidate: any) => ({
+      id: candidate.id,
+      name: candidate.fullName || candidate.name || '-',
+      position: candidate.position || candidate.designation || candidate.currentRole || '-',
+      experience: candidate.experience || '-',
+      skills: candidate.skills || '-',
+      source: candidate.addedBy ? `Added by ${candidate.addedBy}` : (candidate.googleId ? 'Google OAuth' : 'Self Registration'),
+      status: (candidate.pipelineStatus || 'New') as ResumeStatus,
+      uploadedDate: formatDate(candidate.createdAt),
+      email: candidate.email,
+      phone: candidate.phone,
+      location: candidate.location,
+      resumeFile: candidate.resumeFile,
+    }));
+  }, [candidatesRaw]);
+
+  // Map employees to EmployeeData format
+  const employeeData: EmployeeData[] = useMemo(() => {
+    return employeesRaw.map((employee: any) => ({
+      id: employee.id,
+      name: employee.name || '-',
+      position: employee.designation || employee.role || '-',
+      experience: '-',
+      skills: employee.department || '-',
+      source: 'Admin',
+      status: (employee.isActive ? 'Active' : (employee.employmentStatus === 'Resigned' ? 'Resigned' : 'Inactive')) as EmployeeStatus,
+      uploadedDate: formatDate(employee.joiningDate || employee.createdAt),
+      email: employee.email,
+      phone: employee.phone,
+      department: employee.department,
+    }));
+  }, [employeesRaw]);
+
+  // Map clients to ClientData format
+  const clientData: ClientData[] = useMemo(() => {
+    return clientsRaw.map((client: any) => ({
+      id: client.id,
+      name: client.brandName || client.incorporatedName || '-',
+      position: client.category || '-',
+      experience: '-',
+      skills: client.spoc || '-',
+      source: client.source || 'Direct',
+      status: (client.currentStatus === 'active' ? 'Active' : 
+               client.currentStatus === 'frozen' ? 'On Hold' : 
+               client.currentStatus === 'churned' ? 'Terminated' : 'Inactive') as ClientStatus,
+      uploadedDate: formatDate(client.startDate || client.createdAt),
+      email: client.email,
+      website: client.website,
+      location: client.location,
+    }));
+  }, [clientsRaw]);
+
+  // Get loading state
+  const isLoading = useMemo(() => {
+    switch (profileType) {
+      case 'resume': return isLoadingCandidates;
+      case 'employee': return isLoadingEmployees;
+      case 'client': return isLoadingClients;
+      default: return false;
+    }
+  }, [profileType, isLoadingCandidates, isLoadingEmployees, isLoadingClients]);
 
   // Get current data based on profile type
   const getCurrentData = () => {
@@ -132,7 +200,7 @@ export default function MasterDatabase() {
   const getStatusOptions = () => {
     switch (profileType) {
       case 'resume':
-        return ['Inbound', 'Existed', 'Archived', 'Looking for Jobs', 'In working'];
+        return ['New', 'Inbound', 'Existed', 'Archived', 'Looking for Jobs', 'In working', 'L1', 'L2', 'L3', 'Final Round', 'HR Round', 'Offer Stage', 'Closure'];
       case 'employee':
         return ['Active', 'On Leave', 'Inactive', 'Resigned'];
       case 'client':
@@ -428,49 +496,77 @@ export default function MasterDatabase() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredData.map((item, index) => (
-                    <tr 
-                      key={item.id} 
-                      onClick={() => handleRowClick(item)}
-                      className={`border-b border-gray-200 dark:border-gray-700 ${
-                        index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-blue-50 dark:bg-gray-750'
-                      } ${profileType === 'resume' ? 'cursor-pointer hover-elevate' : ''}`}
-                      data-testid={`row-${profileType}-${item.id}`}
-                    >
-                      <td className="py-3 px-4 text-gray-900 dark:text-gray-100" data-testid={`text-name-${item.id}`}>
-                        {item.name}
-                      </td>
-                      <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.position}</td>
-                      <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.experience}</td>
-                      <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
-                        {item.skills.split(',')[0]}...
-                      </td>
-                      <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.source}</td>
-                      {!isResumeDrawerOpen && (
-                        <>
-                          <td className="py-3 px-4">
-                            <Badge className={`${getStatusBadgeColor(item.status)} rounded-full px-3 py-1`}>
-                              {item.status}
-                            </Badge>
-                          </td>
-                          <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.uploadedDate}</td>
-                        </>
-                      )}
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={(e) => handleDeleteRow(e, item)}
-                            className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
-                            data-testid={`button-delete-${item.id}`}
-                          >
-                            <Trash2 size={16} />
-                          </Button>
+                  {isLoading ? (
+                    <tr>
+                      <td colSpan={isResumeDrawerOpen ? 6 : 8} className="py-12 text-center">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                          <span className="text-gray-500 dark:text-gray-400">Loading {getProfileTypeLabel().toLowerCase()}s...</span>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  ) : filteredData.length === 0 ? (
+                    <tr>
+                      <td colSpan={isResumeDrawerOpen ? 6 : 8} className="py-12 text-center">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <span className="text-gray-500 dark:text-gray-400">
+                            {searchQuery || statusFilter !== 'all' 
+                              ? `No ${getProfileTypeLabel().toLowerCase()}s match your filters` 
+                              : `No ${getProfileTypeLabel().toLowerCase()}s found in the database`}
+                          </span>
+                          <span className="text-sm text-gray-400 dark:text-gray-500">
+                            {profileType === 'resume' && "Candidates will appear here when added by recruiters or via individual registration"}
+                            {profileType === 'employee' && "Employees will appear here when added by Admin"}
+                            {profileType === 'client' && "Clients will appear here when added by Admin"}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredData.map((item, index) => (
+                      <tr 
+                        key={item.id} 
+                        onClick={() => handleRowClick(item)}
+                        className={`border-b border-gray-200 dark:border-gray-700 ${
+                          index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-blue-50 dark:bg-gray-750'
+                        } ${profileType === 'resume' ? 'cursor-pointer hover-elevate' : ''}`}
+                        data-testid={`row-${profileType}-${item.id}`}
+                      >
+                        <td className="py-3 px-4 text-gray-900 dark:text-gray-100" data-testid={`text-name-${item.id}`}>
+                          {item.name}
+                        </td>
+                        <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.position}</td>
+                        <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.experience}</td>
+                        <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                          {item.skills && item.skills !== '-' ? (item.skills.split(',')[0] + (item.skills.includes(',') ? '...' : '')) : '-'}
+                        </td>
+                        <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.source}</td>
+                        {!isResumeDrawerOpen && (
+                          <>
+                            <td className="py-3 px-4">
+                              <Badge className={`${getStatusBadgeColor(item.status)} rounded-full px-3 py-1`}>
+                                {item.status}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.uploadedDate}</td>
+                          </>
+                        )}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={(e) => handleDeleteRow(e, item)}
+                              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
+                              data-testid={`button-delete-${item.id}`}
+                            >
+                              <Trash2 size={16} />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
