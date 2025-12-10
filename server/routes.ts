@@ -14,6 +14,7 @@ import "./types"; // Import session types
 import { db } from "./db";
 import { eq, desc, sql } from "drizzle-orm";
 import { logRequirementAdded, logCandidateSubmitted, logClosureMade, logCandidatePipelineChanged } from "./activity-logger";
+import { parseResumeFile, parseBulkResumes } from "./resume-parser";
 import { sendEmployeeWelcomeEmail, sendCandidateWelcomeEmail } from "./email-service";
 import { setupGoogleAuth } from "./passport-google";
 
@@ -26,6 +27,11 @@ if (!fs.existsSync(uploadsDir)) {
 const chatUploadsDir = 'uploads/chat';
 if (!fs.existsSync(chatUploadsDir)) {
   fs.mkdirSync(chatUploadsDir, { recursive: true });
+}
+
+const resumeUploadsDir = 'uploads/resumes';
+if (!fs.existsSync(resumeUploadsDir)) {
+  fs.mkdirSync(resumeUploadsDir, { recursive: true });
 }
 
 const upload = multer({
@@ -93,6 +99,38 @@ const chatUpload = multer({
       return cb(null, true);
     } else {
       cb(new Error('Only images, PDFs, and Word documents are allowed!'));
+    }
+  }
+});
+
+const resumeUpload = multer({
+  storage: multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, resumeUploadsDir);
+    },
+    filename: function (req, file, cb) {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, 'resume-' + uniqueSuffix + path.extname(file.originalname));
+    }
+  }),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit for resumes
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedExtensions = /\.(pdf|doc|docx)$/i;
+    const extname = allowedExtensions.test(file.originalname.toLowerCase());
+    
+    const allowedMimeTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ];
+    const mimetype = allowedMimeTypes.includes(file.mimetype);
+    
+    if (extname && mimetype) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only PDF and Word documents are allowed!'));
     }
   }
 });
@@ -5307,6 +5345,200 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get candidates error:', error);
       res.status(500).json({ message: "Failed to get candidates" });
+    }
+  });
+
+  // Parse single resume and extract info
+  app.post("/api/admin/parse-resume", requireAdminAuth, resumeUpload.single('resume'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No resume file uploaded" });
+      }
+
+      const parsed = await parseResumeFile(req.file.path, req.file.mimetype);
+      
+      res.json({
+        success: true,
+        data: {
+          fullName: parsed.fullName,
+          email: parsed.email,
+          phone: parsed.phone,
+          filePath: req.file.path,
+          fileName: req.file.originalname
+        }
+      });
+    } catch (error) {
+      console.error('Parse resume error:', error);
+      res.status(500).json({ message: "Failed to parse resume" });
+    }
+  });
+
+  // Parse bulk resumes
+  app.post("/api/admin/parse-resumes-bulk", requireAdminAuth, resumeUpload.array('resumes', 20), async (req, res) => {
+    try {
+      const files = req.files as Express.Multer.File[];
+      if (!files || files.length === 0) {
+        return res.status(400).json({ message: "No resume files uploaded" });
+      }
+
+      const fileData = files.map(f => ({
+        path: f.path,
+        originalname: f.originalname,
+        mimetype: f.mimetype
+      }));
+
+      const results = await parseBulkResumes(fileData);
+      
+      const successCount = results.filter(r => r.success).length;
+      const failedCount = results.filter(r => !r.success).length;
+
+      res.json({
+        total: results.length,
+        successCount,
+        failedCount,
+        results: results.map(r => ({
+          fileName: r.fileName,
+          success: r.success,
+          data: r.success ? {
+            fullName: r.data?.fullName,
+            email: r.data?.email,
+            phone: r.data?.phone
+          } : null,
+          error: r.error
+        }))
+      });
+    } catch (error) {
+      console.error('Bulk parse resume error:', error);
+      res.status(500).json({ message: "Failed to parse resumes" });
+    }
+  });
+
+  // Import single candidate from resume
+  app.post("/api/admin/import-candidate", requireAdminAuth, async (req, res) => {
+    try {
+      const { fullName, email, phone, designation, experience, skills, location, resumeFilePath, addedBy } = req.body;
+
+      if (!fullName || !email) {
+        return res.status(400).json({ message: "Full name and email are required" });
+      }
+
+      // Check if candidate already exists
+      const existing = await storage.getCandidateByEmail(email);
+      if (existing) {
+        return res.status(409).json({ message: "A candidate with this email already exists" });
+      }
+
+      const candidateId = await storage.generateNextCandidateId();
+      
+      const newCandidate = await storage.createCandidate({
+        candidateId,
+        fullName,
+        email: email.toLowerCase(),
+        phone: phone || null,
+        designation: designation || null,
+        experience: experience || null,
+        skills: skills || null,
+        location: location || null,
+        resumeFile: resumeFilePath || null,
+        addedBy: addedBy || 'Admin Import',
+        pipelineStatus: 'New',
+        isActive: true,
+        isVerified: false,
+        createdAt: new Date().toISOString()
+      });
+
+      res.json({ 
+        success: true, 
+        message: "Candidate imported successfully",
+        candidate: newCandidate 
+      });
+    } catch (error: any) {
+      console.error('Import candidate error:', error);
+      if (error.message?.includes('duplicate') || error.message?.includes('unique')) {
+        return res.status(409).json({ message: "A candidate with this email already exists" });
+      }
+      res.status(500).json({ message: "Failed to import candidate" });
+    }
+  });
+
+  // Bulk import candidates from resumes
+  app.post("/api/admin/import-candidates-bulk", requireAdminAuth, async (req, res) => {
+    try {
+      const { candidates, addedBy } = req.body;
+
+      if (!candidates || !Array.isArray(candidates) || candidates.length === 0) {
+        return res.status(400).json({ message: "No candidates to import" });
+      }
+
+      const results: Array<{ fileName: string; success: boolean; candidateId?: string; error?: string }> = [];
+
+      for (const candidate of candidates) {
+        try {
+          if (!candidate.fullName || !candidate.email) {
+            results.push({
+              fileName: candidate.fileName || 'Unknown',
+              success: false,
+              error: 'Missing name or email'
+            });
+            continue;
+          }
+
+          // Check for existing candidate
+          const existing = await storage.getCandidateByEmail(candidate.email.toLowerCase());
+          if (existing) {
+            results.push({
+              fileName: candidate.fileName || 'Unknown',
+              success: false,
+              error: 'Email already exists'
+            });
+            continue;
+          }
+
+          const candidateId = await storage.generateNextCandidateId();
+          
+          await storage.createCandidate({
+            candidateId,
+            fullName: candidate.fullName,
+            email: candidate.email.toLowerCase(),
+            phone: candidate.phone || null,
+            designation: null,
+            experience: null,
+            skills: null,
+            location: null,
+            resumeFile: null,
+            addedBy: addedBy || 'Admin Bulk Import',
+            pipelineStatus: 'New',
+            isActive: true,
+            isVerified: false,
+            createdAt: new Date().toISOString()
+          });
+
+          results.push({
+            fileName: candidate.fileName || 'Unknown',
+            success: true,
+            candidateId
+          });
+        } catch (err: any) {
+          results.push({
+            fileName: candidate.fileName || 'Unknown',
+            success: false,
+            error: err.message || 'Failed to create candidate'
+          });
+        }
+      }
+
+      const successCount = results.filter(r => r.success).length;
+      const failedCount = results.filter(r => !r.success).length;
+
+      res.json({
+        total: results.length,
+        successCount,
+        failedCount,
+        results
+      });
+    } catch (error) {
+      console.error('Bulk import candidates error:', error);
+      res.status(500).json({ message: "Failed to import candidates" });
     }
   });
 

@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useMemo, useCallback } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -8,7 +8,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Filter, Search, Trash2, X, Share2, Download, Loader2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { ArrowLeft, Filter, Search, Trash2, X, Share2, Download, Loader2, Upload, FileText, CheckCircle, XCircle } from "lucide-react";
+import { useDropzone } from 'react-dropzone';
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 type ProfileType = 'resume' | 'employee' | 'client';
 
@@ -77,6 +81,30 @@ export default function MasterDatabase() {
   });
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{id: string, name: string, profileType: ProfileType} | null>(null);
+  
+  // Import Resume modal state
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isBulkUpload, setIsBulkUpload] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [bulkFiles, setBulkFiles] = useState<File[]>([]);
+  const [parsedData, setParsedData] = useState<{fullName: string | null; email: string | null; phone: string | null; filePath?: string} | null>(null);
+  const [bulkParsedResults, setBulkParsedResults] = useState<Array<{fileName: string; success: boolean; data?: {fullName: string | null; email: string | null; phone: string | null}; error?: string}>>([]);
+  const [importStep, setImportStep] = useState<'upload' | 'confirm' | 'result'>('upload');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [singleCandidateForm, setSingleCandidateForm] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    designation: '',
+    experience: '',
+    skills: '',
+    location: ''
+  });
+  const [importResults, setImportResults] = useState<{total: number; successCount: number; failedCount: number; results: Array<{fileName: string; success: boolean; error?: string}>} | null>(null);
+
+  const { toast } = useToast();
+
+  const BULK_UPLOAD_LIMIT = 20;
   
   // Advanced filter state
   const [advancedFilters, setAdvancedFilters] = useState({
@@ -400,20 +428,252 @@ export default function MasterDatabase() {
       .slice(0, 2);
   };
 
+  // Reset import modal state
+  const resetImportModal = () => {
+    setUploadedFile(null);
+    setBulkFiles([]);
+    setParsedData(null);
+    setBulkParsedResults([]);
+    setImportStep('upload');
+    setIsProcessing(false);
+    setSingleCandidateForm({
+      fullName: '',
+      email: '',
+      phone: '',
+      designation: '',
+      experience: '',
+      skills: '',
+      location: ''
+    });
+    setImportResults(null);
+  };
+
+  // Handle single file drop
+  const onSingleDrop = useCallback(async (acceptedFiles: File[]) => {
+    if (acceptedFiles.length > 0) {
+      const file = acceptedFiles[0];
+      setUploadedFile(file);
+      setIsProcessing(true);
+      
+      try {
+        const formData = new FormData();
+        formData.append('resume', file);
+        
+        const response = await fetch('/api/admin/parse-resume', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to parse resume');
+        }
+        
+        const result = await response.json();
+        setParsedData(result.data);
+        setSingleCandidateForm(prev => ({
+          ...prev,
+          fullName: result.data.fullName || '',
+          email: result.data.email || '',
+          phone: result.data.phone || ''
+        }));
+        setImportStep('confirm');
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to parse resume. Please try again.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsProcessing(false);
+      }
+    }
+  }, [toast]);
+
+  // Handle bulk files drop
+  const onBulkDrop = useCallback(async (acceptedFiles: File[]) => {
+    const limitedFiles = acceptedFiles.slice(0, BULK_UPLOAD_LIMIT);
+    setBulkFiles(limitedFiles);
+    setIsProcessing(true);
+    
+    try {
+      const formData = new FormData();
+      limitedFiles.forEach(file => {
+        formData.append('resumes', file);
+      });
+      
+      const response = await fetch('/api/admin/parse-resumes-bulk', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to parse resumes');
+      }
+      
+      const result = await response.json();
+      setBulkParsedResults(result.results);
+      setImportStep('confirm');
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to parse resumes. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [toast]);
+
+  const singleDropzone = useDropzone({
+    onDrop: onSingleDrop,
+    accept: {
+      'application/pdf': ['.pdf'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
+    },
+    maxFiles: 1,
+    disabled: isProcessing
+  });
+
+  const bulkDropzone = useDropzone({
+    onDrop: onBulkDrop,
+    accept: {
+      'application/pdf': ['.pdf'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
+    },
+    maxFiles: BULK_UPLOAD_LIMIT,
+    disabled: isProcessing
+  });
+
+  // Handle single candidate import
+  const handleSingleImport = async () => {
+    if (!singleCandidateForm.fullName || !singleCandidateForm.email) {
+      toast({
+        title: "Validation Error",
+        description: "Name and email are required.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsProcessing(true);
+    
+    try {
+      const response = await apiRequest('POST', '/api/admin/import-candidate', {
+        ...singleCandidateForm,
+        resumeFilePath: parsedData?.filePath,
+        addedBy: 'Admin Import'
+      });
+      
+      toast({
+        title: "Success",
+        description: "Candidate imported successfully!",
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/candidates'] });
+      setIsImportModalOpen(false);
+      resetImportModal();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to import candidate.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Handle bulk import
+  const handleBulkImport = async () => {
+    const validCandidates = bulkParsedResults
+      .filter(r => r.success && r.data?.fullName && r.data?.email)
+      .map(r => ({
+        fullName: r.data!.fullName,
+        email: r.data!.email,
+        phone: r.data!.phone,
+        fileName: r.fileName
+      }));
+    
+    if (validCandidates.length === 0) {
+      toast({
+        title: "No Valid Candidates",
+        description: "No resumes with valid name and email found.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsProcessing(true);
+    
+    try {
+      const response = await fetch('/api/admin/import-candidates-bulk', {
+        method: 'POST',
+        body: JSON.stringify({
+          candidates: validCandidates,
+          addedBy: 'Admin Bulk Import'
+        }),
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to import candidates');
+      }
+      
+      const result = await response.json();
+      setImportResults(result);
+      setImportStep('result');
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/candidates'] });
+      
+      toast({
+        title: "Import Complete",
+        description: `${result.successCount} candidates imported, ${result.failedCount} failed.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to import candidates.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 px-6 py-4">
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center justify-between gap-3 mb-6">
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => window.history.back()}
+              variant="ghost"
+              size="icon"
+              data-testid="button-back"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Master Database</h1>
+          </div>
           <Button
-            onClick={() => window.history.back()}
-            variant="ghost"
-            size="icon"
-            data-testid="button-back"
+            onClick={() => {
+              resetImportModal();
+              setIsImportModalOpen(true);
+            }}
+            className="flex items-center gap-2"
+            data-testid="button-import-resume"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <Upload className="h-4 w-4" />
+            Import Resume
           </Button>
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Master Database</h1>
         </div>
 
         {/* Search and Filters */}
@@ -800,6 +1060,371 @@ export default function MasterDatabase() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Import Resume Modal */}
+      <Dialog open={isImportModalOpen} onOpenChange={(open) => {
+        setIsImportModalOpen(open);
+        if (!open) resetImportModal();
+      }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-import-resume">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5" />
+              Import Resume
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="py-4">
+            <div className="flex items-center justify-between gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-md">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="bulk-toggle" className="text-sm font-medium">Bulk Upload</Label>
+                <span className="text-xs text-muted-foreground">(Max {BULK_UPLOAD_LIMIT} files)</span>
+              </div>
+              <Switch
+                id="bulk-toggle"
+                checked={isBulkUpload}
+                onCheckedChange={(checked) => {
+                  setIsBulkUpload(checked);
+                  resetImportModal();
+                }}
+                disabled={importStep !== 'upload'}
+                data-testid="switch-bulk-upload"
+              />
+            </div>
+
+            {/* Single Upload Mode */}
+            {!isBulkUpload && (
+              <>
+                {importStep === 'upload' && (
+                  <div
+                    {...singleDropzone.getRootProps()}
+                    className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                      singleDropzone.isDragActive 
+                        ? 'border-primary bg-primary/5' 
+                        : 'border-gray-300 dark:border-gray-600 hover:border-primary/50'
+                    }`}
+                    data-testid="dropzone-single"
+                  >
+                    <input {...singleDropzone.getInputProps()} data-testid="input-resume-file" />
+                    {isProcessing ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <p className="text-sm text-muted-foreground">Parsing resume...</p>
+                      </div>
+                    ) : (
+                      <>
+                        <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Drag and drop a resume here, or click to browse
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Supported formats: PDF, DOC, DOCX
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {importStep === 'confirm' && parsedData && (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-md border border-green-200 dark:border-green-800">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                        <span className="font-medium text-green-800 dark:text-green-200">Resume Parsed Successfully</span>
+                      </div>
+                      <p className="text-sm text-green-700 dark:text-green-300">
+                        {uploadedFile?.name}
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="fullName">Full Name *</Label>
+                        <Input
+                          id="fullName"
+                          value={singleCandidateForm.fullName}
+                          onChange={(e) => setSingleCandidateForm(prev => ({ ...prev, fullName: e.target.value }))}
+                          placeholder="Enter full name"
+                          data-testid="input-fullName"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email *</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={singleCandidateForm.email}
+                          onChange={(e) => setSingleCandidateForm(prev => ({ ...prev, email: e.target.value }))}
+                          placeholder="Enter email"
+                          data-testid="input-email"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone</Label>
+                        <Input
+                          id="phone"
+                          value={singleCandidateForm.phone}
+                          onChange={(e) => setSingleCandidateForm(prev => ({ ...prev, phone: e.target.value }))}
+                          placeholder="Enter phone number"
+                          data-testid="input-phone"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="designation">Designation</Label>
+                        <Input
+                          id="designation"
+                          value={singleCandidateForm.designation}
+                          onChange={(e) => setSingleCandidateForm(prev => ({ ...prev, designation: e.target.value }))}
+                          placeholder="e.g. Software Engineer"
+                          data-testid="input-designation"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="experience">Experience</Label>
+                        <Input
+                          id="experience"
+                          value={singleCandidateForm.experience}
+                          onChange={(e) => setSingleCandidateForm(prev => ({ ...prev, experience: e.target.value }))}
+                          placeholder="e.g. 5 years"
+                          data-testid="input-experience"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="location">Location</Label>
+                        <Input
+                          id="location"
+                          value={singleCandidateForm.location}
+                          onChange={(e) => setSingleCandidateForm(prev => ({ ...prev, location: e.target.value }))}
+                          placeholder="e.g. New York, USA"
+                          data-testid="input-location"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="skills">Skills</Label>
+                      <Input
+                        id="skills"
+                        value={singleCandidateForm.skills}
+                        onChange={(e) => setSingleCandidateForm(prev => ({ ...prev, skills: e.target.value }))}
+                        placeholder="e.g. JavaScript, React, Node.js"
+                        data-testid="input-skills-import"
+                      />
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Bulk Upload Mode */}
+            {isBulkUpload && (
+              <>
+                {importStep === 'upload' && (
+                  <div
+                    {...bulkDropzone.getRootProps()}
+                    className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                      bulkDropzone.isDragActive 
+                        ? 'border-primary bg-primary/5' 
+                        : 'border-gray-300 dark:border-gray-600 hover:border-primary/50'
+                    }`}
+                    data-testid="dropzone-bulk"
+                  >
+                    <input {...bulkDropzone.getInputProps()} data-testid="input-resume-files-bulk" />
+                    {isProcessing ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <p className="text-sm text-muted-foreground">Parsing {bulkFiles.length} resumes...</p>
+                      </div>
+                    ) : (
+                      <>
+                        <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Drag and drop multiple resumes here, or click to browse
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Supported formats: PDF, DOC, DOCX (Max {BULK_UPLOAD_LIMIT} files)
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {importStep === 'confirm' && bulkParsedResults.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-md">
+                      <span className="font-medium">Parsed Resumes</span>
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="flex items-center gap-1 text-green-600">
+                          <CheckCircle className="h-4 w-4" />
+                          {bulkParsedResults.filter(r => r.success && r.data?.fullName && r.data?.email).length} valid
+                        </span>
+                        <span className="flex items-center gap-1 text-red-600">
+                          <XCircle className="h-4 w-4" />
+                          {bulkParsedResults.filter(r => !r.success || !r.data?.fullName || !r.data?.email).length} invalid
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="max-h-64 overflow-y-auto space-y-2">
+                      {bulkParsedResults.map((result, index) => (
+                        <div 
+                          key={index}
+                          className={`p-3 rounded-md border ${
+                            result.success && result.data?.fullName && result.data?.email
+                              ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                              : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                          }`}
+                          data-testid={`bulk-result-${index}`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                {result.success && result.data?.fullName && result.data?.email ? (
+                                  <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                ) : (
+                                  <XCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
+                                )}
+                                <span className="text-sm font-medium truncate">{result.fileName}</span>
+                              </div>
+                              {result.success && result.data ? (
+                                <div className="mt-1 text-xs text-muted-foreground ml-6">
+                                  <span>{result.data.fullName || 'No name'}</span>
+                                  <span className="mx-2">|</span>
+                                  <span>{result.data.email || 'No email'}</span>
+                                </div>
+                              ) : (
+                                <div className="mt-1 text-xs text-red-600 ml-6">
+                                  {result.error || 'Missing name or email'}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {importStep === 'result' && importResults && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-md text-center">
+                        <div className="text-2xl font-bold">{importResults.total}</div>
+                        <div className="text-sm text-muted-foreground">Total</div>
+                      </div>
+                      <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-md text-center">
+                        <div className="text-2xl font-bold text-green-600">{importResults.successCount}</div>
+                        <div className="text-sm text-green-600">Imported</div>
+                      </div>
+                      <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-md text-center">
+                        <div className="text-2xl font-bold text-red-600">{importResults.failedCount}</div>
+                        <div className="text-sm text-red-600">Failed</div>
+                      </div>
+                    </div>
+
+                    {importResults.results.filter(r => !r.success).length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-red-600">Failed Imports:</p>
+                        <div className="max-h-32 overflow-y-auto space-y-1">
+                          {importResults.results.filter(r => !r.success).map((result, index) => (
+                            <div key={index} className="text-xs text-red-600 flex items-center gap-2">
+                              <XCircle className="h-3 w-3" />
+                              <span>{result.fileName}: {result.error}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <DialogFooter className="flex gap-2">
+            {importStep === 'upload' && (
+              <Button 
+                variant="outline" 
+                onClick={() => setIsImportModalOpen(false)}
+                data-testid="button-cancel-import"
+              >
+                Cancel
+              </Button>
+            )}
+            
+            {importStep === 'confirm' && !isBulkUpload && (
+              <>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setImportStep('upload');
+                    setUploadedFile(null);
+                    setParsedData(null);
+                  }}
+                  data-testid="button-back-import"
+                >
+                  Back
+                </Button>
+                <Button 
+                  onClick={handleSingleImport}
+                  disabled={isProcessing || !singleCandidateForm.fullName || !singleCandidateForm.email}
+                  data-testid="button-confirm-import"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Importing...
+                    </>
+                  ) : (
+                    'Import Candidate'
+                  )}
+                </Button>
+              </>
+            )}
+
+            {importStep === 'confirm' && isBulkUpload && (
+              <>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setImportStep('upload');
+                    setBulkFiles([]);
+                    setBulkParsedResults([]);
+                  }}
+                  data-testid="button-back-bulk-import"
+                >
+                  Back
+                </Button>
+                <Button 
+                  onClick={handleBulkImport}
+                  disabled={isProcessing || bulkParsedResults.filter(r => r.success && r.data?.fullName && r.data?.email).length === 0}
+                  data-testid="button-confirm-bulk-import"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Importing...
+                    </>
+                  ) : (
+                    `Import ${bulkParsedResults.filter(r => r.success && r.data?.fullName && r.data?.email).length} Candidates`
+                  )}
+                </Button>
+              </>
+            )}
+
+            {importStep === 'result' && (
+              <Button 
+                onClick={() => {
+                  setIsImportModalOpen(false);
+                  resetImportModal();
+                }}
+                data-testid="button-close-import"
+              >
+                Close
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
