@@ -524,7 +524,16 @@ const SourceResume = () => {
   };
 
   const filteredCandidates = filterCandidates();
-  const totalPages = Math.ceil(filteredCandidates.length / resultsPerPage);
+  const totalPages = Math.ceil(filteredCandidates.length / resultsPerPage) || 1;
+  
+  // Clamp currentPage to valid range whenever filtered results change
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(filteredCandidates.length / resultsPerPage));
+    if (currentPage > maxPage) {
+      setCurrentPage(maxPage);
+    }
+  }, [filteredCandidates.length, currentPage, resultsPerPage]);
+  
   const paginatedCandidates = filteredCandidates.slice(
     (currentPage - 1) * resultsPerPage,
     currentPage * resultsPerPage
@@ -1463,8 +1472,8 @@ const SourceResume = () => {
             </div>
           )}
           
-          {/* Candidates List - Only show when we have candidates */}
-          {!isLoadingCandidates && !isErrorCandidates && filteredCandidates.length > 0 && (
+          {/* Candidates List - Only show when we have candidates on this page */}
+          {!isLoadingCandidates && !isErrorCandidates && paginatedCandidates.length > 0 && (
           <div className="space-y-4">
             {paginatedCandidates.map((candidate) => (
               <div
