@@ -1899,32 +1899,13 @@ export default function AdminDashboard() {
     }
   };
 
-  // Calculate priority distribution from requirements with toughness breakdown
-  // Handle cases where toughness may be undefined - default to 'Medium'
-  const priorityDistribution = useMemo(() => {
-    const getToughness = (req: any) => req.toughness || 'Medium';
-    const HIGH = {
-      Easy: requirements.filter((req: any) => req.criticality === 'HIGH' && getToughness(req) === 'Easy').length,
-      Medium: requirements.filter((req: any) => req.criticality === 'HIGH' && getToughness(req) === 'Medium').length,
-      Tough: requirements.filter((req: any) => req.criticality === 'HIGH' && getToughness(req) === 'Tough').length,
-    };
-    const MEDIUM = {
-      Easy: requirements.filter((req: any) => req.criticality === 'MEDIUM' && getToughness(req) === 'Easy').length,
-      Medium: requirements.filter((req: any) => req.criticality === 'MEDIUM' && getToughness(req) === 'Medium').length,
-      Tough: requirements.filter((req: any) => req.criticality === 'MEDIUM' && getToughness(req) === 'Tough').length,
-    };
-    const LOW = {
-      Easy: requirements.filter((req: any) => req.criticality === 'LOW' && getToughness(req) === 'Easy').length,
-      Medium: requirements.filter((req: any) => req.criticality === 'LOW' && getToughness(req) === 'Medium').length,
-      Tough: requirements.filter((req: any) => req.criticality === 'LOW' && getToughness(req) === 'Tough').length,
-    };
-    const high = requirements.filter((req: any) => req.criticality === 'HIGH').length;
-    const medium = requirements.filter((req: any) => req.criticality === 'MEDIUM').length;
-    const low = requirements.filter((req: any) => req.criticality === 'LOW').length;
-    const total = requirements.length;
-    
-    return { HIGH, MEDIUM, LOW, high, medium, low, total };
-  }, [requirements]);
+  // Static priority distribution - fixed counts that never change
+  // These represent the expected number of resumes to be delivered based on priority/criticality
+  const priorityDistribution = {
+    HIGH: { Easy: 6, Medium: 4, Tough: 2 },
+    MEDIUM: { Easy: 5, Medium: 3, Tough: 2 },
+    LOW: { Easy: 4, Medium: 3, Tough: 2 },
+  };
 
   const handleMemberClick = (member: any) => {
     setSelectedMember(member);
