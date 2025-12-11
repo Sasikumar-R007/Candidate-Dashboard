@@ -712,21 +712,13 @@ const SourceResume = () => {
                 <Calendar size={16} className="text-purple-600" />
                 Notice Period
               </label>
-              <select
-                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+              <ComboInput
                 value={filters.noticePeriod}
-                onChange={(e) =>
-                  setFilters({ ...filters, noticePeriod: e.target.value })
-                }
-                data-testid="select-notice-period"
-              >
-                <option value="">Any</option>
-                {allNoticePeriods.map((period) => (
-                  <option key={period} value={period}>
-                    {period}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => setFilters({ ...filters, noticePeriod: value })}
+                suggestions={allNoticePeriods}
+                placeholder="Type or select notice period..."
+                testId="input-notice-period"
+              />
             </div>
 
             {/* Experience Range */}
@@ -811,21 +803,13 @@ const SourceResume = () => {
                 <Clock size={16} className="text-purple-600" />
                 Availability
               </label>
-              <select
-                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+              <ComboInput
                 value={filters.availability}
-                onChange={(e) =>
-                  setFilters({ ...filters, availability: e.target.value })
-                }
-                data-testid="select-availability"
-              >
-                <option value="">Any</option>
-                {allAvailability.map((avail) => (
-                  <option key={avail} value={avail}>
-                    {avail}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => setFilters({ ...filters, availability: value })}
+                suggestions={allAvailability}
+                placeholder="Type or select availability..."
+                testId="input-availability"
+              />
             </div>
 
             {/* Skills */}
@@ -884,40 +868,24 @@ const SourceResume = () => {
                 <Building size={16} className="text-purple-600" />
                 Company
               </label>
-              <select
-                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              <ComboInput
                 value={filters.company}
-                onChange={(e) =>
-                  setFilters({ ...filters, company: e.target.value })
-                }
-                data-testid="select-company"
-              >
-                <option value="">Any Company</option>
-                {allCompanies.map((company) => (
-                  <option key={company} value={company}>
-                    {company}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => setFilters({ ...filters, company: value })}
+                suggestions={[...allCompanies, ...uniqueCompanies]}
+                placeholder="Type or select company..."
+                testId="input-company"
+              />
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700">Pedigree Level</label>
-              <select
-                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              <ComboInput
                 value={filters.pedigreeLevel}
-                onChange={(e) =>
-                  setFilters({ ...filters, pedigreeLevel: e.target.value })
-                }
-                data-testid="select-pedigree"
-              >
-                <option value="">Any</option>
-                {allPedigreeLevels.map((level) => (
-                  <option key={level} value={level}>
-                    {level}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => setFilters({ ...filters, pedigreeLevel: value })}
+                suggestions={[...allPedigreeLevels, ...uniquePedigreeLevels]}
+                placeholder="Type or select pedigree level..."
+                testId="input-pedigree"
+              />
             </div>
 
             <div className="space-y-2">
@@ -933,59 +901,35 @@ const SourceResume = () => {
 
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700">Company Sector</label>
-              <select
-                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              <ComboInput
                 value={filters.companySector}
-                onChange={(e) =>
-                  setFilters({ ...filters, companySector: e.target.value })
-                }
-                data-testid="select-company-sector"
-              >
-                <option value="">Any</option>
-                {allCompanySectors.map((sector) => (
-                  <option key={sector} value={sector}>
-                    {sector}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => setFilters({ ...filters, companySector: value })}
+                suggestions={[...allCompanySectors, ...uniqueCompanySectors]}
+                placeholder="Type or select company sector..."
+                testId="input-company-sector"
+              />
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700">Product/Service</label>
-              <select
-                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              <ComboInput
                 value={filters.productService}
-                onChange={(e) =>
-                  setFilters({ ...filters, productService: e.target.value })
-                }
-                data-testid="select-product-service"
-              >
-                <option value="">Any</option>
-                {allProductServices.map((service) => (
-                  <option key={service} value={service}>
-                    {service}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => setFilters({ ...filters, productService: value })}
+                suggestions={[...allProductServices, ...uniqueProductServices]}
+                placeholder="Type or select product/service..."
+                testId="input-product-service"
+              />
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700">Product Category</label>
-              <select
-                className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              <ComboInput
                 value={filters.productCategory}
-                onChange={(e) =>
-                  setFilters({ ...filters, productCategory: e.target.value })
-                }
-                data-testid="select-product-category"
-              >
-                <option value="">Any</option>
-                {allProductCategories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => setFilters({ ...filters, productCategory: value })}
+                suggestions={[...allProductCategories, ...uniqueProductCategories]}
+                placeholder="Type or select product category..."
+                testId="input-product-category"
+              />
             </div>
 
             <div className="space-y-2">
@@ -1262,20 +1206,13 @@ const SourceResume = () => {
 
           <div>
             <label className="block text-base font-medium mb-1">Pedigree Level</label>
-            <select
-              className="w-full border rounded-lg px-3 py-2 text-base"
+            <ComboInput
               value={filters.pedigreeLevel}
-              onChange={(e) =>
-                setFilters({ ...filters, pedigreeLevel: e.target.value })
-              }
-            >
-              <option value="">Any</option>
-              {allPedigreeLevels.map((level) => (
-                <option key={level} value={level}>
-                  {level}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setFilters({ ...filters, pedigreeLevel: value })}
+              suggestions={Array.from(new Set([...allPedigreeLevels, ...uniquePedigreeLevels]))}
+              placeholder="Type or select pedigree level..."
+              testId="input-pedigree-sidebar"
+            />
           </div>
 
           <div>
@@ -1283,7 +1220,7 @@ const SourceResume = () => {
             <ComboInput
               value={filters.companyLevel}
               onChange={(value) => setFilters({ ...filters, companyLevel: value })}
-              suggestions={[...new Set([...allCompanyLevels, ...uniqueCompanyLevels])]}
+              suggestions={Array.from(new Set([...allCompanyLevels, ...uniqueCompanyLevels]))}
               placeholder="Type or select company level..."
               testId="input-company-level-sidebar"
             />
@@ -1291,56 +1228,35 @@ const SourceResume = () => {
 
           <div>
             <label className="block text-base font-medium mb-1">Company Sector</label>
-            <select
-              className="w-full border rounded-lg px-3 py-2 text-base"
+            <ComboInput
               value={filters.companySector}
-              onChange={(e) =>
-                setFilters({ ...filters, companySector: e.target.value })
-              }
-            >
-              <option value="">Any</option>
-              {allCompanySectors.map((sector) => (
-                <option key={sector} value={sector}>
-                  {sector}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setFilters({ ...filters, companySector: value })}
+              suggestions={Array.from(new Set([...allCompanySectors, ...uniqueCompanySectors]))}
+              placeholder="Type or select company sector..."
+              testId="input-company-sector-sidebar"
+            />
           </div>
 
           <div>
             <label className="block text-base font-medium mb-1">Product/Service</label>
-            <select
-              className="w-full border rounded-lg px-3 py-2 text-base"
+            <ComboInput
               value={filters.productService}
-              onChange={(e) =>
-                setFilters({ ...filters, productService: e.target.value })
-              }
-            >
-              <option value="">Any</option>
-              {allProductServices.map((service) => (
-                <option key={service} value={service}>
-                  {service}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setFilters({ ...filters, productService: value })}
+              suggestions={Array.from(new Set([...allProductServices, ...uniqueProductServices]))}
+              placeholder="Type or select product/service..."
+              testId="input-product-service-sidebar"
+            />
           </div>
 
           <div>
             <label className="block text-base font-medium mb-1">Product Category</label>
-            <select
-              className="w-full border rounded-lg px-3 py-2 text-base"
+            <ComboInput
               value={filters.productCategory}
-              onChange={(e) =>
-                setFilters({ ...filters, productCategory: e.target.value })
-              }
-            >
-              <option value="">Any</option>
-              {allProductCategories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setFilters({ ...filters, productCategory: value })}
+              suggestions={Array.from(new Set([...allProductCategories, ...uniqueProductCategories]))}
+              placeholder="Type or select product category..."
+              testId="input-product-category-sidebar"
+            />
           </div>
 
           <div>
@@ -1348,7 +1264,7 @@ const SourceResume = () => {
             <ComboInput
               value={filters.productDomain}
               onChange={(value) => setFilters({ ...filters, productDomain: value })}
-              suggestions={[...new Set([...allProductDomains, ...uniqueProductDomains])]}
+              suggestions={Array.from(new Set([...allProductDomains, ...uniqueProductDomains]))}
               placeholder="Type or select product domain..."
               testId="input-product-domain-sidebar"
             />
@@ -1359,7 +1275,7 @@ const SourceResume = () => {
             <ComboInput
               value={filters.employmentType}
               onChange={(value) => setFilters({ ...filters, employmentType: value })}
-              suggestions={[...new Set([...allEmploymentTypes, ...uniqueEmploymentTypes])]}
+              suggestions={Array.from(new Set([...allEmploymentTypes, ...uniqueEmploymentTypes]))}
               placeholder="Type or select employment type..."
               testId="input-employment-type-sidebar"
             />
