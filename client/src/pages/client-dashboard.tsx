@@ -18,7 +18,8 @@ import { useToast } from "@/hooks/use-toast";
 import SimpleClientHeader from '@/components/dashboard/simple-client-header';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChatDock } from '@/components/chat/chat-dock';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { queryClient, apiRequest } from '@/lib/queryClient';
 
 interface ChatUser {
   id: number;
@@ -38,7 +39,7 @@ export default function ClientDashboard() {
   const [isJdModalOpen, setIsJdModalOpen] = useState(false);
   const [tempJdText, setTempJdText] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedCandidate, setSelectedCandidate] = useState<{name: string, stage: string} | null>(null);
+  const [selectedCandidate, setSelectedCandidate] = useState<{id: string, name: string, stage: string} | null>(null);
   const [candidatePopupPosition, setCandidatePopupPosition] = useState<{x: number, y: number} | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
@@ -114,125 +115,78 @@ export default function ClientDashboard() {
     ]
   });
 
+  // Fetch dashboard stats from API
+  const { data: dashboardStats } = useQuery({
+    queryKey: ['/api/client/dashboard-stats'],
+    initialData: {
+      rolesAssigned: 0,
+      totalPositions: 0,
+      activeRoles: 0,
+      successfulHires: 0,
+      pausedRoles: 0,
+      withdrawnRoles: 0
+    }
+  });
+
+  // Fetch roles/requirements from API
+  const { data: allRolesData, isLoading: isLoadingRoles } = useQuery({
+    queryKey: ['/api/client/requirements'],
+    initialData: []
+  });
+
+  // Fetch pipeline data from API
+  const { data: pipelineData, isLoading: isLoadingPipeline } = useQuery({
+    queryKey: ['/api/client/pipeline'],
+    initialData: []
+  });
+
+  // Fetch closure reports from API
+  const { data: allClosureReports, isLoading: isLoadingClosures } = useQuery({
+    queryKey: ['/api/client/closures'],
+    initialData: []
+  });
+
+  // Fetch client profile from API
+  const { data: clientProfile } = useQuery({
+    queryKey: ['/api/client/profile'],
+    initialData: { name: '', email: '', company: 'Loading...', phone: '' }
+  });
+
+  // Mutation for rejecting a candidate
+  const rejectCandidateMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const response = await apiRequest('PATCH', `/api/client/applications/${id}/status`, {
+        status: 'Rejected',
+        reason
+      });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/client/pipeline'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/client/dashboard-stats'] });
+      toast({
+        title: "Candidate Rejected",
+        description: "The candidate has been rejected successfully.",
+      });
+      setSelectedCandidate(null);
+      setRejectReason('');
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to reject candidate. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
   const firstImpactMetrics = impactMetrics[0] || impactMetrics;
 
-  // Sample data for the dashboard
-  const dashboardStats = {
-    rolesAssigned: 15,
-    totalPositions: 6,
-    activeRoles: 5,
-    successfulHires: 3,
-    pausedRoles: 1,
-    withdrawnRoles: 1
-  };
-
-  // Recent chats data
-  const recentChats: ChatUser[] = [
-    {
-      id: 1,
-      name: 'Deepika',
-      requirements: 5,
-      closures: 6,
-      avatar: '/api/placeholder/40/40',
-      status: 'online'
-    },
-    {
-      id: 2,
-      name: 'Priyanka',
-      requirements: 7,
-      closures: 12,
-      avatar: '/api/placeholder/40/40',
-      status: 'online'
-    },
-    {
-      id: 3,
-      name: 'Thamarai Selvi',
-      requirements: 3,
-      closures: 7,
-      avatar: '/api/placeholder/40/40',
-      status: 'online'
-    }
-  ];
-
-  const allRolesData = [
-    {
-      roleId: 'STCL12JD13',
-      role: 'Full Stack Engineer',
-      team: 'Arun',
-      recruiter: 'Umar',
-      sharedOn: '12-10-2025',
-      status: 'Active',
-      profilesShared: 6,
-      lastActive: '12-09-2025'
-    },
-    {
-      roleId: 'STCL12JD14',
-      role: 'Data Scientist',
-      team: 'Anusha',
-      recruiter: 'Keerthana',
-      sharedOn: '18-11-2025',
-      status: 'Paused',
-      profilesShared: 3,
-      lastActive: '14-10-2025'
-    },
-    {
-      roleId: 'STCL12JD15',
-      role: 'Frontend Developer',
-      team: 'Arun',
-      recruiter: 'Priya',
-      sharedOn: '15-11-2025',
-      status: 'Active',
-      profilesShared: 8,
-      lastActive: '16-11-2025'
-    },
-    {
-      roleId: 'STCL12JD16',
-      role: 'DevOps Engineer',
-      team: 'Anusha',
-      recruiter: 'Raj',
-      sharedOn: '20-11-2025',
-      status: 'Withdrawn',
-      profilesShared: 2,
-      lastActive: '21-11-2025'
-    },
-    {
-      roleId: 'STCL12JD17',
-      role: 'UI/UX Designer',
-      team: 'Arun',
-      recruiter: 'Maya',
-      sharedOn: '22-11-2025',
-      status: 'Active',
-      profilesShared: 4,
-      lastActive: '23-11-2025'
-    },
-    {
-      roleId: 'STCL12JD18',
-      role: 'Backend Developer',
-      team: 'Anusha',
-      recruiter: 'Kiran',
-      sharedOn: '25-11-2025',
-      status: 'Paused',
-      profilesShared: 5,
-      lastActive: '26-11-2025'
-    }
-  ];
-
   // Only show top 2 roles in dashboard
-  const rolesData = allRolesData.slice(0, 2);
+  const rolesData = (allRolesData as any[]).slice(0, 2);
 
-  // Extended closure reports data for modal
-  const allClosureReports = [
-    { candidate: 'David Wilson', position: 'Frontend Developer', advisor: 'Kavitha', offered: '11-05-2023', joined: '10-10-2023' },
-    { candidate: 'Tom Anderson', position: 'UI/UX Designer', advisor: 'Rajesh', offered: '18-05-2023', joined: '12-10-2023' },
-    { candidate: 'Robert Kim', position: 'Backend Developer', advisor: 'Sowmiya', offered: '04-06-2023', joined: '25-10-2023' },
-    { candidate: 'Kevin Brown', position: 'QA Tester', advisor: 'Kalaiselvi', offered: '16-06-2023', joined: '30-10-2023' },
-    { candidate: 'Mel Gibson', position: 'Mobile App Developer', advisor: 'Malathi', offered: '08-07-2023', joined: '05-11-2023' },
-    { candidate: 'Sarah Johnson', position: 'DevOps Engineer', advisor: 'Priya', offered: '15-07-2023', joined: '10-11-2023' },
-    { candidate: 'Michael Chen', position: 'Data Analyst', advisor: 'Arun', offered: '22-07-2023', joined: '15-11-2023' },
-    { candidate: 'Emma Davis', position: 'Product Manager', advisor: 'Suresh', offered: '28-07-2023', joined: '20-11-2023' },
-    { candidate: 'James Thompson', position: 'Tech Lead', advisor: 'Deepa', offered: '05-08-2023', joined: '25-11-2023' },
-    { candidate: 'Lisa Wong', position: 'Security Engineer', advisor: 'Kumar', offered: '12-08-2023', joined: '30-11-2023' }
-  ];
+  // Recent chats data - static for now
+  const recentChats: ChatUser[] = [];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -267,7 +221,7 @@ export default function ClientDashboard() {
           <div className="h-full overflow-y-auto">
             {/* Simple Client Header */}
             <SimpleClientHeader 
-              companyName="Gumlet Marketing Private Limited"
+              companyName={(clientProfile as any)?.company || 'Loading...'}
               onHelpClick={() => setIsHelpChatOpen(true)}
             />
             
@@ -512,7 +466,7 @@ export default function ClientDashboard() {
           <div className="flex flex-col h-full">
             {/* Simple Client Header */}
             <SimpleClientHeader 
-              companyName="Gumlet Marketing Private Limited"
+              companyName={(clientProfile as any)?.company || 'Loading...'}
               onHelpClick={() => setIsHelpChatOpen(true)}
             />
             <div className="flex flex-1 overflow-hidden">
@@ -745,13 +699,161 @@ export default function ClientDashboard() {
           </div>
         );
       
+      case 'pipeline':
+        return (
+          <div className="flex flex-col h-full">
+            <SimpleClientHeader 
+              companyName={(clientProfile as any)?.company || 'Loading...'}
+              onHelpClick={() => setIsHelpChatOpen(true)}
+            />
+            <div className="flex flex-1 overflow-hidden">
+              <div className="flex-1 overflow-auto p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900">Candidate Pipeline</h2>
+                  <div className="flex items-center gap-4">
+                    <Select>
+                      <SelectTrigger className="w-48 rounded">
+                        <SelectValue placeholder="All Stages" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Stages</SelectItem>
+                        <SelectItem value="L1">L1</SelectItem>
+                        <SelectItem value="L2">L2</SelectItem>
+                        <SelectItem value="L3">L3</SelectItem>
+                        <SelectItem value="Final Round">Final Round</SelectItem>
+                        <SelectItem value="Offer Stage">Offer Stage</SelectItem>
+                        <SelectItem value="Closure">Closure</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {isLoadingPipeline ? (
+                  <div className="flex items-center justify-center h-64">
+                    <div className="text-gray-500">Loading pipeline data...</div>
+                  </div>
+                ) : (pipelineData as any[]).length === 0 ? (
+                  <Card className="bg-white border border-gray-200">
+                    <CardContent className="p-8 text-center">
+                      <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Candidates in Pipeline</h3>
+                      <p className="text-gray-500">Once candidates are submitted for your roles, they will appear here.</p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card className="bg-white border border-gray-200">
+                    <CardContent className="p-0">
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr className="bg-gray-50 border-b">
+                              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Candidate</th>
+                              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Role</th>
+                              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
+                              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Applied Date</th>
+                              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Contact</th>
+                              <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {(pipelineData as any[]).map((candidate, index) => (
+                              <tr key={candidate.id || index} className="hover:bg-gray-50" data-testid={`row-candidate-${candidate.id}`}>
+                                <td className="px-4 py-3">
+                                  <div className="flex items-center gap-3">
+                                    <Avatar className="h-8 w-8">
+                                      <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
+                                        {candidate.candidateName?.charAt(0) || 'C'}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="font-medium text-gray-900" data-testid={`text-candidate-name-${candidate.id}`}>{candidate.candidateName}</span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-gray-600" data-testid={`text-role-${candidate.id}`}>{candidate.roleApplied}</td>
+                                <td className="px-4 py-3">
+                                  <Badge 
+                                    variant="secondary" 
+                                    className={`text-xs ${
+                                      candidate.currentStatus === 'Rejected' ? 'bg-red-100 text-red-800' :
+                                      candidate.currentStatus === 'Closure' ? 'bg-green-100 text-green-800' :
+                                      'bg-blue-100 text-blue-800'
+                                    }`}
+                                    data-testid={`badge-status-${candidate.id}`}
+                                  >
+                                    {candidate.currentStatus}
+                                  </Badge>
+                                </td>
+                                <td className="px-4 py-3 text-gray-600" data-testid={`text-date-${candidate.id}`}>{candidate.appliedDate}</td>
+                                <td className="px-4 py-3">
+                                  <div className="text-sm">
+                                    <div className="text-gray-600">{candidate.email}</div>
+                                    <div className="text-gray-400">{candidate.phone}</div>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  {candidate.currentStatus !== 'Rejected' && candidate.currentStatus !== 'Closure' && (
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button variant="ghost" size="icon" data-testid={`button-actions-${candidate.id}`}>
+                                          <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-48 p-2">
+                                        <Button
+                                          variant="ghost"
+                                          className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                                          onClick={() => {
+                                            setSelectedCandidate({ id: candidate.id, name: candidate.candidateName, stage: candidate.currentStatus });
+                                            setRejectReason('');
+                                          }}
+                                          data-testid={`button-reject-${candidate.id}`}
+                                        >
+                                          <XCircle className="h-4 w-4 mr-2" />
+                                          Reject Candidate
+                                        </Button>
+                                      </PopoverContent>
+                                    </Popover>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              {/* Right sidebar with stage summary */}
+              <div className="w-56 bg-white border-l border-gray-200 p-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Stage Summary</h3>
+                <div className="space-y-2">
+                  {['L1', 'L2', 'L3', 'Final Round', 'HR Round', 'Offer Stage', 'Closure', 'Rejected'].map((stage) => {
+                    const count = (pipelineData as any[]).filter(c => c.currentStatus === stage).length;
+                    return (
+                      <div key={stage} className={`flex justify-between items-center py-2 px-3 rounded text-sm ${
+                        stage === 'Rejected' ? 'bg-red-50 text-red-700' :
+                        stage === 'Closure' ? 'bg-green-100 text-green-800' :
+                        'bg-gray-50 text-gray-700'
+                      }`}>
+                        <span>{stage}</span>
+                        <span className="font-bold">{count}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      
       case 'reports':
         return (
           <div className="flex flex-col h-full">
             {/* Simple Client Header */}
             <div className="print:hidden">
               <SimpleClientHeader 
-                companyName="Gumlet Marketing Private Limited"
+                companyName={(clientProfile as any)?.company || 'Loading...'}
                 onHelpClick={() => setIsHelpChatOpen(true)}
               />
             </div>
@@ -1201,8 +1303,19 @@ export default function ClientDashboard() {
             className={`p-3 rounded-lg transition-colors ${
               sidebarTab === 'requirements' ? 'bg-slate-600' : 'hover:bg-slate-600'
             }`}
+            title="Requirements"
           >
             <MapPin className="h-6 w-6 text-white" />
+          </button>
+          
+          <button 
+            onClick={() => setSidebarTab('pipeline')}
+            className={`p-3 rounded-lg transition-colors ${
+              sidebarTab === 'pipeline' ? 'bg-slate-600' : 'hover:bg-slate-600'
+            }`}
+            title="Pipeline"
+          >
+            <Users className="h-6 w-6 text-white" />
           </button>
           
           <button 
@@ -1210,6 +1323,7 @@ export default function ClientDashboard() {
             className={`p-3 rounded-lg transition-colors ${
               sidebarTab === 'reports' ? 'bg-slate-600' : 'hover:bg-slate-600'
             }`}
+            title="Reports"
           >
             <HandHeart className="h-6 w-6 text-white" />
           </button>
@@ -1501,6 +1615,63 @@ export default function ClientDashboard() {
               >
                 <Download className="h-4 w-4" />
                 Download PDF
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject Candidate Confirmation Dialog */}
+      <Dialog open={selectedCandidate !== null && !candidatePopupPosition} onOpenChange={(open) => !open && setSelectedCandidate(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reject Candidate</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Are you sure you want to reject <strong>{selectedCandidate?.name}</strong>?
+            </p>
+            <p className="text-xs text-gray-500">
+              Current stage: {selectedCandidate?.stage}
+            </p>
+            <div>
+              <Label htmlFor="reject-reason" className="text-sm font-medium">
+                Reason for rejection (optional)
+              </Label>
+              <Textarea
+                id="reject-reason"
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                placeholder="Enter reason for rejection..."
+                className="mt-2"
+                data-testid="textarea-reject-reason"
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSelectedCandidate(null);
+                  setRejectReason('');
+                }}
+                data-testid="button-cancel-reject"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (selectedCandidate?.id) {
+                    rejectCandidateMutation.mutate({ 
+                      id: selectedCandidate.id, 
+                      reason: rejectReason 
+                    });
+                  }
+                }}
+                disabled={rejectCandidateMutation.isPending}
+                data-testid="button-confirm-reject"
+              >
+                {rejectCandidateMutation.isPending ? 'Rejecting...' : 'Reject'}
               </Button>
             </div>
           </div>
