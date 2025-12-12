@@ -2,7 +2,16 @@ import express, { type Request, Response, NextFunction } from "express";
 import cors from "cors";
 import session from "express-session";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+
+function log(message: string, source = "express") {
+  const formattedTime = new Date().toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+  console.log(`${formattedTime} [${source}] ${message}`);
+}
 
 const app = express();
 
@@ -88,11 +97,12 @@ app.use((req, res, next) => {
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
   if (process.env.NODE_ENV === "development") {
-  await setupVite(app, server);
-} else {
-  // In production (Render), do NOT serve frontend
-  log("Static frontend disabled — using Vercel frontend.");
-}
+    const { setupVite } = await import("./vite");
+    await setupVite(app, server);
+  } else {
+    // In production (Render), do NOT serve frontend
+    log("Static frontend disabled — using Vercel frontend.");
+  }
 
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
