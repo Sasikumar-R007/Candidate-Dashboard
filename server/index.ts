@@ -1,6 +1,8 @@
 import express, { type Request, Response, NextFunction } from "express";
 import cors from "cors";
 import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import pg from "pg";
 import { registerRoutes } from "./routes";
 
 function log(message: string, source = "express") {
@@ -38,8 +40,19 @@ app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Session configuration
+// Session configuration with PostgreSQL store for persistence
+const PgSession = connectPgSimple(session);
+const sessionPool = new pg.Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+
 app.use(session({
+  store: new PgSession({
+    pool: sessionPool,
+    tableName: 'session',
+    createTableIfMissing: true,
+  }),
   secret: process.env.SESSION_SECRET || 'staffos-secret-key-change-in-production',
   resave: false,
   saveUninitialized: false,
