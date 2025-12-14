@@ -1283,17 +1283,22 @@ export default function AdminDashboard() {
     );
   }, [cashoutData, cashoutSearch]);
 
+  // Filter clients for Master Data - exclude login-only clients (those belong in User Management)
+  const masterDataClients = useMemo(() => {
+    return clients.filter((client: any) => !client.isLoginOnly);
+  }, [clients]);
+
   const filteredClients = useMemo(() => {
-    if (!clientMasterSearch.trim()) return clients;
+    if (!clientMasterSearch.trim()) return masterDataClients;
     const search = clientMasterSearch.toLowerCase();
-    return clients.filter((client: any) => 
+    return masterDataClients.filter((client: any) => 
       client.brandName?.toLowerCase().includes(search) ||
       client.location?.toLowerCase().includes(search) ||
       client.spoc?.toLowerCase().includes(search) ||
       client.website?.toLowerCase().includes(search) ||
       client.currentStatus?.toLowerCase().includes(search)
     );
-  }, [clients, clientMasterSearch]);
+  }, [masterDataClients, clientMasterSearch]);
 
   const filteredHrEmployees = useMemo(() => {
     if (!employeeMasterSearch.trim()) return hrEmployees;

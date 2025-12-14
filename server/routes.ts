@@ -4015,11 +4015,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const clientCode = await storage.generateNextClientCode();
 
       // Create minimal client record with just the essential information
+      // Mark as login-only so it doesn't appear in Master Data tables
       const minimalClientData = {
         clientCode,
         brandName: validatedData.name,
         email: validatedData.email,
         currentStatus: 'active',
+        isLoginOnly: true,
         createdAt: new Date().toISOString(),
       };
       

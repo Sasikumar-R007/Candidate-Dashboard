@@ -413,6 +413,7 @@ export const clients = pgTable("clients", {
   startDate: text("start_date"),
   referral: text("referral"),
   currentStatus: text("current_status").default("active"), // active, frozen, churned
+  isLoginOnly: boolean("is_login_only").default(false), // true = User Management login only, false = Master Data client
   createdAt: text("created_at").notNull(),
 });
 
