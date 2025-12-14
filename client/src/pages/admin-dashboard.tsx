@@ -1231,12 +1231,14 @@ export default function AdminDashboard() {
   });
 
   // Filter employees for HR-related tables (Employees Master)
-  // Include TL and TA employees, exclude admin accounts (STAFFOS*) and clients
+  // Only include employee_record role, exclude TL/TA (they belong in User Management), admin, and clients
   const hrEmployees = useMemo(() => {
     return employees.filter((emp: any) => 
       !emp.employeeId?.startsWith('STAFFOS') &&
       emp.role !== 'client' &&
-      emp.role !== 'admin'
+      emp.role !== 'admin' &&
+      emp.role !== 'team_leader' &&
+      emp.role !== 'recruiter'
     );
   }, [employees]);
 
