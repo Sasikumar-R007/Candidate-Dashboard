@@ -147,9 +147,9 @@ export default function ClientDashboard() {
   });
 
   // Fetch client profile from API
-  const { data: clientProfile } = useQuery({
+  const { data: clientProfile, isLoading: isLoadingProfile } = useQuery({
     queryKey: ['/api/client/profile'],
-    initialData: { name: '', email: '', company: 'Loading...', phone: '' }
+    initialData: { name: '', email: '', company: 'Loading...', phone: '', profileLinked: true, clientDetails: null }
   });
 
   // Mutation for rejecting a candidate
@@ -1127,6 +1127,37 @@ export default function ClientDashboard() {
       });
     }, 500);
   };
+
+  // Profile not linked - show access restricted message
+  if (!isLoadingProfile && clientProfile && !(clientProfile as any).profileLinked) {
+    return (
+      <div className="flex h-screen bg-gray-100">
+        <div className="flex-1 flex items-center justify-center">
+          <Card className="max-w-md w-full mx-4">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center">
+                <User className="w-8 h-8 text-amber-600" />
+              </div>
+              <CardTitle className="text-xl text-gray-900" data-testid="text-profile-not-linked-title">Profile Not Linked</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center space-y-4">
+              <p className="text-gray-600" data-testid="text-profile-not-linked-message">
+                Your client dashboard access is pending. An administrator needs to link your account to a client profile before you can access the dashboard.
+              </p>
+              <p className="text-sm text-gray-500">
+                Please contact your administrator or wait for your account to be configured.
+              </p>
+              <div className="pt-4 border-t">
+                <p className="text-xs text-gray-400">
+                  Logged in as: {(clientProfile as any).email}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-100">

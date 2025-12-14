@@ -6059,7 +6059,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Client Profile - Get current client's profile
+  // Client Profile - Get current client's profile with linked client details
   app.get("/api/client/profile", requireClientAuth, async (req, res) => {
     try {
       const employee = await storage.getEmployeeById(req.session.employeeId!);
@@ -6070,12 +6070,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const clients = await storage.getAllClients();
       const client = clients.find(c => c.email === employee.email);
       
+      // Check if client profile is linked (admin created a client record with matching email)
+      const profileLinked = !!client;
+      
       res.json({
         id: employee.id,
         name: employee.name,
         email: employee.email,
-        company: client?.brandName || employee.name,
         phone: employee.phone,
+        profileLinked,
+        // Basic company info
+        company: client?.brandName || employee.name,
+        // Extended client details (only if profile is linked)
+        clientDetails: profileLinked ? {
+          clientCode: client.clientCode,
+          brandName: client.brandName,
+          incorporatedName: client.incorporatedName,
+          gstin: client.gstin,
+          address: client.address,
+          location: client.location,
+          spoc: client.spoc,
+          website: client.website,
+          linkedin: client.linkedin,
+          category: client.category,
+          currentStatus: client.currentStatus,
+          startDate: client.startDate
+        } : null,
         bannerImage: null,
         profilePicture: null
       });
