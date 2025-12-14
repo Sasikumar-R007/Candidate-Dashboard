@@ -2028,21 +2028,17 @@ export default function AdminDashboard() {
   };
 
   const handleAddClientCredentials = (userData: any) => {
-    // Convert modal data to employee form format for client login
-    const employeeData = {
-      employeeId: userData.id || `STCL${Date.now()}`,
+    // Use the dedicated client credentials mutation
+    createClientCredentialsMutation.mutate({
+      firstName: userData.firstName,
+      lastName: userData.lastName,
       name: userData.name,
+      phoneNumber: userData.phoneNumber || '',
       email: userData.email,
       password: userData.password,
-      role: 'client',
-      phone: userData.phoneNumber || '',
-      department: '',
       joiningDate: userData.joiningDate || '',
-      age: ''
-    };
-    
-    // Save to database using the employee mutation
-    createEmployeeMutation.mutate(employeeData);
+      linkedinProfile: userData.linkedinProfile || '',
+    });
     setUserList(prev => [...prev, userData]);
     setIsAddClientCredentialsModalOpen(false);
   };
