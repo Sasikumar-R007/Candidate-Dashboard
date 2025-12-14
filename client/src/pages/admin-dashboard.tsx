@@ -1230,12 +1230,13 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/employees']
   });
 
-  // Filter employees for HR-related tables (exclude system users like recruiters, team leaders, clients)
+  // Filter employees for HR-related tables (Employees Master)
+  // Include TL and TA employees, exclude admin accounts (STAFFOS*) and clients
   const hrEmployees = useMemo(() => {
     return employees.filter((emp: any) => 
-      emp.role !== 'recruiter' && 
-      emp.role !== 'team_leader' && 
-      emp.role !== 'client'
+      !emp.employeeId?.startsWith('STAFFOS') &&
+      emp.role !== 'client' &&
+      emp.role !== 'admin'
     );
   }, [employees]);
 
@@ -5135,15 +5136,16 @@ export default function AdminDashboard() {
           </div>
         );
       case 'user-management':
-        // Map employees from database to user table format
+        // Map employees from database to user table format (TL, TA, and Client login profiles)
+        // Exclude admin accounts (STAFFOS* IDs) from the list
         const userData = employees
-          .filter(emp => emp.role === 'recruiter' || emp.role === 'team_leader')
+          .filter(emp => (emp.role === 'recruiter' || emp.role === 'team_leader' || emp.role === 'client') && !emp.employeeId?.startsWith('STAFFOS'))
           .map(emp => ({
             id: emp.employeeId,
             dbId: emp.id,
             name: emp.name,
             email: emp.email,
-            role: emp.role === 'team_leader' ? 'Team Leader' : 'Recruiter',
+            role: emp.role === 'team_leader' ? 'Team Leader' : emp.role === 'client' ? 'Client' : 'Recruiter',
             status: emp.isActive ? 'Active' : 'Inactive',
             lastLogin: "N/A",
             phoneNumber: emp.phone || '',
