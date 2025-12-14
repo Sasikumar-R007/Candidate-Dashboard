@@ -287,6 +287,8 @@ export default function ClientDashboard() {
             {/* Simple Client Header */}
             <SimpleClientHeader 
               companyName={(clientProfile as any)?.company || 'Loading...'}
+              clientName={(clientProfile as any)?.name || undefined}
+              clientEmail={(clientProfile as any)?.email || undefined}
               onHelpClick={() => setIsHelpChatOpen(true)}
             />
             
@@ -532,6 +534,8 @@ export default function ClientDashboard() {
             {/* Simple Client Header */}
             <SimpleClientHeader 
               companyName={(clientProfile as any)?.company || 'Loading...'}
+              clientName={(clientProfile as any)?.name || undefined}
+              clientEmail={(clientProfile as any)?.email || undefined}
               onHelpClick={() => setIsHelpChatOpen(true)}
             />
             <div className="flex flex-1 overflow-hidden">
