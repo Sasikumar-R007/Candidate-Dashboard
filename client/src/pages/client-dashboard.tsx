@@ -169,6 +169,7 @@ export default function ClientDashboard() {
         description: "The candidate has been rejected successfully.",
       });
       setSelectedCandidate(null);
+      setCandidatePopupPosition(null);
       setRejectReason('');
     },
     onError: () => {
@@ -179,6 +180,70 @@ export default function ClientDashboard() {
       });
     }
   });
+
+  // Mutation for selecting/shortlisting a candidate
+  const selectCandidateMutation = useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      const response = await apiRequest('PATCH', `/api/client/applications/${id}/status`, {
+        status: 'Selected'
+      });
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/client/pipeline'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/client/dashboard-stats'] });
+      toast({
+        title: "Candidate Selected",
+        description: "The candidate has been selected successfully.",
+      });
+      setSelectedCandidate(null);
+      setCandidatePopupPosition(null);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to select candidate. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Group pipeline data by stage for the column view
+  const pipelineStages = ['L1', 'L2', 'L3', 'Final Round', 'HR Round', 'Offer Stage', 'Closure'];
+  const groupedPipeline = pipelineStages.reduce((acc, stage) => {
+    acc[stage] = (pipelineData as any[]).filter(c => c.currentStatus === stage);
+    return acc;
+  }, {} as Record<string, any[]>);
+
+  // Calculate stage counts for sidebar
+  const stageCounts = {
+    'Sourced': (pipelineData as any[]).filter(c => c.currentStatus === 'Sourced').length,
+    'Shortlisted': (pipelineData as any[]).filter(c => c.currentStatus === 'Shortlisted').length,
+    'Intro Call': (pipelineData as any[]).filter(c => c.currentStatus === 'Intro Call').length,
+    'Assignment': (pipelineData as any[]).filter(c => c.currentStatus === 'Assignment').length,
+    'L1': groupedPipeline['L1']?.length || 0,
+    'L2': groupedPipeline['L2']?.length || 0,
+    'L3': groupedPipeline['L3']?.length || 0,
+    'Final Round': groupedPipeline['Final Round']?.length || 0,
+    'HR Round': groupedPipeline['HR Round']?.length || 0,
+    'Offer Stage': groupedPipeline['Offer Stage']?.length || 0,
+    'Closure': groupedPipeline['Closure']?.length || 0,
+    'Rejected': (pipelineData as any[]).filter(c => c.currentStatus === 'Rejected').length,
+  };
+
+  // Stage color mapping
+  const getStageColor = (stage: string) => {
+    switch (stage) {
+      case 'L1': return { bg: 'bg-green-200', hover: 'hover:bg-green-300', text: 'text-gray-800' };
+      case 'L2': return { bg: 'bg-green-300', hover: 'hover:bg-green-400', text: 'text-gray-800' };
+      case 'L3': return { bg: 'bg-green-400', hover: 'hover:bg-green-500', text: 'text-gray-800' };
+      case 'Final Round': return { bg: 'bg-green-500', hover: 'hover:bg-green-600', text: 'text-white' };
+      case 'HR Round': return { bg: 'bg-green-600', hover: 'hover:bg-green-700', text: 'text-white' };
+      case 'Offer Stage': return { bg: 'bg-green-700', hover: 'hover:bg-green-800', text: 'text-white' };
+      case 'Closure': return { bg: 'bg-green-800', hover: 'hover:bg-green-900', text: 'text-white' };
+      default: return { bg: 'bg-gray-200', hover: 'hover:bg-gray-300', text: 'text-gray-800' };
+    }
+  };
 
   const firstImpactMetrics = impactMetrics[0] || impactMetrics;
 
@@ -524,104 +589,33 @@ export default function ClientDashboard() {
                         </thead>
                         <tbody>
                           <tr>
-                            <td className="p-3 align-top">
-                              <div className="flex flex-col gap-2">
-                                {['Keerthana', 'Vishnu Purana', 'Chanakya', 'Adhya', 'Vanshika', 'Reyansh', 'Shaurya', 'Vihana'].map((name, index) => (
-                                  <div 
-                                    key={index}
-                                    onClick={(e) => handleCandidateClick(e, name, 'Level 1')}
-                                    className="px-3 py-2 bg-green-200 rounded text-center text-sm font-medium text-gray-800 cursor-pointer hover:bg-green-300 transition-colors relative"
-                                  >
-                                    {name}
-                                    <MoreVertical className="h-3 w-3 absolute top-1 right-1 opacity-50" />
+                            {pipelineStages.map((stage) => {
+                              const candidates = groupedPipeline[stage] || [];
+                              const colors = getStageColor(stage);
+                              return (
+                                <td key={stage} className="p-3 align-top">
+                                  <div className="flex flex-col gap-2">
+                                    {candidates.length === 0 ? (
+                                      <div className="px-3 py-2 text-center text-sm text-gray-400">
+                                        No candidates
+                                      </div>
+                                    ) : (
+                                      candidates.map((candidate: any) => (
+                                        <div 
+                                          key={candidate.id}
+                                          onClick={(e) => handleCandidateClick(e, candidate, stage)}
+                                          className={`px-3 py-2 ${colors.bg} rounded text-center text-sm font-medium ${colors.text} cursor-pointer ${colors.hover} transition-colors relative`}
+                                          data-testid={`candidate-card-${candidate.id}`}
+                                        >
+                                          {candidate.candidateName}
+                                          <MoreVertical className="h-3 w-3 absolute top-1 right-1 opacity-50" />
+                                        </div>
+                                      ))
+                                    )}
                                   </div>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="p-3 align-top">
-                              <div className="flex flex-col gap-2">
-                                {['Keerthana', 'Vishnu Purana', 'Chanakya', 'Adhya', 'Vanshika'].map((name, index) => (
-                                  <div 
-                                    key={index}
-                                    onClick={(e) => handleCandidateClick(e, name, 'Level 2')}
-                                    className="px-3 py-2 bg-green-300 rounded text-center text-sm font-medium text-gray-800 cursor-pointer hover:bg-green-400 transition-colors relative"
-                                  >
-                                    {name}
-                                    <MoreVertical className="h-3 w-3 absolute top-1 right-1 opacity-50" />
-                                  </div>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="p-3 align-top">
-                              <div className="flex flex-col gap-2">
-                                {['Keerthana', 'Vishnu Purana', 'Chanakya', 'Adhya', 'Vanshika'].map((name, index) => (
-                                  <div 
-                                    key={index}
-                                    onClick={(e) => handleCandidateClick(e, name, 'Level 3')}
-                                    className="px-3 py-2 bg-green-400 rounded text-center text-sm font-medium text-gray-800 cursor-pointer hover:bg-green-500 transition-colors relative"
-                                  >
-                                    {name}
-                                    <MoreVertical className="h-3 w-3 absolute top-1 right-1 opacity-50" />
-                                  </div>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="p-3 align-top">
-                              <div className="flex flex-col gap-2">
-                                {['Keerthana', 'Vishnu Purana', 'Chanakya', 'Adhya'].map((name, index) => (
-                                  <div 
-                                    key={index}
-                                    onClick={(e) => handleCandidateClick(e, name, 'Final Round')}
-                                    className="px-3 py-2 bg-green-500 rounded text-center text-sm font-medium text-white cursor-pointer hover:bg-green-600 transition-colors relative"
-                                  >
-                                    {name}
-                                    <MoreVertical className="h-3 w-3 absolute top-1 right-1 opacity-70" />
-                                  </div>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="p-3 align-top">
-                              <div className="flex flex-col gap-2">
-                                {['Keerthana', 'Vishnu Purana', 'Chanakya'].map((name, index) => (
-                                  <div 
-                                    key={index}
-                                    onClick={(e) => handleCandidateClick(e, name, 'HR Round')}
-                                    className="px-3 py-2 bg-green-600 rounded text-center text-sm font-medium text-white cursor-pointer hover:bg-green-700 transition-colors relative"
-                                  >
-                                    {name}
-                                    <MoreVertical className="h-3 w-3 absolute top-1 right-1 opacity-70" />
-                                  </div>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="p-3 align-top">
-                              <div className="flex flex-col gap-2">
-                                {['Keerthana', 'Vishnu Purana'].map((name, index) => (
-                                  <div 
-                                    key={index}
-                                    onClick={(e) => handleCandidateClick(e, name, 'Offer Stage')}
-                                    className="px-3 py-2 bg-green-700 rounded text-center text-sm font-medium text-white cursor-pointer hover:bg-green-800 transition-colors relative"
-                                  >
-                                    {name}
-                                    <MoreVertical className="h-3 w-3 absolute top-1 right-1 opacity-70" />
-                                  </div>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="p-3 align-top">
-                              <div className="flex flex-col gap-2">
-                                {['Keerthana', 'Vishnu Purana'].map((name, index) => (
-                                  <div 
-                                    key={index}
-                                    onClick={(e) => handleCandidateClick(e, name, 'Closure')}
-                                    className="px-3 py-2 bg-green-800 rounded text-center text-sm font-medium text-white cursor-pointer hover:bg-green-900 transition-colors relative"
-                                  >
-                                    {name}
-                                    <MoreVertical className="h-3 w-3 absolute top-1 right-1 opacity-70" />
-                                  </div>
-                                ))}
-                              </div>
-                            </td>
+                                </td>
+                              );
+                            })}
                           </tr>
                         </tbody>
                       </table>
@@ -676,173 +670,25 @@ export default function ClientDashboard() {
             <div className="w-64 bg-white border-l border-gray-200">
               <div className="p-4 space-y-1">
                 {[
-                  { label: 'SOURCED', count: 15, color: 'bg-green-100' },
-                  { label: 'SHORTLISTED', count: 9, color: 'bg-green-200' },
-                  { label: 'INTRO CALL', count: 7, color: 'bg-green-300' },
-                  { label: 'ASSIGNMENT', count: 9, color: 'bg-green-400' },
-                  { label: 'L1', count: 15, color: 'bg-green-500 text-white' },
-                  { label: 'L2', count: 9, color: 'bg-green-600 text-white' },
-                  { label: 'L3', count: 3, color: 'bg-green-700 text-white' },
-                  { label: 'FINAL ROUND', count: 9, color: 'bg-green-800 text-white' },
-                  { label: 'HR ROUND', count: 9, color: 'bg-green-900 text-white' },
-                  { label: 'OFFER STAGE', count: 9, color: 'bg-green-900 text-white' },
-                  { label: 'CLOSURE', count: 3, color: 'bg-green-950 text-white' }
+                  { label: 'SOURCED', stageKey: 'Sourced', color: 'bg-green-100' },
+                  { label: 'SHORTLISTED', stageKey: 'Shortlisted', color: 'bg-green-200' },
+                  { label: 'INTRO CALL', stageKey: 'Intro Call', color: 'bg-green-300' },
+                  { label: 'ASSIGNMENT', stageKey: 'Assignment', color: 'bg-green-400' },
+                  { label: 'L1', stageKey: 'L1', color: 'bg-green-500 text-white' },
+                  { label: 'L2', stageKey: 'L2', color: 'bg-green-600 text-white' },
+                  { label: 'L3', stageKey: 'L3', color: 'bg-green-700 text-white' },
+                  { label: 'FINAL ROUND', stageKey: 'Final Round', color: 'bg-green-800 text-white' },
+                  { label: 'HR ROUND', stageKey: 'HR Round', color: 'bg-green-900 text-white' },
+                  { label: 'OFFER STAGE', stageKey: 'Offer Stage', color: 'bg-green-900 text-white' },
+                  { label: 'CLOSURE', stageKey: 'Closure', color: 'bg-green-950 text-white' }
                 ].map((item, index) => (
                   <div key={index} className={`flex justify-between items-center py-3 px-4 rounded ${item.color}`}>
                     <span className={`text-sm font-medium ${item.color.includes('text-white') ? 'text-white' : 'text-gray-700'}`}>{item.label}</span>
-                    <span className={`text-lg font-bold ${item.color.includes('text-white') ? 'text-white' : 'text-gray-900'}`}>{item.count}</span>
+                    <span className={`text-lg font-bold ${item.color.includes('text-white') ? 'text-white' : 'text-gray-900'}`} data-testid={`count-${item.stageKey}`}>{stageCounts[item.stageKey as keyof typeof stageCounts] || 0}</span>
                   </div>
                 ))}
               </div>
             </div>
-            </div>
-          </div>
-        );
-      
-      case 'pipeline':
-        return (
-          <div className="flex flex-col h-full">
-            <SimpleClientHeader 
-              companyName={(clientProfile as any)?.company || 'Loading...'}
-              onHelpClick={() => setIsHelpChatOpen(true)}
-            />
-            <div className="flex flex-1 overflow-hidden">
-              <div className="flex-1 overflow-auto p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900">Candidate Pipeline</h2>
-                  <div className="flex items-center gap-4">
-                    <Select>
-                      <SelectTrigger className="w-48 rounded">
-                        <SelectValue placeholder="All Stages" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Stages</SelectItem>
-                        <SelectItem value="L1">L1</SelectItem>
-                        <SelectItem value="L2">L2</SelectItem>
-                        <SelectItem value="L3">L3</SelectItem>
-                        <SelectItem value="Final Round">Final Round</SelectItem>
-                        <SelectItem value="Offer Stage">Offer Stage</SelectItem>
-                        <SelectItem value="Closure">Closure</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {isLoadingPipeline ? (
-                  <div className="flex items-center justify-center h-64">
-                    <div className="text-gray-500">Loading pipeline data...</div>
-                  </div>
-                ) : (pipelineData as any[]).length === 0 ? (
-                  <Card className="bg-white border border-gray-200">
-                    <CardContent className="p-8 text-center">
-                      <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Candidates in Pipeline</h3>
-                      <p className="text-gray-500">Once candidates are submitted for your roles, they will appear here.</p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <Card className="bg-white border border-gray-200">
-                    <CardContent className="p-0">
-                      <div className="overflow-x-auto">
-                        <table className="w-full border-collapse">
-                          <thead>
-                            <tr className="bg-gray-50 border-b">
-                              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Candidate</th>
-                              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Role</th>
-                              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Status</th>
-                              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Applied Date</th>
-                              <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">Contact</th>
-                              <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 uppercase">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-200">
-                            {(pipelineData as any[]).map((candidate, index) => (
-                              <tr key={candidate.id || index} className="hover:bg-gray-50" data-testid={`row-candidate-${candidate.id}`}>
-                                <td className="px-4 py-3">
-                                  <div className="flex items-center gap-3">
-                                    <Avatar className="h-8 w-8">
-                                      <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
-                                        {candidate.candidateName?.charAt(0) || 'C'}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <span className="font-medium text-gray-900" data-testid={`text-candidate-name-${candidate.id}`}>{candidate.candidateName}</span>
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3 text-gray-600" data-testid={`text-role-${candidate.id}`}>{candidate.roleApplied}</td>
-                                <td className="px-4 py-3">
-                                  <Badge 
-                                    variant="secondary" 
-                                    className={`text-xs ${
-                                      candidate.currentStatus === 'Rejected' ? 'bg-red-100 text-red-800' :
-                                      candidate.currentStatus === 'Closure' ? 'bg-green-100 text-green-800' :
-                                      'bg-blue-100 text-blue-800'
-                                    }`}
-                                    data-testid={`badge-status-${candidate.id}`}
-                                  >
-                                    {candidate.currentStatus}
-                                  </Badge>
-                                </td>
-                                <td className="px-4 py-3 text-gray-600" data-testid={`text-date-${candidate.id}`}>{candidate.appliedDate}</td>
-                                <td className="px-4 py-3">
-                                  <div className="text-sm">
-                                    <div className="text-gray-600">{candidate.email}</div>
-                                    <div className="text-gray-400">{candidate.phone}</div>
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3 text-center">
-                                  {candidate.currentStatus !== 'Rejected' && candidate.currentStatus !== 'Closure' && (
-                                    <Popover>
-                                      <PopoverTrigger asChild>
-                                        <Button variant="ghost" size="icon" data-testid={`button-actions-${candidate.id}`}>
-                                          <MoreVertical className="h-4 w-4" />
-                                        </Button>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-48 p-2">
-                                        <Button
-                                          variant="ghost"
-                                          className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-                                          onClick={() => {
-                                            setSelectedCandidate({ id: candidate.id, name: candidate.candidateName, stage: candidate.currentStatus });
-                                            setRejectReason('');
-                                          }}
-                                          data-testid={`button-reject-${candidate.id}`}
-                                        >
-                                          <XCircle className="h-4 w-4 mr-2" />
-                                          Reject Candidate
-                                        </Button>
-                                      </PopoverContent>
-                                    </Popover>
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-
-              {/* Right sidebar with stage summary */}
-              <div className="w-56 bg-white border-l border-gray-200 p-4">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Stage Summary</h3>
-                <div className="space-y-2">
-                  {['L1', 'L2', 'L3', 'Final Round', 'HR Round', 'Offer Stage', 'Closure', 'Rejected'].map((stage) => {
-                    const count = (pipelineData as any[]).filter(c => c.currentStatus === stage).length;
-                    return (
-                      <div key={stage} className={`flex justify-between items-center py-2 px-3 rounded text-sm ${
-                        stage === 'Rejected' ? 'bg-red-50 text-red-700' :
-                        stage === 'Closure' ? 'bg-green-100 text-green-800' :
-                        'bg-gray-50 text-gray-700'
-                      }`}>
-                        <span>{stage}</span>
-                        <span className="font-bold">{count}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
             </div>
           </div>
         );
@@ -1189,14 +1035,14 @@ export default function ClientDashboard() {
     }
   };
 
-  const handleCandidateClick = (e: React.MouseEvent, name: string, stage: string) => {
+  const handleCandidateClick = (e: React.MouseEvent, candidate: any, stage: string) => {
     e.stopPropagation();
     const rect = (e.target as HTMLElement).getBoundingClientRect();
     setCandidatePopupPosition({
       x: rect.left + rect.width + 10,
       y: rect.top
     });
-    setSelectedCandidate({ name, stage });
+    setSelectedCandidate({ id: candidate.id, name: candidate.candidateName, stage });
   };
 
   const closeCandidatePopup = () => {
@@ -1306,16 +1152,6 @@ export default function ClientDashboard() {
             title="Requirements"
           >
             <MapPin className="h-6 w-6 text-white" />
-          </button>
-          
-          <button 
-            onClick={() => setSidebarTab('pipeline')}
-            className={`p-3 rounded-lg transition-colors ${
-              sidebarTab === 'pipeline' ? 'bg-slate-600' : 'hover:bg-slate-600'
-            }`}
-            title="Pipeline"
-          >
-            <Users className="h-6 w-6 text-white" />
           </button>
           
           <button 
@@ -1701,27 +1537,46 @@ export default function ClientDashboard() {
             </div>
             
             <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <input type="radio" id="reject" name="action" className="text-red-500" />
-                <label htmlFor="reject" className="text-sm text-red-600 font-medium">Reject</label>
-              </div>
+              <Button
+                variant="default"
+                className="w-full justify-start bg-green-600 hover:bg-green-700 text-white"
+                onClick={() => {
+                  if (selectedCandidate?.id) {
+                    selectCandidateMutation.mutate({ id: selectedCandidate.id });
+                  }
+                }}
+                disabled={selectCandidateMutation.isPending}
+                data-testid="button-select-candidate"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                {selectCandidateMutation.isPending ? 'Selecting...' : 'Select Candidate'}
+              </Button>
               
-              <div>
-                <label className="block text-xs text-gray-600 mb-1">Detailed Final Verdict</label>
+              <div className="border-t border-gray-200 pt-3">
+                <label className="block text-xs text-gray-600 mb-1">Reject with reason:</label>
                 <Textarea
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder="Enter reason..."
+                  placeholder="Enter rejection reason..."
                   className="w-full h-16 text-xs border border-gray-300 rounded p-2 resize-none"
                 />
               </div>
               
               <div className="flex justify-end">
                 <Button 
-                  onClick={handleReject}
+                  onClick={() => {
+                    if (selectedCandidate?.id) {
+                      rejectCandidateMutation.mutate({ 
+                        id: selectedCandidate.id, 
+                        reason: rejectReason 
+                      });
+                    }
+                  }}
+                  disabled={rejectCandidateMutation.isPending}
                   className="bg-red-500 hover:bg-red-600 text-white px-4 py-1 text-sm rounded"
+                  data-testid="button-reject-popup"
                 >
-                  Submit
+                  {rejectCandidateMutation.isPending ? 'Rejecting...' : 'Reject'}
                 </Button>
               </div>
             </div>
