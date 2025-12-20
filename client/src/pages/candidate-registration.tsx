@@ -58,6 +58,8 @@ interface RegistrationStep6 {
   preferredLocation: string;
   startDate: string;
   instructions: string;
+  password: string;
+  confirmPassword: string;
 }
 
 const steps = [
@@ -152,8 +154,29 @@ export default function CandidateRegistration() {
   const onSubmit = async () => {
     setIsSubmitting(true);
     try {
-      // Save final step
       const formData = step6Form.getValues();
+      
+      // Validate passwords match
+      if (formData.password !== formData.confirmPassword) {
+        toast({
+          title: "Password Mismatch",
+          description: "Passwords do not match",
+          variant: "destructive"
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (formData.password.length < 6) {
+        toast({
+          title: "Weak Password",
+          description: "Password must be at least 6 characters",
+          variant: "destructive"
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       if (user?.data) {
         const candidateId = 'id' in user.data ? user.data.id : (user.data as any).candidateId;
         await saveMutation.mutateAsync({
@@ -490,6 +513,42 @@ export default function CandidateRegistration() {
           placeholder="Any additional instructions or preferences..."
           {...step6Form.register("instructions")}
         />
+      </div>
+
+      <div className="border-t pt-6 mt-6">
+        <h3 className="text-lg font-semibold mb-4">Create Your Password</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label>Password</Label>
+            <Input 
+              type="password" 
+              placeholder="Create a password (min 6 characters)"
+              {...step6Form.register("password", {
+                required: "Password is required",
+                minLength: {
+                  value: 6,
+                  message: "Password must be at least 6 characters"
+                }
+              })}
+            />
+            {step6Form.formState.errors.password && (
+              <p className="text-red-600 text-sm mt-1">{step6Form.formState.errors.password.message}</p>
+            )}
+          </div>
+          <div>
+            <Label>Confirm Password</Label>
+            <Input 
+              type="password" 
+              placeholder="Confirm your password"
+              {...step6Form.register("confirmPassword", {
+                required: "Please confirm your password"
+              })}
+            />
+            {step6Form.formState.errors.confirmPassword && (
+              <p className="text-red-600 text-sm mt-1">{step6Form.formState.errors.confirmPassword.message}</p>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -540,7 +540,7 @@ export default function CandidateLogin() {
                   <span className="text-gray-600 dark:text-gray-400">Don't have an account? </span>
                   <button
                     type="button"
-                    onClick={() => setIsLogin(false)}
+                    onClick={() => setLocation('/candidate-registration')}
                     className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 font-semibold inline-flex items-center gap-1 transition-colors"
                     data-testid="button-switch-to-register"
                   >

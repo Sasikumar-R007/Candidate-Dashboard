@@ -806,9 +806,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           updateData.location = data.currentLocation;
           updateData.websiteUrl = data.websiteUrl;
           break;
-        case 6: // Job Preferences
+        case 6: // Job Preferences & Password
           updateData.position = data.jobTitle;
           updateData.employmentType = data.employmentType;
+          
+          // Handle password creation on final step
+          if (isComplete && data.password) {
+            if (data.password !== data.confirmPassword) {
+              return res.status(400).json({ message: "Passwords do not match" });
+            }
+            
+            const saltRounds = 10;
+            const hashedPassword = await bcrypt.hash(data.password, saltRounds);
+            updateData.password = hashedPassword;
+            updateData.isVerified = true; // Mark as verified after registration
+          }
           break;
       }
 
