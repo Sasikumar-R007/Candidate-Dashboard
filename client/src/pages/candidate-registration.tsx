@@ -61,12 +61,12 @@ interface RegistrationData {
 }
 
 const steps = [
-  { number: 1, title: "Resume", description: "Upload Your Resume" },
-  { number: 2, title: "About You", description: "Personal Information" },
-  { number: 3, title: "Your Strength", description: "Career Details" },
-  { number: 4, title: "Your Journey", description: "Company Information" },
-  { number: 5, title: "Online Presence", description: "Social Profiles" },
-  { number: 6, title: "Job Preferences", description: "Job Preferences" },
+  { number: 1, title: "Resume", description: "Upload. Parse. Progress." },
+  { number: 2, title: "About You", description: "Let's Start with the basics - you just being you" },
+  { number: 3, title: "Your Strength", description: "Show off what makes you awesome at what you do" },
+  { number: 4, title: "Your Journey", description: "Tell us where you've been and what you learned so far" },
+  { number: 5, title: "Online Presence", description: "Link up your digital world with us - we'd love to explore!" },
+  { number: 6, title: "Job Preferences", description: "Define your goals, we'll help you reach them" },
 ];
 
 export default function CandidateRegistration() {
@@ -169,59 +169,50 @@ export default function CandidateRegistration() {
 
   // Sidebar Component
   const StepperSidebar = () => (
-    <div className="w-full h-screen bg-gradient-to-b from-blue-600 to-blue-700 text-white p-8 flex flex-col overflow-y-auto">
-      {/* Logo */}
-      <div className="mb-8 text-center flex-shrink-0">
-        <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center mx-auto mb-2">
-          <span className="text-blue-600 font-bold text-lg">S</span>
-        </div>
-        <p className="text-sm font-semibold">StaffOS</p>
-      </div>
+    <div className="w-full h-screen bg-gradient-to-b from-blue-500 to-blue-700 text-white p-6 flex flex-col overflow-y-auto relative">
+      {/* Vertical Progress Line */}
+      <div className="absolute left-8 top-0 bottom-0 w-1 bg-white/20 rounded-full" />
 
       {/* Steps */}
-      <div className="flex-1 space-y-5">
+      <div className="relative space-y-8 flex-1">
         {steps.map((step, index) => {
           const isCompleted = step.number < currentStep;
           const isActive = step.number === currentStep;
 
           return (
-            <div key={step.number} className="relative flex items-start gap-3">
-              {/* Connector line */}
-              {index < steps.length - 1 && (
-                <div
-                  className={`absolute left-6 top-12 w-0.5 h-10 transition-all ${
-                    isCompleted ? "bg-white" : "bg-blue-400"
-                  }`}
-                />
+            <div key={step.number} className="relative flex items-start gap-4 pl-6">
+              {/* Filled Progress Line Behind Circle */}
+              {isCompleted && (
+                <div className="absolute left-1 top-0 w-1 h-20 bg-white rounded-full" />
               )}
 
-              {/* Circle */}
+              {/* Circle with Icon */}
               <div
-                className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-semibold transition-all ${
+                className={`relative flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${
                   isCompleted
-                    ? "bg-white text-blue-600"
+                    ? "bg-white text-blue-600 shadow-lg"
                     : isActive
-                    ? "bg-white text-blue-600 ring-4 ring-blue-300"
-                    : "bg-blue-500 text-white"
+                    ? "bg-white text-blue-600 ring-4 ring-white/40 shadow-lg"
+                    : "bg-white/30 text-white border-2 border-white/50"
                 }`}
               >
                 {isCompleted ? (
-                  <Check className="w-6 h-6" />
+                  <Check className="w-5 h-5" />
+                ) : isActive ? (
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
                 ) : (
-                  <span>{step.number}</span>
+                  step.number
                 )}
               </div>
 
-              {/* Text */}
-              <div className="flex-1 min-w-0 mt-1">
-                <p
-                  className={`text-sm font-semibold ${
-                    isActive ? "text-white" : "text-blue-100"
-                  }`}
-                >
+              {/* Text Content */}
+              <div className="flex-1 min-w-0 pt-1">
+                <p className="text-base font-bold text-white leading-tight">
                   {step.title}
                 </p>
-                <p className="text-xs text-blue-200 mt-0.5">{step.description}</p>
+                <p className="text-sm text-white/80 mt-1 leading-snug">
+                  {step.description}
+                </p>
               </div>
             </div>
           );
