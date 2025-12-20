@@ -762,6 +762,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Candidate Registration Stepper Endpoint
+  app.post("/api/candidate/registration", async (req, res) => {
+    try {
+      const { candidateId, step, data, isComplete } = req.body;
+
+      if (!candidateId || !step || !data) {
+        return res.status(400).json({ message: "candidateId, step, and data are required" });
+      }
+
+      // Get existing candidate
+      const candidate = await storage.getCandidateByCandidateId(candidateId);
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+
+      // Map step data to candidate fields
+      const updateData: any = {};
+
+      switch (step) {
+        case 1: // Resume Upload
+          if (data.resume) {
+            updateData.resumeFile = data.resume.name || 'resume.pdf';
+          }
+          break;
+        case 2: // About You
+          updateData.fullName = `${data.firstName} ${data.lastName}`;
+          updateData.phone = data.mobileNumber;
+          break;
+        case 3: // Your Strength
+          updateData.skills = data.primarySkills;
+          updateData.education = data.collegeName;
+          updateData.pedigreeLevel = data.proficiencyLevel;
+          break;
+        case 4: // Your Journey
+          updateData.company = data.currentCompany;
+          updateData.currentRole = data.companyRole;
+          updateData.companyLevel = data.companyType;
+          break;
+        case 5: // Online Presence
+          updateData.linkedinUrl = data.linkedinUrl;
+          updateData.portfolioUrl = data.portfolioUrl;
+          updateData.location = data.currentLocation;
+          updateData.websiteUrl = data.websiteUrl;
+          break;
+        case 6: // Job Preferences
+          updateData.position = data.jobTitle;
+          updateData.employmentType = data.employmentType;
+          break;
+      }
+
+      // Update candidate
+      const updatedCandidate = await storage.updateCandidate(candidate.id, updateData);
+
+      res.json({
+        success: true,
+        message: `Step ${step} saved successfully`,
+        candidate: updatedCandidate,
+        isComplete: isComplete || false
+      });
+    } catch (error) {
+      console.error('Candidate registration error:', error);
+      res.status(500).json({ message: "Failed to save registration data" });
+    }
+  });
+
   // Logout endpoints
   app.post("/api/auth/candidate-logout", async (req, res) => {
     try {

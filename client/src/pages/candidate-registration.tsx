@@ -1,74 +1,144 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { useLocation } from "wouter";
-import { ChevronLeft, ChevronRight, Upload, Edit3, Check } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { ChevronLeft, ChevronRight, Upload, Check, FileText, User, Briefcase, Building2, Globe, Target } from "lucide-react";
+import { useAuth } from "@/contexts/auth-context";
 
-interface ResumeForm {
+interface RegistrationStep1 {
   resume?: File;
-  customJD?: string;
+  certificates?: File[];
 }
 
-interface AboutYouForm {
-  jobTitle: string;
-  jobNature: string;
-  salaryRange: string;
-  secondarySkill: string;
+interface RegistrationStep2 {
+  firstName: string;
+  lastName: string;
+  primaryEmail: string;
+  secondaryEmail: string;
+  mobileNumber: string;
+  alternativeMobileNumber: string;
+  dateOfBirth: string;
+  whatsappNumber: string;
+  currentStatus: string;
 }
 
-interface YourStrengthForm {
+interface RegistrationStep3 {
   jobType: string;
-  noticePeriod: string;
-  designation: string;
-  skillset: string;
+  universityName: string;
+  collegeName: string;
+  proficiencyLevel: string;
+  primarySkills: string;
+  secondarySkills: string;
 }
 
-interface YourJourneyForm {
-  primarySkill: string;
-  experience: string;
-  qualification: string;
-  alternativeSkill: string;
-}
-
-interface OnlinePresenceForm {
+interface RegistrationStep4 {
   currentCompany: string;
-  companyStatus: string;
-  previousRole: string;
-  expectedSalary: string;
+  companyRole: string;
+  companyType: string;
+  companyLevel: string;
+  productCategory: string;
+  productDomain: string;
 }
 
-interface JobPreferencesForm {
-  workedAt: string;
-  problemCategory: string;
-  currentLevel: string;
-  positionsOpen: string;
+interface RegistrationStep5 {
+  linkedinUrl: string;
+  portfolioUrl: string;
+  currentLocation: string;
+  websiteUrl: string;
+}
+
+interface RegistrationStep6 {
+  jobTitle: string;
+  employmentType: string;
+  preferredLocation: string;
+  startDate: string;
+  instructions: string;
 }
 
 const steps = [
-  { id: 1, title: "Resume", icon: Upload },
-  { id: 2, title: "About You", icon: Edit3 },
-  { id: 3, title: "Your Strength", icon: Check },
-  { id: 4, title: "Your Journey", icon: Check },
-  { id: 5, title: "Online presence", icon: Check },
-  { id: 6, title: "Job Preferences", icon: Check },
-  { id: 7, title: "Complete", icon: Check }
+  { id: 1, title: "Resume", icon: FileText, label: "Upload Resume" },
+  { id: 2, title: "About You", icon: User, label: "Personal Info" },
+  { id: 3, title: "Your Strength", icon: Briefcase, label: "Career Details" },
+  { id: 4, title: "Your Journey", icon: Building2, label: "Company History" },
+  { id: 5, title: "Online Presence", icon: Globe, label: "Social Links" },
+  { id: 6, title: "Job Preferences", icon: Target, label: "Job Preferences" },
 ];
 
 export default function CandidateRegistration() {
   const [currentStep, setCurrentStep] = useState(1);
   const [, setLocation] = useLocation();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const resumeForm = useForm<ResumeForm>();
-  const aboutYouForm = useForm<AboutYouForm>();
-  const strengthForm = useForm<YourStrengthForm>();
-  const journeyForm = useForm<YourJourneyForm>();
-  const presenceForm = useForm<OnlinePresenceForm>();
-  const preferencesForm = useForm<JobPreferencesForm>();
+  const step1Form = useForm<RegistrationStep1>();
+  const step2Form = useForm<RegistrationStep2>();
+  const step3Form = useForm<RegistrationStep3>();
+  const step4Form = useForm<RegistrationStep4>();
+  const step5Form = useForm<RegistrationStep5>();
+  const step6Form = useForm<RegistrationStep6>();
 
-  const onNextStep = () => {
+  const saveMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest('POST', '/api/candidate/registration', data);
+      return await res.json();
+    },
+    onSuccess: (response) => {
+      if (response.success) {
+        toast({
+          title: "Step Saved",
+          description: "Your information has been saved successfully.",
+        });
+      }
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to save information",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const onNextStep = async () => {
     if (currentStep < steps.length) {
+      // Save current step data
+      let formData = {};
+      switch (currentStep) {
+        case 1:
+          formData = step1Form.getValues();
+          break;
+        case 2:
+          formData = step2Form.getValues();
+          break;
+        case 3:
+          formData = step3Form.getValues();
+          break;
+        case 4:
+          formData = step4Form.getValues();
+          break;
+        case 5:
+          formData = step5Form.getValues();
+          break;
+        case 6:
+          formData = step6Form.getValues();
+          break;
+      }
+
+      if (user?.data) {
+        const candidateId = 'id' in user.data ? user.data.id : (user.data as any).candidateId;
+        saveMutation.mutate({
+          candidateId,
+          step: currentStep,
+          data: formData
+        });
+      }
+
       setCurrentStep(currentStep + 1);
     }
   };
@@ -79,403 +149,437 @@ export default function CandidateRegistration() {
     }
   };
 
-  const onSubmit = () => {
-    // Navigate to candidate dashboard after completion
-    setLocation('/candidate');
+  const onSubmit = async () => {
+    setIsSubmitting(true);
+    try {
+      // Save final step
+      const formData = step6Form.getValues();
+      if (user?.data) {
+        const candidateId = 'id' in user.data ? user.data.id : (user.data as any).candidateId;
+        await saveMutation.mutateAsync({
+          candidateId,
+          step: 6,
+          data: formData,
+          isComplete: true
+        });
+      }
+
+      toast({
+        title: "Registration Complete!",
+        description: "Your profile has been successfully created.",
+      });
+
+      setTimeout(() => {
+        setLocation('/candidate');
+      }, 500);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to complete registration",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const renderStepProgress = () => (
-    <div className="flex items-center justify-center mb-8">
-      <div className="flex items-center space-x-4">
-        {steps.map((step, index) => (
-          <div key={step.id} className="flex items-center">
-            <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
-              step.id <= currentStep 
-                ? 'bg-blue-600 border-blue-600 text-white' 
-                : step.id === currentStep + 1 
-                ? 'border-blue-300 text-blue-600' 
-                : 'border-gray-300 text-gray-400'
-            }`}>
-              {step.id <= currentStep ? (
-                <Check className="w-5 h-5" />
-              ) : (
-                <step.icon className="w-5 h-5" />
+  // Animated sidebar stepper
+  const renderAnimatedSidebar = () => (
+    <div className="w-full lg:w-64 bg-gradient-to-b from-blue-600 to-blue-700 text-white p-6 lg:p-8 rounded-r-2xl">
+      <h3 className="text-lg font-bold mb-6 text-center">Career Launchpad</h3>
+      <div className="space-y-6">
+        {steps.map((step, index) => {
+          const isCompleted = step.id < currentStep;
+          const isActive = step.id === currentStep;
+          const Icon = step.icon;
+
+          return (
+            <div key={step.id} className="relative">
+              <div className="flex items-start gap-4">
+                <div
+                  className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300 ${
+                    isCompleted
+                      ? 'bg-white text-blue-600 scale-105'
+                      : isActive
+                      ? 'bg-white text-blue-600 ring-4 ring-white/30 scale-110'
+                      : 'bg-blue-500/50 text-white'
+                  }`}
+                >
+                  {isCompleted ? <Check className="w-5 h-5" /> : step.id}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`font-semibold text-sm transition-all ${isActive ? 'text-white' : 'text-blue-100'}`}>
+                    {step.label}
+                  </p>
+                  <p className="text-xs text-blue-200 mt-1">{step.title}</p>
+
+                  {/* Fill animation */}
+                  {isCompleted && (
+                    <div className="mt-2 h-1 bg-white rounded-full animate-pulse" />
+                  )}
+                </div>
+              </div>
+
+              {/* Connector line */}
+              {index < steps.length - 1 && (
+                <div
+                  className={`absolute left-5 top-12 w-0.5 h-8 transition-all duration-500 ${
+                    isCompleted ? 'bg-white' : 'bg-blue-500/30'
+                  }`}
+                />
               )}
             </div>
-            {index < steps.length - 1 && (
-              <div className={`w-12 h-0.5 ${
-                step.id < currentStep ? 'bg-blue-600' : 'bg-gray-300'
-              }`} />
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
 
-  const renderStepTitles = () => (
-    <div className="flex justify-center mb-8">
-      <div className="flex space-x-8">
-        {steps.map((step) => (
-          <div
-            key={step.id}
-            className={`text-center ${
-              step.id === currentStep ? 'text-blue-600 font-semibold' : 'text-gray-500'
-            }`}
-          >
-            <div className="text-sm">{step.title}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-
-  const renderResumeStep = () => (
+  const renderStep1 = () => (
     <div className="space-y-6">
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-semibold mb-2">Upload. Parse. Progress.</h2>
-        <p className="text-gray-600">Finding the right job isn't easy — but we've built StaffOS.</p>
-        <p className="text-gray-600">Upload your resume and let StaffOS help you get noticed by the right employers, faster.</p>
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Upload Resume</h2>
+        <p className="text-gray-600">Upload your resume and certificates to get started</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* File Upload */}
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition">
           <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600 mb-2">Drag & Drop A file here or Click to Browse</p>
-          <p className="text-sm text-gray-500">Supported: PDF, Docx</p>
-          <p className="text-sm text-gray-500">Max File Size: 5MB</p>
+          <p className="text-gray-600 mb-2">Drag & Drop or Click to Browse</p>
+          <p className="text-sm text-gray-500 mb-4">PDF, DOC, DOCX (Max 5MB)</p>
           <input
             type="file"
-            accept=".pdf,.docx"
+            accept=".pdf,.doc,.docx"
             className="hidden"
-            {...resumeForm.register("resume")}
+            id="resume-input"
+            {...step1Form.register("resume")}
           />
+          <Button variant="outline" onClick={() => document.getElementById('resume-input')?.click()}>
+            Select Resume
+          </Button>
         </div>
 
-        {/* Custom JD */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-center">
-            <Edit3 className="w-6 h-6 text-gray-600 mr-2" />
-            <span className="text-gray-600">Copy & Paste Or Write Your Own JD</span>
-          </div>
-          <textarea
-            className="w-full h-32 border border-gray-300 rounded-lg p-4 resize-none"
-            placeholder="Write your job description here..."
-            {...resumeForm.register("customJD")}
+        <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition">
+          <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600 mb-2">Upload Certificates</p>
+          <p className="text-sm text-gray-500 mb-4">Images, PDF (Max 5MB each)</p>
+          <input
+            type="file"
+            accept=".pdf,.jpg,.png,.jpeg"
+            multiple
+            className="hidden"
+            id="cert-input"
+            {...step1Form.register("certificates")}
           />
+          <Button variant="outline" onClick={() => document.getElementById('cert-input')?.click()}>
+            Select Certificates
+          </Button>
         </div>
       </div>
     </div>
   );
 
-  const renderAboutYouStep = () => (
+  const renderStep2 = () => (
     <div className="space-y-6">
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-semibold mb-2">Show off what makes you awesome at what you do</h2>
+      <div>
+        <h2 className="text-2xl font-bold mb-2">About You</h2>
+        <p className="text-gray-600">Tell us about yourself</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="jobTitle" className="block text-sm font-medium mb-2">Job Title</Label>
-          <Input
-            id="jobTitle"
-            placeholder="First Name"
-            className="w-full"
-            {...aboutYouForm.register("jobTitle", { required: true })}
-          />
+          <Label>First Name</Label>
+          <Input placeholder="First Name" {...step2Form.register("firstName")} />
         </div>
         <div>
-          <Label htmlFor="jobNature" className="block text-sm font-medium mb-2">Job Nature</Label>
-          <Input
-            id="jobNature"
-            placeholder="Last Name"
-            className="w-full"
-            {...aboutYouForm.register("jobNature", { required: true })}
-          />
+          <Label>Last Name</Label>
+          <Input placeholder="Last Name" {...step2Form.register("lastName")} />
         </div>
         <div>
-          <Label htmlFor="salaryRange" className="block text-sm font-medium mb-2">Salary Range</Label>
-          <Input
-            id="salaryRange"
-            placeholder="Salary Range"
-            className="w-full"
-            {...aboutYouForm.register("salaryRange", { required: true })}
-          />
+          <Label>Primary Email</Label>
+          <Input type="email" placeholder="Primary Email" {...step2Form.register("primaryEmail")} />
         </div>
         <div>
-          <Label htmlFor="secondarySkill" className="block text-sm font-medium mb-2">Secondary Skill</Label>
-          <Input
-            id="secondarySkill"
-            placeholder="Secondary Skill"
-            className="w-full"
-            {...aboutYouForm.register("secondarySkill", { required: true })}
-          />
+          <Label>Secondary Email</Label>
+          <Input type="email" placeholder="Secondary Email" {...step2Form.register("secondaryEmail")} />
+        </div>
+        <div>
+          <Label>Mobile Number</Label>
+          <Input placeholder="Mobile Number" {...step2Form.register("mobileNumber")} />
+        </div>
+        <div>
+          <Label>Alternative Mobile Number</Label>
+          <Input placeholder="Alternative Mobile Number" {...step2Form.register("alternativeMobileNumber")} />
+        </div>
+        <div>
+          <Label>Date of Birth</Label>
+          <Input type="date" {...step2Form.register("dateOfBirth")} />
+        </div>
+        <div>
+          <Label>WhatsApp Number</Label>
+          <Input placeholder="WhatsApp Number" {...step2Form.register("whatsappNumber")} />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        <div>
-          <Label htmlFor="qualification" className="block text-sm font-medium mb-2">Qualification Type</Label>
-          <Input
-            id="qualification"
-            placeholder="Enter your qualification"
-            className="w-full"
-          />
-        </div>
-        <div>
-          <Label htmlFor="reason" className="block text-sm font-medium mb-2">Reason Of CV</Label>
-          <Input
-            id="reason"
-            placeholder="Why are you looking for a job change?"
-            className="w-full"
-          />
-        </div>
+      <div>
+        <Label>Current Status</Label>
+        <select className="w-full h-10 border border-gray-300 rounded-lg px-3" {...step2Form.register("currentStatus")}>
+          <option value="">Select Status</option>
+          <option value="employed">Currently Employed</option>
+          <option value="unemployed">Unemployed</option>
+          <option value="freelance">Freelancer</option>
+        </select>
       </div>
     </div>
   );
 
-  const renderYourStrengthStep = () => (
+  const renderStep3 = () => (
     <div className="space-y-6">
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-semibold mb-2">Show off what makes you awesome at what you do</h2>
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Your Strength</h2>
+        <p className="text-gray-600">Tell us about your career strengths</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="jobType" className="block text-sm font-medium mb-2">Job Type</Label>
-          <Input
-            id="jobType"
-            placeholder="Product Analyst"
-            className="w-full"
-            {...strengthForm.register("jobType", { required: true })}
-          />
-        </div>
-        <div>
-          <Label htmlFor="noticePeriod" className="block text-sm font-medium mb-2">Notice Period</Label>
-          <select
-            className="w-full h-11 border border-gray-300 rounded-lg px-3 bg-white"
-            {...strengthForm.register("noticePeriod", { required: true })}
-          >
-            <option value="">Select notice period</option>
-            <option value="immediate">Immediate</option>
-            <option value="15days">15 Days</option>
-            <option value="30days">30 Days</option>
-            <option value="60days">60 Days</option>
-            <option value="90days">90 Days</option>
+          <Label>Job Type</Label>
+          <select className="w-full h-10 border border-gray-300 rounded-lg px-3" {...step3Form.register("jobType")}>
+            <option value="">Select Job Type</option>
+            <option value="full-time">Full-time</option>
+            <option value="part-time">Part-time</option>
+            <option value="contract">Contract</option>
           </select>
         </div>
         <div>
-          <Label htmlFor="designation" className="block text-sm font-medium mb-2">Domain Group</Label>
-          <select
-            className="w-full h-11 border border-gray-300 rounded-lg px-3 bg-white"
-            {...strengthForm.register("designation", { required: true })}
-          >
-            <option value="">Select domain</option>
-            <option value="it">Information Technology</option>
-            <option value="finance">Finance</option>
-            <option value="marketing">Marketing</option>
-            <option value="hr">Human Resources</option>
-            <option value="sales">Sales</option>
-          </select>
+          <Label>University Name</Label>
+          <Input placeholder="University Name" {...step3Form.register("universityName")} />
         </div>
         <div>
-          <Label htmlFor="skillset" className="block text-sm font-medium mb-2">Primary Group</Label>
-          <select
-            className="w-full h-11 border border-gray-300 rounded-lg px-3 bg-white"
-            {...strengthForm.register("skillset", { required: true })}
-          >
-            <option value="">Select primary skill</option>
-            <option value="frontend">Frontend Development</option>
-            <option value="backend">Backend Development</option>
-            <option value="fullstack">Full Stack Development</option>
-            <option value="mobile">Mobile Development</option>
-            <option value="devops">DevOps</option>
+          <Label>College Name</Label>
+          <Input placeholder="College Name" {...step3Form.register("collegeName")} />
+        </div>
+        <div>
+          <Label>Proficiency Level</Label>
+          <select className="w-full h-10 border border-gray-300 rounded-lg px-3" {...step3Form.register("proficiencyLevel")}>
+            <option value="">Select Level</option>
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+            <option value="expert">Expert</option>
           </select>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        <div>
-          <Label htmlFor="experience" className="block text-sm font-medium mb-2">Experience Days</Label>
-          <Input
-            id="experience"
-            placeholder="Enter years of experience"
-            className="w-full"
-          />
-        </div>
-        <div>
-          <Label htmlFor="alternateskill" className="block text-sm font-medium mb-2">Alternate Skills</Label>
-          <Input
-            id="alternateskill"
-            placeholder="Additional skills you possess"
-            className="w-full"
-          />
-        </div>
+      <div>
+        <Label>Primary Skills</Label>
+        <Input placeholder="Comma separated skills" {...step3Form.register("primarySkills")} />
+      </div>
+      <div>
+        <Label>Secondary Skills</Label>
+        <Input placeholder="Comma separated skills" {...step3Form.register("secondarySkills")} />
       </div>
     </div>
   );
 
-  const renderYourJourneyStep = () => (
+  const renderStep4 = () => (
     <div className="space-y-6">
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-semibold mb-2">Tell us where you've been and what you have done so far</h2>
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Your Journey</h2>
+        <p className="text-gray-600">Tell us about your work history</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="currentCompany" className="block text-sm font-medium mb-2">Current Company</Label>
-          <Input
-            id="currentCompany"
-            placeholder="Company Name"
-            className="w-full"
-          />
+          <Label>Current Company</Label>
+          <Input placeholder="Company Name" {...step4Form.register("currentCompany")} />
         </div>
         <div>
-          <Label htmlFor="companyStatus" className="block text-sm font-medium mb-2">Company Status</Label>
-          <Input
-            id="companyStatus"
-            placeholder="Company Status"
-            className="w-full"
-          />
+          <Label>Company Role</Label>
+          <Input placeholder="Your Role" {...step4Form.register("companyRole")} />
         </div>
         <div>
-          <Label htmlFor="previousRole" className="block text-sm font-medium mb-2">Previous Role</Label>
-          <Input
-            id="previousRole"
-            placeholder="Previous Position"
-            className="w-full"
-          />
+          <Label>Company Type</Label>
+          <select className="w-full h-10 border border-gray-300 rounded-lg px-3" {...step4Form.register("companyType")}>
+            <option value="">Select Type</option>
+            <option value="startup">Startup</option>
+            <option value="mid-size">Mid-size</option>
+            <option value="enterprise">Enterprise</option>
+            <option value="mnc">MNC</option>
+          </select>
         </div>
         <div>
-          <Label htmlFor="currentLevel" className="block text-sm font-medium mb-2">Current Level</Label>
-          <Input
-            id="currentLevel"
-            placeholder="Position Category"
-            className="w-full"
-          />
+          <Label>Company Level</Label>
+          <Input placeholder="Level/Grade" {...step4Form.register("companyLevel")} />
         </div>
         <div>
-          <Label htmlFor="currentLevel" className="block text-sm font-medium mb-2">Problem Domain</Label>
-          <Input
-            id="problemDomain"
-            placeholder="Problem Domain"
-            className="w-full"
-          />
+          <Label>Product Category</Label>
+          <Input placeholder="Product Category" {...step4Form.register("productCategory")} />
         </div>
         <div>
-          <Label htmlFor="positionCategory" className="block text-sm font-medium mb-2">Position Category</Label>
-          <Input
-            id="positionCategory"
-            placeholder="Position Category"
-            className="w-full"
-          />
+          <Label>Product Domain</Label>
+          <Input placeholder="Domain" {...step4Form.register("productDomain")} />
         </div>
       </div>
     </div>
   );
 
-  const renderCurrentStep = () => {
+  const renderStep5 = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Online Presence</h2>
+        <p className="text-gray-600">Share your online profiles</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label>LinkedIn URL</Label>
+          <Input type="url" placeholder="https://linkedin.com/in/yourprofile" {...step5Form.register("linkedinUrl")} />
+        </div>
+        <div>
+          <Label>Portfolio URL</Label>
+          <Input type="url" placeholder="https://yourportfolio.com" {...step5Form.register("portfolioUrl")} />
+        </div>
+        <div>
+          <Label>Current Location</Label>
+          <Input placeholder="City, Country" {...step5Form.register("currentLocation")} />
+        </div>
+        <div>
+          <Label>Website URL</Label>
+          <Input type="url" placeholder="https://yourwebsite.com" {...step5Form.register("websiteUrl")} />
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep6 = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold mb-2">Job Preferences</h2>
+        <p className="text-gray-600">Tell us what you're looking for</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label>Job Title</Label>
+          <Input placeholder="Desired Job Title" {...step6Form.register("jobTitle")} />
+        </div>
+        <div>
+          <Label>Employment Type</Label>
+          <select className="w-full h-10 border border-gray-300 rounded-lg px-3" {...step6Form.register("employmentType")}>
+            <option value="">Select Type</option>
+            <option value="full-time">Full-time</option>
+            <option value="part-time">Part-time</option>
+            <option value="contract">Contract</option>
+            <option value="freelance">Freelance</option>
+          </select>
+        </div>
+        <div>
+          <Label>Preferred Location</Label>
+          <Input placeholder="City, Country" {...step6Form.register("preferredLocation")} />
+        </div>
+        <div>
+          <Label>Start Date</Label>
+          <Input type="date" {...step6Form.register("startDate")} />
+        </div>
+      </div>
+
+      <div>
+        <Label>Additional Instructions</Label>
+        <textarea
+          className="w-full h-24 border border-gray-300 rounded-lg px-3 py-2"
+          placeholder="Any additional instructions or preferences..."
+          {...step6Form.register("instructions")}
+        />
+      </div>
+    </div>
+  );
+
+  const renderContent = () => {
     switch (currentStep) {
       case 1:
-        return renderResumeStep();
+        return renderStep1();
       case 2:
-        return renderAboutYouStep();
+        return renderStep2();
       case 3:
-        return renderYourStrengthStep();
+        return renderStep3();
       case 4:
-        return renderYourJourneyStep();
+        return renderStep4();
       case 5:
+        return renderStep5();
       case 6:
-        return (
-          <div className="text-center py-12">
-            <h2 className="text-xl font-semibold mb-4">Coming Soon</h2>
-            <p className="text-gray-600">This step will be available soon.</p>
-          </div>
-        );
-      case 7:
-        return (
-          <div className="text-center py-12">
-            <Check className="w-16 h-16 text-green-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-semibold mb-4">Registration Complete!</h2>
-            <p className="text-gray-600 mb-6">Your profile has been successfully created.</p>
-            <Button
-              onClick={onSubmit}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3"
-            >
-              Go to Dashboard
-            </Button>
-          </div>
-        );
+        return renderStep6();
       default:
         return null;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 relative">
-      {/* Background Design Elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-blue-900 to-blue-700 clip-path-polygon"></div>
-        <div className="absolute bottom-0 left-0 opacity-20">
-          <svg width="400" height="400" viewBox="0 0 400 400" className="text-blue-600">
-            <circle cx="50" cy="50" r="20" fill="currentColor" opacity="0.3" />
-            <circle cx="150" cy="100" r="15" fill="currentColor" opacity="0.4" />
-            <circle cx="100" cy="200" r="25" fill="currentColor" opacity="0.2" />
-            <circle cx="250" cy="150" r="18" fill="currentColor" opacity="0.3" />
-            <circle cx="200" cy="300" r="22" fill="currentColor" opacity="0.2" />
-            <path d="M50,50 L150,100 L100,200 L250,150 L200,300" stroke="currentColor" strokeWidth="2" opacity="0.3" fill="none" />
-          </svg>
-        </div>
-      </div>
-
-      {/* Header */}
-      <div className="relative z-10 p-6">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold text-gray-900">Career Launchpad</h1>
-          </div>
-          <div className="absolute top-4 right-6">
-            <div className="text-blue-900 font-bold text-xl">StaffOS</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Progress Steps */}
-      <div className="relative z-10 max-w-4xl mx-auto px-6">
-        {renderStepProgress()}
-        {renderStepTitles()}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 flex">
+      {/* Left Sidebar - Animated Stepper */}
+      <div className="hidden lg:flex flex-col">
+        {renderAnimatedSidebar()}
       </div>
 
       {/* Main Content */}
-      <div className="relative z-10 max-w-4xl mx-auto px-6 pb-12">
-        <div className="bg-white rounded-lg shadow-sm p-8">
-          {renderCurrentStep()}
+      <div className="flex-1 flex flex-col">
+        {/* Mobile Sidebar */}
+        <div className="lg:hidden bg-gradient-to-b from-blue-600 to-blue-700 text-white p-4">
+          {renderAnimatedSidebar()}
+        </div>
 
-          {/* Navigation Buttons */}
-          {currentStep < 7 && (
-            <div className="flex justify-between items-center mt-8 pt-6 border-t">
-              <Button
-                variant="outline"
-                onClick={onPrevStep}
-                disabled={currentStep === 1}
-                className="flex items-center space-x-2"
-                data-testid="button-prev-step"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                <span>Previous</span>
-              </Button>
+        {/* Content Area */}
+        <div className="flex-1 p-6 lg:p-12 overflow-auto">
+          <div className="max-w-3xl mx-auto">
+            <div className="bg-white rounded-lg shadow-sm p-8">
+              {renderContent()}
 
-              <Button
-                onClick={onNextStep}
-                className="bg-slate-800 hover:bg-slate-700 text-white flex items-center space-x-2"
-                data-testid="button-next-step"
-              >
-                <span>Submit</span>
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+              {/* Navigation */}
+              <div className="flex justify-between items-center mt-12 pt-8 border-t">
+                <Button
+                  variant="outline"
+                  onClick={onPrevStep}
+                  disabled={currentStep === 1}
+                  className="flex items-center gap-2"
+                  data-testid="button-prev-step"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Previous
+                </Button>
+
+                {currentStep === steps.length ? (
+                  <Button
+                    onClick={onSubmit}
+                    disabled={isSubmitting}
+                    className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+                    data-testid="button-submit-registration"
+                  >
+                    <Check className="w-4 h-4" />
+                    {isSubmitting ? "Submitting..." : "Complete Registration"}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={onNextStep}
+                    className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                    data-testid="button-next-step"
+                  >
+                    Next
+                    <ChevronRight className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
             </div>
-          )}
+
+            {/* Progress Indicator */}
+            <div className="mt-6 text-center text-gray-600">
+              <p>Step {currentStep} of {steps.length}</p>
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${(currentStep / steps.length) * 100}%` }}
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
