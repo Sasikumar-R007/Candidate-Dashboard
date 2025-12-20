@@ -233,18 +233,18 @@ export default function CandidateRegistration() {
   // Step 1: Resume
   const Step1Content = () => (
     <div className="h-full flex flex-col">
-      <div className="flex-shrink-0 mb-4">
-        <h2 className="text-2xl font-bold text-gray-900">Career Launchpad</h2>
-        <p className="text-gray-600 text-sm">Upload Resume</p>
+      <div className="flex-shrink-0 mb-6">
+        <h2 className="text-2xl font-bold text-blue-600">Career Launchpad</h2>
+        <p className="text-gray-600 text-sm mt-1">Upload Resume</p>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-4 pr-4">
+      <div className="flex-1 overflow-y-auto space-y-6 pr-4">
         {/* Resume Upload */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
+          <label className="block text-sm font-medium text-blue-600 mb-3">
             Upload Resume
           </label>
-          <div className="border-2 border-dashed border-gray-300 rounded-sm p-6 text-center hover:border-blue-400 transition">
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition">
             <Upload className="w-10 h-10 text-gray-400 mx-auto mb-2" />
             <p className="text-gray-600 font-medium text-sm mb-1">
               Drag & Drop a file here or Click to Browse
@@ -268,7 +268,7 @@ export default function CandidateRegistration() {
                 variant="outline"
                 size="sm"
                 onClick={() => document.getElementById("resume-input")?.click()}
-                className="text-xs px-3 py-1 h-8"
+                className="text-xs px-4 h-9"
               >
                 Select Resume
               </Button>
@@ -282,32 +282,32 @@ export default function CandidateRegistration() {
               </button>
             </div>
             {resumeFileName && (
-              <p className="text-xs text-green-600 mt-2">✓ {resumeFileName}</p>
+              <p className="text-xs text-green-600 mt-3">✓ {resumeFileName}</p>
             )}
           </div>
         </div>
 
         {/* Certificates Upload */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
+          <label className="block text-sm font-medium text-blue-600 mb-3">
             Upload Certificates <span className="text-blue-600">+</span>
           </label>
-          <div className="border border-gray-200 rounded-sm p-4">
+          <div className="border border-gray-200 rounded-lg p-6">
             <Button
               variant="default"
-              className="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1 h-8 mb-2"
+              className="bg-blue-600 hover:bg-blue-700 text-xs px-4 h-9 mb-3"
               size="sm"
             >
               Upload Image
             </Button>
-            <p className="text-gray-600 text-xs">
+            <p className="text-gray-600 text-sm">
               or drop a file, paste image, use{" "}
               <span className="text-gray-500">url</span>
             </p>
             <button
               type="button"
               onClick={onSkip}
-              className="text-red-500 text-xs font-medium hover:text-red-700 transition mt-2 block"
+              className="text-red-500 text-sm font-medium hover:text-red-700 transition mt-3 block"
               data-testid="button-skip-certificates"
             >
               Skip now
@@ -344,96 +344,102 @@ export default function CandidateRegistration() {
   // Step 2: About You
   const Step2Content = () => (
     <div className="h-full flex flex-col">
-      <div className="flex-shrink-0 mb-4">
-        <h2 className="text-2xl font-bold text-gray-900">Career Launchpad</h2>
-        <p className="text-gray-600 text-sm">About You</p>
+      <div className="flex-shrink-0 mb-6">
+        <h2 className="text-2xl font-bold text-blue-600">Career Launchpad</h2>
+        <p className="text-gray-600 text-sm mt-1">About You</p>
       </div>
 
       <div className="flex-1 overflow-y-auto pr-4">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-6">
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">First Name</Label>
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+              First Name
+            </Label>
             <Input
               placeholder="First Name"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step2Form.register("firstName")}
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">Last Name</Label>
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+              Last Name
+            </Label>
             <Input
               placeholder="Last Name"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step2Form.register("lastName")}
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               Mobile Number
             </Label>
             <Input
               placeholder="Mobile Number"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step2Form.register("mobileNumber")}
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               Alternative Mobile Number
             </Label>
             <Input
               placeholder="Alternative Mobile Number"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step2Form.register("alternativeMobileNumber")}
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               Primary Email
             </Label>
             <Input
               type="email"
               placeholder="Primary Email"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step2Form.register("primaryEmail")}
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               Secondary Email
             </Label>
             <Input
               type="email"
               placeholder="Secondary Email"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step2Form.register("secondaryEmail")}
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               Date of Birth
             </Label>
             <Input
               type="date"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step2Form.register("dateOfBirth")}
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               WhatsApp Number
             </Label>
             <Input
               placeholder="WhatsApp Number"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step2Form.register("whatsappNumber")}
             />
           </div>
         </div>
 
-        <div className="mt-4">
-          <Label className="text-xs text-gray-700 mb-1 block">Current Status</Label>
-          <select className="w-full border border-gray-300 rounded-sm px-2 py-1 text-sm h-8">
+        <div className="mt-6">
+          <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            Current Status
+          </Label>
+          <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
             <option value="">Select Status</option>
             <option value="employed">Currently Employed</option>
             <option value="unemployed">Unemployed</option>
@@ -447,16 +453,18 @@ export default function CandidateRegistration() {
   // Step 3: Your Strength
   const Step3Content = () => (
     <div className="h-full flex flex-col">
-      <div className="flex-shrink-0 mb-4">
-        <h2 className="text-2xl font-bold text-gray-900">Career Launchpad</h2>
-        <p className="text-gray-600 text-sm">Your Strength</p>
+      <div className="flex-shrink-0 mb-6">
+        <h2 className="text-2xl font-bold text-blue-600">Career Launchpad</h2>
+        <p className="text-gray-600 text-sm mt-1">Your Strength</p>
       </div>
 
       <div className="flex-1 overflow-y-auto pr-4">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-6">
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">Job Type</Label>
-            <select className="w-full border border-gray-300 rounded-sm px-2 py-1 text-sm h-8">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+              Job Type
+            </Label>
+            <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
               <option value="">Select Job Type</option>
               <option value="full-time">Full-time</option>
               <option value="part-time">Part-time</option>
@@ -464,65 +472,65 @@ export default function CandidateRegistration() {
             </select>
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               Primary Skill
             </Label>
             <Input
               placeholder="Marketing Analytics"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step3Form.register("primarySkill")}
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               University Name
             </Label>
             <Input
               placeholder="University Name"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step3Form.register("universityName")}
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               Secondary Skill
             </Label>
             <div className="flex gap-2">
               <Input
                 placeholder="SEO"
-                className="border border-gray-300 rounded-sm text-sm h-8"
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm"
                 {...step3Form.register("secondarySkill")}
               />
-              <Button variant="outline" className="px-2 h-8">
+              <Button variant="outline" className="px-3 h-10">
                 +
               </Button>
             </div>
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               College Name
             </Label>
             <Input
               placeholder="College Name"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step3Form.register("collegeName")}
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               Resource Management
             </Label>
             <Input
               placeholder="Resource Management"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               readOnly
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               Proficiency Level
             </Label>
-            <select className="w-full border border-gray-300 rounded-sm px-2 py-1 text-sm h-8">
+            <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
               <option value="">Select Level</option>
               <option value="beginner">Beginner</option>
               <option value="intermediate">Intermediate</option>
@@ -531,12 +539,12 @@ export default function CandidateRegistration() {
             </select>
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               Business Strategy
             </Label>
             <Input
               placeholder="Business Strategy"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               readOnly
             />
           </div>
@@ -548,47 +556,47 @@ export default function CandidateRegistration() {
   // Step 4: Your Journey
   const Step4Content = () => (
     <div className="h-full flex flex-col">
-      <div className="flex-shrink-0 mb-4">
-        <h2 className="text-2xl font-bold text-gray-900">Career Launchpad</h2>
-        <p className="text-gray-600 text-sm">Your Journey</p>
+      <div className="flex-shrink-0 mb-6">
+        <h2 className="text-2xl font-bold text-blue-600">Career Launchpad</h2>
+        <p className="text-gray-600 text-sm mt-1">Your Journey</p>
       </div>
 
       <div className="flex-1 overflow-y-auto pr-4">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-6">
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               Current Company
             </Label>
             <Input
               placeholder="Company Name"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step4Form.register("currentCompany")}
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               Company Sector
             </Label>
             <Input
               placeholder="Company Sector"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               Current Role
             </Label>
             <Input
               placeholder="Your Role"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step4Form.register("currentRole")}
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               Company Type
             </Label>
-            <select className="w-full border border-gray-300 rounded-sm px-2 py-1 text-sm h-8">
+            <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
               <option value="">Select Type</option>
               <option value="startup">Startup</option>
               <option value="mid-size">Mid-size</option>
@@ -597,32 +605,32 @@ export default function CandidateRegistration() {
             </select>
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               Company Level
             </Label>
             <Input
               placeholder="Level/Grade"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step4Form.register("companyLevel")}
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               Product Category
             </Label>
             <Input
               placeholder="Product Category"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step4Form.register("productCategory")}
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               Product Domain
             </Label>
             <Input
               placeholder="Domain"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step4Form.register("productDomain")}
             />
           </div>
@@ -634,45 +642,53 @@ export default function CandidateRegistration() {
   // Step 5: Online Presence
   const Step5Content = () => (
     <div className="h-full flex flex-col">
-      <div className="flex-shrink-0 mb-4">
-        <h2 className="text-2xl font-bold text-gray-900">Career Launchpad</h2>
-        <p className="text-gray-600 text-sm">Online Presence</p>
+      <div className="flex-shrink-0 mb-6">
+        <h2 className="text-2xl font-bold text-blue-600">Career Launchpad</h2>
+        <p className="text-gray-600 text-sm mt-1">Online Presence</p>
       </div>
 
       <div className="flex-1 overflow-y-auto pr-4">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-6">
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">LinkedIn</Label>
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+              LinkedIn
+            </Label>
             <Input
               type="url"
               placeholder="LinkedIn URL"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step5Form.register("linkedinUrl")}
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">Portfolio</Label>
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+              Portfolio
+            </Label>
             <Input
               type="url"
               placeholder="Portfolio URL"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step5Form.register("portfolioUrl")}
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">Location</Label>
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+              Location
+            </Label>
             <Input
               placeholder="City, Country"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step5Form.register("currentLocation")}
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">Website</Label>
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+              Website
+            </Label>
             <Input
               type="url"
               placeholder="Website URL"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step5Form.register("websiteUrl")}
             />
           </div>
@@ -684,76 +700,80 @@ export default function CandidateRegistration() {
   // Step 6: Job Preferences
   const Step6Content = () => (
     <div className="h-full flex flex-col">
-      <div className="flex-shrink-0 mb-4">
-        <h2 className="text-2xl font-bold text-gray-900">Career Launchpad</h2>
-        <p className="text-gray-600 text-sm">Job Preferences</p>
+      <div className="flex-shrink-0 mb-6">
+        <h2 className="text-2xl font-bold text-blue-600">Career Launchpad</h2>
+        <p className="text-gray-600 text-sm mt-1">Job Preferences</p>
       </div>
 
       <div className="flex-1 overflow-y-auto pr-4">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-6">
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">Job Title</Label>
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+              Job Title
+            </Label>
             <Input
               placeholder="Desired Job Title"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step6Form.register("jobTitle")}
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               Employment type
             </Label>
             <Input
               placeholder="Full Time"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step6Form.register("employmentType")}
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               Preferred Location
             </Label>
             <Input
               placeholder="City, Country"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step6Form.register("preferredLocation")}
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700 mb-1 block">
+            <Label className="text-sm font-medium text-blue-600 mb-2 block">
               Starting date
             </Label>
             <Input
               type="date"
-              className="border border-gray-300 rounded-sm text-sm h-8"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
               {...step6Form.register("startingDate")}
             />
           </div>
         </div>
 
-        <div className="mt-3">
-          <Label className="text-xs text-gray-700 mb-1 block">
+        <div className="mt-6">
+          <Label className="text-sm font-medium text-blue-600 mb-2 block">
             Instructions to Recruiter
           </Label>
           <Textarea
             placeholder="Any additional instructions or preferences..."
-            className="border border-gray-300 rounded-sm text-sm min-h-16"
+            className="border border-gray-300 rounded-md px-3 py-2 text-sm min-h-20"
             {...step6Form.register("instructions")}
           />
         </div>
 
         {/* Password Section */}
-        <div className="mt-4 pt-4 border-t">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">
+        <div className="mt-6 pt-6 border-t">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">
             Create Your Password
           </h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-6">
             <div>
-              <Label className="text-xs text-gray-700 mb-1 block">Password</Label>
+              <Label className="text-sm font-medium text-blue-600 mb-2 block">
+                Password
+              </Label>
               <Input
                 type="password"
                 placeholder="Create a password (min 6 characters)"
-                className="border border-gray-300 rounded-sm text-sm h-8"
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm"
                 {...step6Form.register("password", {
                   required: "Password is required",
                   minLength: {
@@ -769,13 +789,13 @@ export default function CandidateRegistration() {
               )}
             </div>
             <div>
-              <Label className="text-xs text-gray-700 mb-1 block">
+              <Label className="text-sm font-medium text-blue-600 mb-2 block">
                 Confirm Password
               </Label>
               <Input
                 type="password"
                 placeholder="Confirm your password"
-                className="border border-gray-300 rounded-sm text-sm h-8"
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm"
                 {...step6Form.register("confirmPassword", {
                   required: "Please confirm your password",
                 })}
@@ -813,7 +833,7 @@ export default function CandidateRegistration() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar - Increased width to w-80 */}
+      {/* Sidebar */}
       <div className="hidden lg:block w-80 flex-shrink-0">
         <StepperSidebar />
       </div>
@@ -821,26 +841,26 @@ export default function CandidateRegistration() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile Header */}
-        <div className="lg:hidden bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 flex-shrink-0">
-          <h3 className="text-sm font-semibold">
+        <div className="lg:hidden bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex-shrink-0">
+          <h3 className="text-lg font-semibold">
             {steps[currentStep - 1]?.title}
           </h3>
         </div>
 
-        {/* Content Area - Fixed height with overflow */}
-        <div className="flex-1 flex flex-col overflow-hidden p-6 lg:p-8">
+        {/* Content Area */}
+        <div className="flex-1 flex flex-col overflow-hidden p-8">
           <div className="max-w-4xl mx-auto w-full h-full flex flex-col">
-            <div className="bg-white rounded-sm flex-1 flex flex-col overflow-hidden p-6">
+            <div className="bg-white rounded-lg flex-1 flex flex-col overflow-hidden p-8">
               {renderContent()}
             </div>
 
-            {/* Navigation - Fixed at bottom, not scrollable */}
-            <div className="flex justify-between items-center mt-4 pt-4 border-t flex-shrink-0">
+            {/* Navigation - Fixed at bottom */}
+            <div className="flex justify-between items-center mt-6 pt-6 border-t flex-shrink-0">
               <Button
                 variant="ghost"
                 onClick={onPrevStep}
                 disabled={currentStep === 1}
-                className="text-gray-600 text-xs px-3 h-8"
+                className="text-gray-600 text-sm px-4 h-10"
                 data-testid="button-prev-step"
               >
                 ← Previous Step
@@ -850,7 +870,7 @@ export default function CandidateRegistration() {
                 <Button
                   onClick={onSubmit}
                   disabled={isSubmitting}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-6 h-8"
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-8 h-10 rounded-md"
                   data-testid="button-submit-registration"
                 >
                   {isSubmitting ? "Submitting..." : "Submit"}
@@ -858,7 +878,7 @@ export default function CandidateRegistration() {
               ) : (
                 <Button
                   onClick={onNextStep}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-6 h-8"
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-8 h-10 rounded-md"
                   data-testid="button-next-step"
                 >
                   Next
