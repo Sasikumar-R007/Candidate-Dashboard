@@ -328,6 +328,15 @@ export const candidates = pgTable("candidates", {
   employmentType: text("employment_type"), // Full-time, Part-time, Contract, etc.
   isActive: boolean("is_active").default(true),
   isVerified: boolean("is_verified").default(false),
+  phoneVerified: boolean("phone_verified").default(false),
+  createdAt: text("created_at").notNull(),
+});
+
+export const otps = pgTable("otps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull(),
+  otp: text("otp").notNull(),
+  expiresAt: text("expires_at").notNull(),
   createdAt: text("created_at").notNull(),
 });
 
@@ -573,6 +582,10 @@ export const insertCandidateSchema = createInsertSchema(candidates).omit({
 });
 
 export const insertCandidateLoginAttemptsSchema = createInsertSchema(candidateLoginAttempts).omit({
+  id: true,
+});
+
+export const insertOtpSchema = createInsertSchema(otps).omit({
   id: true,
 });
 
@@ -873,6 +886,8 @@ export type InsertCandidate = z.infer<typeof insertCandidateSchema>;
 export type Candidate = typeof candidates.$inferSelect;
 export type InsertCandidateLoginAttempts = z.infer<typeof insertCandidateLoginAttemptsSchema>;
 export type CandidateLoginAttempts = typeof candidateLoginAttempts.$inferSelect;
+export type InsertOtp = z.infer<typeof insertOtpSchema>;
+export type Otp = typeof otps.$inferSelect;
 export type InsertInterviewTracker = z.infer<typeof insertInterviewTrackerSchema>;
 export type InterviewTracker = typeof interviewTracker.$inferSelect;
 export type InsertInterviewTrackerCounts = z.infer<typeof insertInterviewTrackerCountsSchema>;
