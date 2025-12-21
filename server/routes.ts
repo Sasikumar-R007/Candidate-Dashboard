@@ -4017,10 +4017,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create client record (without password)
       const { password, ...clientDataWithoutPassword } = validatedData;
-      // Ensure clientCode is included in the data
+      // Ensure clientCode is included in the data and explicitly set isLoginOnly to false for Master Database
       const clientDataToInsert = {
         ...clientDataWithoutPassword,
-        clientCode
+        clientCode,
+        isLoginOnly: false  // This is a Master Database client, not a User Management login-only client
       };
       const client = await storage.createClient(clientDataToInsert);
       
@@ -5440,8 +5441,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       
-      // Delete the candidate using the Drizzle query
-      const result = await db.delete(candidates).where(eq(candidates.id, id));
+      // Verify candidate exists before deletion
+      const candidateToDelete = await storage.getCandidateById(id);
+      if (!candidateToDelete) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+      
+      // Delete the candidate using storage layer (ensures database persistence)
+      const deleted = await storage.deleteCandidate(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Failed to delete candidate" });
+      }
       
       res.json({ message: "Candidate deleted successfully" });
     } catch (error) {
