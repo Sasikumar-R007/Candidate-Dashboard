@@ -406,9 +406,12 @@ export default function MasterDatabase() {
     try {
       const response = await apiRequest('POST', '/api/admin/verify-password', {
         password: passwordInput
-      }) as any;
+      });
+      
+      // Parse the response JSON
+      const responseData = await response.json() as any;
 
-      if (response && response.success) {
+      if (responseData && responseData.success) {
         // Password verified - proceed with actual deletion from database
         if (itemToDelete) {
           // Determine the correct API endpoint based on profile type
@@ -422,28 +425,40 @@ export default function MasterDatabase() {
           }
 
           if (deleteEndpoint) {
-            // Call the actual delete API endpoint
-            await apiRequest('DELETE', deleteEndpoint, {});
+            try {
+              // Call the actual delete API endpoint
+              const deleteResponse = await apiRequest('DELETE', deleteEndpoint, {});
+              
+              // Parse the response
+              const deleteResult = await deleteResponse.json();
+              
+              if (!deleteResponse.ok) {
+                throw new Error(deleteResult.message || 'Failed to delete item');
+              }
 
-            // Invalidate the query cache to refetch data
-            if (itemToDelete.profileType === 'resume') {
-              await queryClient.invalidateQueries({ queryKey: ['/api/admin/candidates'] });
-            } else if (itemToDelete.profileType === 'employee') {
-              await queryClient.invalidateQueries({ queryKey: ['/api/admin/employees'] });
-            } else if (itemToDelete.profileType === 'client') {
-              await queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
+              // Invalidate the query cache to refetch data
+              if (itemToDelete.profileType === 'resume') {
+                await queryClient.invalidateQueries({ queryKey: ['/api/admin/candidates'] });
+              } else if (itemToDelete.profileType === 'employee') {
+                await queryClient.invalidateQueries({ queryKey: ['/api/admin/employees'] });
+              } else if (itemToDelete.profileType === 'client') {
+                await queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
+              }
+
+              // Close drawer if the deleted item is currently displayed
+              if (selectedResume && selectedResume.id === itemToDelete.id && profileType === itemToDelete.profileType) {
+                setIsResumeDrawerOpen(false);
+                setSelectedResume(null);
+              }
+
+              toast({
+                title: "Success",
+                description: `${itemToDelete.name} has been permanently deleted from the database`
+              });
+            } catch (deleteError) {
+              console.error('Deletion failed:', deleteError);
+              throw deleteError;
             }
-
-            // Close drawer if the deleted item is currently displayed
-            if (selectedResume && selectedResume.id === itemToDelete.id && profileType === itemToDelete.profileType) {
-              setIsResumeDrawerOpen(false);
-              setSelectedResume(null);
-            }
-
-            toast({
-              title: "Success",
-              description: `${itemToDelete.name} has been permanently deleted from the database`
-            });
           }
         }
         setIsPasswordDialogOpen(false);
