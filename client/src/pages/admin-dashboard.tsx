@@ -3249,7 +3249,13 @@ export default function AdminDashboard() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Employees Master</CardTitle>
-                <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white">+ Add Employee</Button>
+                <Button 
+                  className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={() => setIsEmployeeModalOpen(true)}
+                  data-testid="button-add-employee-master"
+                >
+                  + Add Employee
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto admin-scrollbar">
@@ -3328,6 +3334,13 @@ export default function AdminDashboard() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Client Master</CardTitle>
+                <Button 
+                  className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={() => setIsClientModalOpen(true)}
+                  data-testid="button-add-client-master"
+                >
+                  + Add New Client
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto admin-scrollbar">
