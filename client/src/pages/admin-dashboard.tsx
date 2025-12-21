@@ -7415,13 +7415,16 @@ export default function AdminDashboard() {
               <div className="flex flex-col w-full">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Input 
-                      placeholder="Date of Joining"
-                      className="input-styled rounded w-full cursor-pointer"
-                      value={employeeForm.joiningDate ? format(new Date(employeeForm.joiningDate), 'MMM dd, yyyy') : ''}
-                      readOnly
-                      data-testid="input-joining-date"
-                    />
+                    <div className="relative">
+                      <Input 
+                        placeholder="DD-MM-YYYY"
+                        className="input-styled rounded w-full cursor-pointer pr-10"
+                        value={employeeForm.joiningDate ? format(new Date(employeeForm.joiningDate), 'dd-MM-yyyy') : ''}
+                        readOnly
+                        data-testid="input-joining-date"
+                      />
+                      <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    </div>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
@@ -7511,13 +7514,16 @@ export default function AdminDashboard() {
               <div className="flex flex-col w-full">
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Input 
-                      placeholder="Date of Birth"
-                      className="input-styled rounded w-full cursor-pointer"
-                      value={employeeForm.fatherName ? format(new Date(employeeForm.fatherName), 'MMM dd, yyyy') : ''}
-                      readOnly
-                      data-testid="input-father-name"
-                    />
+                    <div className="relative">
+                      <Input 
+                        placeholder="DD-MM-YYYY"
+                        className="input-styled rounded w-full cursor-pointer pr-10"
+                        value={employeeForm.fatherName ? format(new Date(employeeForm.fatherName), 'dd-MM-yyyy') : ''}
+                        readOnly
+                        data-testid="input-father-name"
+                      />
+                      <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    </div>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
                     <Calendar
