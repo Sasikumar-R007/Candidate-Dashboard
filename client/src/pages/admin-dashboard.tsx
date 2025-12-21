@@ -1243,6 +1243,11 @@ export default function AdminDashboard() {
     );
   }, [employees]);
 
+  // Fetch candidates from database
+  const { data: candidates = [], isLoading: isLoadingCandidates } = useQuery({
+    queryKey: ['/api/admin/candidates']
+  });
+
   // Fetch clients from database
   const { data: clients = [], isLoading: isLoadingClients } = useQuery({
     queryKey: ['/api/admin/clients']
