@@ -2095,6 +2095,7 @@ export default function AdminDashboard() {
   };
 
   const handleArchivesClick = () => {
+    sessionStorage.setItem('adminDashboardActiveTab', activeTab);
     navigate('/archives');
   };
 

@@ -1,0 +1,48 @@
+How to Implement This Pattern for Other Dashboards:
+Use this exact prompt/template for Client Dashboard, Recruiter Dashboard, Team Leader Dashboard, and Candidate Dashboard:
+
+Template for Other Dashboards:
+For [Dashboard Name] (Client/Recruiter/TL/Candidate):
+1. *Find the main state variable* that tracks which page/tab is currently active in [Dashboard Name], similar to how admin-dashboard.tsx has:
+   typescript
+   const [activeTab, setActiveTab] = useState('team');
+Replace it with sessionStorage restoration:
+
+const initial[DashboardName]Tab = () => {
+  const saved = sessionStorage.getItem('[dashboard-name]ActiveTab');
+  sessionStorage.removeItem('[dashboard-name]ActiveTab');
+  return saved ? saved : '[default-tab]';
+};
+const [activeTab, setActiveTab] = useState(initial[DashboardName]Tab());
+Find ALL navigate calls that go to sub-pages (like /master-database, /archives, etc.)
+
+Before EVERY navigate call, add these two lines:
+
+sessionStorage.setItem('[dashboard-name]ActiveTab', activeTab);
+navigate('/path-to-subpage');
+Restart the workflow to test
+
+### **Mapping for Each Dashboard:**
+| Dashboard | State Variable | SessionStorage Key | Default Tab | Sub-page Routes |
+|-----------|---|---|---|---|
+| **Admin** | `activeTab` | `adminDashboardActiveTab` | `'team'` | `/master-database`, `/archives`, `/meetings`, `/metrics`, etc. |
+| **Client** | `activeTab` (or similar) | `clientDashboardActiveTab` | `'overview'` (or first tab) | Check client-dashboard.tsx |
+| **Recruiter** | `activeTab` (or similar) | `recruiterDashboardActiveTab` | `'dashboard'` (or first tab) | Check recruiter-dashboard-2.tsx |
+| **TL** | `activeTab` (or similar) | `tlDashboardActiveTab` | `'overview'` (or first tab) | Check team-leader-dashboard.tsx |
+| **Candidate** | `activeTab` (or similar) | `candidateDashboardActiveTab` | `'home'` (or first tab) | Check dashboard.tsx |
+---
+## **Quick Reference Code Snippets:**
+**Step 1 - Restore from sessionStorage (add near useState declarations):**
+typescript
+const initialActiveTab = () => {
+  const saved = sessionStorage.getItem('[dashboard-name]ActiveTab');
+  sessionStorage.removeItem('[dashboard-name]ActiveTab');
+  return saved ? saved : '[default-tab]';
+};
+const [activeTab, setActiveTab] = useState(initialActiveTab());
+Step 2 - Save before navigating (wrap ALL navigate calls):
+
+onClick={() => {
+  sessionStorage.setItem('[dashboard-name]ActiveTab', activeTab);
+  navigate('/sub-page-route');
+}}
