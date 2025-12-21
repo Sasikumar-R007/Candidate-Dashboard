@@ -409,20 +409,42 @@ export default function MasterDatabase() {
       }) as any;
 
       if (response && response.success) {
-        // Password verified - proceed with deletion
+        // Password verified - proceed with actual deletion from database
         if (itemToDelete) {
-          setDeletedIds(prev => ({
-            ...prev,
-            [itemToDelete.profileType]: [...prev[itemToDelete.profileType], itemToDelete.id]
-          }));
-          if (selectedResume && selectedResume.id === itemToDelete.id && profileType === itemToDelete.profileType) {
-            setIsResumeDrawerOpen(false);
-            setSelectedResume(null);
+          // Determine the correct API endpoint based on profile type
+          let deleteEndpoint = '';
+          if (itemToDelete.profileType === 'resume') {
+            deleteEndpoint = `/api/admin/candidates/${itemToDelete.id}`;
+          } else if (itemToDelete.profileType === 'employee') {
+            deleteEndpoint = `/api/admin/employees/${itemToDelete.id}`;
+          } else if (itemToDelete.profileType === 'client') {
+            deleteEndpoint = `/api/admin/clients/${itemToDelete.id}`;
           }
-          toast({
-            title: "Success",
-            description: `${itemToDelete.name} has been deleted successfully`
-          });
+
+          if (deleteEndpoint) {
+            // Call the actual delete API endpoint
+            await apiRequest('DELETE', deleteEndpoint, {});
+
+            // Invalidate the query cache to refetch data
+            if (itemToDelete.profileType === 'resume') {
+              await queryClient.invalidateQueries({ queryKey: ['/api/admin/candidates'] });
+            } else if (itemToDelete.profileType === 'employee') {
+              await queryClient.invalidateQueries({ queryKey: ['/api/admin/employees'] });
+            } else if (itemToDelete.profileType === 'client') {
+              await queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
+            }
+
+            // Close drawer if the deleted item is currently displayed
+            if (selectedResume && selectedResume.id === itemToDelete.id && profileType === itemToDelete.profileType) {
+              setIsResumeDrawerOpen(false);
+              setSelectedResume(null);
+            }
+
+            toast({
+              title: "Success",
+              description: `${itemToDelete.name} has been permanently deleted from the database`
+            });
+          }
         }
         setIsPasswordDialogOpen(false);
         setPasswordInput("");
@@ -454,9 +476,10 @@ export default function MasterDatabase() {
         }
       }
     } catch (error) {
+      console.error('Delete error:', error);
       toast({
         title: "Error",
-        description: "Failed to verify password",
+        description: "Failed to delete the item. Please try again.",
         variant: "destructive"
       });
     } finally {

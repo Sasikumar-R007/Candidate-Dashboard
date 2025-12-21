@@ -5435,6 +5435,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete candidate by ID
+  app.delete("/api/admin/candidates/:id", requireAdminAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Delete the candidate using the Drizzle query
+      const result = await db.delete(candidates).where(eq(candidates.id, id));
+      
+      res.json({ message: "Candidate deleted successfully" });
+    } catch (error) {
+      console.error('Delete candidate error:', error);
+      res.status(500).json({ message: "Failed to delete candidate" });
+    }
+  });
+
   // Parse single resume and extract info
   app.post("/api/admin/parse-resume", requireAdminAuth, resumeUpload.single('resume'), async (req, res) => {
     try {
