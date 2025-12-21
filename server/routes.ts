@@ -3991,7 +3991,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         location: z.string().optional(),
         spoc: z.string().optional(),
         email: z.string().email(),
-        password: z.string().min(6),
+        password: z.string().optional(),
         website: z.string().optional(),
         linkedin: z.string().optional(),
         agreement: z.string().optional(),
@@ -4025,14 +4025,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       const client = await storage.createClient(clientDataToInsert);
       
-      // Create employee profile for client login
+      // Create employee profile for client login with auto-generated password if not provided
       // Note: storage.createEmployee will hash the password, so pass raw password
-      const rawPassword = validatedData.password;
+      const rawPassword = validatedData.password || require('crypto').randomBytes(12).toString('hex');
       const employeeData = {
         employeeId: clientCode,
         name: validatedData.brandName,
         email: validatedData.email,
-        password: validatedData.password,
+        password: rawPassword,
         role: "client",
         phone: validatedData.spoc || "",
         department: "Client",
