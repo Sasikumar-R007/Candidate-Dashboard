@@ -65,7 +65,9 @@ interface ClientData {
 
 export default function MasterDatabase() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [profileType, setProfileType] = useState<ProfileType>('resume');
+  const initialTab = (sessionStorage.getItem('masterDatabaseTab') as ProfileType) || 'resume';
+  sessionStorage.removeItem('masterDatabaseTab');
+  const [profileType, setProfileType] = useState<ProfileType>(initialTab);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
   const [isResumeDrawerOpen, setIsResumeDrawerOpen] = useState(false);

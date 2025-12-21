@@ -3123,7 +3123,10 @@ export default function AdminDashboard() {
                 <CardTitle>Resume Database</CardTitle>
                 <Button 
                   className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white"
-                  onClick={() => navigate('/master-database')}
+                  onClick={() => {
+                    sessionStorage.setItem('masterDatabaseTab', 'resume');
+                    navigate('/master-database');
+                  }}
                 >
                   View Full Database
                 </Button>
@@ -3284,7 +3287,15 @@ export default function AdminDashboard() {
                 </div>
                 
                 <div className="flex justify-end mt-4">
-                  <Button className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm">View More</Button>
+                  <Button 
+                    className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
+                    onClick={() => {
+                      sessionStorage.setItem('masterDatabaseTab', 'employee');
+                      navigate('/master-database');
+                    }}
+                  >
+                    View More
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -3363,7 +3374,15 @@ export default function AdminDashboard() {
                 </div>
                 
                 <div className="flex justify-end mt-4">
-                  <Button className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm">View More</Button>
+                  <Button 
+                    className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
+                    onClick={() => {
+                      sessionStorage.setItem('masterDatabaseTab', 'client');
+                      navigate('/master-database');
+                    }}
+                  >
+                    View More
+                  </Button>
                 </div>
               </CardContent>
             </Card>
