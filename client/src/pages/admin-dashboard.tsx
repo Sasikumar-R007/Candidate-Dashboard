@@ -23,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -7413,30 +7414,12 @@ export default function AdminDashboard() {
             {/* Row 4 - Date of Joining and Employment Status */}
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col w-full">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <div className="relative">
-                      <Input 
-                        placeholder="DD-MM-YYYY"
-                        className="input-styled rounded w-full cursor-pointer pr-10"
-                        value={employeeForm.joiningDate ? format(new Date(employeeForm.joiningDate), 'dd-MM-yyyy') : ''}
-                        readOnly
-                        data-testid="input-joining-date"
-                      />
-                      <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                    </div>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={employeeForm.joiningDate ? new Date(employeeForm.joiningDate) : undefined}
-                      onSelect={(date) => {
-                        if (date) setEmployeeForm({...employeeForm, joiningDate: date.toISOString().split('T')[0]});
-                      }}
-                      disabled={(date) => date > new Date()}
-                    />
-                  </PopoverContent>
-                </Popover>
+                <DatePicker
+                  value={employeeForm.joiningDate}
+                  onChange={(date) => setEmployeeForm({...employeeForm, joiningDate: date})}
+                  placeholder="DD-MM-YYYY"
+                  maxDate={new Date()}
+                />
               </div>
               <div className="flex flex-col w-full">
                 <Select 
@@ -7512,30 +7495,12 @@ export default function AdminDashboard() {
             {/* Row 7 - DoB and Mother Name */}
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col w-full">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <div className="relative">
-                      <Input 
-                        placeholder="DD-MM-YYYY"
-                        className="input-styled rounded w-full cursor-pointer pr-10"
-                        value={employeeForm.fatherName ? format(new Date(employeeForm.fatherName), 'dd-MM-yyyy') : ''}
-                        readOnly
-                        data-testid="input-father-name"
-                      />
-                      <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                    </div>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={employeeForm.fatherName ? new Date(employeeForm.fatherName) : undefined}
-                      onSelect={(date) => {
-                        if (date) setEmployeeForm({...employeeForm, fatherName: date.toISOString().split('T')[0]});
-                      }}
-                      disabled={(date) => date > new Date()}
-                    />
-                  </PopoverContent>
-                </Popover>
+                <DatePicker
+                  value={employeeForm.fatherName}
+                  onChange={(date) => setEmployeeForm({...employeeForm, fatherName: date})}
+                  placeholder="DD-MM-YYYY"
+                  maxDate={new Date()}
+                />
               </div>
               <div className="flex flex-col w-full">
                 <Input 
