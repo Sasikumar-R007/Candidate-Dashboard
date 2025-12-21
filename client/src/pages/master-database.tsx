@@ -1240,7 +1240,7 @@ export default function MasterDatabase() {
           </DialogHeader>
 
           <div className="py-4">
-            <div className="flex items-center justify-between gap-4 mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-md">
+            <div className="flex items-center justify-between gap-4 mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
               <div className="flex items-center gap-2">
                 <Label htmlFor="bulk-toggle" className="text-sm font-medium">Bulk Upload</Label>
                 <span className="text-xs text-muted-foreground">(Max {BULK_UPLOAD_LIMIT} files)</span>
