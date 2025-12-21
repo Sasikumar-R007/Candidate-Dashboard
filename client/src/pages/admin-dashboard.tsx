@@ -7403,23 +7403,24 @@ export default function AdminDashboard() {
 
             {/* Row 4 - Date of Joining and Employment Status */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Date of Joining</label>
+              <div className="flex flex-col w-full">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Date of Joining</label>
                 <Input 
                   type="date"
-                  className="input-styled rounded" 
+                  className="input-styled rounded w-full" 
                   value={employeeForm.joiningDate}
                   onChange={(e) => setEmployeeForm({...employeeForm, joiningDate: e.target.value})}
                   data-testid="input-joining-date"
                 />
               </div>
-              <div>
+              <div className="flex flex-col w-full">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Employment Status</label>
                 <Select 
                   value={employeeForm.employmentStatus}
                   onValueChange={(value) => setEmployeeForm({...employeeForm, employmentStatus: value})}
                 >
-                  <SelectTrigger className="input-styled rounded" data-testid="select-employment-status">
-                    <SelectValue placeholder="Employment Status" />
+                  <SelectTrigger className="input-styled rounded w-full" data-testid="select-employment-status">
+                    <SelectValue placeholder="Select Status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Active">Active</SelectItem>
@@ -7486,20 +7487,21 @@ export default function AdminDashboard() {
 
             {/* Row 7 - DoB and Mother Name */}
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Date of Birth</label>
+              <div className="flex flex-col w-full">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Date of Birth</label>
                 <Input 
                   type="date"
-                  className="input-styled rounded" 
+                  className="input-styled rounded w-full" 
                   value={employeeForm.fatherName}
                   onChange={(e) => setEmployeeForm({...employeeForm, fatherName: e.target.value})}
                   data-testid="input-father-name"
                 />
               </div>
-              <div>
+              <div className="flex flex-col w-full">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mother Name</label>
                 <Input 
-                  placeholder="Mother Name" 
-                  className="input-styled rounded" 
+                  type="text"
+                  className="input-styled rounded w-full" 
                   value={employeeForm.motherName}
                   onChange={(e) => setEmployeeForm({...employeeForm, motherName: e.target.value})}
                   data-testid="input-mother-name"
