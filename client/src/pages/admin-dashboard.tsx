@@ -906,7 +906,14 @@ function ClientSettingsSection() {
 }
 
 export default function AdminDashboard() {
-  const [sidebarTab, setSidebarTab] = useState('dashboard');
+  // Restore sidebarTab from sessionStorage for proper back navigation
+  const initialSidebarTab = () => {
+    const saved = sessionStorage.getItem('adminDashboardSidebarTab');
+    sessionStorage.removeItem('adminDashboardSidebarTab');
+    return saved ? saved : 'dashboard';
+  };
+  
+  const [sidebarTab, setSidebarTab] = useState(initialSidebarTab());
   
   // Restore activeTab from sessionStorage for proper back navigation
   const initialActiveTab = () => {
@@ -2095,7 +2102,7 @@ export default function AdminDashboard() {
   };
 
   const handleArchivesClick = () => {
-    sessionStorage.setItem('adminDashboardActiveTab', activeTab);
+    sessionStorage.setItem('adminDashboardSidebarTab', sidebarTab);
     navigate('/archives');
   };
 
@@ -3139,7 +3146,7 @@ export default function AdminDashboard() {
                 <Button 
                   className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white"
                   onClick={() => {
-                    sessionStorage.setItem('adminDashboardActiveTab', activeTab);
+                    sessionStorage.setItem('adminDashboardSidebarTab', sidebarTab);
                     sessionStorage.setItem('masterDatabaseTab', 'resume');
                     navigate('/master-database');
                   }}
@@ -3306,7 +3313,7 @@ export default function AdminDashboard() {
                   <Button 
                     className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
                     onClick={() => {
-                      sessionStorage.setItem('adminDashboardActiveTab', activeTab);
+                      sessionStorage.setItem('adminDashboardSidebarTab', sidebarTab);
                       sessionStorage.setItem('masterDatabaseTab', 'employee');
                       navigate('/master-database');
                     }}
@@ -3394,7 +3401,7 @@ export default function AdminDashboard() {
                   <Button 
                     className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
                     onClick={() => {
-                      sessionStorage.setItem('adminDashboardActiveTab', activeTab);
+                      sessionStorage.setItem('adminDashboardSidebarTab', sidebarTab);
                       sessionStorage.setItem('masterDatabaseTab', 'client');
                       navigate('/master-database');
                     }}
@@ -4511,7 +4518,7 @@ export default function AdminDashboard() {
                     <Button 
                       className="btn-rounded bg-purple-600 hover:bg-purple-700 text-white text-sm px-4"
                       onClick={() => {
-                        sessionStorage.setItem('adminDashboardActiveTab', activeTab);
+                        sessionStorage.setItem('adminDashboardSidebarTab', sidebarTab);
                         sessionStorage.setItem('masterDatabaseTab', 'resume');
                         navigate('/master-database');
                       }}
@@ -4574,7 +4581,7 @@ export default function AdminDashboard() {
                     <Button 
                       className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded text-sm"
                       onClick={() => {
-                        sessionStorage.setItem('adminDashboardActiveTab', activeTab);
+                        sessionStorage.setItem('adminDashboardSidebarTab', sidebarTab);
                         sessionStorage.setItem('masterDatabaseTab', 'resume');
                         navigate('/master-database');
                       }}
@@ -4593,7 +4600,7 @@ export default function AdminDashboard() {
                   <Button 
                     className="btn-rounded bg-cyan-400 hover:bg-cyan-500 text-slate-900 text-sm px-4"
                     onClick={() => {
-                      sessionStorage.setItem('adminDashboardActiveTab', activeTab);
+                      sessionStorage.setItem('adminDashboardSidebarTab', sidebarTab);
                       sessionStorage.setItem('masterDatabaseTab', 'employee');
                       navigate('/master-database');
                     }}
@@ -4648,7 +4655,7 @@ export default function AdminDashboard() {
                   <Button 
                     className="btn-rounded bg-cyan-400 hover:bg-cyan-500 text-slate-900 text-sm px-4"
                     onClick={() => {
-                      sessionStorage.setItem('adminDashboardActiveTab', activeTab);
+                      sessionStorage.setItem('adminDashboardSidebarTab', sidebarTab);
                       sessionStorage.setItem('masterDatabaseTab', 'client');
                       navigate('/master-database');
                     }}
@@ -7986,7 +7993,7 @@ export default function AdminDashboard() {
               className="bg-blue-600 hover:bg-blue-700 text-white"
               onClick={() => {
                 setIsResumeDatabaseModalOpen(false);
-                sessionStorage.setItem('adminDashboardActiveTab', activeTab);
+                sessionStorage.setItem('adminDashboardSidebarTab', sidebarTab);
                 sessionStorage.setItem('masterDatabaseTab', 'resume');
                 navigate('/master-database');
               }}
