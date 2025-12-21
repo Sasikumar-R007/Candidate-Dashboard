@@ -1245,17 +1245,18 @@ export default function MasterDatabase() {
                 <Label htmlFor="bulk-toggle" className="text-sm font-medium">Bulk Upload</Label>
                 <span className="text-xs text-muted-foreground">(Max {BULK_UPLOAD_LIMIT} files)</span>
               </div>
-              <Switch
-                id="bulk-toggle"
-                checked={isBulkUpload}
-                onCheckedChange={(checked) => {
-                  setIsBulkUpload(checked);
-                  resetImportModal();
-                }}
-                disabled={importStep !== 'upload'}
-                className="bg-gray-400 dark:bg-gray-600"
-                data-testid="switch-bulk-upload"
-              />
+              <div className="bg-gray-200 dark:bg-gray-700 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600">
+                <Switch
+                  id="bulk-toggle"
+                  checked={isBulkUpload}
+                  onCheckedChange={(checked) => {
+                    setIsBulkUpload(checked);
+                    resetImportModal();
+                  }}
+                  disabled={importStep !== 'upload'}
+                  data-testid="switch-bulk-upload"
+                />
+              </div>
             </div>
 
             {/* Single Upload Mode */}
