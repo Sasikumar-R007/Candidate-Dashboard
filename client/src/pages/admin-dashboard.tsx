@@ -7252,6 +7252,21 @@ export default function AdminDashboard() {
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">%</span>
               </div>
+              <div>
+                <Select 
+                  value={clientForm.currentStatus}
+                  onValueChange={(value) => setClientForm({...clientForm, currentStatus: value})}
+                >
+                  <SelectTrigger className="input-styled rounded" data-testid="select-active">
+                    <SelectValue placeholder="Active" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="frozen">Frozen</SelectItem>
+                    <SelectItem value="churned">Churned</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Row 7 */}
@@ -7327,22 +7342,6 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Row 9 */}
-            <div>
-              <Select 
-                value={clientForm.currentStatus}
-                onValueChange={(value) => setClientForm({...clientForm, currentStatus: value})}
-              >
-                <SelectTrigger className="input-styled rounded" data-testid="select-current-status">
-                  <SelectValue placeholder="Active" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="frozen">Frozen</SelectItem>
-                  <SelectItem value="churned">Churned</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
 
             <div className="flex justify-center pt-6">
               <Button 

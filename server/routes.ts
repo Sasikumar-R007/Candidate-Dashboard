@@ -4,6 +4,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import session from "express-session";
 import fs from "fs";
 import passport from "passport";
+import { randomBytes } from "crypto";
 import { storage } from "./storage";
 import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema, insertRecruiterCommandSchema, recruiterCommands, employees, candidates } from "@shared/schema";
 import { z } from "zod";
@@ -4027,7 +4028,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create employee profile for client login with auto-generated password if not provided
       // Note: storage.createEmployee will hash the password, so pass raw password
-      const rawPassword = validatedData.password || require('crypto').randomBytes(12).toString('hex');
+      const rawPassword = validatedData.password || randomBytes(12).toString('hex');
       const employeeData = {
         employeeId: clientCode,
         name: validatedData.brandName,
