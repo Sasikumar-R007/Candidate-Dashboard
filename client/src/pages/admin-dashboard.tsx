@@ -7404,23 +7404,35 @@ export default function AdminDashboard() {
             {/* Row 4 - Date of Joining and Employment Status */}
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col w-full">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Date of Joining</label>
-                <Input 
-                  type="date"
-                  className="input-styled rounded w-full" 
-                  value={employeeForm.joiningDate}
-                  onChange={(e) => setEmployeeForm({...employeeForm, joiningDate: e.target.value})}
-                  data-testid="input-joining-date"
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Input 
+                      placeholder="Date of Joining"
+                      className="input-styled rounded w-full cursor-pointer"
+                      value={employeeForm.joiningDate ? format(new Date(employeeForm.joiningDate), 'MMM dd, yyyy') : ''}
+                      readOnly
+                      data-testid="input-joining-date"
+                    />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={employeeForm.joiningDate ? new Date(employeeForm.joiningDate) : undefined}
+                      onSelect={(date) => {
+                        if (date) setEmployeeForm({...employeeForm, joiningDate: date.toISOString().split('T')[0]});
+                      }}
+                      disabled={(date) => date > new Date()}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="flex flex-col w-full">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Employment Status</label>
                 <Select 
                   value={employeeForm.employmentStatus}
                   onValueChange={(value) => setEmployeeForm({...employeeForm, employmentStatus: value})}
                 >
                   <SelectTrigger className="input-styled rounded w-full" data-testid="select-employment-status">
-                    <SelectValue placeholder="Select Status" />
+                    <SelectValue placeholder="Employment Status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Active">Active</SelectItem>
@@ -7488,19 +7500,32 @@ export default function AdminDashboard() {
             {/* Row 7 - DoB and Mother Name */}
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col w-full">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Date of Birth</label>
-                <Input 
-                  type="date"
-                  className="input-styled rounded w-full" 
-                  value={employeeForm.fatherName}
-                  onChange={(e) => setEmployeeForm({...employeeForm, fatherName: e.target.value})}
-                  data-testid="input-father-name"
-                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Input 
+                      placeholder="Date of Birth"
+                      className="input-styled rounded w-full cursor-pointer"
+                      value={employeeForm.fatherName ? format(new Date(employeeForm.fatherName), 'MMM dd, yyyy') : ''}
+                      readOnly
+                      data-testid="input-father-name"
+                    />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={employeeForm.fatherName ? new Date(employeeForm.fatherName) : undefined}
+                      onSelect={(date) => {
+                        if (date) setEmployeeForm({...employeeForm, fatherName: date.toISOString().split('T')[0]});
+                      }}
+                      disabled={(date) => date > new Date()}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="flex flex-col w-full">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mother Name</label>
                 <Input 
                   type="text"
+                  placeholder="Mother Name"
                   className="input-styled rounded w-full" 
                   value={employeeForm.motherName}
                   onChange={(e) => setEmployeeForm({...employeeForm, motherName: e.target.value})}
@@ -7513,7 +7538,7 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input 
-                  placeholder="Father's contact number" 
+                  placeholder="Father's Contact Number" 
                   className="input-styled rounded" 
                   value={employeeForm.fatherNumber}
                   onChange={(e) => setEmployeeForm({...employeeForm, fatherNumber: e.target.value})}
@@ -7522,7 +7547,7 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <Input 
-                  placeholder="Mother's Number" 
+                  placeholder="Mother's Contact Number" 
                   className="input-styled rounded" 
                   value={employeeForm.motherNumber}
                   onChange={(e) => setEmployeeForm({...employeeForm, motherNumber: e.target.value})}
