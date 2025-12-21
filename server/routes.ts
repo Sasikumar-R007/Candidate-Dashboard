@@ -5698,12 +5698,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get the current admin user
-      const adminId = req.session.userId;
+      const adminId = req.session.employeeId;
       if (!adminId) {
         return res.status(401).json({ success: false, message: "Not authenticated" });
       }
 
-      const user = await storage.getUserById(adminId);
+      const user = await storage.getEmployeeById(adminId);
       if (!user) {
         return res.status(404).json({ success: false, message: "User not found" });
       }
