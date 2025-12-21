@@ -7488,7 +7488,7 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input 
-                  placeholder="DoB" 
+                  placeholder="Date of Birth (DD-MM-YYYY)" 
                   type="date"
                   className="input-styled rounded" 
                   value={employeeForm.fatherName}
