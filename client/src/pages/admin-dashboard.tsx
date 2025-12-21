@@ -4551,7 +4551,10 @@ export default function AdminDashboard() {
                   <div className="flex justify-end mt-4">
                     <Button 
                       className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded text-sm"
-                      onClick={() => setIsResumeDatabaseModalOpen(true)}
+                      onClick={() => {
+                        sessionStorage.setItem('masterDatabaseTab', 'resume');
+                        navigate('/master-database');
+                      }}
                       data-testid="button-view-more-resume-database"
                     >
                       View More
@@ -4566,7 +4569,10 @@ export default function AdminDashboard() {
                   <CardTitle className="text-lg text-gray-900 dark:text-white">Employees Master</CardTitle>
                   <Button 
                     className="btn-rounded bg-cyan-400 hover:bg-cyan-500 text-slate-900 text-sm px-4"
-                    onClick={() => setIsEmployeeMasterModalOpen(true)}
+                    onClick={() => {
+                      sessionStorage.setItem('masterDatabaseTab', 'employee');
+                      navigate('/master-database');
+                    }}
                   >
                     View More
                   </Button>
@@ -4617,7 +4623,10 @@ export default function AdminDashboard() {
                   <CardTitle className="text-lg text-gray-900 dark:text-white">Client Master</CardTitle>
                   <Button 
                     className="btn-rounded bg-cyan-400 hover:bg-cyan-500 text-slate-900 text-sm px-4"
-                    onClick={() => setIsClientMasterModalOpen(true)}
+                    onClick={() => {
+                      sessionStorage.setItem('masterDatabaseTab', 'client');
+                      navigate('/master-database');
+                    }}
                   >
                     View More
                   </Button>
