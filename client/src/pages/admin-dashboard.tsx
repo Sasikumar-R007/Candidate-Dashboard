@@ -7321,7 +7321,7 @@ export default function AdminDashboard() {
                 <Input 
                   placeholder="Employee ID" 
                   className="input-styled rounded bg-gray-50 dark:bg-gray-800" 
-                  value={employeeForm.employeeId || 'Auto-generated'}
+                  value={employeeForm.employeeId || 'Unique ID (Auto-generated)'}
                   readOnly
                   data-testid="input-employee-id"
                 />
@@ -7465,11 +7465,12 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Row 7 - Father Name and Mother Name */}
+            {/* Row 7 - DoB and Mother Name */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input 
-                  placeholder="Father Name" 
+                  placeholder="DoB" 
+                  type="date"
                   className="input-styled rounded" 
                   value={employeeForm.fatherName}
                   onChange={(e) => setEmployeeForm({...employeeForm, fatherName: e.target.value})}
@@ -7487,11 +7488,11 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Row 8 - Father's Number and Mother's Number */}
+            {/* Row 8 - Father's contact number and Mother's Number */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input 
-                  placeholder="Father's Number" 
+                  placeholder="Father's contact number" 
                   className="input-styled rounded" 
                   value={employeeForm.fatherNumber}
                   onChange={(e) => setEmployeeForm({...employeeForm, fatherNumber: e.target.value})}
