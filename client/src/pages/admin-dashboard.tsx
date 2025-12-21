@@ -907,7 +907,15 @@ function ClientSettingsSection() {
 
 export default function AdminDashboard() {
   const [sidebarTab, setSidebarTab] = useState('dashboard');
-  const [activeTab, setActiveTab] = useState('team');
+  
+  // Restore activeTab from sessionStorage for proper back navigation
+  const initialActiveTab = () => {
+    const saved = sessionStorage.getItem('adminDashboardActiveTab');
+    sessionStorage.removeItem('adminDashboardActiveTab');
+    return saved ? saved : 'team';
+  };
+  
+  const [activeTab, setActiveTab] = useState(initialActiveTab());
   const [adminProfile, setAdminProfile] = useState(initialAdminProfile);
   const [requirementsVisible, setRequirementsVisible] = useState(10);
   const [isAddRequirementModalOpen, setIsAddRequirementModalOpen] = useState(false);
@@ -3130,6 +3138,7 @@ export default function AdminDashboard() {
                 <Button 
                   className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white"
                   onClick={() => {
+                    sessionStorage.setItem('adminDashboardActiveTab', activeTab);
                     sessionStorage.setItem('masterDatabaseTab', 'resume');
                     navigate('/master-database');
                   }}
@@ -3296,6 +3305,7 @@ export default function AdminDashboard() {
                   <Button 
                     className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
                     onClick={() => {
+                      sessionStorage.setItem('adminDashboardActiveTab', activeTab);
                       sessionStorage.setItem('masterDatabaseTab', 'employee');
                       navigate('/master-database');
                     }}
@@ -3383,6 +3393,7 @@ export default function AdminDashboard() {
                   <Button 
                     className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
                     onClick={() => {
+                      sessionStorage.setItem('adminDashboardActiveTab', activeTab);
                       sessionStorage.setItem('masterDatabaseTab', 'client');
                       navigate('/master-database');
                     }}
@@ -4498,7 +4509,11 @@ export default function AdminDashboard() {
                   <div className="flex gap-2">
                     <Button 
                       className="btn-rounded bg-purple-600 hover:bg-purple-700 text-white text-sm px-4"
-                      onClick={() => navigate('/master-database')}
+                      onClick={() => {
+                        sessionStorage.setItem('adminDashboardActiveTab', activeTab);
+                        sessionStorage.setItem('masterDatabaseTab', 'resume');
+                        navigate('/master-database');
+                      }}
                     >
                       View Full Database
                     </Button>
@@ -4558,6 +4573,7 @@ export default function AdminDashboard() {
                     <Button 
                       className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded text-sm"
                       onClick={() => {
+                        sessionStorage.setItem('adminDashboardActiveTab', activeTab);
                         sessionStorage.setItem('masterDatabaseTab', 'resume');
                         navigate('/master-database');
                       }}
@@ -4576,6 +4592,7 @@ export default function AdminDashboard() {
                   <Button 
                     className="btn-rounded bg-cyan-400 hover:bg-cyan-500 text-slate-900 text-sm px-4"
                     onClick={() => {
+                      sessionStorage.setItem('adminDashboardActiveTab', activeTab);
                       sessionStorage.setItem('masterDatabaseTab', 'employee');
                       navigate('/master-database');
                     }}
@@ -4630,6 +4647,7 @@ export default function AdminDashboard() {
                   <Button 
                     className="btn-rounded bg-cyan-400 hover:bg-cyan-500 text-slate-900 text-sm px-4"
                     onClick={() => {
+                      sessionStorage.setItem('adminDashboardActiveTab', activeTab);
                       sessionStorage.setItem('masterDatabaseTab', 'client');
                       navigate('/master-database');
                     }}
@@ -7967,6 +7985,8 @@ export default function AdminDashboard() {
               className="bg-blue-600 hover:bg-blue-700 text-white"
               onClick={() => {
                 setIsResumeDatabaseModalOpen(false);
+                sessionStorage.setItem('adminDashboardActiveTab', activeTab);
+                sessionStorage.setItem('masterDatabaseTab', 'resume');
                 navigate('/master-database');
               }}
               data-testid="button-view-full-database"
