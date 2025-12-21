@@ -181,7 +181,6 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
                   }`}
                   data-testid={`button-nav-expanded-${item.id}`}
                 >
-                  <IconComponent size={20} className="mr-3" />
                   <span>{item.label}</span>
                 </button>
               );
