@@ -188,11 +188,11 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
           </nav>
 
           {/* Logout Section */}
-          <div className="border-t border-slate-700 p-4">
+          <div className="border-t border-slate-700">
             <button
               onClick={handleLogout}
               disabled={logoutMutation.isPending}
-              className="w-full flex items-center justify-center py-2 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors rounded disabled:opacity-50"
+              className="w-full flex items-center justify-center py-3 px-4 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
               data-testid="button-admin-logout"
             >
               <LogOut size={16} className="mr-2" />
