@@ -7404,8 +7404,8 @@ export default function AdminDashboard() {
             {/* Row 4 - Date of Joining and Employment Status */}
             <div className="grid grid-cols-2 gap-4">
               <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Date of Joining</label>
                 <Input 
-                  placeholder="Date of Joining" 
                   type="date"
                   className="input-styled rounded" 
                   value={employeeForm.joiningDate}
@@ -7487,8 +7487,8 @@ export default function AdminDashboard() {
             {/* Row 7 - DoB and Mother Name */}
             <div className="grid grid-cols-2 gap-4">
               <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 block">Date of Birth</label>
                 <Input 
-                  placeholder="Date of Birth (DD-MM-YYYY)" 
                   type="date"
                   className="input-styled rounded" 
                   value={employeeForm.fatherName}
