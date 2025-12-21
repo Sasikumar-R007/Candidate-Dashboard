@@ -9,10 +9,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Filter, Search, Trash2, X, Share2, Download, Loader2, Upload, FileText, CheckCircle, XCircle } from "lucide-react";
+import { ArrowLeft, Filter, Search, MoreVertical, X, Share2, Download, Loader2, Upload, FileText, CheckCircle, XCircle } from "lucide-react";
 import { useDropzone } from 'react-dropzone';
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 type ProfileType = 'resume' | 'employee' | 'client';
 
@@ -82,7 +83,11 @@ export default function MasterDatabase() {
     client: []
   });
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{id: string, name: string, profileType: ProfileType} | null>(null);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordAttempts, setPasswordAttempts] = useState(0);
+  const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
   
   // Import Resume modal state
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -377,41 +382,101 @@ export default function MasterDatabase() {
     setSelectedResume(null);
   };
 
-  // Handle delete row - Show confirmation dialog
+  // Handle delete row - Show 3-dot menu or password dialog
   const handleDeleteRow = (e: React.MouseEvent, item: ResumeData | EmployeeData | ClientData) => {
     e.stopPropagation();
     setItemToDelete({ id: item.id, name: item.name, profileType });
-    setIsDeleteDialogOpen(true);
+    setPasswordAttempts(0);
+    setPasswordInput("");
+    setIsPasswordDialogOpen(true);
   };
 
-  // Handle confirmed delete
-  const handleConfirmDelete = () => {
-    if (itemToDelete) {
-      setDeletedIds(prev => ({
-        ...prev,
-        [itemToDelete.profileType]: [...prev[itemToDelete.profileType], itemToDelete.id]
-      }));
-      // Close drawer if the deleted item is currently selected and from the same profile type
-      if (selectedResume && selectedResume.id === itemToDelete.id && profileType === itemToDelete.profileType) {
-        setIsResumeDrawerOpen(false);
-        setSelectedResume(null);
-      }
+  // Handle password verification for delete
+  const handleVerifyPassword = async () => {
+    if (!passwordInput) {
+      toast({
+        title: "Error",
+        description: "Please enter your password",
+        variant: "destructive"
+      });
+      return;
     }
-    setIsDeleteDialogOpen(false);
-    setItemToDelete(null);
+
+    setIsVerifyingPassword(true);
+    try {
+      const response = await apiRequest('POST', '/api/admin/verify-password', {
+        password: passwordInput
+      }) as any;
+
+      if (response && response.success) {
+        // Password verified - proceed with deletion
+        if (itemToDelete) {
+          setDeletedIds(prev => ({
+            ...prev,
+            [itemToDelete.profileType]: [...prev[itemToDelete.profileType], itemToDelete.id]
+          }));
+          if (selectedResume && selectedResume.id === itemToDelete.id && profileType === itemToDelete.profileType) {
+            setIsResumeDrawerOpen(false);
+            setSelectedResume(null);
+          }
+          toast({
+            title: "Success",
+            description: `${itemToDelete.name} has been deleted successfully`
+          });
+        }
+        setIsPasswordDialogOpen(false);
+        setPasswordInput("");
+        setPasswordAttempts(0);
+        setItemToDelete(null);
+      } else {
+        // Wrong password
+        const newAttempts = passwordAttempts + 1;
+        setPasswordAttempts(newAttempts);
+        setPasswordInput("");
+
+        if (newAttempts >= 3) {
+          toast({
+            title: "Security Alert",
+            description: "Maximum password attempts exceeded. Logging out for security.",
+            variant: "destructive"
+          });
+          setIsPasswordDialogOpen(false);
+          setItemToDelete(null);
+          // Auto logout
+          await fetch('/api/admin/logout', { method: 'POST', credentials: 'include' });
+          window.location.href = '/admin-login';
+        } else {
+          toast({
+            title: "Incorrect Password",
+            description: `${3 - newAttempts} attempt(s) remaining`,
+            variant: "destructive"
+          });
+        }
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to verify password",
+        variant: "destructive"
+      });
+    } finally {
+      setIsVerifyingPassword(false);
+    }
   };
 
   // Handle cancel delete
   const handleCancelDelete = () => {
-    setIsDeleteDialogOpen(false);
+    setIsPasswordDialogOpen(false);
+    setPasswordInput("");
+    setPasswordAttempts(0);
     setItemToDelete(null);
   };
 
   // Handle dialog close via backdrop or ESC
   const handleDialogOpenChange = (open: boolean) => {
-    setIsDeleteDialogOpen(open);
+    setIsPasswordDialogOpen(open);
     if (!open) {
-      setItemToDelete(null);
+      handleCancelDelete();
     }
   };
 
@@ -821,17 +886,30 @@ export default function MasterDatabase() {
                           </>
                         )}
                         <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              onClick={(e) => handleDeleteRow(e, item)}
-                              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950"
-                              data-testid={`button-delete-${item.id}`}
-                            >
-                              <Trash2 size={16} />
-                            </Button>
-                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                className="h-8 w-8"
+                                data-testid={`button-actions-${item.id}`}
+                              >
+                                <MoreVertical size={16} />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteRow(e as any, item);
+                                }}
+                                className="text-red-600 dark:text-red-400"
+                                data-testid={`menu-delete-${item.id}`}
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     ))
@@ -1046,29 +1124,69 @@ export default function MasterDatabase() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={handleDialogOpenChange}>
-        <AlertDialogContent data-testid="dialog-delete-confirm">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{itemToDelete?.name}"? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={handleCancelDelete} data-testid="button-cancel-delete">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleConfirmDelete}
-              className="bg-red-600 hover:bg-red-700"
-              data-testid="button-confirm-delete"
+      {/* Password Protected Delete Dialog */}
+      <Dialog open={isPasswordDialogOpen} onOpenChange={handleDialogOpenChange} data-testid="dialog-password-delete">
+        <DialogContent className="max-w-md" data-testid="dialog-password-confirm">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              To delete "{itemToDelete?.name}", please enter your admin password for security.
+            </p>
+            
+            <div className="space-y-2">
+              <Label htmlFor="delete-password">Admin Password</Label>
+              <Input
+                id="delete-password"
+                type="password"
+                placeholder="Enter your password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isVerifyingPassword) {
+                    handleVerifyPassword();
+                  }
+                }}
+                disabled={isVerifyingPassword || passwordAttempts >= 3}
+                data-testid="input-delete-password"
+              />
+            </div>
+
+            {passwordAttempts > 0 && passwordAttempts < 3 && (
+              <p className="text-sm text-red-600 dark:text-red-400">
+                {3 - passwordAttempts} attempt(s) remaining
+              </p>
+            )}
+
+            {passwordAttempts >= 3 && (
+              <p className="text-sm text-red-600 dark:text-red-400 font-semibold">
+                Maximum attempts exceeded. You will be logged out.
+              </p>
+            )}
+          </div>
+
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline"
+              onClick={handleCancelDelete}
+              disabled={isVerifyingPassword}
+              data-testid="button-cancel-password"
             >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={handleVerifyPassword}
+              disabled={isVerifyingPassword || passwordAttempts >= 3 || !passwordInput}
+              data-testid="button-confirm-password"
+            >
+              {isVerifyingPassword ? 'Verifying...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Import Resume Modal */}
       <Dialog open={isImportModalOpen} onOpenChange={(open) => {

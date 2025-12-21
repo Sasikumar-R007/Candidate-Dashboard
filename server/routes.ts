@@ -5662,6 +5662,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Verify admin password before deletion
+  app.post("/api/admin/verify-password", requireAdminAuth, async (req, res) => {
+    try {
+      const { password } = req.body;
+
+      if (!password) {
+        return res.status(400).json({ success: false, message: "Password is required" });
+      }
+
+      // Get the current admin user
+      const adminId = req.session.userId;
+      if (!adminId) {
+        return res.status(401).json({ success: false, message: "Not authenticated" });
+      }
+
+      const user = await storage.getUserById(adminId);
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+
+      // Verify password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+
+      if (isPasswordValid) {
+        res.json({ success: true, message: "Password verified" });
+      } else {
+        res.json({ success: false, message: "Invalid password" });
+      }
+    } catch (error) {
+      console.error('Password verification error:', error);
+      res.status(500).json({ success: false, message: "Failed to verify password" });
+    }
+  });
+
   // Delete employee
   app.delete("/api/admin/employees/:id", requireAdminAuth, async (req, res) => {
     try {
