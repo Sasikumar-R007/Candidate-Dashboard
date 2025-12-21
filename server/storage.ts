@@ -98,6 +98,7 @@ export interface IStorage {
   generateNextEmployeeId(role: string): Promise<string>;
   
   // Candidate methods
+  getCandidateById(id: string): Promise<Candidate | undefined>;
   getCandidateByEmail(email: string): Promise<Candidate | undefined>;
   getCandidateByCandidateId(candidateId: string): Promise<Candidate | undefined>;
   getCandidateByGoogleId(googleId: string): Promise<Candidate | undefined>;
@@ -1099,6 +1100,10 @@ export class MemStorage implements IStorage {
   }
 
   // Candidate methods using in-memory storage
+  async getCandidateById(id: string): Promise<Candidate | undefined> {
+    return this.candidates.get(id);
+  }
+
   async getCandidateByEmail(email: string): Promise<Candidate | undefined> {
     const candidatesList = Array.from(this.candidates.values());
     for (const candidate of candidatesList) {

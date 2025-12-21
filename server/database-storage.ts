@@ -338,6 +338,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Candidate methods
+  async getCandidateById(id: string): Promise<Candidate | undefined> {
+    const [candidate] = await db.select().from(candidates).where(eq(candidates.id, id));
+    return candidate || undefined;
+  }
+
   async getCandidateByEmail(email: string): Promise<Candidate | undefined> {
     const [candidate] = await db.select().from(candidates).where(eq(candidates.email, email));
     return candidate || undefined;
