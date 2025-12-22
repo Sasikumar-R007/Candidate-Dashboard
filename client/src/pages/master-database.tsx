@@ -846,47 +846,30 @@ export default function MasterDatabase() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Action Buttons Section */}
         {profileType === 'resume' && (
-          <div className="px-6 pt-4 pb-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Resume Database</h2>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs"
-                  onClick={() => {}}
-                  data-testid="button-view-more-resume"
-                >
-                  View More
-                </Button>
-              </div>
+          <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between gap-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Resume Database</h2>
               <div className="flex items-center gap-2">
                 <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs"
+                  className="bg-purple-600 hover:bg-purple-700 text-white text-sm"
                   onClick={() => {}}
                   data-testid="button-view-full-database"
                 >
                   View Full Database
                 </Button>
                 <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs"
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm"
                   onClick={() => {}}
                   data-testid="button-add-new-client"
                 >
-                  Add New Client
+                  + Add New Client
                 </Button>
                 <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs"
+                  className="bg-green-600 hover:bg-green-700 text-white text-sm"
                   onClick={() => {}}
                   data-testid="button-add-employee"
                 >
-                  Add Employee
+                  + Add Employee
                 </Button>
               </div>
             </div>
@@ -894,8 +877,8 @@ export default function MasterDatabase() {
         )}
 
         {profileType === 'employee' && (
-          <div className="px-6 pt-4 pb-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between gap-4">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Employee Master</h2>
             </div>
           </div>
@@ -903,7 +886,7 @@ export default function MasterDatabase() {
 
         {/* Table Section */}
         <div className={`flex-1 flex overflow-hidden p-6`}>
-          <div className={`bg-white dark:bg-gray-800 rounded-md overflow-hidden flex-1 flex flex-col ${
+          <div className={`bg-white dark:bg-gray-800 rounded-md overflow-hidden flex-1 flex flex-col relative ${
             isResumeDrawerOpen ? 'flex-1' : 'w-full'
           }`}>
             <div className="overflow-x-auto flex-1">
