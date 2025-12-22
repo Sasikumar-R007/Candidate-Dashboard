@@ -4525,11 +4525,11 @@ export default function AdminDashboard() {
             <div className="flex-1 px-6 py-6 space-y-6 overflow-y-auto admin-scrollbar">
               {/* Resume Database */}
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg text-gray-900 dark:text-white">Resume Database</CardTitle>
-                  <div className="flex gap-2">
+                <CardHeader className="flex flex-col items-start gap-4">
+                  {/* Top buttons row */}
+                  <div className="flex gap-2 w-full">
                     <Button 
-                      className="btn-rounded bg-purple-600 hover:bg-purple-700 text-white text-sm px-4"
+                      className="btn-rounded bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded"
                       onClick={() => {
                         sessionStorage.setItem('adminDashboardSidebarTab', sidebarTab);
                         sessionStorage.setItem('masterDatabaseTab', 'resume');
@@ -4539,18 +4539,33 @@ export default function AdminDashboard() {
                       View Full Database
                     </Button>
                     <Button 
-                      className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white text-sm px-4"
+                      className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded"
                       onClick={() => setIsClientModalOpen(true)}
                       data-testid="button-add-new-client"
                     >
                       + Add New Client
                     </Button>
                     <Button 
-                      className="btn-rounded bg-green-600 hover:bg-green-700 text-white text-sm px-4"
+                      className="btn-rounded bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded"
                       onClick={() => setIsEmployeeModalOpen(true)}
                       data-testid="button-add-employee"
                     >
                       + Add Employee
+                    </Button>
+                  </div>
+                  {/* Title and View More row */}
+                  <div className="flex flex-row items-center justify-between w-full">
+                    <CardTitle className="text-lg text-gray-900 dark:text-white">Resume Database</CardTitle>
+                    <Button 
+                      className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded text-sm"
+                      onClick={() => {
+                        sessionStorage.setItem('adminDashboardSidebarTab', sidebarTab);
+                        sessionStorage.setItem('masterDatabaseTab', 'resume');
+                        navigate('/master-database');
+                      }}
+                      data-testid="button-view-more-resume-database"
+                    >
+                      View More
                     </Button>
                   </div>
                 </CardHeader>
@@ -4588,20 +4603,6 @@ export default function AdminDashboard() {
                         )}
                       </tbody>
                     </table>
-                  </div>
-                  {/* View More button */}
-                  <div className="flex justify-end mt-4">
-                    <Button 
-                      className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded text-sm"
-                      onClick={() => {
-                        sessionStorage.setItem('adminDashboardSidebarTab', sidebarTab);
-                        sessionStorage.setItem('masterDatabaseTab', 'resume');
-                        navigate('/master-database');
-                      }}
-                      data-testid="button-view-more-resume-database"
-                    >
-                      View More
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
