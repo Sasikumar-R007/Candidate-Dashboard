@@ -843,34 +843,106 @@ export default function MasterDatabase() {
       </div>
 
       {/* Main Content Area - Side by Side Layout */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Action Buttons Section */}
+        {profileType === 'resume' && (
+          <div className="px-6 pt-4 pb-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Resume Database</h2>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => {}}
+                  data-testid="button-view-more-resume"
+                >
+                  View More
+                </Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => {}}
+                  data-testid="button-view-full-database"
+                >
+                  View Full Database
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => {}}
+                  data-testid="button-add-new-client"
+                >
+                  Add New Client
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => {}}
+                  data-testid="button-add-employee"
+                >
+                  Add Employee
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {profileType === 'employee' && (
+          <div className="px-6 pt-4 pb-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Employee Master</h2>
+            </div>
+          </div>
+        )}
+
         {/* Table Section */}
-        <div className={`p-6 overflow-auto ${
-          isResumeDrawerOpen ? 'flex-1' : 'w-full'
-        }`}>
-          <div className="bg-white dark:bg-gray-800 rounded-md overflow-hidden">
-            <div className="overflow-x-auto">
+        <div className={`flex-1 flex overflow-hidden p-6`}>
+          <div className={`bg-white dark:bg-gray-800 rounded-md overflow-hidden flex-1 flex flex-col ${
+            isResumeDrawerOpen ? 'flex-1' : 'w-full'
+          }`}>
+            <div className="overflow-x-auto flex-1">
               <table className="w-full">
                 <thead>
-                  <tr className="bg-blue-200 dark:bg-blue-900">
+                  <tr className="bg-blue-200 dark:bg-blue-900 sticky top-0">
                     <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Name</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Position</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Experience</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Skills</th>
-                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Source</th>
-                    {!isResumeDrawerOpen && (
+                    {profileType === 'resume' && (
                       <>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Position</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Experience</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Skills</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Status</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Uploaded Date</th>
                       </>
                     )}
+                    {profileType === 'employee' && (
+                      <>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Position</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Department</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Email</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Status</th>
+                      </>
+                    )}
+                    {profileType === 'client' && (
+                      <>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Category</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Location</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">SPOC</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Status</th>
+                      </>
+                    )}
+                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Uploaded Date</th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading ? (
                     <tr>
-                      <td colSpan={isResumeDrawerOpen ? 6 : 8} className="py-12 text-center">
+                      <td colSpan={8} className="py-12 text-center">
                         <div className="flex flex-col items-center justify-center gap-2">
                           <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
                           <span className="text-gray-500 dark:text-gray-400">Loading {getProfileTypeLabel().toLowerCase()}s...</span>
@@ -879,7 +951,7 @@ export default function MasterDatabase() {
                     </tr>
                   ) : filteredData.length === 0 ? (
                     <tr>
-                      <td colSpan={isResumeDrawerOpen ? 6 : 8} className="py-12 text-center">
+                      <td colSpan={8} className="py-12 text-center">
                         <div className="flex flex-col items-center justify-center gap-2">
                           <span className="text-gray-500 dark:text-gray-400">
                             {searchQuery || statusFilter !== 'all' 
@@ -907,22 +979,51 @@ export default function MasterDatabase() {
                         <td className="py-3 px-4 text-gray-900 dark:text-gray-100" data-testid={`text-name-${item.id}`}>
                           {item.name}
                         </td>
-                        <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.position}</td>
-                        <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.experience}</td>
-                        <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
-                          {item.skills && item.skills !== '-' ? (item.skills.split(',')[0] + (item.skills.includes(',') ? '...' : '')) : '-'}
-                        </td>
-                        <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.source}</td>
-                        {!isResumeDrawerOpen && (
+                        {profileType === 'resume' && (
                           <>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.position}</td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.experience}</td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {item.skills && item.skills !== '-' ? (item.skills.split(',')[0] + (item.skills.includes(',') ? '...' : '')) : '-'}
+                            </td>
                             <td className="py-3 px-4">
                               <Badge className={`${getStatusBadgeColor(item.status)} rounded-full px-3 py-1`}>
                                 {item.status}
                               </Badge>
                             </td>
-                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.uploadedDate}</td>
                           </>
                         )}
+                        {profileType === 'employee' && (
+                          <>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.position}</td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'department' in item ? (item as any).department : item.skills}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'email' in item ? (item as any).email : '-'}
+                            </td>
+                            <td className="py-3 px-4">
+                              <Badge className={`${getStatusBadgeColor(item.status)} rounded-full px-3 py-1`}>
+                                {item.status}
+                              </Badge>
+                            </td>
+                          </>
+                        )}
+                        {profileType === 'client' && (
+                          <>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.position}</td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'location' in item ? (item as any).location : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.skills}</td>
+                            <td className="py-3 px-4">
+                              <Badge className={`${getStatusBadgeColor(item.status)} rounded-full px-3 py-1`}>
+                                {item.status}
+                              </Badge>
+                            </td>
+                          </>
+                        )}
+                        <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.uploadedDate}</td>
                         <td className="py-3 px-4">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
