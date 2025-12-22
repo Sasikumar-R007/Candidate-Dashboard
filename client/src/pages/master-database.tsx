@@ -844,45 +844,6 @@ export default function MasterDatabase() {
 
       {/* Main Content Area - Side by Side Layout */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Action Buttons Section */}
-        {profileType === 'resume' && (
-          <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Resume Database</h2>
-              <div className="flex items-center gap-2">
-                <Button
-                  className="bg-purple-600 hover:bg-purple-700 text-white text-sm"
-                  onClick={() => {}}
-                  data-testid="button-view-full-database"
-                >
-                  View Full Database
-                </Button>
-                <Button
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm"
-                  onClick={() => {}}
-                  data-testid="button-add-new-client"
-                >
-                  + Add New Client
-                </Button>
-                <Button
-                  className="bg-green-600 hover:bg-green-700 text-white text-sm"
-                  onClick={() => {}}
-                  data-testid="button-add-employee"
-                >
-                  + Add Employee
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {profileType === 'employee' && (
-          <div className="px-6 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center justify-between gap-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Employee Master</h2>
-            </div>
-          </div>
-        )}
 
         {/* Table Section */}
         <div className={`flex-1 flex overflow-hidden p-6`}>
