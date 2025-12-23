@@ -5077,14 +5077,11 @@ export default function AdminDashboard() {
               <CardHeader className="pb-2 pt-3 flex flex-row flex-wrap items-center justify-between gap-2">
                 <CardTitle className="text-lg text-gray-900 dark:text-white">Revenue Data</CardTitle>
                 <Button 
-                  className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded"
-                  onClick={() => {
-                    setEditingRevenueMapping(null);
-                    setIsRevenueMappingModalOpen(true);
-                  }}
-                  data-testid="button-add-revenue-mapping-2"
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded"
+                  onClick={() => setIsClosureModalOpen(true)}
+                  data-testid="button-view-more-revenue"
                 >
-                  + Add Revenue
+                  View More
                 </Button>
               </CardHeader>
               <CardContent className="p-3">
