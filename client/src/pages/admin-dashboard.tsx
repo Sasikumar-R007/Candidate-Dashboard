@@ -5686,27 +5686,36 @@ export default function AdminDashboard() {
                     </CardHeader>
                     <CardContent className="p-4 lg:p-6">
                       <div className="h-48 sm:h-64 mb-4">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart
-                            data={keyAspectsData.chartData}
-                            margin={{
-                              top: 5,
-                              right: 15,
-                              left: 10,
-                              bottom: 5,
-                            }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" />
-                            <XAxis dataKey="name" style={{ fontSize: '10px' }} />
-                            <YAxis style={{ fontSize: '10px' }} />
-                            <Tooltip />
-                            <Legend wrapperStyle={{ fontSize: '10px' }} />
-                            <Line type="monotone" dataKey="growthMoM" name="Growth MoM (%)" stroke="#82ca9d" strokeWidth={2} />
-                            <Line type="monotone" dataKey="burnRate" name="Burn Rate (%)" stroke="#ff7c7c" strokeWidth={2} />
-                            <Line type="monotone" dataKey="churnRate" name="Churn Rate (%)" stroke="#ffc658" strokeWidth={2} />
-                            <Line type="monotone" dataKey="attrition" name="Attrition (%)" stroke="#8884d8" strokeWidth={2} />
-                          </LineChart>
-                        </ResponsiveContainer>
+                        {!keyAspectsData.chartData || keyAspectsData.chartData.length === 0 ? (
+                          <div className="flex items-center justify-center w-full h-full bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
+                            <div className="text-center">
+                              <p className="text-gray-600 dark:text-gray-400 text-sm">No metrics data available</p>
+                              <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">Data will appear once metrics are recorded</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart
+                              data={keyAspectsData.chartData}
+                              margin={{
+                                top: 5,
+                                right: 15,
+                                left: 10,
+                                bottom: 5,
+                              }}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" style={{ fontSize: '10px' }} />
+                              <YAxis style={{ fontSize: '10px' }} />
+                              <Tooltip />
+                              <Legend wrapperStyle={{ fontSize: '10px' }} />
+                              <Line type="monotone" dataKey="growthMoM" name="Growth MoM (%)" stroke="#82ca9d" strokeWidth={2} />
+                              <Line type="monotone" dataKey="burnRate" name="Burn Rate (%)" stroke="#ff7c7c" strokeWidth={2} />
+                              <Line type="monotone" dataKey="churnRate" name="Churn Rate (%)" stroke="#ffc658" strokeWidth={2} />
+                              <Line type="monotone" dataKey="attrition" name="Attrition (%)" stroke="#8884d8" strokeWidth={2} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        )}
                       </div>
                       
                       <div className="flex justify-end mt-4">
