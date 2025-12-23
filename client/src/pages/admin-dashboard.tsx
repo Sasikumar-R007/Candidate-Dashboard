@@ -3531,6 +3531,14 @@ export default function AdminDashboard() {
                       </Button>
                     </div>
                     <div className="h-[260px]">
+                      {(!monthlyChartData || monthlyChartData.length === 0) ? (
+                        <div className="flex items-center justify-center w-full h-full bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
+                          <div className="text-center">
+                            <p className="text-gray-600 dark:text-gray-400 text-sm">No performance data available</p>
+                            <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">Data will appear once teams submit their performance metrics</p>
+                          </div>
+                        </div>
+                      ) : (
                       <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={monthlyChartData}>
                           <CartesianGrid strokeDasharray="3 3" />
@@ -3547,7 +3555,7 @@ export default function AdminDashboard() {
                                     key={team} 
                                     type="monotone" 
                                     dataKey={team} 
-                                    name={team.replace(/Team$/, "'s Team")} 
+                                    name={team} 
                                     stroke={colors[index % colors.length]} 
                                     strokeWidth={2} 
                                     dot={{ fill: colors[index % colors.length] }} 
@@ -3617,6 +3625,7 @@ export default function AdminDashboard() {
                           )}
                         </LineChart>
                       </ResponsiveContainer>
+                      )}
                     </div>
                   </div>
 
