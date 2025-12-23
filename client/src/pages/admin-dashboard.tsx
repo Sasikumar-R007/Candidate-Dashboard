@@ -5077,7 +5077,7 @@ export default function AdminDashboard() {
               <CardHeader className="pb-2 pt-3 flex flex-row flex-wrap items-center justify-between gap-2">
                 <CardTitle className="text-lg text-gray-900 dark:text-white">Revenue Data</CardTitle>
                 <Button 
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded"
+                  className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded font-medium text-sm"
                   onClick={() => setIsClosureModalOpen(true)}
                   data-testid="button-view-more-revenue"
                 >
