@@ -1517,20 +1517,9 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/monthly-performance'],
   });
 
-  // Monthly Performance chart data - uses backend data or fallback data
+  // Monthly Performance chart data - uses backend data only
   const monthlyChartData = useMemo(() => {
-    if (monthlyPerformanceData?.data && monthlyPerformanceData.data.length > 0) {
-      return monthlyPerformanceData.data;
-    }
-    // Fallback data when no data from API
-    return [
-      { month: 'Jan', arunTeam: 0, anushaTeam: 0 },
-      { month: 'Feb', arunTeam: 0, anushaTeam: 0 },
-      { month: 'Mar', arunTeam: 0, anushaTeam: 0 },
-      { month: 'Apr', arunTeam: 0, anushaTeam: 0 },
-      { month: 'May', arunTeam: 0, anushaTeam: 0 },
-      { month: 'Jun', arunTeam: 0, anushaTeam: 0 }
-    ];
+    return monthlyPerformanceData?.data ?? [];
   }, [monthlyPerformanceData]);
 
   // Performance chart data - uses backend data or empty array
@@ -3496,9 +3485,14 @@ export default function AdminDashboard() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="arun">Arun</SelectItem>
-                    <SelectItem value="anusha">Anusha</SelectItem>
-                    <SelectItem value="all">All</SelectItem>
+                    {monthlyPerformanceData?.teams?.map((team) => (
+                      <SelectItem key={team} value={team.toLowerCase()}>
+                        {team}
+                      </SelectItem>
+                    ))}
+                    {monthlyPerformanceData?.teams && monthlyPerformanceData.teams.length > 0 && (
+                      <SelectItem value="all">All</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
                 
@@ -3561,30 +3555,13 @@ export default function AdminDashboard() {
                                     dot={{ fill: colors[index % colors.length] }} 
                                   />
                                 );
-                              }) || (
-                                <>
-                                  {teamLeads.slice(0, 2).map((tl, idx) => {
-                                    const colors = ['#3B82F6', '#EF4444'];
-                                    return (
-                                      <Line 
-                                        key={tl.id}
-                                        type="monotone" 
-                                        dataKey={`team${idx}`}
-                                        name={`${tl.name}'s Team`}
-                                        stroke={colors[idx]}
-                                        strokeWidth={2}
-                                        dot={{ fill: colors[idx] }}
-                                      />
-                                    );
-                                  })}
-                                </>
-                              )}
+                              })}
                             </>
                           )}
-                          {selectedPerformanceTeam === 'arun' && (
+                          {selectedPerformanceTeam !== 'all' && (
                             <>
                               {monthlyPerformanceData?.members
-                                ?.filter(m => m.teamLeader?.toLowerCase().includes('arun') || m.teamLeader === 'STTL001')
+                                ?.filter(m => m.teamLeader?.toLowerCase() === selectedPerformanceTeam)
                                 ?.slice(0, 4)
                                 .map((member, index) => {
                                   const colors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'];
@@ -3599,28 +3576,7 @@ export default function AdminDashboard() {
                                       dot={{ fill: colors[index % colors.length] }} 
                                     />
                                   );
-                                }) || null}
-                            </>
-                          )}
-                          {selectedPerformanceTeam === 'anusha' && (
-                            <>
-                              {monthlyPerformanceData?.members
-                                ?.filter(m => m.teamLeader?.toLowerCase().includes('anusha'))
-                                ?.slice(0, 4)
-                                .map((member, index) => {
-                                  const colors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'];
-                                  return (
-                                    <Line 
-                                      key={member.key} 
-                                      type="monotone" 
-                                      dataKey={member.key} 
-                                      name={member.name} 
-                                      stroke={colors[index % colors.length]} 
-                                      strokeWidth={2} 
-                                      dot={{ fill: colors[index % colors.length] }} 
-                                    />
-                                  );
-                                }) || null}
+                                })}
                             </>
                           )}
                         </LineChart>
@@ -4903,70 +4859,63 @@ export default function AdminDashboard() {
                       </Button>
                     </div>
                     <div className="h-[260px]">
+                      {(!monthlyChartData || monthlyChartData.length === 0) ? (
+                        <div className="flex items-center justify-center w-full h-full bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
+                          <div className="text-center">
+                            <p className="text-gray-600 dark:text-gray-400 text-sm">No performance data available</p>
+                            <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">Data will appear once teams submit their performance metrics</p>
+                          </div>
+                        </div>
+                      ) : (
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={[
-                          { month: 'Jan', arunTeam: 0, anushaTeam: 0, sudharshan: 0, deepika: 0, dharshan: 0, kavya: 0 },
-                          { month: 'Feb', arunTeam: 0, anushaTeam: 0, sudharshan: 0, deepika: 0, dharshan: 0, kavya: 0 },
-                          { month: 'Mar', arunTeam: 0, anushaTeam: 0, sudharshan: 0, deepika: 0, dharshan: 0, kavya: 0 },
-                          { month: 'Apr', arunTeam: 0, anushaTeam: 0, sudharshan: 0, deepika: 0, dharshan: 0, kavya: 0 },
-                          { month: 'May', arunTeam: 0, anushaTeam: 0, sudharshan: 0, deepika: 0, dharshan: 0, kavya: 0 },
-                          { month: 'Jun', arunTeam: 0, anushaTeam: 0, sudharshan: 0, deepika: 0, dharshan: 0, kavya: 0 }
-                        ]}>
-                          <defs>
-                            <linearGradient id="colorArunTeam" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
-                              <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1}/>
-                            </linearGradient>
-                            <linearGradient id="colorAnushaTeam" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#EF4444" stopOpacity={0.8}/>
-                              <stop offset="95%" stopColor="#EF4444" stopOpacity={0.1}/>
-                            </linearGradient>
-                            <linearGradient id="colorSudharshan" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
-                              <stop offset="95%" stopColor="#3B82F6" stopOpacity={0.1}/>
-                            </linearGradient>
-                            <linearGradient id="colorDeepika" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
-                              <stop offset="95%" stopColor="#10B981" stopOpacity={0.1}/>
-                            </linearGradient>
-                            <linearGradient id="colorDharshan" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.8}/>
-                              <stop offset="95%" stopColor="#F59E0B" stopOpacity={0.1}/>
-                            </linearGradient>
-                            <linearGradient id="colorKavya" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8}/>
-                              <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.1}/>
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} />
-                          <XAxis dataKey="month" stroke="#6b7280" style={{ fontSize: '11px' }} tick={{ fill: '#6b7280' }} />
-                          <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} tick={{ fill: '#6b7280' }} />
-                          <Tooltip />
+                        <LineChart data={monthlyChartData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="month" />
+                          <YAxis />
+                          <Tooltip formatter={(value: number) => `₹${value.toLocaleString()}`} />
                           <Legend />
                           {selectedPerformanceTeam === 'all' && (
                             <>
-                              <Area type="monotone" dataKey="arunTeam" name="Arun's Team" stroke="#3B82F6" strokeWidth={2} fill="url(#colorArunTeam)" dot={{ fill: '#3B82F6', r: 4 }} activeDot={{ r: 6 }} />
-                              <Area type="monotone" dataKey="anushaTeam" name="Anusha's Team" stroke="#EF4444" strokeWidth={2} fill="url(#colorAnushaTeam)" fillOpacity={0.6} dot={{ fill: '#EF4444', r: 4 }} activeDot={{ r: 6 }} />
+                              {monthlyPerformanceData?.teams?.map((team, index) => {
+                                const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6'];
+                                return (
+                                  <Line 
+                                    key={team} 
+                                    type="monotone" 
+                                    dataKey={team} 
+                                    name={team} 
+                                    stroke={colors[index % colors.length]} 
+                                    strokeWidth={2} 
+                                    dot={{ fill: colors[index % colors.length] }} 
+                                  />
+                                );
+                              })}
                             </>
                           )}
-                          {selectedPerformanceTeam === 'arun' && (
+                          {selectedPerformanceTeam !== 'all' && (
                             <>
-                              <Area type="monotone" dataKey="sudharshan" name="Sudharshan" stroke="#3B82F6" strokeWidth={2} fill="url(#colorSudharshan)" dot={{ fill: '#3B82F6', r: 4 }} activeDot={{ r: 6 }} />
-                              <Area type="monotone" dataKey="deepika" name="Deepika" stroke="#10B981" strokeWidth={2} fill="url(#colorDeepika)" fillOpacity={0.6} dot={{ fill: '#10B981', r: 4 }} activeDot={{ r: 6 }} />
-                              <Area type="monotone" dataKey="dharshan" name="Dharshan" stroke="#F59E0B" strokeWidth={2} fill="url(#colorDharshan)" fillOpacity={0.6} dot={{ fill: '#F59E0B', r: 4 }} activeDot={{ r: 6 }} />
-                              <Area type="monotone" dataKey="kavya" name="Kavya" stroke="#8B5CF6" strokeWidth={2} fill="url(#colorKavya)" fillOpacity={0.6} dot={{ fill: '#8B5CF6', r: 4 }} activeDot={{ r: 6 }} />
+                              {monthlyPerformanceData?.members
+                                ?.filter(m => m.teamLeader?.toLowerCase() === selectedPerformanceTeam)
+                                ?.slice(0, 4)
+                                .map((member, index) => {
+                                  const colors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'];
+                                  return (
+                                    <Line 
+                                      key={member.key} 
+                                      type="monotone" 
+                                      dataKey={member.key} 
+                                      name={member.name} 
+                                      stroke={colors[index % colors.length]} 
+                                      strokeWidth={2} 
+                                      dot={{ fill: colors[index % colors.length] }} 
+                                    />
+                                  );
+                                })}
                             </>
                           )}
-                          {selectedPerformanceTeam === 'anusha' && (
-                            <>
-                              <Area type="monotone" dataKey="sudharshan" name="Sudharshan" stroke="#3B82F6" strokeWidth={2} fill="url(#colorSudharshan)" dot={{ fill: '#3B82F6', r: 4 }} activeDot={{ r: 6 }} />
-                              <Area type="monotone" dataKey="deepika" name="Deepika" stroke="#10B981" strokeWidth={2} fill="url(#colorDeepika)" fillOpacity={0.6} dot={{ fill: '#10B981', r: 4 }} activeDot={{ r: 6 }} />
-                              <Area type="monotone" dataKey="dharshan" name="Dharshan" stroke="#F59E0B" strokeWidth={2} fill="url(#colorDharshan)" fillOpacity={0.6} dot={{ fill: '#F59E0B', r: 4 }} activeDot={{ r: 6 }} />
-                              <Area type="monotone" dataKey="kavya" name="Kavya" stroke="#8B5CF6" strokeWidth={2} fill="url(#colorKavya)" fillOpacity={0.6} dot={{ fill: '#8B5CF6', r: 4 }} activeDot={{ r: 6 }} />
-                            </>
-                          )}
-                        </AreaChart>
+                        </LineChart>
                       </ResponsiveContainer>
+                      )}
                     </div>
                   </div>
 
