@@ -972,6 +972,13 @@ export default function AdminDashboard() {
   const { data: pipelineApplications = [], isLoading: isLoadingPipeline } = useQuery<any[]>({
     queryKey: ["/api/admin/pipeline"],
   });
+
+  // Fetch team leads for reassign dropdown
+  const { data: teamLeads = [], isLoading: isLoadingTeamLeads } = useQuery<any[]>({
+    queryKey: ["/api/admin/team-leads"],
+  });
+
+  const [selectedTeamLeadId, setSelectedTeamLeadId] = useState<string>("");
   
   // Transform pipeline applications to candidate data with status stages
   const pipelineApplicantData = useMemo(() => {
@@ -6838,7 +6845,10 @@ export default function AdminDashboard() {
       />
 
       {/* Reassign Requirement Modal */}
-      <Dialog open={isReassignModalOpen} onOpenChange={setIsReassignModalOpen}>
+      <Dialog open={isReassignModalOpen} onOpenChange={(open) => {
+        setIsReassignModalOpen(open);
+        if (!open) setSelectedTeamLeadId("");
+      }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Reassign Requirement</DialogTitle>
@@ -6856,21 +6866,26 @@ export default function AdminDashboard() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Reassign to Team Lead
               </label>
-              <Select>
+              <Select value={selectedTeamLeadId} onValueChange={setSelectedTeamLeadId}>
                 <SelectTrigger className="input-styled">
-                  <SelectValue placeholder="Select Team Lead" />
+                  <SelectValue placeholder={isLoadingTeamLeads ? "Loading..." : "Select Team Lead"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="arun">Arun KS</SelectItem>
-                  <SelectItem value="anusha">Anusha</SelectItem>
-                  <SelectItem value="umar">Umar</SelectItem>
+                  {teamLeads.map((tl) => (
+                    <SelectItem key={tl.id} value={tl.id}>
+                      {tl.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="flex justify-end gap-2 pt-4">
               <Button
                 variant="outline"
-                onClick={() => setIsReassignModalOpen(false)}
+                onClick={() => {
+                  setIsReassignModalOpen(false);
+                  setSelectedTeamLeadId("");
+                }}
                 className="btn-rounded"
               >
                 Cancel
@@ -6878,18 +6893,26 @@ export default function AdminDashboard() {
               <Button
                 onClick={() => {
                   // Update the requirement with new assignments
-                  if (selectedRequirement) {
+                  if (selectedRequirement && selectedTeamLeadId) {
+                    const selectedTL = teamLeads.find(tl => tl.id === selectedTeamLeadId);
                     updateRequirementMutation.mutate({
                       id: selectedRequirement.id,
                       updates: {
-                        talentAdvisor: "Updated TA", // This would be from form state
-                        teamLead: "Updated TL"       // This would be from form state  
+                        teamLead: selectedTL?.name || selectedTeamLeadId
+                      }
+                    }, {
+                      onSuccess: () => {
+                        setIsReassignModalOpen(false);
+                        setSelectedTeamLeadId("");
+                        toast({ title: "Success", description: "Requirement reassigned successfully" });
                       }
                     });
+                  } else {
+                    toast({ title: "Error", description: "Please select a Team Lead", variant: "destructive" });
                   }
                 }}
                 className="bg-cyan-400 hover:bg-cyan-500 text-black btn-rounded"
-                disabled={updateRequirementMutation.isPending}
+                disabled={updateRequirementMutation.isPending || !selectedTeamLeadId || isLoadingTeamLeads}
               >
                 {updateRequirementMutation.isPending ? 'Updating...' : 'Update Details'}
               </Button>

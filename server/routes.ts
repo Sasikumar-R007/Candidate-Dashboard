@@ -5415,6 +5415,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all team leads
+  app.get("/api/admin/team-leads", requireAdminAuth, async (req, res) => {
+    try {
+      const employees = await storage.getAllEmployees();
+      const teamLeads = employees.filter(emp => emp.role === 'team_leader');
+      const formattedTLs = teamLeads.map(tl => ({
+        id: tl.id,
+        name: tl.name,
+        email: tl.email,
+        role: tl.role
+      }));
+      res.json(formattedTLs);
+    } catch (error) {
+      console.error('Get team leads error:', error);
+      res.status(500).json({ message: "Failed to get team leads" });
+    }
+  });
+
   // Get all clients
   app.get("/api/admin/clients", requireAdminAuth, async (req, res) => {
     try {
