@@ -1352,7 +1352,7 @@ export default function AdminDashboard() {
     );
   }, [requirements, requirementsSearch]);
 
-  // Fetch daily metrics from API
+  // Fetch daily metrics from API with date filter
   const { data: dailyMetricsData = {
     totalRequirements: 0,
     completedRequirements: 0,
@@ -1363,7 +1363,7 @@ export default function AdminDashboard() {
     dailyDeliveryDefaulted: 0,
     overallPerformance: "G"
   }, isLoading: isLoadingMetrics } = useQuery({
-    queryKey: ['/api/admin/daily-metrics'],
+    queryKey: ['/api/admin/daily-metrics', format(selectedDate, 'yyyy-MM-dd'), selectedDailyMetricsTeam],
   });
 
   // Fetch key aspects data from API for metrics chart

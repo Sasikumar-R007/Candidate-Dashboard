@@ -3399,36 +3399,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Daily Metrics API endpoint
+  // Daily Metrics API endpoint with date filtering
   app.get("/api/admin/daily-metrics", requireAdminAuth, async (req, res) => {
     try {
+      // Get date query parameter (format: yyyy-MM-dd)
+      const selectedDate = req.query.date as string || new Date().toISOString().split('T')[0];
+      const team = req.query.team as string || 'overall';
+      
       // Import getResumeTarget for calculations
       const { getResumeTarget } = await import("@shared/constants");
       
       // Import schema tables
-      const { requirements, employees, candidates } = await import("@shared/schema");
+      const { requirements, employees, candidates, resumeSubmissions } = await import("@shared/schema");
       
-      // Get all active (non-archived) requirements
+      // Get all active (non-archived) requirements created on or before the selected date
       const allRequirements = await db.select().from(requirements)
         .where(eq(requirements.isArchived, false));
       
-      const totalRequirements = allRequirements.length;
+      // Filter by date on created date
+      const filteredRequirements = allRequirements.filter(req => {
+        const createdDate = new Date(req.createdAt).toISOString().split('T')[0];
+        return createdDate <= selectedDate;
+      });
       
-      // Get all resume submissions for calculating delivery
-      const { resumeSubmissions } = await import("@shared/schema");
+      const totalRequirements = filteredRequirements.length;
+      
+      // Get all resume submissions up to the selected date
       const allSubmissions = await db.select().from(resumeSubmissions);
+      
+      // Filter submissions by date
+      const filteredSubmissions = allSubmissions.filter(sub => {
+        const submittedDate = new Date(sub.submittedAt).toISOString().split('T')[0];
+        return submittedDate <= selectedDate;
+      });
       
       // Calculate metrics for all requirements
       let totalResumesRequired = 0;
       let totalResumesDelivered = 0;
       let completedRequirements = 0;
       
-      for (const req of allRequirements) {
+      for (const req of filteredRequirements) {
         const target = getResumeTarget(req.criticality, req.toughness);
         totalResumesRequired += target;
         
-        // Count resumes submitted for this requirement
-        const deliveredForReq = allSubmissions.filter(s => s.requirementId === req.id).length;
+        // Count resumes submitted for this requirement up to selected date
+        const deliveredForReq = filteredSubmissions.filter(s => s.requirementId === req.id).length;
         totalResumesDelivered += deliveredForReq;
         
         // Check if this requirement is fully delivered
@@ -3463,7 +3478,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalResumesRequired,
         dailyDeliveryDelivered: totalResumesDelivered,
         dailyDeliveryDefaulted: Math.max(0, totalResumesRequired - totalResumesDelivered),
-        overallPerformance: totalResumesDelivered >= totalResumesRequired ? "G" : "R"
+        overallPerformance: totalResumesDelivered >= totalResumesRequired ? "G" : "R",
+        date: selectedDate
       });
     } catch (error) {
       console.error('Daily metrics error:', error);
