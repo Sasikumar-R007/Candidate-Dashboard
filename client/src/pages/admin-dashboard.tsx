@@ -289,6 +289,18 @@ interface PerformanceChartProps {
 }
 
 function PerformanceChart({ data, height = "100%", benchmarkValue = 10, showDualLines = false }: PerformanceChartProps) {
+  // Show empty state if no data
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex items-center justify-center w-full h-full bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
+        <div className="text-center">
+          <p className="text-gray-600 dark:text-gray-400 text-sm">No performance data available</p>
+          <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">Data will appear once teams are assigned</p>
+        </div>
+      </div>
+    );
+  }
+
   const maxResumes = showDualLines 
     ? Math.max(...data.map(d => Math.max(d.resumesA || 0, d.resumesB || 0)))
     : 15;
@@ -401,6 +413,18 @@ interface RevenueChartProps {
 }
 
 function RevenueChart({ data, height = "100%", benchmarkValue = 230000 }: RevenueChartProps) {
+  // Show empty state if no data
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex items-center justify-center w-full h-full bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
+        <div className="text-center">
+          <p className="text-gray-600 dark:text-gray-400 text-sm">No revenue data available</p>
+          <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">Revenue data will appear once closures are recorded</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <ResponsiveContainer width="100%" height={height}>
       <ComposedChart data={data}>
@@ -3531,8 +3555,20 @@ export default function AdminDashboard() {
                                 );
                               }) || (
                                 <>
-                                  <Line type="monotone" dataKey="arunTeam" name="Arun's Team" stroke="#3B82F6" strokeWidth={2} dot={{ fill: '#3B82F6' }} />
-                                  <Line type="monotone" dataKey="anushaTeam" name="Anusha's Team" stroke="#EF4444" strokeWidth={2} dot={{ fill: '#EF4444' }} />
+                                  {teamLeads.slice(0, 2).map((tl, idx) => {
+                                    const colors = ['#3B82F6', '#EF4444'];
+                                    return (
+                                      <Line 
+                                        key={tl.id}
+                                        type="monotone" 
+                                        dataKey={`team${idx}`}
+                                        name={`${tl.name}'s Team`}
+                                        stroke={colors[idx]}
+                                        strokeWidth={2}
+                                        dot={{ fill: colors[idx] }}
+                                      />
+                                    );
+                                  })}
                                 </>
                               )}
                             </>
@@ -5671,8 +5707,11 @@ export default function AdminDashboard() {
                               <SelectValue placeholder="Client" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="client1">Client 1</SelectItem>
-                              <SelectItem value="client2">Client 2</SelectItem>
+                              {clients.map((client: any) => (
+                                <SelectItem key={client.id} value={client.id}>
+                                  {client.brandName || client.incorporatedName || 'Unknown'}
+                                </SelectItem>
+                              ))}
                               <SelectItem value="all">All Clients</SelectItem>
                             </SelectContent>
                           </Select>
@@ -8305,8 +8344,11 @@ export default function AdminDashboard() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Teams</SelectItem>
-                  <SelectItem value="arun">Arun (TL)</SelectItem>
-                  <SelectItem value="anusha">Anusha (TL)</SelectItem>
+                  {teamLeads.map((tl: any) => (
+                    <SelectItem key={tl.id} value={tl.id.toLowerCase()}>
+                      {tl.name} (TL)
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               
