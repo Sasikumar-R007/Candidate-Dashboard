@@ -4876,9 +4876,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .filter(rm => teamMemberIds.includes(rm.talentAdvisorId) || teamMemberNames.includes(rm.talentAdvisorName.toLowerCase()))
             .reduce((sum, rm) => sum + (rm.revenue || 0), 0);
           
-          const tlName = tl.name.toLowerCase().includes('arun') ? 'arunTeam' : 
-                        tl.name.toLowerCase().includes('anusha') ? 'anushaTeam' : 
-                        `${tl.name.replace(/\s+/g, '')}Team`;
+          const tlName = tl.name;
           teamData[tlName] = teamRevenue;
           
           // Calculate individual member revenue for team detail view
@@ -4897,12 +4895,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
       
-      // Get unique team and member keys
-      const teamKeys = [...new Set(teamLeaders.map(tl => 
-        tl.name.toLowerCase().includes('arun') ? 'arunTeam' : 
-        tl.name.toLowerCase().includes('anusha') ? 'anushaTeam' : 
-        `${tl.name.replace(/\s+/g, '')}Team`
-      ))];
+      // Get unique team names from team leaders
+      const teamKeys = [...new Set(teamLeaders.map(tl => tl.name))];
       
       const memberNames = recruiters.map(r => ({
         key: r.name.toLowerCase().replace(/\s+/g, ''),
