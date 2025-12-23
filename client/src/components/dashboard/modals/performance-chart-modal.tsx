@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { X, CalendarIcon } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, AreaChart, Area } from 'recharts';
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
@@ -46,6 +46,15 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
     queryKey: ['/api/admin/team-members-list'],
   });
 
+  // Fetch monthly performance data for team names
+  const { data: monthlyPerformanceData } = useQuery<{
+    data: Array<Record<string, any>>;
+    teams: string[];
+    members: Array<{ key: string; name: string; teamLeader: string }>;
+  }>({
+    queryKey: ['/api/admin/monthly-performance'],
+  });
+
   // Fetch performance graph data from backend
   const { data: performanceData = [], isLoading: isLoadingPerformance } = useQuery<PerformanceDataItem[]>({
     queryKey: ['/api/admin/performance-graph', selectedTeam, dateFrom?.toISOString(), dateTo?.toISOString(), period],
@@ -75,19 +84,10 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden flex flex-col">
-        <DialogHeader className="flex flex-row items-center justify-between p-4 border-b dark:border-gray-700 flex-shrink-0">
+        <DialogHeader className="p-4 border-b dark:border-gray-700 flex-shrink-0">
           <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">
             Performance Graph
           </DialogTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
-            data-testid="button-close-performance-chart-modal"
-          >
-            <X className="h-4 w-4" />
-          </Button>
         </DialogHeader>
         
         <div className="p-6 overflow-y-auto flex-1">
@@ -99,8 +99,11 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Teams</SelectItem>
-                <SelectItem value="arun">Arun (TL)</SelectItem>
-                <SelectItem value="anusha">Anusha (TL)</SelectItem>
+                {monthlyPerformanceData?.teams?.map((team) => (
+                  <SelectItem key={team} value={team.toLowerCase()}>
+                    {team}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
             
