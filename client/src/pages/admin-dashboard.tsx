@@ -4268,12 +4268,15 @@ export default function AdminDashboard() {
                   <div className="flex items-center gap-4">
                     <Select value={selectedPipelineTeam} onValueChange={setSelectedPipelineTeam}>
                       <SelectTrigger className="w-48 input-styled btn-rounded">
-                        <SelectValue placeholder="Arun/Anusha/All" />
+                        <SelectValue placeholder="Select Team" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All</SelectItem>
-                        <SelectItem value="arun">Arun</SelectItem>
-                        <SelectItem value="anusha">Anusha</SelectItem>
+                        {monthlyPerformanceData?.teams?.map((team) => (
+                          <SelectItem key={team} value={team.toLowerCase()}>
+                            {team}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <Popover>
@@ -4824,9 +4827,12 @@ export default function AdminDashboard() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="arun">Arun</SelectItem>
-                      <SelectItem value="anusha">Anusha</SelectItem>
                       <SelectItem value="all">All</SelectItem>
+                      {monthlyPerformanceData?.teams?.map((team) => (
+                        <SelectItem key={team} value={team.toLowerCase()}>
+                          {team}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   
@@ -5534,9 +5540,12 @@ export default function AdminDashboard() {
                         <SelectValue placeholder="Team" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="arun">Arun</SelectItem>
-                        <SelectItem value="anusha">Anusha</SelectItem>
                         <SelectItem value="all">All</SelectItem>
+                        {monthlyPerformanceData?.teams?.map((team) => (
+                          <SelectItem key={team} value={team.toLowerCase()}>
+                            {team}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
