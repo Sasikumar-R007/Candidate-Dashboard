@@ -1364,6 +1364,14 @@ export default function AdminDashboard() {
     overallPerformance: "G"
   }, isLoading: isLoadingMetrics } = useQuery({
     queryKey: ['/api/admin/daily-metrics', format(selectedDate, 'yyyy-MM-dd'), selectedDailyMetricsTeam],
+    queryFn: async () => {
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const response = await fetch(`/api/admin/daily-metrics?date=${dateStr}&team=${selectedDailyMetricsTeam}`, {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch daily metrics');
+      return response.json();
+    }
   });
 
   // Fetch key aspects data from API for metrics chart
