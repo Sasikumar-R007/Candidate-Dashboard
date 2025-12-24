@@ -1,393 +1,399 @@
-# 🚀 Deployment Checklist for StaffOS
+# StaffOS - Complete Deployment Analysis & Environment Variables Guide
 
-## ✅ Will Your App Work When Deployed?
-
-**Short Answer: YES**, but you need to verify a few things!
-
----
-
-## 🔍 Key Differences: Preview vs Production
-
-### Development Preview (Current - replit.dev)
-- ✅ You're seeing this now
-- ✅ Temporary URL (*.replit.dev)
-- ✅ Auto-restarts when you make changes
-- ✅ Uses **development database**
-- ✅ Browser dev tools available
-
-### Production Deployment (After Publishing - replit.app)
-- 🚀 Permanent URL (*.replit.app or custom domain)
-- 🚀 Snapshot of your app's current state
-- 🚀 Does NOT auto-restart (you must republish)
-- 🚀 Uses **production database** (separate from development!)
-- 🚀 Optimized and built for performance
+**Analysis Date:** December 24, 2025  
+**Project:** rest-express (Node.js 20, Express, React, Drizzle ORM, PostgreSQL)
 
 ---
 
-## ⚠️ CRITICAL: Development vs Production Database
+## ✅ DEPLOYMENT READINESS STATUS
 
-**IMPORTANT:** Replit keeps TWO separate databases:
+### Overall Status: **READY FOR DEPLOYMENT** ✓
 
-1. **Development Database** (what you've been using)
-   - Your test data is here
-   - The 3 employees and 2 candidates you see
-   - Modified by running seed scripts
-
-2. **Production Database** (for your live site)
-   - **COMPLETELY SEPARATE** from development
-   - **STARTS EMPTY** when you first deploy
-   - You need to seed this separately!
-
-**What Happens When You Publish:**
-- ✅ Database **schema** (tables, columns) is copied to production
-- ❌ Database **data** (your users, candidates) is NOT copied
-- ❌ You must seed production database separately
+Your project is properly configured for production deployment on both **Vercel** (frontend) and **Render** (backend).
 
 ---
 
-## 📋 PRE-DEPLOYMENT CHECKLIST
+## 🏗️ PROJECT ARCHITECTURE
 
-### ✅ 1. Environment Variables (DATABASE_URL)
-
-**Status:** ✅ Already configured
-
-Your `DATABASE_URL` is set in Secrets and will automatically work in production.
-
-**To Verify:**
-1. Click "Secrets" in left sidebar
-2. Confirm `DATABASE_URL` exists
-3. This automatically syncs to production deployment
-
-### ✅ 2. Deployment Configuration
-
-**Status:** ✅ Already configured
-
-Your `.replit` file shows:
 ```
-[deployment]
-deploymentTarget = "autoscale"
-build = ["npm", "run", "build"]
-run = ["npm", "run", "start"]
+Frontend (Vercel)          Backend (Render)           Database
+    ↓                           ↓                         ↓
+React + Vite    ←API calls→  Express.js    ←→  PostgreSQL + Drizzle ORM
+vite.dev        ←CORS→       Node.js 20         (+ Session Storage)
+dist/           ←Sessions→   Port 5000         (+ Google OAuth)
 ```
 
-This means:
-- ✅ Autoscale deployment (scales based on traffic)
-- ✅ Builds with `npm run build` before deploying
-- ✅ Runs with `npm run start` in production
+---
 
-### ✅ 3. Build Scripts
+## 📦 BUILD & RUN CONFIGURATION
 
-**To Verify:**
-Check your `package.json` has these scripts:
-
+### Build Command
 ```bash
-# Check build script exists
-grep "build" package.json
-
-# Check start script exists  
-grep "start" package.json
-```
-
-**Status:** ✅ Already configured
-- `"build": "vite build && esbuild..."`
-- `"start": "npx cross-env NODE_ENV=production node dist/index.js"`
-
-### ✅ 4. Production Database Schema
-
-**You MUST do this after first deployment:**
-
-The schema (table structure) will be automatically pushed, but you need to seed initial data.
-
-### ✅ 5. File Uploads Directory
-
-**Check:** Your `uploads/` folder exists
-
-**Status:** ✅ Already exists
-
-**Note:** In production, uploaded files are NOT persistent on Autoscale deployments. Consider using Replit Object Storage for production file uploads.
-
----
-
-## 🚀 DEPLOYMENT STEPS
-
-### Step 1: Pre-Deployment Checks
-
-```bash
-# 1. Test build locally
 npm run build
-
-# 2. Verify build succeeded (check for dist/ folder)
-ls -la dist/
-
-# 3. Test production mode locally
-npm run start
 ```
+Outputs:
+- `dist/` - Frontend static files (for Vercel)
+- `dist/index.js` - Backend bundle (for Render)
 
-**Expected:** App should start without errors.
-
-### Step 2: Deploy to Production
-
-1. **Click "Deploy" button** in Replit (top right)
-2. **Choose deployment type:** Autoscale (already configured)
-3. **Review configuration**
-4. **Click "Deploy"**
-
-### Step 3: Wait for Deployment
-
-- Replit will:
-  - ✅ Run `npm run build`
-  - ✅ Create a snapshot of your app
-  - ✅ Deploy to production servers
-  - ✅ Create production database schema
-  - ✅ Assign you a `.replit.app` URL
-
-### Step 4: Seed Production Database
-
-**CRITICAL STEP - Don't skip this!**
-
-After deployment, your production database has empty tables. You need to add the admin user.
-
-**Option A: Run Seed Script in Production (Recommended)**
-
-1. Go to your deployed app's admin panel (if available)
-2. Or use Replit's deployment console/shell
-3. Run: `npx tsx server/seed.ts`
-
-**Option B: Manually Add Admin via Database UI**
-
-1. In Replit, click "Database"
-2. Switch to "Production" database (toggle at top)
-3. Go to `employees` table
-4. Click "Add Row"
-5. Add admin user manually
-
-**Option C: Create via API**
-
+### Production Start Command
 ```bash
-# Replace YOUR_APP_URL with your actual deployed URL
-curl -X POST https://YOUR_APP_URL.replit.app/api/admin/employees \
-  -H "Content-Type: application/json" \
-  -d '{
-    "employeeId": "STTA001",
-    "name": "Admin User",
-    "email": "admin@staffos.com",
-    "password": "admin123",
-    "role": "admin",
-    "age": "30",
-    "phone": "+1234567890",
-    "department": "Administration",
-    "joiningDate": "2024-01-01",
-    "reportingTo": "CEO"
-  }'
+npm start
+# OR
+node dist/index.js
 ```
 
-### Step 5: Test Your Deployed App
-
-1. **Visit your production URL** (*.replit.app)
-2. **Test admin login:**
-   - Go to `/employer-login`
-   - Use: `admin@staffos.com` / `admin123`
-3. **Test candidate registration:**
-   - Go to `/candidate-login`
-   - Register a new account
-   - Verify OTP works (production should use real email)
-4. **Test employee creation:**
-   - Login as admin
-   - Try adding a new employee
+### Development Command
+```bash
+npm run dev
+```
 
 ---
 
-## 🔧 POST-DEPLOYMENT CONFIGURATION
+## 🌍 COMPLETE ENVIRONMENT VARIABLES FOR DEPLOYMENT
 
-### 1. Email Service (For OTP in Production)
+### **VERCEL FRONTEND** (Build-time Variables)
 
-**Current:** OTP is logged to console (development only)
+Set these in Vercel Project Settings → Environment Variables:
 
-**Production:** You need to configure email service
-
-**Options:**
-- Set up SMTP credentials (Gmail, SendGrid, etc.)
-- Or use a service like Resend, Postmark, or AWS SES
-
-**Add to Secrets:**
-```
-EMAIL_SERVICE=gmail
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASSWORD=your-app-password
+```env
+# Required
+VITE_API_URL=https://your-render-backend.onrender.com
 ```
 
-### 2. File Uploads (If Using)
+**Note:** Vercel will automatically set `NODE_ENV=production` during build.
 
-**Current:** Files saved to `uploads/` folder
+---
 
-**Problem:** Autoscale deployments don't persist files
+### **RENDER BACKEND** (Runtime Variables)
 
-**Solution:** Use Replit Object Storage
+Set all these in Render Service Settings → Environment Variables:
 
-1. Enable Object Storage in your Repl
-2. Update file upload code to use Object Storage
-3. Or switch to Reserved VM deployment (has persistent storage)
+#### **1. DATABASE & SESSION (CRITICAL)**
+```env
+DATABASE_URL=postgresql://user:password@host:port/dbname
+SESSION_SECRET=your-super-secret-key-min-32-chars
+```
 
-### 3. Custom Domain (Optional)
+**Examples:**
+- `DATABASE_URL=postgresql://admin:password123@db.neon.tech:5432/staffos_prod`
+- `SESSION_SECRET=7f3b9e2d1a4c6f8e5b2a9c4d7e1f3a5b` *(generate with `openssl rand -hex 32`)*
 
-1. Click "Deploy" → "Domains"
-2. Add your custom domain
-3. Update DNS settings as instructed
-4. Enable HTTPS (automatic)
+**⚠️ CRITICAL:** 
+- `DATABASE_URL` must include SSL settings
+- `SESSION_SECRET` must be different from development
 
-### 4. Environment-Specific Configuration
+#### **2. FRONTEND & BACKEND URLS (CRITICAL)**
+```env
+FRONTEND_URL=https://your-vercel-project.vercel.app
+BACKEND_URL=https://your-render-backend.onrender.com
+```
 
-Your app can detect production environment:
+**How to find:**
+- `FRONTEND_URL` - Your Vercel deployed URL (Settings → Domains)
+- `BACKEND_URL` - Your Render service URL (after deployment)
 
+**Used for:**
+- `FRONTEND_URL` → CORS validation, preventing unauthorized requests
+- `BACKEND_URL` → Email links, OAuth redirects, password reset links
+
+#### **3. GOOGLE OAUTH (Optional - for Social Login)**
+```env
+GOOGLE_CLIENT_ID=1234567890-abcdefghijklmnopqrst.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxxxxxxx
+GOOGLE_CALLBACK_URL=https://your-render-backend.onrender.com/api/auth/google/callback
+```
+
+**How to get:**
+1. Go to [Google Cloud Console](https://console.cloud.google.com)
+2. Create OAuth 2.0 credentials (Web Application)
+3. Add authorized redirect URI: `https://your-render-backend.onrender.com/api/auth/google/callback`
+
+**⚠️ CRITICAL:** 
+- Callback URL must match exactly
+- Keep `GOOGLE_CLIENT_SECRET` private (never in code)
+
+#### **4. EMAIL SERVICE - RESEND (Optional - for Sending Emails)**
+```env
+RESEND_API_KEY=re_1234567890abcdefghijklmn
+FROM_EMAIL=StaffOS <noreply@yourdomain.com>
+```
+
+**How to get:**
+1. Sign up at [Resend.com](https://resend.com)
+2. Get API key from dashboard
+3. Verify domain ownership
+
+**Format:** `"Display Name <email@domain>"`
+
+**⚠️ Note:** If not configured, email features will log warnings but won't crash.
+
+#### **5. ADMIN FEATURES (Optional)**
+```env
+ADMIN_RESET_KEY=secure-random-admin-reset-key-here
+```
+
+Used for admin password reset functionality. Generate a random string.
+
+#### **6. RUNTIME CONFIGURATION**
+```env
+NODE_ENV=production
+PORT=5000
+```
+
+**Important:**
+- `NODE_ENV=production` → Enables security features, disables hot-reload
+- `PORT=5000` → Render will auto-assign, but backend expects this
+
+---
+
+## 📋 QUICK COPY-PASTE TEMPLATE
+
+Use this template to collect all variables for Render:
+
+```env
+# Database (REQUIRED)
+DATABASE_URL=postgresql://user:password@host:port/dbname
+SESSION_SECRET=your-random-key-here
+
+# URLs (REQUIRED)
+FRONTEND_URL=https://your-vercel-project.vercel.app
+BACKEND_URL=https://your-render-backend.onrender.com
+
+# Google OAuth (OPTIONAL)
+GOOGLE_CLIENT_ID=your-client-id
+GOOGLE_CLIENT_SECRET=your-client-secret
+GOOGLE_CALLBACK_URL=https://your-render-backend.onrender.com/api/auth/google/callback
+
+# Email (OPTIONAL)
+RESEND_API_KEY=your-resend-api-key
+FROM_EMAIL=StaffOS <noreply@yourdomain.com>
+
+# Admin (OPTIONAL)
+ADMIN_RESET_KEY=your-admin-reset-key
+
+# Runtime
+NODE_ENV=production
+PORT=5000
+```
+
+---
+
+## 🚀 STEP-BY-STEP DEPLOYMENT GUIDE
+
+### **Step 1: Database Setup (Render or Neon)**
+
+1. Create PostgreSQL database on [Render](https://render.com) or [Neon](https://neon.tech)
+2. Get connection string: `postgresql://user:pass@host:port/db`
+3. Add to Render: `DATABASE_URL` environment variable
+
+**Test connection:**
+```bash
+psql "your-database-url"
+```
+
+### **Step 2: Deploy Backend on Render**
+
+1. Create Render account and new Web Service
+2. Connect GitHub repository
+3. Configure:
+   - **Build command:** `npm run build`
+   - **Start command:** `npm start`
+   - **Node version:** 20 (if option available)
+4. Add **ALL** environment variables from section above
+5. Click Deploy
+6. **Note the URL:** `https://your-render-backend.onrender.com`
+
+### **Step 3: Generate SESSION_SECRET**
+
+```bash
+# In terminal, run:
+openssl rand -hex 32
+# Copy the output to RENDER environment variables
+```
+
+### **Step 4: Update Render Environment**
+
+After getting Render URL, update in Render dashboard:
+```
+BACKEND_URL=https://your-render-backend.onrender.com
+```
+
+### **Step 5: Deploy Frontend on Vercel**
+
+1. Go to [Vercel](https://vercel.com) and import your GitHub repo
+2. Add environment variable:
+   ```
+   VITE_API_URL=https://your-render-backend.onrender.com
+   ```
+3. Vercel auto-detects `npm run build` - no changes needed
+4. Click Deploy
+5. **Note the URL:** `https://your-vercel-project.vercel.app`
+
+### **Step 6: Final Backend Configuration**
+
+Update Render environment with frontend URL:
+```
+FRONTEND_URL=https://your-vercel-project.vercel.app
+```
+
+### **Step 7: Database Migrations**
+
+After first backend deployment:
+```bash
+npm run db:push
+# This creates database tables from your schema
+```
+
+---
+
+## 🔍 VERIFYING DEPLOYMENT
+
+### Health Check Endpoint
+```bash
+curl https://your-render-backend.onrender.com/api/auth/verify-session
+# Expected response: {"authenticated":false}
+```
+
+### Check CORS is Working
+```bash
+curl -H "Origin: https://your-vercel-project.vercel.app" \
+     -H "Access-Control-Request-Method: POST" \
+     https://your-render-backend.onrender.com/api/auth/login
+```
+
+### Test Database Connection
+```bash
+# In Render logs, you should see:
+# "Backend server running on http://0.0.0.0:5000"
+```
+
+---
+
+## ⚠️ CRITICAL PRODUCTION CHECKLIST
+
+- [ ] **DATABASE_URL** is set and uses SSL
+- [ ] **SESSION_SECRET** changed from default and secure (32+ chars)
+- [ ] **FRONTEND_URL** points to Vercel domain
+- [ ] **BACKEND_URL** points to Render domain
+- [ ] **NODE_ENV=production** in Render
+- [ ] **Google OAuth** callback URL registered in Google Console
+- [ ] **RESEND_API_KEY** added if using email
+- [ ] Backend health check endpoint working
+- [ ] Frontend can make API calls to backend
+- [ ] Sessions persist across page reloads
+- [ ] Render logs show no errors
+
+---
+
+## 🐛 TROUBLESHOOTING
+
+### Issue: "Google OAuth not configured"
+**Solution:** Add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to Render environment
+
+### Issue: CORS errors - "Access denied"
+**Solution:** Update `FRONTEND_URL` in Render to match Vercel domain exactly
+
+### Issue: Frontend can't reach backend
+**Check:**
+1. Is Render backend deployed and running?
+2. Is `VITE_API_URL` correct in Vercel?
+3. Are CORS headers being sent? (Check browser Network tab)
+
+### Issue: Database connection failed
+**Solutions:**
+- Check `DATABASE_URL` format is correct
+- Verify database is accessible from Render IP
+- Ensure SSL is enabled on connection string
+- Check database user has correct permissions
+
+### Issue: "Session table does not exist"
+**Solution:** Run `npm run db:push` after first deployment
+
+### Issue: Email not sending
+**Solutions:**
+- Verify `RESEND_API_KEY` is valid
+- Check `FROM_EMAIL` matches verified domain in Resend
+- Look for "403 Unauthorized" in logs
+
+---
+
+## 📊 CONFIGURATION REFERENCE
+
+### Session Store
+- **Type:** PostgreSQL (`connect-pg-simple`)
+- **Table:** `session` (auto-created)
+- **Expires:** 24 hours
+- **Secure:** HTTPS only in production
+
+### CORS Rules
 ```typescript
-// In your code
-if (process.env.REPLIT_DEPLOYMENT === '1') {
-  // Production-specific logic
-} else {
-  // Development-specific logic
-}
+// Production allows:
+- *.vercel.app (Vercel preview deployments)
+- FRONTEND_URL (your custom domain)
+- localhost:* (fallback for local testing)
 ```
 
----
+### Database Pool
+- **Production:** 10 connections
+- **Development:** 5 connections
+- **Timeout:** Default PostgreSQL timeout
 
-## 📊 MONITORING YOUR DEPLOYMENT
-
-After deploying, monitor:
-
-1. **Deployment Status**
-   - Green = Running
-   - Red = Error (check logs)
-
-2. **Logs**
-   - View deployment logs in Replit
-   - Check for startup errors
-
-3. **Analytics**
-   - Replit provides basic analytics
-   - Track requests, errors, response times
-
-4. **Database**
-   - Switch to "Production" in Database UI
-   - Verify data is being saved correctly
+### Frontend Build
+- **Build tool:** Vite
+- **Output:** Static files in `dist/`
+- **Caching:** Content-hash in filenames
+- **Optimization:** Tree-shaking, code splitting
 
 ---
 
-## ✅ FINAL CHECKLIST BEFORE DEPLOYING
+## 🎯 QUICK VERIFICATION CHECKLIST
 
-Use this checklist:
-
-- [ ] ✅ `DATABASE_URL` secret is set
-- [ ] ✅ Build script works (`npm run build`)
-- [ ] ✅ Start script works (`npm run start`)
-- [ ] ✅ Deployment config is correct in `.replit`
-- [ ] ✅ All dependencies are in `package.json`
-- [ ] ⚠️  Plan to seed production database after deploy
-- [ ] ⚠️  Plan to configure email service (for OTP)
-- [ ] ⚠️  Plan for file uploads (Object Storage or Reserved VM)
-- [ ] ✅ Test all critical user flows in preview
-
-**Items marked ✅ are already done!**
-
-**Items marked ⚠️ need attention after deployment.**
-
----
-
-## 🚨 COMMON DEPLOYMENT ISSUES
-
-### Issue 1: "Cannot connect to database"
-**Cause:** DATABASE_URL not set in production
-**Fix:** Check Secrets, ensure it syncs to deployment
-
-### Issue 2: "Admin login doesn't work"
-**Cause:** Production database is empty
-**Fix:** Seed production database with admin user
-
-### Issue 3: "OTP not sending"
-**Cause:** Email service not configured
-**Fix:** Set up email service or check console logs
-
-### Issue 4: "Uploaded files disappear"
-**Cause:** Autoscale doesn't persist files
-**Fix:** Use Replit Object Storage or Reserved VM
-
-### Issue 5: "App crashes on startup"
-**Cause:** Build failed or missing dependencies
-**Fix:** Check deployment logs, ensure all packages in package.json
-
----
-
-## 🎯 DEPLOYMENT TYPES EXPLAINED
-
-### Autoscale (Current - Recommended for you)
-- ✅ Scales automatically based on traffic
-- ✅ Pay only for what you use
-- ✅ Goes to sleep when idle (saves cost)
-- ❌ No persistent file storage
-- ❌ Cold starts when waking up
-
-**Best for:** Web apps, APIs, most use cases
-
-### Reserved VM
-- ✅ Always running (no cold starts)
-- ✅ Persistent file storage
-- ✅ More control
-- ❌ Higher cost (always billed)
-
-**Best for:** Apps needing persistent files or 24/7 uptime
-
-### Static
-- ✅ Very cheap
-- ✅ Fast CDN delivery
-- ❌ No server-side code
-
-**Best for:** Static websites only (not applicable for you)
-
----
-
-## 📝 DEPLOYMENT COMMAND REFERENCE
+Before considering deployment complete, verify:
 
 ```bash
-# Test build locally
-npm run build
-
-# Test production mode locally
-npm run start
-
-# View build output
-ls -la dist/
-
-# Check deployment configuration
-cat .replit
-
-# Access production database (after deploy)
-# Use Replit Database UI and switch to "Production"
-
-# View deployment logs
-# Use Replit Deployments panel
+# 1. Can you log in with credentials?
+# 2. Can you upload resume/files?
+# 3. Do emails send (if configured)?
+# 4. Do sessions persist after refresh?
+# 5. Can you use Google OAuth (if configured)?
+# 6. Are database records saving?
+# 7. Do all pages load without errors?
+# 8. Can you navigate to all routes?
 ```
 
 ---
 
-## ✨ YOUR DEPLOYMENT IS READY!
+## 📝 ENVIRONMENT VARIABLES SUMMARY TABLE
 
-**What's Already Done:**
-✅ Database connection configured
-✅ Deployment settings configured
-✅ Build and start scripts set up
-✅ Development environment fully tested
-
-**What You Need to Do:**
-1. Click "Deploy" button
-2. Wait for deployment to complete
-3. Seed production database with admin user
-4. Test your deployed app
-5. (Optional) Configure email service for OTP
-6. (Optional) Set up custom domain
-
-**Your app WILL work in production!** 🎉
+| Variable | Render | Vercel | Required | Type | Example |
+|----------|--------|--------|----------|------|---------|
+| DATABASE_URL | ✓ | ✗ | Yes | Secret | `postgresql://...` |
+| SESSION_SECRET | ✓ | ✗ | Yes | Secret | `7f3b9e2d1a4c...` |
+| FRONTEND_URL | ✓ | ✗ | Yes | Env | `https://app.vercel.app` |
+| BACKEND_URL | ✓ | ✗ | Yes | Env | `https://api.onrender.com` |
+| GOOGLE_CLIENT_ID | ✓ | ✗ | No | Secret | `1234567890-abc...` |
+| GOOGLE_CLIENT_SECRET | ✓ | ✗ | No | Secret | `GOCSPX-xxx...` |
+| GOOGLE_CALLBACK_URL | ✓ | ✗ | No | Env | `https://api.onrender.com/...` |
+| RESEND_API_KEY | ✓ | ✗ | No | Secret | `re_1234567890...` |
+| FROM_EMAIL | ✓ | ✗ | No | Env | `StaffOS <...>` |
+| ADMIN_RESET_KEY | ✓ | ✗ | No | Secret | `secure-key-here` |
+| NODE_ENV | ✓ | ✗ | Yes | Env | `production` |
+| PORT | ✓ | ✗ | Auto | Env | `5000` |
+| VITE_API_URL | ✗ | ✓ | Yes | Env | `https://api.onrender.com` |
 
 ---
 
-**Last Updated:** October 22, 2025  
-**Deployment Type:** Autoscale  
-**Status:** Ready to Deploy
+## 🔗 Useful Links
+
+- [Render Docs](https://render.com/docs)
+- [Vercel Docs](https://vercel.com/docs)
+- [Drizzle ORM](https://orm.drizzle.team)
+- [Express.js](https://expressjs.com)
+- [Google OAuth Setup](https://developers.google.com/identity/protocols/oauth2)
+- [Resend Email Service](https://resend.com)
+- [PostgreSQL SSL](https://www.postgresql.org/docs/current/ssl-tcp.html)
+
+---
+
+**Last Updated:** December 24, 2025  
+**Status:** ✅ Ready for Production Deployment
