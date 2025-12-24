@@ -20,49 +20,54 @@ export async function setupVite(app: Express, server: any) {
     return; // never load vite on Render
   }
 
-  const { createServer: createViteServer } = await import("vite");
-  const { default: viteConfig } = await import("../vite.config");
+  try {
+    const { createServer: createViteServer } = await import("vite");
+    const { default: viteConfig } = await import("../vite.config");
 
-  const vite = await createViteServer({
-    ...viteConfig,
-    server: {
-      ...viteConfig.server,
-      middlewareMode: true,
-      hmr: { server },
-      allowedHosts: true,
-    },
-    appType: "custom",
-  });
+    const vite = await createViteServer({
+      ...viteConfig,
+      server: {
+        ...viteConfig.server,
+        middlewareMode: true,
+        hmr: { server },
+        allowedHosts: true,
+      },
+      appType: "custom",
+    });
 
-  app.use(vite.middlewares);
+    app.use(vite.middlewares);
 
-  // Serve index.html for all non-API routes (SPA fallback)
-  app.use("*", async (req, res, next) => {
-    const url = req.originalUrl;
+    // Serve index.html for all non-API routes (SPA fallback)
+    app.use("*", async (req, res, next) => {
+      const url = req.originalUrl;
 
-    // Skip API routes
-    if (url.startsWith("/api")) {
-      return next();
-    }
+      // Skip API routes
+      if (url.startsWith("/api")) {
+        return next();
+      }
 
-    try {
-      // Read index.html from the client directory
-      let template = fs.readFileSync(
-        path.resolve(process.cwd(), "client", "index.html"),
-        "utf-8"
-      );
+      try {
+        // Read index.html from the client directory
+        let template = fs.readFileSync(
+          path.resolve(process.cwd(), "client", "index.html"),
+          "utf-8"
+        );
 
-      // Apply Vite HTML transforms (injects HMR client, etc.)
-      template = await vite.transformIndexHtml(url, template);
+        // Apply Vite HTML transforms (injects HMR client, etc.)
+        template = await vite.transformIndexHtml(url, template);
 
-      res.status(200).set({ "Content-Type": "text/html" }).end(template);
-    } catch (e) {
-      vite.ssrFixStacktrace(e as Error);
-      next(e);
-    }
-  });
+        res.status(200).set({ "Content-Type": "text/html" }).end(template);
+      } catch (e) {
+        vite.ssrFixStacktrace(e as Error);
+        next(e);
+      }
+    });
 
-  log("Vite dev server active", "vite");
+    log("Vite dev server active", "vite");
+  } catch (error) {
+    // Vite not available - probably production environment
+    log("Vite not available (production environment)", "vite");
+  }
 }
 
 // NO STATIC SERVE IN PRODUCTION
