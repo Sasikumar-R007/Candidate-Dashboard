@@ -26,12 +26,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users, ExternalLink, HelpCircle, MoreVertical, Download, Edit2 } from "lucide-react";
+import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users, ExternalLink, HelpCircle, MoreVertical, Download, Edit2, ChevronDown, ChevronUp, Plus, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ComposedChart, BarChart, Bar, Cell, AreaChart, Area } from 'recharts';
 import { useLocation } from "wouter";
@@ -961,7 +962,25 @@ export default function AdminDashboard() {
   const [isClientMasterModalOpen, setIsClientMasterModalOpen] = useState(false);
   const [isEmployeeMasterModalOpen, setIsEmployeeMasterModalOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [cashoutData, setCashoutData] = useState<Array<{ month: string; year: string; employees: number; salary: number; incentive: number; tools: number; rent: number; others: number }>>([]);
+  // Fetch cash outflow data from API
+  const { data: cashoutDataRaw = [], isLoading: isLoadingCashout, refetch: refetchCashout } = useQuery<any[]>({
+    queryKey: ['/api/admin/cash-outflows']
+  });
+
+  // Transform API data to match frontend format
+  const cashoutData = useMemo(() => {
+    return cashoutDataRaw.map((item: any) => ({
+      id: item.id,
+      month: item.month,
+      year: String(item.year),
+      employees: item.employeesCount,
+      salary: item.totalSalary,
+      incentive: item.incentive,
+      tools: item.toolsCost,
+      rent: item.rent,
+      others: item.otherExpenses
+    }));
+  }, [cashoutDataRaw]);
   const [cashoutForm, setCashoutForm] = useState({
     month: '', year: '', employees: '', salary: '', incentive: '', tools: '', rent: '', others: ''
   });
@@ -1134,7 +1153,7 @@ export default function AdminDashboard() {
   // Pipeline modal state
   const [, navigate] = useLocation();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedDailyMetricsTeam, setSelectedDailyMetricsTeam] = useState<'overall' | 'team1' | 'team2'>('overall');
+  const [selectedDailyMetricsTeam, setSelectedDailyMetricsTeam] = useState<string>('overall');
   const [selectedMember, setSelectedMember] = useState<any>(null);
   const [selectedPipelineTeam, setSelectedPipelineTeam] = useState<string>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -1143,8 +1162,8 @@ export default function AdminDashboard() {
   const [isDefaultedModalOpen, setIsDefaultedModalOpen] = useState(false);
   const [isTlMeetingsModalOpen, setIsTlMeetingsModalOpen] = useState(false);
   const [isCeoMeetingsModalOpen, setIsCeoMeetingsModalOpen] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [createModalSession, setCreateModalSession] = useState<'message' | 'meeting'>('message');
+  const [isCreateMessageModalOpen, setIsCreateMessageModalOpen] = useState(false);
+  const [isCreateMeetingModalOpen, setIsCreateMeetingModalOpen] = useState(false);
   const [selectedRecipient, setSelectedRecipient] = useState('');
   const [messageContent, setMessageContent] = useState('');
   const [meetingFor, setMeetingFor] = useState('');
@@ -1152,6 +1171,7 @@ export default function AdminDashboard() {
   const [meetingType, setMeetingType] = useState('');
   const [meetingDate, setMeetingDate] = useState<Date | undefined>();
   const [meetingTime, setMeetingTime] = useState('');
+  const [meetingTitle, setMeetingTitle] = useState('');
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [isEditingMeeting, setIsEditingMeeting] = useState(false);
@@ -1188,6 +1208,10 @@ export default function AdminDashboard() {
   const [avgDaysValueModal, setAvgDaysValueModal] = useState<string>("");
   const [isResetPerformanceConfirmOpen, setIsResetPerformanceConfirmOpen] = useState(false);
   const [isResetMasterDataConfirmOpen, setIsResetMasterDataConfirmOpen] = useState(false);
+  const [expandedMeetings, setExpandedMeetings] = useState<Set<string>>(new Set());
+  const [meetingMembers, setMeetingMembers] = useState<string[]>([]);
+  const [showAddMembers, setShowAddMembers] = useState(false);
+  const [memberSearchTerm, setMemberSearchTerm] = useState('');
   
   // Search term states for modals and tables
   const [targetSearch, setTargetSearch] = useState('');
@@ -1200,6 +1224,13 @@ export default function AdminDashboard() {
   const [teamPerformanceSearch, setTeamPerformanceSearch] = useState('');
   const [closureListSearch, setClosureListSearch] = useState('');
   const [requirementsSearch, setRequirementsSearch] = useState('');
+  
+  // Password confirmation dialog state for user deletion
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<{id: string, name: string} | null>(null);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [passwordAttempts, setPasswordAttempts] = useState(0);
+  const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
   
   const [clientForm, setClientForm] = useState({
     brandName: '', incorporatedName: '', gstin: '',
@@ -1273,7 +1304,7 @@ export default function AdminDashboard() {
   });
 
   // Fetch employees from database
-  const { data: employees = [], isLoading: isLoadingEmployees } = useQuery<Employee[]>({
+  const { data: employees = [], isLoading: isLoadingEmployees, refetch: refetchEmployees } = useQuery<Employee[]>({
     queryKey: ['/api/admin/employees']
   });
 
@@ -1290,7 +1321,7 @@ export default function AdminDashboard() {
   }, [employees]);
 
   // Fetch candidates from database
-  const { data: candidates = [], isLoading: isLoadingCandidates } = useQuery({
+  const { data: candidates = [], isLoading: isLoadingCandidates } = useQuery<any[]>({
     queryKey: ['/api/admin/candidates']
   });
 
@@ -1362,6 +1393,20 @@ export default function AdminDashboard() {
       emp.employmentStatus?.toLowerCase().includes(search)
     );
   }, [hrEmployees, employeeMasterSearch]);
+
+  // Filter candidates for Resume Database table
+  const filteredCandidates = useMemo(() => {
+    const candidatesList = (candidates as any[]) || [];
+    if (!resumeDatabaseSearch.trim()) return candidatesList;
+    const search = resumeDatabaseSearch.toLowerCase();
+    return candidatesList.filter((candidate: any) => 
+      candidate.candidateId?.toLowerCase().includes(search) ||
+      candidate.fullName?.toLowerCase().includes(search) ||
+      candidate.currentRole?.toLowerCase().includes(search) ||
+      candidate.email?.toLowerCase().includes(search) ||
+      candidate.location?.toLowerCase().includes(search)
+    );
+  }, [candidates, resumeDatabaseSearch]);
 
   const filteredRequirements = useMemo(() => {
     if (!requirementsSearch.trim()) return requirements;
@@ -1859,7 +1904,7 @@ export default function AdminDashboard() {
         className: "bg-green-50 border-green-200 text-green-800",
       });
       resetForm();
-      setIsCreateModalOpen(false);
+      setIsCreateMeetingModalOpen(false);
     },
     onError: (error: Error) => {
       toast({
@@ -1887,7 +1932,7 @@ export default function AdminDashboard() {
         className: "bg-green-50 border-green-200 text-green-800",
       });
       resetForm();
-      setIsCreateModalOpen(false);
+      setIsCreateMeetingModalOpen(false);
     },
     onError: (error: Error) => {
       toast({
@@ -1932,22 +1977,51 @@ export default function AdminDashboard() {
 
   // Derive TL and CEO meetings from query data
   const tlMeetings = useMemo(() => {
-    return allMeetings.filter((m: any) => m.meetingCategory === 'tl' && m.status === 'pending');
+    return (allMeetings as any[]).filter((m: any) => m.meetingCategory === 'tl' && m.status === 'pending');
   }, [allMeetings]);
 
   const ceoMeetings = useMemo(() => {
-    return allMeetings.filter((m: any) => m.meetingCategory === 'ceo_ta' && m.status === 'pending');
+    return (allMeetings as any[]).filter((m: any) => m.meetingCategory === 'ceo_ta' && m.status === 'pending');
   }, [allMeetings]);
+
+  // Combined pending meetings for the new card-based UI
+  const pendingMeetings = useMemo(() => {
+    return [...tlMeetings, ...ceoMeetings].sort((a: any, b: any) => {
+      const dateA = new Date(`${a.meetingDate} ${a.meetingTime}`);
+      const dateB = new Date(`${b.meetingDate} ${b.meetingTime}`);
+      return dateA.getTime() - dateB.getTime();
+    });
+  }, [tlMeetings, ceoMeetings]);
+
+  // Toggle meeting expansion
+  const toggleMeetingExpansion = (meetingId: string) => {
+    setExpandedMeetings(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(meetingId)) {
+        newSet.delete(meetingId);
+      } else {
+        newSet.add(meetingId);
+      }
+      return newSet;
+    });
+  };
 
   // Meeting action handlers
   const handleRescheduleMeeting = (meeting: any) => {
-    setMeetingFor(meeting.meetingCategory === 'tl' ? 'TL' : 'TA');
+    // Find the person for "Meeting For"
+    const meetingForPerson = employees.find((e: Employee) => e.id === meeting.personId);
+    if (meetingForPerson) {
+      setMeetingFor(meetingForPerson.id);
+    }
     setMeetingWith(meeting.personId || '');
+    setMeetingTitle(meeting.meetingType || '');
     setMeetingType(meeting.meetingType);
     setMeetingDate(new Date(meeting.meetingDate));
     setMeetingTime(meeting.meetingTime);
+    setMeetingMembers(meeting.members && Array.isArray(meeting.members) ? meeting.members : []);
+    setShowAddMembers(meeting.members && Array.isArray(meeting.members) && meeting.members.length > 0);
     setEditingMeetingId(meeting.id);
-    setIsCreateModalOpen(true);
+    setIsCreateMeetingModalOpen(true);
   };
 
   const handleDeleteMeeting = (meetingId: string, personName: string) => {
@@ -1985,6 +2059,10 @@ export default function AdminDashboard() {
     setMeetingType('');
     setMeetingDate(undefined);
     setMeetingTime('');
+    setMeetingTitle('');
+    setMeetingMembers([]);
+    setShowAddMembers(false);
+    setMemberSearchTerm('');
     setEditingMeetingId(null);
   };
 
@@ -2000,7 +2078,7 @@ export default function AdminDashboard() {
     if (!selectedRecipient || !messageContent.trim()) {
       return;
     }
-    const recipientName = allEmployees.find(emp => emp.id === selectedRecipient)?.name || selectedRecipient;
+    const recipientName = employees.find((e: Employee) => e.id === selectedRecipient)?.name || selectedRecipient;
     
     // Add new message to Message Status table
     const today = new Date();
@@ -2016,19 +2094,27 @@ export default function AdminDashboard() {
     
     showSuccessAlert(`Message sent to ${recipientName} successfully`);
     resetForm();
-    setIsCreateModalOpen(false);
+    setIsCreateMessageModalOpen(false);
   };
 
   const handleSetMeeting = () => {
-    if (!meetingFor || !meetingWith || !meetingType || !meetingDate || !meetingTime) {
+    if (!meetingFor || !meetingWith || !meetingDate || !meetingTime) {
       return;
     }
     
-    const personName = (meetingFor === 'TL' ? tlList : taList).find(emp => emp.id === meetingWith)?.name || meetingWith;
-    const meetingCategory = meetingFor === 'TL' ? 'tl' : 'ceo_ta';
+    const meetingForPerson = employees.find((e: Employee) => e.id === meetingFor);
+    const meetingWithPerson = employees.find((e: Employee) => e.id === meetingWith);
+    
+    if (!meetingForPerson || !meetingWithPerson) {
+      return;
+    }
+    
+    const personName = meetingWithPerson.name;
+    // Determine category based on the person's role
+    const meetingCategory = meetingForPerson.role === 'team_leader' ? 'tl' : 'ceo_ta';
     
     const meetingData = {
-      meetingType,
+      meetingType: meetingTitle || meetingType || 'Team Performance',
       meetingDate: format(meetingDate, 'yyyy-MM-dd'),
       meetingTime,
       person: personName,
@@ -2036,6 +2122,7 @@ export default function AdminDashboard() {
       agenda: "Meeting agenda",
       status: 'pending' as const,
       meetingCategory,
+      members: meetingMembers,
     };
     
     if (editingMeetingId) {
@@ -2043,6 +2130,9 @@ export default function AdminDashboard() {
     } else {
       createMeetingMutation.mutate(meetingData);
     }
+    
+    resetForm();
+    setIsCreateMeetingModalOpen(false);
   };
 
   // Requirements handlers
@@ -2135,8 +2225,126 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteUser = (userId: string, userName: string) => {
-    if (window.confirm(`Are you sure you want to delete ${userName}?`)) {
-      deleteEmployeeMutation.mutate(userId);
+    setUserToDelete({ id: userId, name: userName });
+    setPasswordAttempts(0);
+    setPasswordInput("");
+    setIsPasswordDialogOpen(true);
+  };
+
+  // Handle password verification for delete
+  const handleVerifyPassword = async () => {
+    if (!passwordInput) {
+      toast({
+        title: "Error",
+        description: "Please enter your password",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsVerifyingPassword(true);
+    try {
+      const response = await apiRequest('POST', '/api/admin/verify-password', {
+        password: passwordInput
+      });
+      
+      // Parse the response JSON
+      const responseData = await response.json() as any;
+
+      if (responseData && responseData.success) {
+        // Password verified - proceed with actual deletion from database
+        if (userToDelete) {
+          try {
+            // Call the actual delete API endpoint
+            const deleteResponse = await apiRequest('DELETE', `/api/admin/employees/${userToDelete.id}`, {});
+            
+            // Parse the response
+            const deleteResult = await deleteResponse.json();
+            
+            if (!deleteResponse.ok) {
+              throw new Error(deleteResult.message || 'Failed to delete user');
+            }
+
+            // Optimistically update the cache - remove deleted user immediately
+            queryClient.setQueryData<Employee[]>(['/api/admin/employees'], (oldData = []) => {
+              return oldData.filter(emp => emp.id !== userToDelete.id);
+            });
+            
+            // Then refetch in the background to ensure data is in sync
+            queryClient.invalidateQueries({ queryKey: ['/api/admin/employees'] });
+            refetchEmployees(); // Don't await - let it happen in background
+
+            toast({
+              title: "Success",
+              description: `${userToDelete.name} has been permanently deleted from the database. Email and password have been completely removed.`,
+              className: "bg-green-50 border-green-200 text-green-800",
+            });
+            
+            // Close dialog after successful deletion
+            setIsPasswordDialogOpen(false);
+            setPasswordInput("");
+            setPasswordAttempts(0);
+            setUserToDelete(null);
+          } catch (deleteError: any) {
+            console.error('Deletion failed:', deleteError);
+            toast({
+              title: "Error",
+              description: deleteError.message || "Failed to delete the user. Please try again.",
+              variant: "destructive"
+            });
+            // Don't close dialog on error - let user try again
+          }
+        }
+      } else {
+        // Wrong password
+        const newAttempts = passwordAttempts + 1;
+        setPasswordAttempts(newAttempts);
+        setPasswordInput("");
+
+        if (newAttempts >= 3) {
+          toast({
+            title: "Security Alert",
+            description: "Maximum password attempts exceeded. Logging out for security.",
+            variant: "destructive"
+          });
+          setIsPasswordDialogOpen(false);
+          setUserToDelete(null);
+          // Auto logout
+          await fetch('/api/admin/logout', { method: 'POST', credentials: 'include' });
+          window.location.href = '/admin-login';
+        } else {
+          toast({
+            title: "Incorrect Password",
+            description: `${3 - newAttempts} attempt(s) remaining`,
+            variant: "destructive"
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete the user. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsVerifyingPassword(false);
+    }
+  };
+
+  // Handle cancel delete
+  const handleCancelDelete = () => {
+    setIsPasswordDialogOpen(false);
+    setPasswordInput("");
+    setPasswordAttempts(0);
+    setUserToDelete(null);
+  };
+
+  // Handle dialog close via backdrop or ESC
+  const handlePasswordDialogOpenChange = (open: boolean) => {
+    setIsPasswordDialogOpen(open);
+    if (!open) {
+      handleCancelDelete();
     }
   };
 
@@ -2161,25 +2369,49 @@ export default function AdminDashboard() {
     setIsCustomDate(value === 'custom');
   };
 
-  const handleAddCashoutData = () => {
-    if (cashoutForm.month && cashoutForm.year && cashoutForm.employees && cashoutForm.salary) {
-      const newEntry = {
-        month: cashoutForm.month,
-        year: cashoutForm.year,
-        employees: parseInt(cashoutForm.employees) || 0,
-        salary: parseInt(cashoutForm.salary) || 0,
-        incentive: parseInt(cashoutForm.incentive) || 0,
-        tools: parseInt(cashoutForm.tools) || 0,
-        rent: parseInt(cashoutForm.rent) || 0,
-        others: parseInt(cashoutForm.others) || 0,
-      };
-      setCashoutData(prev => [newEntry, ...prev]);
+  // Create cash outflow mutation
+  const createCashOutflowMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest('POST', '/api/admin/cash-outflows', data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/cash-outflows'] });
       setCashoutForm({
         month: '', year: '', employees: '', salary: '', incentive: '', tools: '', rent: '', others: ''
       });
       toast({
         title: "Success",
-        description: "Cash outflow added",
+        description: "Cash outflow added successfully",
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add cash outflow",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const handleAddCashoutData = () => {
+    if (cashoutForm.month && cashoutForm.year && cashoutForm.employees && cashoutForm.salary) {
+      createCashOutflowMutation.mutate({
+        month: cashoutForm.month,
+        year: parseInt(cashoutForm.year, 10),
+        employeesCount: parseInt(cashoutForm.employees, 10),
+        totalSalary: parseInt(cashoutForm.salary, 10),
+        incentive: parseInt(cashoutForm.incentive, 10) || 0,
+        toolsCost: parseInt(cashoutForm.tools, 10) || 0,
+        rent: parseInt(cashoutForm.rent, 10) || 0,
+        otherExpenses: parseInt(cashoutForm.others, 10) || 0,
+      });
+    } else {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields (Month, Year, Employees, Salary)",
+        variant: "destructive",
       });
     }
   };
@@ -2387,14 +2619,19 @@ export default function AdminDashboard() {
         <CardHeader className="pb-1 pt-2 flex flex-row flex-wrap items-center justify-between gap-2">
           <CardTitle className="text-lg text-gray-900 dark:text-white">Daily Metrics</CardTitle>
           <div className="flex items-center gap-2 flex-wrap">
-            <Select value={selectedDailyMetricsTeam} onValueChange={(value) => setSelectedDailyMetricsTeam(value as 'overall' | 'team1' | 'team2')}>
-              <SelectTrigger className="w-24 h-7 text-sm" data-testid="select-daily-metrics-team">
+            <Select value={selectedDailyMetricsTeam} onValueChange={(value) => setSelectedDailyMetricsTeam(value)}>
+              <SelectTrigger className="w-32 h-7 text-sm" data-testid="select-daily-metrics-team">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="overall">Overall</SelectItem>
-                <SelectItem value="team1">Team 1</SelectItem>
-                <SelectItem value="team2">Team 2</SelectItem>
+                {employees
+                  .filter((emp: Employee) => emp.role === 'team_leader' && emp.isActive)
+                  .map((teamLeader: Employee) => (
+                    <SelectItem key={teamLeader.id} value={teamLeader.id}>
+                      {teamLeader.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
             
@@ -2541,105 +2778,313 @@ export default function AdminDashboard() {
 
 
       {/* Messages and Meetings Section */}
-      <div className="grid grid-cols-10 gap-3 h-fit">
-        {/* Pending Meetings - 4/10 width */}
-        <Card className="bg-gray-100 dark:bg-gray-700 col-span-3">
+      <div className="grid grid-cols-2 gap-6 h-fit">
+        {/* Pending Meetings */}
+        <Card className="bg-gray-100 dark:bg-gray-700">
           <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-lg text-gray-900 dark:text-white">Pending Meetings</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg font-bold text-gray-900 dark:text-white">Pending Meetings</CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
+                  onClick={() => setIsCreateMeetingModalOpen(true)}
+                  data-testid="button-add-meeting"
+                >
+                  <Plus className="h-4 w-4 text-gray-700 dark:text-gray-300" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
+                  data-testid="button-meeting-options"
+                >
+                  <MoreVertical className="h-4 w-4 text-gray-700 dark:text-gray-300" />
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="px-4 pb-4">
-            <div className="bg-white dark:bg-gray-800  p-4 relative">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center">
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">TL's Meeting</h3>
-                  <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">{tlMeetings.length}</div>
-                  <Button 
-                    size="sm" 
-                    className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-sm rounded"
-                    onClick={() => setIsTlMeetingsModalOpen(true)}
-                    data-testid="button-view-tl-meetings"
-                  >
-                    View
-                  </Button>
+            <div className="space-y-3 max-h-[500px] overflow-y-auto">
+              {pendingMeetings.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  No pending meetings
                 </div>
-                {/* Center vertical divider */}
-                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-300 dark:bg-gray-600 transform -translate-x-0.5"></div>
-                <div className="text-center">
-                  <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">CEO's Meeting</h3>
-                  <div className="text-4xl font-bold text-gray-900 dark:text-white mb-3">{ceoMeetings.length}</div>
-                  <Button 
-                    size="sm" 
-                    className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-sm rounded"
-                    onClick={() => setIsCeoMeetingsModalOpen(true)}
-                    data-testid="button-view-ceo-meetings"
-                  >
-                    View
-                  </Button>
+              ) : (
+                pendingMeetings.map((meeting: any) => {
+                  const isExpanded = expandedMeetings.has(meeting.id);
+                  const meetingTime = meeting.meetingTime || '8:30 am';
+                  const meetingDate = meeting.meetingDate ? new Date(meeting.meetingDate) : new Date();
+                  const formattedTime = meetingTime.includes('am') || meetingTime.includes('pm') 
+                    ? meetingTime 
+                    : `${meetingTime} am`;
+                  
+                  return (
+                    <div
+                      key={meeting.id}
+                      className="bg-white dark:bg-gray-800 rounded-lg border border-blue-200 dark:border-blue-800 p-4 cursor-pointer hover:shadow-md transition-shadow"
+                    >
+                      {!isExpanded ? (
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="font-semibold text-gray-900 dark:text-white">
+                              Meeting for {meeting.person || 'Unknown'}
+                            </div>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleMeetingExpansion(meeting.id);
+                            }}
+                            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                            data-testid={`button-expand-meeting-${meeting.id}`}
+                          >
+                            <ChevronDown className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {/* Title and Status on same row */}
+                          <div className="flex items-center justify-between">
+                            <div className="font-semibold text-gray-900 dark:text-white">
+                              Meeting for {meeting.person || 'Unknown'}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {(() => {
+                                // Determine if meeting is completed based on date/time
+                                try {
+                                  const meetingDateStr = meeting.meetingDate;
+                                  const meetingTimeStr = meeting.meetingTime || '00:00';
+                                  // Parse time - handle both "HH:MM" and "HH:MM am/pm" formats
+                                  let timeStr = meetingTimeStr;
+                                  if (!timeStr.includes('am') && !timeStr.includes('pm')) {
+                                    // Convert 24h format to 12h if needed
+                                    const [hours, minutes] = timeStr.split(':');
+                                    const hour24 = parseInt(hours);
+                                    if (hour24 >= 12) {
+                                      timeStr = `${hour24 === 12 ? 12 : hour24 - 12}:${minutes} pm`;
+                                    } else {
+                                      timeStr = `${hour24 === 0 ? 12 : hour24}:${minutes} am`;
+                                    }
+                                  }
+                                  const meetingDateTime = new Date(`${meetingDateStr} ${timeStr}`);
+                                  const now = new Date();
+                                  const isCompleted = meetingDateTime < now || meeting.status === 'completed';
+                                  return (
+                                    <span className={`text-sm font-medium ${
+                                      isCompleted 
+                                        ? 'text-green-600 dark:text-green-400' 
+                                        : 'text-yellow-600 dark:text-yellow-400'
+                                    }`}>
+                                      {isCompleted ? 'Completed' : 'Scheduled'}
+                                    </span>
+                                  );
+                                } catch (e) {
+                                  // Fallback to status if date parsing fails
+                                  return (
+                                    <span className={`text-sm font-medium ${
+                                      meeting.status === 'completed'
+                                        ? 'text-green-600 dark:text-green-400' 
+                                        : 'text-yellow-600 dark:text-yellow-400'
+                                    }`}>
+                                      {meeting.status === 'completed' ? 'Completed' : 'Scheduled'}
+                                    </span>
+                                  );
+                                }
+                              })()}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRescheduleMeeting(meeting);
+                                }}
+                                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                                data-testid={`button-edit-meeting-${meeting.id}`}
+                                title="Edit meeting"
+                              >
+                                <EditIcon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleMeetingExpansion(meeting.id);
+                                }}
+                                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                                data-testid={`button-collapse-meeting-${meeting.id}`}
+                              >
+                                <ChevronUp className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                              </button>
+                            </div>
+                          </div>
+                          
+                          {/* Time */}
+                          <div className="text-sm text-gray-600 dark:text-gray-400">
+                            {formattedTime}
+                          </div>
+                          
+                          {/* Participants */}
+                          <div className="flex items-center gap-2">
+                            {(() => {
+                              // Get actual participants
+                              const participants: string[] = [];
+                              if (meeting.personId) {
+                                participants.push(meeting.personId);
+                              }
+                              if (meeting.members && Array.isArray(meeting.members)) {
+                                participants.push(...meeting.members);
+                              }
+                              // Remove duplicates
+                              const uniqueParticipants = Array.from(new Set(participants));
+                              const participantCount = uniqueParticipants.length;
+                              
+                              // Get participant names
+                              const participantNames = uniqueParticipants
+                                .map(id => employees.find((e: Employee) => e.id === id))
+                                .filter(Boolean)
+                                .slice(0, 3);
+                              
+                              const remainingCount = Math.max(0, participantCount - 3);
+                              
+                              return (
+                                <div className="flex -space-x-2">
+                                  {participantNames.map((emp: Employee | undefined, idx: number) => {
+                                    if (!emp) return null;
+                                    const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500'];
+                                    return (
+                                      <div
+                                        key={emp.id}
+                                        className={`w-8 h-8 rounded-full ${colors[idx % colors.length]} border-2 border-white dark:border-gray-800 flex items-center justify-center text-white text-xs font-medium`}
+                                        title={emp.name}
+                                      >
+                                        {emp.name.charAt(0).toUpperCase()}
+                                      </div>
+                                    );
+                                  })}
+                                  {remainingCount > 0 && (
+                                    <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900 border-2 border-white dark:border-gray-800 flex items-center justify-center text-xs font-medium text-green-700 dark:text-green-300">
+                                      +{remainingCount}
+                                    </div>
+                                  )}
+                                  {participantCount === 0 && (
+                                    <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 border-2 border-white dark:border-gray-800"></div>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </div>
+                          
+                          {/* Action button - shorter width */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-auto bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 px-4"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Handle action
+                            }}
+                          >
+                            {meeting.meetingType || 'Team Performance'}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+              {pendingMeetings.length > 3 && (
+                <div className="text-center pt-2">
+                  <ChevronDown className="h-4 w-4 text-gray-400 mx-auto" />
                 </div>
-              </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Message Status - 5/10 width */}
-        <Card className="bg-gray-50 dark:bg-gray-800 col-span-5">
-          <CardHeader className="pb-1 pt-2">
+        {/* Message Status */}
+        <Card className="bg-gray-100 dark:bg-gray-700">
+          <CardHeader className="pb-2 pt-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg text-gray-900 dark:text-white">Message Status</CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={() => setIsAllMessagesModalOpen(true)}
-                data-testid="button-view-all-messages"
-              >
-                <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-              </Button>
+              <CardTitle className="text-lg font-bold text-gray-900 dark:text-white">Message Status</CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
+                  onClick={() => {
+                    setIsCreateMessageModalOpen(true);
+                  }}
+                  data-testid="button-add-message"
+                >
+                  <Plus className="h-4 w-4 text-gray-700 dark:text-gray-300" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
+                  onClick={() => setIsAllMessagesModalOpen(true)}
+                  data-testid="button-message-options"
+                >
+                  <MoreVertical className="h-4 w-4 text-gray-700 dark:text-gray-300" />
+                </Button>
+              </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto admin-scrollbar">
-              <table className="w-full text-sm bg-white dark:bg-gray-900 rounded">
-                <thead>
-                  <tr className="bg-slate-800 text-white">
-                    <th className="text-left py-2 px-3 text-sm font-medium">Name</th>
-                    <th className="text-left py-2 px-3 text-sm font-medium">Message</th>
-                    <th className="text-left py-2 px-3 text-sm font-medium">Date</th>
-                    <th className="text-left py-2 px-3 text-sm font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {messagesData.slice(0, 4).map((message, index) => (
-                    <tr key={index} className="border-b border-gray-100 dark:border-gray-700">
-                      <td className="py-2 px-3 text-gray-900 dark:text-white font-medium">{message.name}</td>
-                      <td className="py-2 px-3 text-gray-600 dark:text-gray-400">{message.message}</td>
-                      <td className="py-2 px-3 text-gray-600 dark:text-gray-400">{message.date}</td>
-                      <td className="py-2 px-3">
-                        <span className={`w-3 h-3 rounded-full inline-block ${
-                          message.status === 'active' ? 'bg-green-500' : 'bg-red-500'
-                        }`}></span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <CardContent className="px-4 pb-4">
+            <div className="space-y-3 max-h-[500px] overflow-y-auto">
+              {messagesData.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  No messages
+                </div>
+              ) : (
+                messagesData.slice(0, 5).map((message, index) => {
+                  const isActive = message.status === 'active';
+                  const timeStr = message.timestamp 
+                    ? new Date(message.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+                    : message.date;
+                  
+                  return (
+                    <div
+                      key={index}
+                      className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-gray-900 dark:text-white mb-1">
+                            {message.name}
+                          </div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                            {message.message || 'Please provide a quick status update on your team\'s progress ...'}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {timeStr}
+                          </div>
+                          {isActive ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <CheckCircle2 className="h-4 w-4 text-gray-400" />
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            data-testid={`button-message-options-${index}`}
+                          >
+                            <MoreVertical className="h-4 w-4 text-gray-500" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+              {messagesData.length > 5 && (
+                <div className="text-center pt-2">
+                  <ChevronDown className="h-4 w-4 text-gray-400 mx-auto" />
+                </div>
+              )}
             </div>
-          </CardContent>
-        </Card>
-        
-        {/* Create Section - 1/10 width */}
-        <Card className="bg-slate-800 dark:bg-slate-900 col-span-2">
-          <CardContent className="flex flex-col items-center justify-center h-full p-3">
-            <div className="p-4 mb-3">
-              <Mail className="w-10 h-10 text-white" />
-            </div>
-            <Button 
-              className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
-              onClick={() => setIsCreateModalOpen(true)}
-              data-testid="button-create"
-            >
-              Create
-            </Button>
           </CardContent>
         </Card>
       </div>
@@ -3690,64 +4135,6 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
 
-              {/* List of Closures Table */}
-              <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
-                <CardHeader className="pb-2 pt-3 flex flex-row flex-wrap items-center justify-between gap-2">
-                  <CardTitle className="text-lg text-gray-900 dark:text-white">List Of Closures</CardTitle>
-                  <Button 
-                    className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded"
-                    onClick={() => setIsClosureModalOpen(true)}
-                    data-testid="button-view-list-closures"
-                  >
-                    View List
-                  </Button>
-                </CardHeader>
-                <CardContent className="p-3">
-                  <div className="overflow-x-auto admin-scrollbar">
-                    <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
-                      <thead>
-                        <tr className="bg-gray-200 dark:bg-gray-700">
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Candidate</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Positions</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Client</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Quarter</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Talent Advisor</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">CTC</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Revenue</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {isLoadingClosures ? (
-                          <tr>
-                            <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                              Loading closures data...
-                            </td>
-                          </tr>
-                        ) : closuresListData.length === 0 ? (
-                          <tr>
-                            <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                              No closures data available
-                            </td>
-                          </tr>
-                        ) : (
-                          closuresListData.slice(0, 4).map((closure, index) => (
-                            <tr key={closure.id || index} className="border-b border-gray-100 dark:border-gray-700">
-                              <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{closure.candidate}</td>
-                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.position}</td>
-                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.client}</td>
-                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.quarter}</td>
-                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.talentAdvisor}</td>
-                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.ctc}</td>
-                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.revenue}</td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-
               {/* Revenue Data Table */}
               <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
                 <CardHeader className="pb-2 pt-3 flex flex-row flex-wrap items-center justify-between gap-2">
@@ -4593,30 +4980,30 @@ export default function AdminDashboard() {
                     <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
                       <thead>
                         <tr className="bg-gray-100 dark:bg-gray-700">
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Employee ID</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Candidate ID</th>
                           <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Name</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Team</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Total Applicants</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Uploads</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Role</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Email</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Location</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {isLoadingEmployees ? (
+                        {isLoadingCandidates ? (
                           <tr>
-                            <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading employees...</td>
+                            <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading candidates...</td>
                           </tr>
-                        ) : hrEmployees.length === 0 ? (
+                        ) : (candidates as any[]).length === 0 ? (
                           <tr>
-                            <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">No employees found. Click "+ Add Employee" to add one.</td>
+                            <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">No candidates found. Click "+ Add Employee" to add one.</td>
                           </tr>
                         ) : (
-                          hrEmployees.slice(0, 5).map((row: any, index: number) => (
+                          (candidates as any[]).slice(0, 5).map((row: any, index: number) => (
                             <tr key={row.id || index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-                              <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{row.employeeId}</td>
-                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.name}</td>
-                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.department || 'N/A'}</td>
-                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">-</td>
-                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">-</td>
+                              <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{row.candidateId || '-'}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.fullName || '-'}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.currentRole || row.position || '-'}</td>
+                              <td className="py-3 px-4 text-blue-600 dark:text-blue-400">{row.email || '-'}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.location || '-'}</td>
                             </tr>
                           ))
                         )}
@@ -5026,58 +5413,6 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            {/* List of Closures Table */}
-            <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
-              <CardHeader className="pb-2 pt-3 flex flex-row flex-wrap items-center justify-between gap-2">
-                <CardTitle className="text-lg text-gray-900 dark:text-white">List Of Closures</CardTitle>
-                <Button 
-                  className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded"
-                  onClick={() => setIsClosureModalOpen(true)}
-                  data-testid="button-view-closures-list"
-                >
-                  View List
-                </Button>
-              </CardHeader>
-              <CardContent className="p-3">
-                <div className="overflow-x-auto admin-scrollbar">
-                  <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
-                    <thead>
-                      <tr className="bg-gray-200 dark:bg-gray-700">
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Candidate</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Positions</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Client</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Quarter</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Talent Advisor</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">CTC</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Revenue</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {closuresListData.length === 0 ? (
-                        <tr>
-                          <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                            No closures data available
-                          </td>
-                        </tr>
-                      ) : (
-                        closuresListData.slice(0, 4).map((closure, index) => (
-                          <tr key={closure.id || index} className="border-b border-gray-100 dark:border-gray-700">
-                            <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{closure.candidate}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.position}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.client}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.quarter}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.talentAdvisor}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.ctc}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{closure.revenue}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Revenue Data Table */}
             <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
               <CardHeader className="pb-2 pt-3 flex flex-row flex-wrap items-center justify-between gap-2">
@@ -5323,7 +5658,7 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {isLoadingEmployees ? (
+                      {isLoadingEmployees && employees.length === 0 ? (
                         <tr>
                           <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
                             Loading employees...
@@ -5332,7 +5667,7 @@ export default function AdminDashboard() {
                       ) : filteredUsers.length === 0 ? (
                         <tr>
                           <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                            No employees found
+                            {userSearchTerm ? 'No employees found matching your search' : 'No employees found'}
                           </td>
                         </tr>
                       ) : (
@@ -5944,7 +6279,7 @@ export default function AdminDashboard() {
                         <Button 
                           className="bg-cyan-400 hover:bg-cyan-500 text-black px-4 py-2 rounded w-20 disabled:opacity-50 disabled:cursor-not-allowed"
                           onClick={handleAddCashoutData}
-                          disabled={!isCashoutFormComplete}
+                          disabled={!isCashoutFormComplete || createCashOutflowMutation.isPending}
                           data-testid="button-add-cashout"
                         >
                           Add
@@ -5968,18 +6303,32 @@ export default function AdminDashboard() {
                           </tr>
                         </thead>
                         <tbody>
-                          {cashoutData.slice(0, 5).map((row, index) => (
-                            <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
-                              <td className="py-3 px-4 text-gray-900 dark:text-white">{row.month}</td>
-                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.year}</td>
-                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.employees}</td>
-                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.salary.toLocaleString()}</td>
-                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.incentive.toLocaleString()}</td>
-                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.tools.toLocaleString()}</td>
-                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.rent.toLocaleString()}</td>
-                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.others.toLocaleString()}</td>
+                          {isLoadingCashout ? (
+                            <tr>
+                              <td colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                                Loading cash outflow data...
+                              </td>
                             </tr>
-                          ))}
+                          ) : cashoutData.length === 0 ? (
+                            <tr>
+                              <td colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                                No cash outflow data found. Add your first entry above.
+                              </td>
+                            </tr>
+                          ) : (
+                            cashoutData.slice(0, 5).map((row, index) => (
+                              <tr key={row.id || index} className="border-b border-gray-100 dark:border-gray-800">
+                                <td className="py-3 px-4 text-gray-900 dark:text-white">{row.month}</td>
+                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.year}</td>
+                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.employees}</td>
+                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.salary.toLocaleString('en-IN')}</td>
+                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.incentive.toLocaleString('en-IN')}</td>
+                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.tools.toLocaleString('en-IN')}</td>
+                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.rent.toLocaleString('en-IN')}</td>
+                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.others.toLocaleString('en-IN')}</td>
+                              </tr>
+                            ))
+                          )}
                         </tbody>
                       </table>
                     </div>
@@ -6507,163 +6856,377 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Create Modal (Message/Meeting) */}
-      <Dialog open={isCreateModalOpen} onOpenChange={(open) => { setIsCreateModalOpen(open); if (!open) resetForm(); }}>
+      {/* Create Message Modal */}
+      <Dialog open={isCreateMessageModalOpen} onOpenChange={(open) => { setIsCreateMessageModalOpen(open); if (!open) resetForm(); }}>
         <DialogContent className="max-w-md mx-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
           <DialogHeader>
-            <DialogTitle className="sr-only">Create</DialogTitle>
+            <DialogTitle className="sr-only">Create Message</DialogTitle>
           </DialogHeader>
           <div className="p-3 pt-2">
-            {/* Toggle Tabs */}
-            <div className="flex border-b border-gray-200 dark:border-gray-700 mb-3">
-              <button
-                onClick={() => setCreateModalSession('message')}
-                className={`px-4 py-2 text-sm font-medium border-b-2 ${
-                  createModalSession === 'message'
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            <div className="space-y-3">
+              <Select value={selectedRecipient} onValueChange={setSelectedRecipient} data-testid="select-message-recipient" required>
+                <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded">
+                  <SelectValue placeholder="Select recipient" />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                  {isLoadingEmployees ? (
+                    <SelectItem value="loading" disabled>Loading...</SelectItem>
+                  ) : (
+                    employees
+                      .filter((e: Employee) => 
+                        (e.role === 'team_leader' || e.role === 'recruiter') && 
+                        (e.isActive === true || e.isActive === undefined)
+                      )
+                      .map((employee: Employee) => (
+                        <SelectItem key={employee.id} value={employee.id} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                          {employee.name}
+                        </SelectItem>
+                      ))
+                  )}
+                </SelectContent>
+              </Select>
+              
+              <Textarea
+                placeholder="Enter here!"
+                rows={4}
+                value={messageContent}
+                onChange={(e) => setMessageContent(e.target.value)}
+                className="w-full resize-none bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded"
+                data-testid="textarea-message-content"
+                required
+              />
+              
+              <div className="flex justify-end">
+                <Button 
+                  onClick={handleSendMessage}
+                  disabled={!selectedRecipient || !messageContent.trim()}
+                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-2 rounded flex items-center gap-2"
+                  data-testid="button-send-message"
+                >
+                  Send 
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Meeting Modal */}
+      <Dialog open={isCreateMeetingModalOpen} onOpenChange={(open) => { setIsCreateMeetingModalOpen(open); if (!open) resetForm(); }}>
+        <DialogContent className="max-w-lg mx-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 h-[90vh] max-h-[700px] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold text-center text-gray-900 dark:text-white">
+              Meeting scheduling
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* Meeting Title with Floating Label */}
+            <div className="relative">
+              <Input
+                value={meetingTitle}
+                onChange={(e) => setMeetingTitle(e.target.value)}
+                className={`w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded pr-10 transition-all ${
+                  meetingTitle ? 'pt-6 pb-2' : 'py-3'
                 }`}
-                data-testid="button-message-tab"
-              >
-                Message
-              </button>
-              <button
-                onClick={() => setCreateModalSession('meeting')}
-                className={`px-4 py-2 text-sm font-medium border-b-2 ${
-                  createModalSession === 'meeting'
-                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                data-testid="input-meeting-title"
+              />
+              <label
+                className={`absolute left-3 transition-all pointer-events-none ${
+                  meetingTitle
+                    ? 'top-1.5 text-xs text-gray-500 dark:text-gray-400 font-medium'
+                    : 'top-1/2 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400'
                 }`}
-                data-testid="button-meeting-tab"
               >
-                Meeting
-              </button>
+                Meeting Title
+              </label>
+              <EditIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
             </div>
 
-            {/* Message Form */}
-            {createModalSession === 'message' && (
-              <div className="space-y-3">
-                <Select value={selectedRecipient} onValueChange={setSelectedRecipient} data-testid="select-message-recipient" required>
-                  <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded">
-                    <SelectValue placeholder="Select recipient" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                    {allEmployees.map((employee) => (
+            {/* Meeting For with Floating Label */}
+            <div className="relative">
+              <Select 
+                value={meetingFor} 
+                onValueChange={(value) => {
+                  setMeetingFor(value);
+                  if (!meetingWith) {
+                    setMeetingWith(value);
+                  }
+                }} 
+                data-testid="select-meeting-for" 
+                required
+              >
+                <SelectTrigger className={`w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded pr-10 ${
+                  meetingFor ? 'pt-6 pb-2' : 'py-3'
+                }`}>
+                  <SelectValue placeholder="" />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                  {employees
+                    .filter((e: Employee) => e.role === 'team_leader' || e.role === 'recruiter' || e.role === 'admin')
+                    .map((employee: Employee) => (
                       <SelectItem key={employee.id} value={employee.id} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
                         {employee.name}
                       </SelectItem>
                     ))}
-                  </SelectContent>
-                </Select>
-                
-                <Textarea
-                  placeholder="Enter here!"
-                  rows={4}
-                  value={messageContent}
-                  onChange={(e) => setMessageContent(e.target.value)}
-                  className="w-full resize-none bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 rounded"
-                  data-testid="textarea-message-content"
-                  required
-                />
-                
-                <div className="flex justify-end">
-                  <Button 
-                    onClick={handleSendMessage}
-                    disabled={!selectedRecipient || !messageContent.trim()}
-                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-2 rounded flex items-center gap-2"
-                    data-testid="button-send-message"
-                  >
-                    Send 
-                    <Send className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
+                </SelectContent>
+              </Select>
+              <label
+                className={`absolute left-3 transition-all pointer-events-none ${
+                  meetingFor
+                    ? 'top-1.5 text-xs text-gray-500 dark:text-gray-400 font-medium'
+                    : 'top-1/2 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400'
+                }`}
+              >
+                Meeting For
+              </label>
+              <EditIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
+            </div>
 
-            {/* Meeting Form */}
-            {createModalSession === 'meeting' && (
-              <div className="space-y-3">
-                <Select value={meetingFor} onValueChange={(value) => { setMeetingFor(value); setMeetingWith(''); }} data-testid="select-meeting-for" required>
-                  <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded">
-                    <SelectValue placeholder="Meeting for" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                    <SelectItem value="TL" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">TL - Team Leader</SelectItem>
-                    <SelectItem value="TA" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">TA - Talent Advisor</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={meetingWith} onValueChange={setMeetingWith} data-testid="select-meeting-with" required disabled={!meetingFor}>
-                  <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white disabled:opacity-50 rounded">
-                    <SelectValue placeholder="Meeting with" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                    {getMeetingWithOptions().map((employee) => (
+            {/* Meeting With with Floating Label */}
+            <div className="relative">
+              <Select 
+                value={meetingWith} 
+                onValueChange={setMeetingWith} 
+                data-testid="select-meeting-with" 
+                required
+              >
+                <SelectTrigger className={`w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded pr-10 ${
+                  meetingWith ? 'pt-6 pb-2' : 'py-3'
+                }`}>
+                  <SelectValue placeholder="" />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                  {employees
+                    .filter((e: Employee) => e.role === 'team_leader' || e.role === 'recruiter' || e.role === 'admin')
+                    .map((employee: Employee) => (
                       <SelectItem key={employee.id} value={employee.id} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
-                        {employee.name} {employee.displayRole && employee.displayRole.includes('Team Leader') ? `(${employee.displayRole})` : ''}
+                        {employee.name}
                       </SelectItem>
                     ))}
-                  </SelectContent>
-                </Select>
-                
-                <Select value={meetingType} onValueChange={setMeetingType} data-testid="select-meeting-type" required>
-                  <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded">
-                    <SelectValue placeholder="Meeting type" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                    <SelectItem value="Performance Review" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Performance Review</SelectItem>
-                    <SelectItem value="Team Planning" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">Team Planning</SelectItem>
-                    <SelectItem value="One-on-One" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">One-on-One</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded"
-                      data-testid="button-meeting-date"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {meetingDate ? format(meetingDate, "PPP") : <span className="text-gray-500 dark:text-gray-400">Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={meetingDate}
-                      onSelect={setMeetingDate}
-                      initialFocus
-                      className="dark:text-white"
-                    />
-                  </PopoverContent>
-                </Popover>
-                
+                </SelectContent>
+              </Select>
+              <label
+                className={`absolute left-3 transition-all pointer-events-none ${
+                  meetingWith
+                    ? 'top-1.5 text-xs text-gray-500 dark:text-gray-400 font-medium'
+                    : 'top-1/2 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400'
+                }`}
+              >
+                Meeting with
+              </label>
+              <EditIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
+            </div>
+            
+            {/* Add Members Checkbox */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="add-members"
+                checked={showAddMembers}
+                onCheckedChange={(checked) => setShowAddMembers(checked as boolean)}
+                data-testid="checkbox-add-members"
+              />
+              <label htmlFor="add-members" className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+                Add Members
+              </label>
+            </div>
+
+            {/* Add Members Section */}
+            {showAddMembers && (
+              <div className="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-3">
+                {/* Search Bar */}
                 <div className="relative">
                   <Input
-                    type="time"
-                    value={meetingTime}
-                    onChange={(e) => setMeetingTime(e.target.value)}
+                    value={memberSearchTerm}
+                    onChange={(e) => setMemberSearchTerm(e.target.value)}
+                    placeholder="Search here"
                     className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded pl-10"
-                    data-testid="input-meeting-time"
-                    required
+                    data-testid="input-member-search"
                   />
-                  <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
                 </div>
-                
-                <div className="flex justify-end">
-                  <Button 
-                    onClick={handleSetMeeting}
-                    disabled={!meetingFor || !meetingWith || !meetingType || !meetingDate || !meetingTime}
-                    className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-2 rounded flex items-center gap-2"
-                    data-testid="button-set-meeting"
+
+                {/* Quick Add Buttons */}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const ceo = employees.find((e: Employee) => e.role === 'admin');
+                      if (ceo && !meetingMembers.includes(ceo.id)) {
+                        setMeetingMembers([...meetingMembers, ceo.id]);
+                      }
+                    }}
+                    className="text-xs"
+                    data-testid="button-add-ceo"
                   >
-                    Set
-                    <CalendarCheck className="w-4 h-4" />
+                    + CEO
+                  </Button>
+                  {employees
+                    .filter((e: Employee) => e.role === 'team_leader')
+                    .slice(0, 2)
+                    .map((tl: Employee, index: number) => (
+                      <Button
+                        key={tl.id}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (!meetingMembers.includes(tl.id)) {
+                            setMeetingMembers([...meetingMembers, tl.id]);
+                          }
+                        }}
+                        className="text-xs"
+                        data-testid={`button-add-tl-${index + 1}`}
+                      >
+                        + Team Leader {index + 1}
+                      </Button>
+                    ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                        onClick={() => {
+                          const allTLs = employees
+                            .filter((e: Employee) => e.role === 'team_leader')
+                            .map((e: Employee) => e.id);
+                          setMeetingMembers(Array.from(new Set([...meetingMembers, ...allTLs])));
+                        }}
+                    className="text-xs"
+                    data-testid="button-add-both-tl"
+                  >
+                    + Both TL
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const allIds = employees.map((e: Employee) => e.id);
+                      setMeetingMembers(allIds);
+                    }}
+                    className="text-xs"
+                    data-testid="button-add-all-members"
+                  >
+                    + All Members
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMeetingMembers([])}
+                    className="text-xs"
+                    data-testid="button-add-none"
+                  >
+                    + None
                   </Button>
                 </div>
+
+                {/* Selected Members List */}
+                {meetingMembers.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Selected Members:</div>
+                    <div className="flex flex-wrap gap-2">
+                      {meetingMembers.map((memberId) => {
+                        const member = employees.find((e: Employee) => e.id === memberId);
+                        return member ? (
+                          <div
+                            key={memberId}
+                            className="flex items-center gap-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded text-xs"
+                          >
+                            {member.name}
+                            <button
+                              onClick={() => setMeetingMembers(meetingMembers.filter(id => id !== memberId))}
+                              className="ml-1 hover:text-red-600"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
+            
+            {/* Date with Floating Label */}
+            <div className="relative">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={`w-full justify-start text-left font-normal bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded ${
+                      meetingDate ? 'pt-6 pb-2' : 'py-3'
+                    }`}
+                    data-testid="button-meeting-date"
+                  >
+                    {meetingDate ? (
+                      <>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {format(meetingDate, "dd-MM-yyyy")}
+                      </>
+                    ) : (
+                      <>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        <span className="text-gray-500 dark:text-gray-400">Date</span>
+                      </>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={meetingDate}
+                    onSelect={setMeetingDate}
+                    initialFocus
+                    className="dark:text-white"
+                  />
+                </PopoverContent>
+              </Popover>
+              {meetingDate && (
+                <label className="absolute left-10 top-1.5 text-xs text-gray-500 dark:text-gray-400 font-medium pointer-events-none">
+                  Date
+                </label>
+              )}
+            </div>
+            
+            {/* Time with Floating Label */}
+            <div className="relative">
+              <Input
+                type="time"
+                value={meetingTime}
+                onChange={(e) => setMeetingTime(e.target.value)}
+                className={`w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded pl-10 ${
+                  meetingTime ? 'pt-6 pb-2' : 'py-3'
+                }`}
+                data-testid="input-meeting-time"
+                required
+              />
+              <label
+                className={`absolute left-10 transition-all pointer-events-none ${
+                  meetingTime
+                    ? 'top-1.5 text-xs text-gray-500 dark:text-gray-400 font-medium'
+                    : 'top-1/2 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400'
+                }`}
+              >
+                Time
+              </label>
+              <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+            </div>
+          </div>
+          
+          {/* Set Meeting Button - Fixed at bottom */}
+          <div className="flex justify-center p-4 border-t border-gray-200 dark:border-gray-700">
+            <Button 
+              onClick={handleSetMeeting}
+              disabled={!meetingFor || !meetingWith || !meetingDate || !meetingTime}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-8 py-2 rounded text-base font-medium w-full"
+              data-testid="button-set-meeting"
+            >
+              Set Meeting
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -6848,6 +7411,70 @@ export default function AdminDashboard() {
         editData={editingUser && editingUser.role === 'Recruiter' ? editingUser : null}
         onSubmit={editingUser ? handleUpdateUser : handleAddUser}
       />
+
+      {/* Password Protected Delete Dialog for User Management */}
+      <Dialog open={isPasswordDialogOpen} onOpenChange={handlePasswordDialogOpenChange} data-testid="dialog-password-delete">
+        <DialogContent className="max-w-md" data-testid="dialog-password-confirm">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              To delete "{userToDelete?.name}", please enter your admin password for security.
+            </p>
+            
+            <div className="space-y-2">
+              <Label htmlFor="delete-password">Admin Password</Label>
+              <Input
+                id="delete-password"
+                type="password"
+                placeholder="Enter your password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isVerifyingPassword) {
+                    handleVerifyPassword();
+                  }
+                }}
+                disabled={isVerifyingPassword || passwordAttempts >= 3}
+                data-testid="input-delete-password"
+              />
+            </div>
+
+            {passwordAttempts > 0 && passwordAttempts < 3 && (
+              <p className="text-sm text-red-600 dark:text-red-400">
+                {3 - passwordAttempts} attempt(s) remaining
+              </p>
+            )}
+
+            {passwordAttempts >= 3 && (
+              <p className="text-sm text-red-600 dark:text-red-400 font-semibold">
+                Maximum attempts exceeded. You will be logged out.
+              </p>
+            )}
+          </div>
+
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline"
+              onClick={handleCancelDelete}
+              disabled={isVerifyingPassword}
+              data-testid="button-cancel-password"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={handleVerifyPassword}
+              disabled={isVerifyingPassword || passwordAttempts >= 3 || !passwordInput}
+              data-testid="button-confirm-password"
+            >
+              {isVerifyingPassword ? 'Verifying...' : 'Delete'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Team Leader Modal New */}
       <AddTeamLeaderModalNew
@@ -7121,18 +7748,32 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredCashoutData.map((row, index) => (
-                    <tr key={index} className="border-b border-gray-100 dark:border-gray-800">
-                      <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.month}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.year}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.employees}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.salary.toLocaleString()}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.incentive.toLocaleString()}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.tools.toLocaleString()}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.rent.toLocaleString()}</td>
-                      <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.others.toLocaleString()}</td>
+                  {isLoadingCashout ? (
+                    <tr>
+                      <td colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                        Loading cash outflow data...
+                      </td>
                     </tr>
-                  ))}
+                  ) : filteredCashoutData.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                        {cashoutSearch ? 'No matching cash outflow data found' : 'No cash outflow data found'}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredCashoutData.map((row, index) => (
+                      <tr key={row.id || index} className="border-b border-gray-100 dark:border-gray-800">
+                        <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.month}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.year}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.employees}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.salary.toLocaleString('en-IN')}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.incentive.toLocaleString('en-IN')}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.tools.toLocaleString('en-IN')}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.rent.toLocaleString('en-IN')}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.others.toLocaleString('en-IN')}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -8004,32 +8645,30 @@ export default function AdminDashboard() {
               <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
                 <thead>
                   <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Employee ID</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Candidate ID</th>
                     <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Name</th>
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Total Applicants</th>
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Uploads</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Role</th>
                     <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Email</th>
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Department</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Location</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {isLoadingEmployees ? (
+                  {isLoadingCandidates ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading employees...</td>
+                      <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading candidates...</td>
                     </tr>
-                  ) : filteredHrEmployees.length === 0 ? (
+                  ) : filteredCandidates.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">{resumeDatabaseSearch ? 'No matching employees found' : 'No employees found. Click "+ Add Employee" to add one.'}</td>
+                      <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">{resumeDatabaseSearch ? 'No matching candidates found' : 'No candidates found. Click "+ Add Employee" to add one.'}</td>
                     </tr>
                   ) : (
-                    filteredHrEmployees.map((row: any, index: number) => (
+                    filteredCandidates.map((row: any, index: number) => (
                       <tr key={row.id || index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
-                        <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.employeeId}</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.name}</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">-</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">-</td>
-                        <td className="py-3 px-3 text-blue-600 dark:text-blue-400">{row.email}</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.department || 'N/A'}</td>
+                        <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.candidateId || '-'}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.fullName || '-'}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.currentRole || row.position || '-'}</td>
+                        <td className="py-3 px-3 text-blue-600 dark:text-blue-400">{row.email || '-'}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.location || '-'}</td>
                       </tr>
                     ))
                   )}

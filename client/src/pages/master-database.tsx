@@ -830,15 +830,18 @@ export default function MasterDatabase() {
             </SelectContent>
           </Select>
 
-          <Button 
-            variant="outline" 
-            className="flex items-center gap-2 bg-white dark:bg-gray-800" 
-            onClick={() => setIsAdvancedFilterOpen(true)}
-            data-testid="button-advanced-filter"
-          >
-            <Filter size={16} />
-            Advanced Filter
-          </Button>
+          {/* Only show Advanced Filter for Resume, hide for Employee and Client */}
+          {profileType === 'resume' && (
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2 bg-white dark:bg-gray-800" 
+              onClick={() => setIsAdvancedFilterOpen(true)}
+              data-testid="button-advanced-filter"
+            >
+              <Filter size={16} />
+              Advanced Filter
+            </Button>
+          )}
         </div>
       </div>
 

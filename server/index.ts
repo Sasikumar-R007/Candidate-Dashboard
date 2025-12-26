@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
 import cors from "cors";
 import session from "express-session";
@@ -42,10 +43,27 @@ app.use(express.urlencoded({ extended: false }));
 
 // Session configuration with PostgreSQL store for persistence
 const PgSession = connectPgSimple(session);
-const sessionPool = new pg.Pool({ 
+
+// Check if this is a local database (localhost or 127.0.0.1)
+const isLocalDatabase = process.env.DATABASE_URL?.includes('localhost') || 
+                        process.env.DATABASE_URL?.includes('127.0.0.1') ||
+                        (!process.env.DATABASE_URL?.includes('neon.tech') && 
+                         !process.env.DATABASE_URL?.includes('sslmode=require'));
+
+// Configure session pool with appropriate SSL settings
+const sessionPoolConfig: any = {
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
+};
+
+if (isLocalDatabase) {
+  // For local PostgreSQL, disable SSL
+  sessionPoolConfig.ssl = false;
+} else {
+  // For cloud databases (Neon, etc.), use SSL
+  sessionPoolConfig.ssl = { rejectUnauthorized: false };
+}
+
+const sessionPool = new pg.Pool(sessionPoolConfig);
 
 app.use(session({
   store: new PgSession({
@@ -123,13 +141,21 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
-  const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '0.0.0.0';
+  // Use localhost for Windows compatibility in development, 0.0.0.0 for production
+  const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
   
-  server.listen({
+  // Windows doesn't support reusePort, so only use it on non-Windows systems
+  const isWindows = process.platform === 'win32';
+  const listenOptions: any = {
     port,
     host,
-    reusePort: true,
-  }, () => {
+  };
+  
+  if (!isWindows) {
+    listenOptions.reusePort = true;
+  }
+  
+  server.listen(listenOptions, () => {
     log(`🚀 Backend server running on http://${host}:${port}`);
     log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     if (process.env.FRONTEND_URL) {

@@ -495,6 +495,19 @@ export const revenueMappings = pgTable("revenue_mappings", {
   createdAt: text("created_at").notNull(),
 });
 
+export const cashOutflows = pgTable("cash_outflows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  month: text("month").notNull(),
+  year: integer("year").notNull(),
+  employeesCount: integer("employees_count").notNull(),
+  totalSalary: integer("total_salary").notNull(),
+  incentive: integer("incentive").notNull().default(0),
+  toolsCost: integer("tools_cost").notNull().default(0),
+  rent: integer("rent").notNull().default(0),
+  otherExpenses: integer("other_expenses").notNull().default(0),
+  createdAt: text("created_at").notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
 });
@@ -538,6 +551,10 @@ export const insertTeamLeaderProfileSchema = createInsertSchema(teamLeaderProfil
 });
 
 export const insertTargetMetricsSchema = createInsertSchema(targetMetrics).omit({
+  id: true,
+});
+
+export const insertCashOutflowSchema = createInsertSchema(cashOutflows).omit({
   id: true,
 });
 
@@ -868,6 +885,9 @@ export type InsertTeamLeaderProfile = z.infer<typeof insertTeamLeaderProfileSche
 export type TeamLeaderProfile = typeof teamLeaderProfile.$inferSelect;
 export type InsertTargetMetrics = z.infer<typeof insertTargetMetricsSchema>;
 export type TargetMetrics = typeof targetMetrics.$inferSelect;
+export type InsertCashOutflow = z.infer<typeof insertCashOutflowSchema>;
+export type CashOutflow = typeof cashOutflows.$inferSelect;
+
 export type InsertTargetMappings = z.infer<typeof insertTargetMappingsSchema>;
 export type TargetMappings = typeof targetMappings.$inferSelect;
 export type InsertDailyMetrics = z.infer<typeof insertDailyMetricsSchema>;

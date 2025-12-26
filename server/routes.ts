@@ -345,7 +345,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session.regenerate((err) => {
         if (err) {
           console.error('Session regeneration error:', err);
-          return res.status(500).json({ message: "Internal server error" });
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          console.error('Session error details:', errorMessage);
+          return res.status(500).json({ 
+            message: "Internal server error",
+            error: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+          });
         }
         
         // Set session after regeneration
@@ -357,7 +362,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session.save((saveErr) => {
           if (saveErr) {
             console.error('Session save error:', saveErr);
-            return res.status(500).json({ message: "Internal server error" });
+            const errorMessage = saveErr instanceof Error ? saveErr.message : String(saveErr);
+            console.error('Session save error details:', errorMessage);
+            return res.status(500).json({ 
+              message: "Internal server error",
+              error: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+            });
           }
           
           // Return employee data (excluding password) for frontend routing
@@ -371,7 +381,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Employee login error:', error);
-      res.status(500).json({ message: "Internal server error" });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      console.error('Login error details:', { errorMessage, errorStack });
+      res.status(500).json({ 
+        message: "Internal server error",
+        error: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+      });
     }
   });
 
@@ -3756,7 +3772,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       console.error('Admin check error:', error);
-      res.status(500).json({ message: "Failed to check admin status" });
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      console.error('Error details:', { errorMessage, errorStack });
+      res.status(500).json({ 
+        message: "Failed to check admin status",
+        error: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+      });
     }
   });
 
@@ -4362,6 +4384,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get revenue mappings error:", error);
       res.status(500).json({ message: "Failed to get revenue mappings" });
+    }
+  });
+
+  // Cash Outflow CRUD operations
+  
+  // Create cash outflow
+  app.post("/api/admin/cash-outflows", requireAdminAuth, async (req, res) => {
+    try {
+      const { month, year, employeesCount, totalSalary, incentive, toolsCost, rent, otherExpenses } = req.body;
+
+      if (!month || !year || employeesCount === undefined || totalSalary === undefined) {
+        return res.status(400).json({ message: "Month, year, employees count, and total salary are required" });
+      }
+
+      // Parse and validate numeric values
+      const yearNum = parseInt(String(year), 10);
+      const employeesCountNum = parseInt(String(employeesCount), 10);
+      const totalSalaryNum = parseInt(String(totalSalary), 10);
+      const incentiveNum = incentive ? parseInt(String(incentive), 10) : 0;
+      const toolsCostNum = toolsCost ? parseInt(String(toolsCost), 10) : 0;
+      const rentNum = rent ? parseInt(String(rent), 10) : 0;
+      const otherExpensesNum = otherExpenses ? parseInt(String(otherExpenses), 10) : 0;
+
+      // Validate parsed values
+      if (isNaN(yearNum) || isNaN(employeesCountNum) || isNaN(totalSalaryNum) || 
+          isNaN(incentiveNum) || isNaN(toolsCostNum) || isNaN(rentNum) || isNaN(otherExpensesNum)) {
+        return res.status(400).json({ message: "Invalid numeric values in cash outflow data" });
+      }
+
+      const cashOutflowData = {
+        month: String(month),
+        year: yearNum,
+        employeesCount: employeesCountNum,
+        totalSalary: totalSalaryNum,
+        incentive: incentiveNum,
+        toolsCost: toolsCostNum,
+        rent: rentNum,
+        otherExpenses: otherExpensesNum,
+        createdAt: new Date().toISOString()
+      };
+
+      const cashOutflow = await storage.createCashOutflow(cashOutflowData);
+      res.status(201).json({ message: "Cash outflow created successfully", cashOutflow });
+    } catch (error: any) {
+      console.error("Create cash outflow error:", error);
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+        code: error.code
+      });
+      if (error.message?.includes('duplicate') || error.message?.includes('unique')) {
+        return res.status(409).json({ message: "Cash outflow entry already exists for this month and year" });
+      }
+      if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
+        return res.status(500).json({ 
+          message: "Database table not found. Please run 'npm run db:push' to create the cash_outflows table.",
+          error: error.message 
+        });
+      }
+      res.status(500).json({ 
+        message: "Failed to create cash outflow",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+  });
+
+  // Get all cash outflows
+  app.get("/api/admin/cash-outflows", requireAdminAuth, async (req, res) => {
+    try {
+      const cashOutflows = await storage.getAllCashOutflows();
+      res.json(cashOutflows);
+    } catch (error) {
+      console.error("Get cash outflows error:", error);
+      res.status(500).json({ message: "Failed to get cash outflows" });
+    }
+  });
+
+  // Delete cash outflow
+  app.delete("/api/admin/cash-outflows/:id", requireAdminAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteCashOutflow(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Cash outflow not found" });
+      }
+      
+      res.json({ message: "Cash outflow deleted successfully" });
+    } catch (error) {
+      console.error("Delete cash outflow error:", error);
+      res.status(500).json({ message: "Failed to delete cash outflow" });
     }
   });
 
@@ -5755,16 +5869,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/admin/employees/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      const deleted = await storage.deleteEmployee(id);
       
-      if (!deleted) {
+      // Verify employee exists before deletion
+      const employeeToDelete = await storage.getEmployeeById(id);
+      if (!employeeToDelete) {
         return res.status(404).json({ message: "Employee not found" });
       }
       
-      res.json({ message: "Employee deleted successfully" });
-    } catch (error) {
+      // Perform hard delete - completely remove from database
+      const deleted = await storage.deleteEmployee(id);
+      
+      if (!deleted) {
+        return res.status(500).json({ message: "Failed to delete employee from database" });
+      }
+      
+      // Verify deletion by checking if employee still exists
+      const verifyDelete = await storage.getEmployeeById(id);
+      if (verifyDelete) {
+        console.error('Employee still exists after deletion attempt:', id);
+        return res.status(500).json({ message: "Employee deletion failed - record still exists" });
+      }
+      
+      res.json({ 
+        message: "Employee deleted successfully",
+        deleted: true,
+        email: employeeToDelete.email // Return email for confirmation
+      });
+    } catch (error: any) {
       console.error('Delete employee error:', error);
-      res.status(500).json({ message: "Failed to delete employee" });
+      if (error.message?.includes('foreign key') || error.message?.includes('constraint')) {
+        return res.status(409).json({ 
+          message: "Cannot delete employee: record is referenced by other data. Please remove related records first." 
+        });
+      }
+      res.status(500).json({ message: "Failed to delete employee", error: error.message });
     }
   });
 

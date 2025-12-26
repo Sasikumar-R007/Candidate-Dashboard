@@ -33,6 +33,8 @@ import {
   type InsertTargetMappings,
   type RevenueMapping,
   type InsertRevenueMapping,
+  type CashOutflow,
+  type InsertCashOutflow,
   type RecruiterJob,
   type InsertRecruiterJob,
   type UserActivity,
@@ -210,6 +212,12 @@ export interface IStorage {
   getRevenueMappingById(id: string): Promise<RevenueMapping | undefined>;
   updateRevenueMapping(id: string, updates: Partial<RevenueMapping>): Promise<RevenueMapping | undefined>;
   deleteRevenueMapping(id: string): Promise<boolean>;
+  
+  // Cash Outflow methods
+  createCashOutflow(outflow: InsertCashOutflow): Promise<CashOutflow>;
+  getAllCashOutflows(): Promise<CashOutflow[]>;
+  deleteCashOutflow(id: string): Promise<boolean>;
+  
   getClientById(id: string): Promise<Client | undefined>;
   
   // Recruiter Quarterly Performance methods
@@ -1428,6 +1436,19 @@ export class MemStorage implements IStorage {
       pausedRoles: 0,
       withdrawnRoles: 0
     };
+  }
+
+  // Cash Outflow methods (stub - not implemented in MemStorage)
+  async createCashOutflow(outflow: InsertCashOutflow): Promise<CashOutflow> {
+    throw new Error("Cash Outflow methods not implemented in MemStorage. Use DatabaseStorage.");
+  }
+
+  async getAllCashOutflows(): Promise<CashOutflow[]> {
+    throw new Error("Cash Outflow methods not implemented in MemStorage. Use DatabaseStorage.");
+  }
+
+  async deleteCashOutflow(id: string): Promise<boolean> {
+    throw new Error("Cash Outflow methods not implemented in MemStorage. Use DatabaseStorage.");
   }
 
   async getClientPipelineData(companyName: string): Promise<any[]> {

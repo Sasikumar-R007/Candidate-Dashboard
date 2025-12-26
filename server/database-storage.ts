@@ -38,6 +38,8 @@ import {
   type InsertTargetMappings,
   type RevenueMapping,
   type InsertRevenueMapping,
+  type InsertCashOutflow,
+  type CashOutflow,
   type RecruiterJob,
   type InsertRecruiterJob,
   type RecruiterCommand,
@@ -73,7 +75,8 @@ import {
   meetings,
   requirementAssignments,
   resumeSubmissions,
-  dailyMetricsSnapshots
+  dailyMetricsSnapshots,
+  cashOutflows
 } from "@shared/schema";
 import { getResumeTarget } from "@shared/constants";
 import { db } from "./db";
@@ -264,8 +267,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getEmployeeByEmail(email: string): Promise<Employee | undefined> {
-    const [employee] = await db.select().from(employees).where(eq(employees.email, email));
-    return employee || undefined;
+    try {
+      const [employee] = await db.select().from(employees).where(eq(employees.email, email));
+      return employee || undefined;
+    } catch (error) {
+      console.error('Database error in getEmployeeByEmail:', error);
+      throw error;
+    }
   }
 
   async getEmployeeByEmployeeId(employeeId: string): Promise<Employee | undefined> {
@@ -294,7 +302,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllEmployees(): Promise<Employee[]> {
-    return await db.select().from(employees).where(eq(employees.isActive, true)).orderBy(desc(employees.createdAt));
+    try {
+      return await db.select().from(employees).where(eq(employees.isActive, true)).orderBy(desc(employees.createdAt));
+    } catch (error) {
+      console.error('Database error in getAllEmployees:', error);
+      throw error;
+    }
   }
 
   async updateEmployee(id: string, updates: Partial<Employee>): Promise<Employee | undefined> {
@@ -308,10 +321,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteEmployee(id: string): Promise<boolean> {
-    // Soft delete by marking as inactive
+    // Hard delete - completely remove the employee from database
+    // This allows the email to be reused for new users
     const result = await db
-      .update(employees)
-      .set({ isActive: false })
+      .delete(employees)
       .where(eq(employees.id, id));
     return (result.rowCount ?? 0) > 0;
   }
@@ -974,6 +987,34 @@ export class DatabaseStorage implements IStorage {
 
   async deleteRevenueMapping(id: string): Promise<boolean> {
     const result = await db.delete(revenueMappings).where(eq(revenueMappings.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Cash Outflow methods
+  async createCashOutflow(outflow: InsertCashOutflow): Promise<CashOutflow> {
+    try {
+      const [cashOutflow] = await db.insert(cashOutflows).values({
+        ...outflow,
+        createdAt: outflow.createdAt || new Date().toISOString()
+      }).returning();
+      return cashOutflow;
+    } catch (error) {
+      console.error('Database error in createCashOutflow:', error);
+      throw error;
+    }
+  }
+
+  async getAllCashOutflows(): Promise<CashOutflow[]> {
+    try {
+      return await db.select().from(cashOutflows).orderBy(desc(cashOutflows.createdAt));
+    } catch (error) {
+      console.error('Database error in getAllCashOutflows:', error);
+      throw error;
+    }
+  }
+
+  async deleteCashOutflow(id: string): Promise<boolean> {
+    const result = await db.delete(cashOutflows).where(eq(cashOutflows.id, id));
     return (result.rowCount ?? 0) > 0;
   }
 
