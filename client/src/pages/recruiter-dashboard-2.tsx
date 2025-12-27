@@ -741,7 +741,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader userName={`${recruiterProfile?.name || 'Recruiter'} - Recruiter`} companyName="Gumlat Marketing Private Limited" />
+          <AdminTopHeader userName={`${recruiterProfile?.name || 'Recruiter'} - Recruiter`} companyName="Scaling Theory" />
           <div className="flex h-screen">
             {/* Main Content - Middle Section (Scrollable) */}
             <div className="px-6 py-6 space-y-6 flex-1 overflow-y-auto h-full">
@@ -749,7 +749,7 @@ export default function RecruiterDashboard2() {
               {/* Success Alert */}
               {showSuccessAlert && (
                 <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-                  Job posted successfully!
+                  Resume Uploaded Successfully!
                 </div>
               )}
 
@@ -1230,7 +1230,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader userName={`${recruiterProfile?.name || 'Recruiter'} - Recruiter`} companyName="Gumlat Marketing Private Limited" />
+          <AdminTopHeader userName={`${recruiterProfile?.name || 'Recruiter'} - Recruiter`} companyName="Scaling Theory" />
           <div className="flex h-screen">
             {/* Main Content Area */}
             <div className="flex-1 px-6 py-6 overflow-y-auto">
@@ -1515,7 +1515,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader userName={`${recruiterProfile?.name || 'Recruiter'} - Recruiter`} companyName="Gumlat Marketing Private Limited" />
+          <AdminTopHeader userName={`${recruiterProfile?.name || 'Recruiter'} - Recruiter`} companyName="Scaling Theory" />
           <div className="flex h-screen">
             {/* Main Content Area */}
             <div className="flex-1 px-6 py-6 overflow-y-auto">
@@ -1936,7 +1936,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50 dark:bg-gray-950">
-          <AdminTopHeader userName={`${recruiterProfile?.name || 'Recruiter'} - Recruiter`} companyName="Gumlat Marketing Private Limited" />
+          <AdminTopHeader userName={`${recruiterProfile?.name || 'Recruiter'} - Recruiter`} companyName="Scaling Theory" />
           <div className="flex h-[calc(100vh-64px)]">
             {/* Main Content Area - Scrollable */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -2204,7 +2204,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader userName={`${recruiterProfile?.name || 'Recruiter'} - Recruiter`} companyName="Gumlat Marketing Private Limited" />
+          <AdminTopHeader userName={`${recruiterProfile?.name || 'Recruiter'} - Recruiter`} companyName="Scaling Theory" />
           <div className="flex flex-col h-full p-6">
             <h2 className="text-2xl font-bold mb-4">Team Chat</h2>
             <div className="flex-1 bg-white rounded-lg border border-gray-200 p-4 mb-4 overflow-y-auto">

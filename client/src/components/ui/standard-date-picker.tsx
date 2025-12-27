@@ -1,87 +1,96 @@
-import * as React from "react"
-import { Calendar as CalendarIcon, ChevronUp, ChevronDown } from "lucide-react"
-import { format, getYear, getMonth } from "date-fns"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Calendar } from "@/components/ui/calendar"
-import { Button } from "@/components/ui/button"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Input } from "@/components/ui/input"
+import * as React from "react";
+import { Calendar as CalendarIcon, ChevronUp, ChevronDown } from "lucide-react";
+import { format, getYear, getMonth } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
 
-interface DatePickerProps {
-  value: string | undefined
-  onChange: (date: string) => void
-  placeholder?: string
-  maxDate?: Date
-  minDate?: Date
+interface StandardDatePickerProps {
+  value?: Date;
+  onChange: (date: Date | undefined) => void;
+  placeholder?: string;
+  maxDate?: Date;
+  minDate?: Date;
+  disabled?: boolean;
+  className?: string;
 }
 
-export function DatePicker({ value, onChange, placeholder = "DD-MM-YYYY", maxDate, minDate }: DatePickerProps) {
-  const [open, setOpen] = React.useState(false)
-  const selectedDate = value ? new Date(value) : undefined
-  const [displayYear, setDisplayYear] = React.useState<number>(selectedDate ? getYear(selectedDate) : new Date().getFullYear())
-  const [displayMonth, setDisplayMonth] = React.useState<number>(selectedDate ? getMonth(selectedDate) : new Date().getMonth())
+export function StandardDatePicker({ 
+  value, 
+  onChange, 
+  placeholder = "Select date",
+  maxDate,
+  minDate,
+  disabled = false,
+  className = ""
+}: StandardDatePickerProps) {
+  const [open, setOpen] = React.useState(false);
+  const [displayYear, setDisplayYear] = React.useState<number>(value ? getYear(value) : new Date().getFullYear());
+  const [displayMonth, setDisplayMonth] = React.useState<number>(value ? getMonth(value) : new Date().getMonth());
 
-  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-  const monthNamesShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+  const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-  // Update display month/year when selectedDate changes
+  // Update display month/year when value changes
   React.useEffect(() => {
-    if (selectedDate) {
-      setDisplayYear(getYear(selectedDate))
-      setDisplayMonth(getMonth(selectedDate))
+    if (value) {
+      setDisplayYear(getYear(value));
+      setDisplayMonth(getMonth(value));
     }
-  }, [selectedDate])
+  }, [value]);
 
   const handleNextMonth = () => {
     if (displayMonth === 11) {
-      setDisplayMonth(0)
-      setDisplayYear(displayYear + 1)
+      setDisplayMonth(0);
+      setDisplayYear(displayYear + 1);
     } else {
-      setDisplayMonth(displayMonth + 1)
+      setDisplayMonth(displayMonth + 1);
     }
-  }
+  };
 
   const handlePrevMonth = () => {
     if (displayMonth === 0) {
-      setDisplayMonth(11)
-      setDisplayYear(displayYear - 1)
+      setDisplayMonth(11);
+      setDisplayYear(displayYear - 1);
     } else {
-      setDisplayMonth(displayMonth - 1)
+      setDisplayMonth(displayMonth - 1);
     }
-  }
+  };
 
-  const displayDate = selectedDate
-    ? format(selectedDate, 'dd-MM-yyyy')
-    : ''
+  const displayDate = value
+    ? format(value, 'dd-MM-yyyy')
+    : '';
 
   const handleDateSelect = (date: Date | undefined) => {
+    onChange(date);
     if (date) {
-      onChange(date.toISOString().split('T')[0])
-      setOpen(false)
+      setOpen(false);
     }
-  }
+  };
 
   const handleClear = () => {
-    onChange('')
-    setOpen(false)
-  }
+    onChange(undefined);
+    setOpen(false);
+  };
 
   const handleToday = () => {
-    const today = new Date()
-    onChange(today.toISOString().split('T')[0])
-    setOpen(false)
-  }
+    const today = new Date();
+    onChange(today);
+    setOpen(false);
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <div className="relative">
+        <div className={`relative ${className}`}>
           <Input
             type="text"
             placeholder={placeholder}
             value={displayDate}
             readOnly
-            className="input-styled rounded w-full cursor-pointer pr-10"
+            disabled={disabled}
+            className="w-full cursor-pointer pr-10"
           />
           <CalendarIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
         </div>
@@ -133,17 +142,17 @@ export function DatePicker({ value, onChange, placeholder = "DD-MM-YYYY", maxDat
           {/* Calendar */}
           <Calendar
             mode="single"
-            selected={selectedDate}
+            selected={value}
             onSelect={handleDateSelect}
             disabled={(date) => {
-              if (maxDate && date > maxDate) return true
-              if (minDate && date < minDate) return true
-              return false
+              if (maxDate && date > maxDate) return true;
+              if (minDate && date < minDate) return true;
+              return false;
             }}
             month={new Date(displayYear, displayMonth)}
             onMonthChange={(date) => {
-              setDisplayYear(getYear(date))
-              setDisplayMonth(getMonth(date))
+              setDisplayYear(getYear(date));
+              setDisplayMonth(getMonth(date));
             }}
             className="w-full"
           />
@@ -172,5 +181,6 @@ export function DatePicker({ value, onChange, placeholder = "DD-MM-YYYY", maxDat
         </div>
       </PopoverContent>
     </Popover>
-  )
+  );
 }
+

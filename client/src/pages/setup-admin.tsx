@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -257,14 +258,14 @@ export default function SetupAdmin() {
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="securityKey">Security Key *</Label>
-                <Input
+                <PasswordInput
                   id="securityKey"
-                  type="password"
                   placeholder="Enter security key"
                   value={securityKey}
                   onChange={(e) => setSecurityKey(e.target.value)}
                   className="w-full"
                   data-testid="input-security-key"
+                  showPasswordToggle={false}
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
                       handleResetAdmin();
@@ -404,9 +405,8 @@ export default function SetupAdmin() {
 
             <div className="space-y-2">
               <Label htmlFor="password">Password *</Label>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 placeholder="••••••••"
                 {...register("password", { 
                   required: "Password is required",
@@ -422,9 +422,8 @@ export default function SetupAdmin() {
 
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password *</Label>
-              <Input
+              <PasswordInput
                 id="confirmPassword"
-                type="password"
                 placeholder="••••••••"
                 {...register("confirmPassword", { 
                   required: "Please confirm your password",

@@ -122,16 +122,6 @@ export default function TeamLeaderProfileModal({ open, onOpenChange, teamLeader 
             </div>
           </div>
         </div>
-
-        <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-            Team Leadership Summary
-          </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Leading a team of {teamLeader.members} talented recruiters with {teamLeader.tenure} years of experience. 
-            Achieved {teamLeader.qtrsAchieved} quarters of consistent performance with a current performance score of {teamLeader.performanceScore}%.
-          </p>
-        </div>
       </DialogContent>
     </Dialog>
   );

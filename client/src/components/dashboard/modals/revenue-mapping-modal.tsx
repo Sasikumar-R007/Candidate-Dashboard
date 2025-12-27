@@ -135,6 +135,20 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
     emp.designation?.toLowerCase().includes('lead')
   );
 
+  // Clear partnerName when clientType is not "Partner"
+  useEffect(() => {
+    if (clientType !== "Partner") {
+      setPartnerName("");
+    }
+  }, [clientType]);
+
+  // Clear otherSource when source is not "Other"
+  useEffect(() => {
+    if (source !== "Other") {
+      setOtherSource("");
+    }
+  }, [source]);
+
   // Populate form when editing
   useEffect(() => {
     if (editingRevenueMapping) {
@@ -278,23 +292,8 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
         </DialogHeader>
         
         <div className="space-y-4 py-4">
-          {/* Row 1 - Talent Advisor & Team Lead */}
+          {/* Row 1 - Team Lead & Talent Advisor */}
           <div className="grid grid-cols-2 gap-6">
-            <div>
-              <RequiredLabel text="Talent Advisor" />
-              <Select value={talentAdvisor} onValueChange={setTalentAdvisor}>
-                <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700" data-testid="select-talent-advisor">
-                  <SelectValue placeholder="Select Talent Advisor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {talentAdvisors.map((ta: any) => (
-                    <SelectItem key={ta.id} value={ta.id}>
-                      {ta.name} ({ta.employeeId})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
             <div>
               <RequiredLabel text="Team Lead" />
               <Select value={teamLead} onValueChange={setTeamLead}>
@@ -305,6 +304,21 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
                   {teamLeads.map((tl: any) => (
                     <SelectItem key={tl.id} value={tl.id}>
                       {tl.name} ({tl.employeeId})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <RequiredLabel text="Talent Advisor" />
+              <Select value={talentAdvisor} onValueChange={setTalentAdvisor}>
+                <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700" data-testid="select-talent-advisor">
+                  <SelectValue placeholder="Select Talent Advisor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {talentAdvisors.map((ta: any) => (
+                    <SelectItem key={ta.id} value={ta.id}>
+                      {ta.name} ({ta.employeeId})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -388,21 +402,20 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
                 </SelectContent>
               </Select>
             </div>
-            {clientType === "Partner" && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Partner Name <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  type="text"
-                  placeholder="Enter Partner Name"
-                  value={partnerName}
-                  onChange={(e) => setPartnerName(e.target.value)}
-                  className="bg-gray-50 dark:bg-gray-700"
-                  data-testid="input-partner-name"
-                />
-              </div>
-            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Partner Name <span className="text-red-500">*</span>
+              </label>
+              <Input
+                type="text"
+                placeholder="Enter Partner Name"
+                value={partnerName}
+                onChange={(e) => setPartnerName(e.target.value)}
+                disabled={clientType !== "Partner"}
+                className={`bg-gray-50 dark:bg-gray-700 ${clientType !== "Partner" ? "opacity-50 cursor-not-allowed" : ""}`}
+                data-testid="input-partner-name"
+              />
+            </div>
           </div>
 
           {/* Row 5 - Offered Date & Closure Date */}
@@ -532,19 +545,18 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
                 </SelectContent>
               </Select>
             </div>
-            {source === "Other" && (
-              <div>
-                <RequiredLabel text="Specify Source" />
-                <Input
-                  type="text"
-                  placeholder="Enter source name"
-                  value={otherSource}
-                  onChange={(e) => setOtherSource(e.target.value)}
-                  className="bg-gray-50 dark:bg-gray-700"
-                  data-testid="input-other-source"
-                />
-              </div>
-            )}
+            <div>
+              <RequiredLabel text="Specify Source" />
+              <Input
+                type="text"
+                placeholder="Enter source name"
+                value={otherSource}
+                onChange={(e) => setOtherSource(e.target.value)}
+                disabled={source !== "Other"}
+                className={`bg-gray-50 dark:bg-gray-700 ${source !== "Other" ? "opacity-50 cursor-not-allowed" : ""}`}
+                data-testid="input-other-source"
+              />
+            </div>
           </div>
 
           {/* Row 9 - Invoice Date & Invoice Number */}

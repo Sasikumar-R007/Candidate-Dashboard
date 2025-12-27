@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { useForm } from "react-hook-form";
 import { useLocation } from "wouter";
@@ -474,9 +475,8 @@ export default function CandidateLogin() {
                   <Label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Password
                   </Label>
-                  <Input
+                  <PasswordInput
                     id="password"
-                    type="password"
                     placeholder="Enter your password"
                     className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 dark:focus:ring-emerald-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all"
                     data-testid="input-login-password"
@@ -597,9 +597,8 @@ export default function CandidateLogin() {
                   <Label htmlFor="registerPassword" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Password
                   </Label>
-                  <Input
+                  <PasswordInput
                     id="registerPassword"
-                    type="password"
                     placeholder="Create a password"
                     className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 dark:focus:ring-emerald-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all"
                     data-testid="input-register-password"
@@ -620,9 +619,8 @@ export default function CandidateLogin() {
                   <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     Confirm Password
                   </Label>
-                  <Input
+                  <PasswordInput
                     id="confirmPassword"
-                    type="password"
                     placeholder="Confirm your password"
                     className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 dark:focus:ring-emerald-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all"
                     data-testid="input-register-confirm-password"

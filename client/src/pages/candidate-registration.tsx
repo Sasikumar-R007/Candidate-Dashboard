@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
@@ -761,8 +762,7 @@ export default function CandidateRegistration() {
               <Label className="text-sm font-medium text-blue-600 mb-2 block">
                 Password
               </Label>
-              <Input
-                type="password"
+              <PasswordInput
                 placeholder="Create a password (min 6 characters)"
                 className="border border-gray-300 rounded-md px-3 py-2 text-sm"
                 {...step6Form.register("password", {
@@ -783,8 +783,7 @@ export default function CandidateRegistration() {
               <Label className="text-sm font-medium text-blue-600 mb-2 block">
                 Confirm Password
               </Label>
-              <Input
-                type="password"
+              <PasswordInput
                 placeholder="Confirm your password"
                 className="border border-gray-300 rounded-md px-3 py-2 text-sm"
                 {...step6Form.register("confirmPassword", {

@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon } from "lucide-react";
@@ -136,9 +137,8 @@ export default function AddClientCredentialsModal({ isOpen, onClose, editData, o
             data-testid="input-client-email"
           />
 
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
             value={formData.password}
             onChange={(e) => setFormData({...formData, password: e.target.value})}
             placeholder="Enter password"

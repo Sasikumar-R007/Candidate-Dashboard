@@ -7,6 +7,8 @@ import { Switch } from '@/components/ui/switch';
 import { Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
 
 interface ResumeFormData {
   firstName: string;
@@ -56,10 +58,93 @@ export default function UploadResumeModal({
   setFormError
 }: UploadResumeModalProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [deliverToRequirement, setDeliverToRequirement] = useState(false);
   const [selectedRequirement, setSelectedRequirement] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const handleSubmit = () => {
+  // Mutation for creating candidate
+  const createCandidateMutation = useMutation({
+    mutationFn: async (candidateData: any) => {
+      // First upload resume file if present
+      let resumeFilePath = null;
+      if (resumeFile) {
+        const formData = new FormData();
+        formData.append('resume', resumeFile);
+        const uploadResponse = await fetch('/api/recruiter/upload/resume', {
+          method: 'POST',
+          body: formData,
+          credentials: 'include'
+        });
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload resume file');
+        }
+        const uploadResult = await uploadResponse.json();
+        resumeFilePath = uploadResult.filePath || uploadResult.url;
+      }
+      
+      // Then create candidate
+      return apiRequest('POST', '/api/recruiter/candidates', {
+        ...candidateData,
+        resumeFile: resumeFilePath
+      });
+    },
+    onSuccess: () => {
+      // Invalidate queries to refresh candidate lists
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/candidates'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/candidates/counts'] });
+      
+      toast({
+        title: "Resume uploaded successfully",
+        description: deliverToRequirement && selectedRequirement 
+          ? `Resume delivered to requirement: ${selectedRequirement}` 
+          : "Resume has been added to the database",
+      });
+      
+      // Reset form
+      setFormData({
+        firstName: '',
+        lastName: '',
+        mobileNumber: '',
+        whatsappNumber: '',
+        primaryEmail: '',
+        secondaryEmail: '',
+        highestQualification: '',
+        collegeName: '',
+        linkedin: '',
+        pedigreeLevel: '',
+        currentLocation: '',
+        noticePeriod: '',
+        website: '',
+        portfolio1: '',
+        currentCompany: '',
+        portfolio2: '',
+        currentRole: '',
+        portfolio3: '',
+        companyDomain: '',
+        companyLevel: '',
+        skills: ['', '', '', '', '']
+      });
+      setResumeFile(null);
+      setFormError('');
+      setDeliverToRequirement(false);
+      setSelectedRequirement('');
+      
+      // Close modal and trigger success callback
+      onClose();
+      onSuccess();
+    },
+    onError: (error: any) => {
+      setFormError(error.message || 'Failed to upload resume. Please try again.');
+      toast({
+        title: "Error",
+        description: error.message || 'Failed to upload resume. Please try again.',
+        variant: 'destructive'
+      });
+    }
+  });
+  
+  const handleSubmit = async () => {
     // Basic validation
     const required = ['firstName', 'lastName', 'mobileNumber', 'primaryEmail', 'highestQualification', 'collegeName', 'pedigreeLevel', 'currentLocation', 'currentCompany', 'currentRole', 'companyDomain', 'companyLevel'];
     const hasEmptyRequired = required.some(field => !(formData[field as keyof ResumeFormData] as string).trim());
@@ -70,50 +155,39 @@ export default function UploadResumeModal({
       return;
     }
     
-    // Capture state before closing
-    const isDelivering = deliverToRequirement;
-    const requirementName = selectedRequirement;
-    
-    // Show success toast before closing
-    toast({
-      title: "Resume uploaded successfully",
-      description: isDelivering && requirementName 
-        ? `Resume delivered to requirement: ${requirementName}` 
-        : "Resume has been added to the database",
-    });
-    
-    // Reset form first
-    setFormData({
-      firstName: '',
-      lastName: '',
-      mobileNumber: '',
-      whatsappNumber: '',
-      primaryEmail: '',
-      secondaryEmail: '',
-      highestQualification: '',
-      collegeName: '',
-      linkedin: '',
-      pedigreeLevel: '',
-      currentLocation: '',
-      noticePeriod: '',
-      website: '',
-      portfolio1: '',
-      currentCompany: '',
-      portfolio2: '',
-      currentRole: '',
-      portfolio3: '',
-      companyDomain: '',
-      companyLevel: '',
-      skills: ['', '', '', '', '']
-    });
-    setResumeFile(null);
+    setIsSubmitting(true);
     setFormError('');
-    setDeliverToRequirement(false);
-    setSelectedRequirement('');
     
-    // Close modal after reset
-    onClose();
-    onSuccess();
+    // Prepare candidate data
+    const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+    const skillsString = formData.skills.filter(s => s.trim()).join(', ');
+    
+    const candidateData = {
+      fullName,
+      email: formData.primaryEmail.toLowerCase().trim(),
+      phone: formData.mobileNumber.trim(),
+      designation: formData.currentRole || null,
+      experience: null, // Can be calculated or added later
+      skills: skillsString || null,
+      location: formData.currentLocation || null,
+      company: formData.currentCompany || null,
+      education: formData.collegeName || null,
+      highestQualification: formData.highestQualification || null,
+      linkedinUrl: formData.linkedin || null,
+      websiteUrl: formData.website || null,
+      portfolioUrl: formData.portfolio1 || formData.portfolio2 || formData.portfolio3 || null,
+      noticePeriod: formData.noticePeriod || null,
+      pedigreeLevel: formData.pedigreeLevel || null,
+      companyLevel: formData.companyLevel || null,
+      companyDomain: formData.companyDomain || null,
+      pipelineStatus: 'New',
+      addedBy: 'Recruiter', // Will be replaced with actual recruiter name from session
+      isActive: true,
+      isVerified: false
+    };
+    
+    createCandidateMutation.mutate(candidateData);
+    setIsSubmitting(false);
   };
 
   return (
@@ -443,10 +517,11 @@ export default function UploadResumeModal({
             <div className="flex justify-center pt-4">
               <Button
                 onClick={handleSubmit}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded font-medium"
+                disabled={isSubmitting || createCandidateMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2 rounded font-medium disabled:opacity-50"
                 data-testid="button-submit-resume"
               >
-                Submit Resume
+                {isSubmitting || createCandidateMutation.isPending ? 'Submitting...' : 'Submit Resume'}
               </Button>
             </div>
           </div>

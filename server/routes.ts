@@ -3167,6 +3167,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Recruiter upload resume file
+  app.post("/api/recruiter/upload/resume", requireEmployeeAuth, resumeUpload.single('resume'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
+        : `http://${req.get('host')}`;
+      
+      const filePath = `${baseUrl}/uploads/resumes/${req.file.filename}`;
+      
+      res.json({ 
+        success: true,
+        filePath: filePath,
+        url: filePath,
+        filename: req.file.filename 
+      });
+    } catch (error: any) {
+      console.error('Resume upload error:', error);
+      res.status(500).json({ message: "Upload failed", error: error.message || 'Unknown error' });
+    }
+  });
+
   app.post("/api/recruiter/upload/profile", upload.single('file'), (req, res) => {
     try {
       if (!req.file) {
@@ -4820,17 +4845,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get all revenue mappings (closures)
       const allRevenueMappings = await db.select().from(revenueMappings);
       
-      // Transform to closure list format
-      const closuresList = allRevenueMappings.map(rm => ({
-        id: rm.id,
-        candidate: rm.candidateName || "N/A",
-        position: rm.position,
-        client: rm.clientName,
-        quarter: `${rm.quarter}, ${rm.year}`,
-        talentAdvisor: rm.talentAdvisorName,
-        ctc: rm.revenue ? (rm.revenue / (rm.percentage / 100)).toLocaleString('en-IN') : "N/A",
-        revenue: rm.revenue ? rm.revenue.toLocaleString('en-IN') : "0"
-      }));
+      // Transform to closure list format for "All Closure Reports" modal
+      const closuresList = allRevenueMappings.map(rm => {
+        // Calculate Fixed CTC from revenue and percentage
+        const fixedCTC = rm.revenue && rm.percentage ? (rm.revenue / (rm.percentage / 100)) : 0;
+        
+        // Format dates to DD-MM-YYYY format
+        const formatDate = (dateStr: string | null | undefined): string => {
+          if (!dateStr) return "N/A";
+          try {
+            const date = new Date(dateStr);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}-${month}-${year}`;
+          } catch {
+            return dateStr; // Return as-is if parsing fails
+          }
+        };
+        
+        // Determine status: if closureDate exists, it's "Joined", otherwise "Pending"
+        const status = rm.closureDate ? "Joined" : "Pending";
+        
+        return {
+          id: rm.id,
+          candidate: rm.candidateName || "N/A",
+          position: rm.position,
+          client: rm.clientName,
+          talentAdvisor: rm.talentAdvisorName,
+          fixedCTC: fixedCTC > 0 ? `₹${fixedCTC.toLocaleString('en-IN')}` : "N/A",
+          offeredDate: formatDate(rm.offeredDate),
+          joinedDate: formatDate(rm.closureDate),
+          status: status,
+          // Keep these for backward compatibility with other closures endpoints
+          quarter: `${rm.quarter}, ${rm.year}`,
+          ctc: fixedCTC > 0 ? fixedCTC.toLocaleString('en-IN') : "N/A",
+          revenue: rm.revenue ? rm.revenue.toLocaleString('en-IN') : "0"
+        };
+      });
       
       res.json(closuresList);
     } catch (error) {
@@ -5215,6 +5267,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get job counts error:", error);
       res.status(500).json({ message: "Failed to get job counts" });
+    }
+  });
+
+  // Recruiter create candidate (upload resume)
+  app.post("/api/recruiter/candidates", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      const recruiterName = employee?.name || 'Recruiter';
+      
+      const { fullName, email, phone, designation, experience, skills, location, company, education, highestQualification, linkedinUrl, websiteUrl, portfolioUrl, noticePeriod, pedigreeLevel, companyLevel, companyDomain, resumeFile } = req.body;
+
+      if (!fullName || !email) {
+        return res.status(400).json({ message: "Full name and email are required" });
+      }
+
+      // Check if candidate already exists
+      const existing = await storage.getCandidateByEmail(email.toLowerCase());
+      if (existing) {
+        return res.status(409).json({ message: "A candidate with this email already exists" });
+      }
+
+      const candidateId = await storage.generateNextCandidateId();
+      
+      const newCandidate = await storage.createCandidate({
+        candidateId,
+        fullName,
+        email: email.toLowerCase(),
+        phone: phone || null,
+        designation: designation || null,
+        experience: experience || null,
+        skills: skills || null,
+        location: location || null,
+        company: company || null,
+        education: education || null,
+        currentRole: designation || null,
+        linkedinUrl: linkedinUrl || null,
+        websiteUrl: websiteUrl || null,
+        portfolioUrl: portfolioUrl || null,
+        noticePeriod: noticePeriod || null,
+        pedigreeLevel: pedigreeLevel || null,
+        companyLevel: companyLevel || null,
+        companyDomain: companyDomain || null,
+        resumeFile: resumeFile || null,
+        addedBy: recruiterName,
+        pipelineStatus: 'New',
+        isActive: true,
+        isVerified: false,
+        createdAt: new Date().toISOString()
+      });
+
+      // Log activity
+      await logCandidateSubmitted(recruiterName, newCandidate.candidateId, newCandidate.fullName);
+
+      res.json({ 
+        success: true, 
+        message: "Candidate created successfully",
+        candidate: newCandidate 
+      });
+    } catch (error: any) {
+      console.error('Create candidate error:', error);
+      if (error.message?.includes('duplicate') || error.message?.includes('unique')) {
+        return res.status(409).json({ message: "A candidate with this email already exists" });
+      }
+      res.status(500).json({ message: "Failed to create candidate", error: error.message || 'Unknown error' });
     }
   });
 

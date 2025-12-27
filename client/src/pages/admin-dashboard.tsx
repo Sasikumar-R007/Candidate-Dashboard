@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { DatePicker } from "@/components/ui/date-picker";
+import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -32,6 +33,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users, ExternalLink, HelpCircle, MoreVertical, Download, Edit2, ChevronDown, ChevronUp, Plus, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ComposedChart, BarChart, Bar, Cell, AreaChart, Area } from 'recharts';
@@ -954,6 +956,11 @@ export default function AdminDashboard() {
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
   const [isMetricsModalOpen, setIsMetricsModalOpen] = useState(false);
   const [isClientMetricsModalOpen, setIsClientMetricsModalOpen] = useState(false);
+  const [clientMetricsPeriod, setClientMetricsPeriod] = useState<string>("monthly");
+  const [clientMetricsDate, setClientMetricsDate] = useState<Date | undefined>(new Date());
+  const [clientMetricsWeekStart, setClientMetricsWeekStart] = useState<Date | undefined>(new Date());
+  const [clientMetricsMonth, setClientMetricsMonth] = useState<string>(format(new Date(), "MMMM"));
+  const [clientMetricsYear, setClientMetricsYear] = useState<string>(format(new Date(), "yyyy"));
   const [isPipelineModalOpen, setIsPipelineModalOpen] = useState(false);
   const [isCashoutModalOpen, setIsCashoutModalOpen] = useState(false);
   const [isClientModalOpen, setIsClientModalOpen] = useState(false);
@@ -1531,7 +1538,7 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/team-performance'],
   });
 
-  // Fetch closures list from API
+  // Fetch closures list from API for Closure Modal
   const { data: closuresListData = [], isLoading: isLoadingClosures } = useQuery<Array<{
     id: string;
     candidate: string;
@@ -1544,6 +1551,33 @@ export default function AdminDashboard() {
   }>>({
     queryKey: ['/api/admin/closures-list'],
   });
+
+  // Fetch closure reports for "All Closure Reports" modal (pipeline page)
+  const { data: closureReportsData = [], isLoading: isLoadingClosureReports } = useQuery<Array<{
+    id: string;
+    candidate: string;
+    position: string;
+    client: string;
+    talentAdvisor: string;
+    fixedCTC: string;
+    offeredDate: string;
+    joinedDate: string;
+    status: string;
+  }>>({
+    queryKey: ['/api/admin/closures-list'],
+  });
+
+  // Filter closure reports based on search
+  const filteredClosureReports = useMemo(() => {
+    if (!closureReportsSearch) return closureReportsData;
+    const searchLower = closureReportsSearch.toLowerCase();
+    return closureReportsData.filter(report => 
+      report.candidate?.toLowerCase().includes(searchLower) ||
+      report.position?.toLowerCase().includes(searchLower) ||
+      report.client?.toLowerCase().includes(searchLower) ||
+      report.talentAdvisor?.toLowerCase().includes(searchLower)
+    );
+  }, [closureReportsData, closureReportsSearch]);
 
   // Fetch revenue analysis data from API
   const { data: revenueAnalysis } = useQuery<{
@@ -2644,12 +2678,59 @@ export default function AdminDashboard() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => date && setSelectedDate(date)}
-                  initialFocus
-                />
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1 flex-1">
+                      <span className="text-sm font-medium">{format(selectedDate, "MMMM")}, </span>
+                      <Select value={format(selectedDate, "yyyy")} onValueChange={(val) => {
+                        const newDate = new Date(selectedDate);
+                        newDate.setFullYear(parseInt(val));
+                        setSelectedDate(newDate);
+                      }}>
+                        <SelectTrigger className="h-auto p-0 border-0 shadow-none focus:ring-0 w-auto">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
+                            <SelectItem key={year} value={year.toString()}>
+                              {year}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
+                        const newDate = new Date(selectedDate);
+                        newDate.setMonth(newDate.getMonth() - 1);
+                        setSelectedDate(newDate);
+                      }} type="button">
+                        <ChevronUp className="h-4 w-4" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
+                        const newDate = new Date(selectedDate);
+                        newDate.setMonth(newDate.getMonth() + 1);
+                        setSelectedDate(newDate);
+                      }} type="button">
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    initialFocus
+                  />
+                  <div className="flex justify-between border-t pt-3">
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedDate(new Date())} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
+                      Clear
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedDate(new Date())} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
+                      Today
+                    </Button>
+                  </div>
+                </div>
               </PopoverContent>
             </Popover>
           </div>
@@ -4673,13 +4754,60 @@ export default function AdminDashboard() {
                           {format(selectedDate, "dd-MMM-yyyy")}
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={selectedDate}
-                          onSelect={(date) => date && setSelectedDate(date)}
-                          initialFocus
-                        />
+                      <PopoverContent className="w-auto p-0" align="end">
+                        <div className="p-4 space-y-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1 flex-1">
+                              <span className="text-sm font-medium">{format(selectedDate, "MMMM")}, </span>
+                              <Select value={format(selectedDate, "yyyy")} onValueChange={(val) => {
+                                const newDate = new Date(selectedDate);
+                                newDate.setFullYear(parseInt(val));
+                                setSelectedDate(newDate);
+                              }}>
+                                <SelectTrigger className="h-auto p-0 border-0 shadow-none focus:ring-0 w-auto">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
+                                    <SelectItem key={year} value={year.toString()}>
+                                      {year}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
+                                const newDate = new Date(selectedDate);
+                                newDate.setMonth(newDate.getMonth() - 1);
+                                setSelectedDate(newDate);
+                              }} type="button">
+                                <ChevronUp className="h-4 w-4" />
+                              </Button>
+                              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
+                                const newDate = new Date(selectedDate);
+                                newDate.setMonth(newDate.getMonth() + 1);
+                                setSelectedDate(newDate);
+                              }} type="button">
+                                <ChevronDown className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                          <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={(date) => date && setSelectedDate(date)}
+                            initialFocus
+                          />
+                          <div className="flex justify-between border-t pt-3">
+                            <Button variant="ghost" size="sm" onClick={() => setSelectedDate(new Date())} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
+                              Clear
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => setSelectedDate(new Date())} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
+                              Today
+                            </Button>
+                          </div>
+                        </div>
                       </PopoverContent>
                     </Popover>
                   </div>
@@ -5787,8 +5915,55 @@ export default function AdminDashboard() {
                             {teamsCustomDate ? format(teamsCustomDate, 'PPP') : 'Pick date'}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar mode="single" selected={teamsCustomDate} onSelect={setTeamsCustomDate} />
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <div className="p-4 space-y-3">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1 flex-1">
+                                <span className="text-sm font-medium">{format(teamsCustomDate || new Date(), "MMMM")}, </span>
+                                <Select value={teamsCustomDate ? format(teamsCustomDate, "yyyy") : format(new Date(), "yyyy")} onValueChange={(val) => {
+                                  const newDate = new Date(teamsCustomDate || new Date());
+                                  newDate.setFullYear(parseInt(val));
+                                  setTeamsCustomDate(newDate);
+                                }}>
+                                  <SelectTrigger className="h-auto p-0 border-0 shadow-none focus:ring-0 w-auto">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
+                                      <SelectItem key={year} value={year.toString()}>
+                                        {year}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
+                                  const newDate = new Date(teamsCustomDate || new Date());
+                                  newDate.setMonth(newDate.getMonth() - 1);
+                                  setTeamsCustomDate(newDate);
+                                }} type="button">
+                                  <ChevronUp className="h-4 w-4" />
+                                </Button>
+                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
+                                  const newDate = new Date(teamsCustomDate || new Date());
+                                  newDate.setMonth(newDate.getMonth() + 1);
+                                  setTeamsCustomDate(newDate);
+                                }} type="button">
+                                  <ChevronDown className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                            <Calendar mode="single" selected={teamsCustomDate} onSelect={setTeamsCustomDate} />
+                            <div className="flex justify-between border-t pt-3">
+                              <Button variant="ghost" size="sm" onClick={() => setTeamsCustomDate(undefined)} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
+                                Clear
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => setTeamsCustomDate(new Date())} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
+                                Today
+                              </Button>
+                            </div>
+                          </div>
                         </PopoverContent>
                       </Popover>
                     </div>
@@ -7176,13 +7351,60 @@ export default function AdminDashboard() {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={meetingDate}
-                    onSelect={setMeetingDate}
-                    initialFocus
-                    className="dark:text-white"
-                  />
+                  <div className="p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1 flex-1">
+                        <span className="text-sm font-medium">{format(meetingDate || new Date(), "MMMM")}, </span>
+                        <Select value={meetingDate ? format(meetingDate, "yyyy") : format(new Date(), "yyyy")} onValueChange={(val) => {
+                          const newDate = new Date(meetingDate || new Date());
+                          newDate.setFullYear(parseInt(val));
+                          setMeetingDate(newDate);
+                        }}>
+                          <SelectTrigger className="h-auto p-0 border-0 shadow-none focus:ring-0 w-auto">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
+                              <SelectItem key={year} value={year.toString()}>
+                                {year}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
+                          const newDate = new Date(meetingDate || new Date());
+                          newDate.setMonth(newDate.getMonth() - 1);
+                          setMeetingDate(newDate);
+                        }} type="button">
+                          <ChevronUp className="h-4 w-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
+                          const newDate = new Date(meetingDate || new Date());
+                          newDate.setMonth(newDate.getMonth() + 1);
+                          setMeetingDate(newDate);
+                        }} type="button">
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <Calendar
+                      mode="single"
+                      selected={meetingDate}
+                      onSelect={setMeetingDate}
+                      initialFocus
+                      className="dark:text-white"
+                    />
+                    <div className="flex justify-between border-t pt-3">
+                      <Button variant="ghost" size="sm" onClick={() => setMeetingDate(undefined)} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
+                        Clear
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setMeetingDate(new Date())} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
+                        Today
+                      </Button>
+                    </div>
+                  </div>
                 </PopoverContent>
               </Popover>
               {meetingDate && (
@@ -7263,86 +7485,40 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="p-3 text-gray-900 dark:text-white">David Johnson</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Frontend Developer</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">TechCorp</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Kavitha</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹12,00,000</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">12-06-2025</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">12-04-2025</td>
-                    <td className="p-3"><span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded">Joined</span></td>
-                  </tr>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="p-3 text-gray-900 dark:text-white">Tom Anderson</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">UI/UX Designer</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Designify</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Rajesh</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹15,00,000</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">18-06-2025</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">05-05-2025</td>
-                    <td className="p-3"><span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded">Joined</span></td>
-                  </tr>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="p-3 text-gray-900 dark:text-white">Robert Kim</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Backend Developer</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">CodeLabs</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Sowmiya</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹18,00,000</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">28-06-2025</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">19-08-2025</td>
-                    <td className="p-3"><span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded">Joined</span></td>
-                  </tr>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="p-3 text-gray-900 dark:text-white">Kevin Brown</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">QA Tester</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">AppLogic</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Kalaiselvi</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹10,00,000</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">03-07-2025</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">03-09-2025</td>
-                    <td className="p-3"><span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded">Joined</span></td>
-                  </tr>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="p-3 text-gray-900 dark:text-white">Mel Gibson</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Mobile App Developer</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Tesco</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Malathi</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹16,00,000</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">18-07-2025</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">10-10-2025</td>
-                    <td className="p-3"><span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded">Joined</span></td>
-                  </tr>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="p-3 text-gray-900 dark:text-white">Sarah Williams</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Product Manager</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">InnovateTech</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Priya</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹25,00,000</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">15-08-2025</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">01-11-2025</td>
-                    <td className="p-3"><span className="bg-yellow-100 text-yellow-800 text-sm px-2 py-1 rounded">Pending</span></td>
-                  </tr>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="p-3 text-gray-900 dark:text-white">Michael Chen</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Data Scientist</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">DataFlow</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Arun</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹22,00,000</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">25-08-2025</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">15-11-2025</td>
-                    <td className="p-3"><span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded">Joined</span></td>
-                  </tr>
-                  <tr className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="p-3 text-gray-900 dark:text-white">Lisa Rodriguez</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">DevOps Engineer</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">CloudTech</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">Anusha</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">₹20,00,000</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">10-09-2025</td>
-                    <td className="p-3 text-gray-600 dark:text-gray-400">25-11-2025</td>
-                    <td className="p-3"><span className="bg-green-100 text-green-800 text-sm px-2 py-1 rounded">Joined</span></td>
-                  </tr>
+                  {isLoadingClosureReports ? (
+                    <tr>
+                      <td colSpan={8} className="p-8 text-center text-gray-500 dark:text-gray-400">
+                        Loading closure reports...
+                      </td>
+                    </tr>
+                  ) : filteredClosureReports.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="p-8 text-center text-gray-500 dark:text-gray-400">
+                        {closureReportsSearch ? `No results found for "${closureReportsSearch}"` : "No closure reports available"}
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredClosureReports.map((report) => (
+                      <tr key={report.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td className="p-3 text-gray-900 dark:text-white">{report.candidate}</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">{report.position}</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">{report.client}</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">{report.talentAdvisor}</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">{report.fixedCTC}</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">{report.offeredDate}</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">{report.joinedDate}</td>
+                        <td className="p-3">
+                          <span className={`text-sm px-2 py-1 rounded ${
+                            report.status === "Joined" 
+                              ? "bg-green-100 text-green-800" 
+                              : "bg-yellow-100 text-yellow-800"
+                          }`}>
+                            {report.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -7426,9 +7602,8 @@ export default function AdminDashboard() {
             
             <div className="space-y-2">
               <Label htmlFor="delete-password">Admin Password</Label>
-              <Input
+              <PasswordInput
                 id="delete-password"
-                type="password"
                 placeholder="Enter your password"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
@@ -8026,15 +8201,72 @@ export default function AdminDashboard() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={clientStartDate}
-                      onSelect={(date) => {
-                        setClientStartDate(date);
-                        setClientForm({...clientForm, startDate: date ? format(date, "yyyy-MM-dd") : ''});
-                      }}
-                      initialFocus
-                    />
+                    <div className="p-4 space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1 flex-1">
+                          <span className="text-sm font-medium">{format(clientStartDate || new Date(), "MMMM")}, </span>
+                          <Select value={clientStartDate ? format(clientStartDate, "yyyy") : format(new Date(), "yyyy")} onValueChange={(val) => {
+                            const newDate = new Date(clientStartDate || new Date());
+                            newDate.setFullYear(parseInt(val));
+                            setClientStartDate(newDate);
+                            setClientForm({...clientForm, startDate: format(newDate, "yyyy-MM-dd")});
+                          }}>
+                            <SelectTrigger className="h-auto p-0 border-0 shadow-none focus:ring-0 w-auto">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
+                                <SelectItem key={year} value={year.toString()}>
+                                  {year}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
+                            const newDate = new Date(clientStartDate || new Date());
+                            newDate.setMonth(newDate.getMonth() - 1);
+                            setClientStartDate(newDate);
+                            setClientForm({...clientForm, startDate: format(newDate, "yyyy-MM-dd")});
+                          }} type="button">
+                            <ChevronUp className="h-4 w-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
+                            const newDate = new Date(clientStartDate || new Date());
+                            newDate.setMonth(newDate.getMonth() + 1);
+                            setClientStartDate(newDate);
+                            setClientForm({...clientForm, startDate: format(newDate, "yyyy-MM-dd")});
+                          }} type="button">
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <Calendar
+                        mode="single"
+                        selected={clientStartDate}
+                        onSelect={(date) => {
+                          setClientStartDate(date);
+                          setClientForm({...clientForm, startDate: date ? format(date, "yyyy-MM-dd") : ''});
+                        }}
+                        initialFocus
+                      />
+                      <div className="flex justify-between border-t pt-3">
+                        <Button variant="ghost" size="sm" onClick={() => {
+                          setClientStartDate(undefined);
+                          setClientForm({...clientForm, startDate: ''});
+                        }} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
+                          Clear
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => {
+                          const today = new Date();
+                          setClientStartDate(today);
+                          setClientForm({...clientForm, startDate: format(today, "yyyy-MM-dd")});
+                        }} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
+                          Today
+                        </Button>
+                      </div>
+                    </div>
                   </PopoverContent>
                 </Popover>
               </div>
@@ -8975,13 +9207,60 @@ export default function AdminDashboard() {
                     {revenueDateFrom ? format(revenueDateFrom, "PPP") : <span>From Date</span>}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={revenueDateFrom}
-                    onSelect={setRevenueDateFrom}
-                    initialFocus
-                  />
+                <PopoverContent className="w-auto p-0" align="start">
+                  <div className="p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1 flex-1">
+                        <span className="text-sm font-medium">{format(revenueDateFrom || new Date(), "MMMM")}, </span>
+                        <Select value={revenueDateFrom ? format(revenueDateFrom, "yyyy") : format(new Date(), "yyyy")} onValueChange={(val) => {
+                          const newDate = new Date(revenueDateFrom || new Date());
+                          newDate.setFullYear(parseInt(val));
+                          setRevenueDateFrom(newDate);
+                        }}>
+                          <SelectTrigger className="h-auto p-0 border-0 shadow-none focus:ring-0 w-auto">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
+                              <SelectItem key={year} value={year.toString()}>
+                                {year}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
+                          const newDate = new Date(revenueDateFrom || new Date());
+                          newDate.setMonth(newDate.getMonth() - 1);
+                          setRevenueDateFrom(newDate);
+                        }} type="button">
+                          <ChevronUp className="h-4 w-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
+                          const newDate = new Date(revenueDateFrom || new Date());
+                          newDate.setMonth(newDate.getMonth() + 1);
+                          setRevenueDateFrom(newDate);
+                        }} type="button">
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <Calendar
+                      mode="single"
+                      selected={revenueDateFrom}
+                      onSelect={setRevenueDateFrom}
+                      initialFocus
+                    />
+                    <div className="flex justify-between border-t pt-3">
+                      <Button variant="ghost" size="sm" onClick={() => setRevenueDateFrom(undefined)} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
+                        Clear
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setRevenueDateFrom(new Date())} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
+                        Today
+                      </Button>
+                    </div>
+                  </div>
                 </PopoverContent>
               </Popover>
               
@@ -8996,13 +9275,60 @@ export default function AdminDashboard() {
                     {revenueDateTo ? format(revenueDateTo, "PPP") : <span>To Date</span>}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={revenueDateTo}
-                    onSelect={setRevenueDateTo}
-                    initialFocus
-                  />
+                <PopoverContent className="w-auto p-0" align="start">
+                  <div className="p-4 space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1 flex-1">
+                        <span className="text-sm font-medium">{format(revenueDateTo || new Date(), "MMMM")}, </span>
+                        <Select value={revenueDateTo ? format(revenueDateTo, "yyyy") : format(new Date(), "yyyy")} onValueChange={(val) => {
+                          const newDate = new Date(revenueDateTo || new Date());
+                          newDate.setFullYear(parseInt(val));
+                          setRevenueDateTo(newDate);
+                        }}>
+                          <SelectTrigger className="h-auto p-0 border-0 shadow-none focus:ring-0 w-auto">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
+                              <SelectItem key={year} value={year.toString()}>
+                                {year}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
+                          const newDate = new Date(revenueDateTo || new Date());
+                          newDate.setMonth(newDate.getMonth() - 1);
+                          setRevenueDateTo(newDate);
+                        }} type="button">
+                          <ChevronUp className="h-4 w-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
+                          const newDate = new Date(revenueDateTo || new Date());
+                          newDate.setMonth(newDate.getMonth() + 1);
+                          setRevenueDateTo(newDate);
+                        }} type="button">
+                          <ChevronDown className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <Calendar
+                      mode="single"
+                      selected={revenueDateTo}
+                      onSelect={setRevenueDateTo}
+                      initialFocus
+                    />
+                    <div className="flex justify-between border-t pt-3">
+                      <Button variant="ghost" size="sm" onClick={() => setRevenueDateTo(undefined)} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
+                        Clear
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setRevenueDateTo(new Date())} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
+                        Today
+                      </Button>
+                    </div>
+                  </div>
                 </PopoverContent>
               </Popover>
               
@@ -9051,13 +9377,184 @@ export default function AdminDashboard() {
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold text-gray-900">Speed Metrics</h2>
               <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <CalendarIcon className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm">12-Aug-2025</span>
-                </div>
-                <Select>
+                {/* Date/Period Selector */}
+                {clientMetricsPeriod === "daily" && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <div className="flex items-center gap-2 cursor-pointer border rounded-md px-3 py-2 hover:bg-gray-50">
+                        <CalendarIcon className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm">
+                          {clientMetricsDate ? format(clientMetricsDate, "dd-MMM-yyyy") : "Select date"}
+                        </span>
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <div className="p-4 space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1 flex-1">
+                            <span className="text-sm font-medium">{format(clientMetricsDate || new Date(), "MMMM")}, </span>
+                            <Select value={clientMetricsDate ? format(clientMetricsDate, "yyyy") : format(new Date(), "yyyy")} onValueChange={(val) => {
+                              const newDate = new Date(clientMetricsDate || new Date());
+                              newDate.setFullYear(parseInt(val));
+                              setClientMetricsDate(newDate);
+                            }}>
+                              <SelectTrigger className="h-auto p-0 border-0 shadow-none focus:ring-0 w-auto">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
+                                  <SelectItem key={year} value={year.toString()}>
+                                    {year}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
+                              const newDate = new Date(clientMetricsDate || new Date());
+                              newDate.setMonth(newDate.getMonth() - 1);
+                              setClientMetricsDate(newDate);
+                            }} type="button">
+                              <ChevronUp className="h-4 w-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
+                              const newDate = new Date(clientMetricsDate || new Date());
+                              newDate.setMonth(newDate.getMonth() + 1);
+                              setClientMetricsDate(newDate);
+                            }} type="button">
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <Calendar
+                          mode="single"
+                          selected={clientMetricsDate}
+                          onSelect={setClientMetricsDate}
+                          initialFocus
+                        />
+                        <div className="flex justify-between border-t pt-3">
+                          <Button variant="ghost" size="sm" onClick={() => setClientMetricsDate(undefined)} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
+                            Clear
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setClientMetricsDate(new Date())} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
+                            Today
+                          </Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
+                
+                {clientMetricsPeriod === "weekly" && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <div className="flex items-center gap-2 cursor-pointer border rounded-md px-3 py-2 hover:bg-gray-50">
+                        <CalendarIcon className="h-4 w-4 text-gray-500" />
+                        <span className="text-sm">
+                          {clientMetricsWeekStart 
+                            ? `${format(clientMetricsWeekStart, "dd-MMM-yyyy")} - ${format(new Date(clientMetricsWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000), "dd-MMM-yyyy")}`
+                            : "Select start date"}
+                        </span>
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <div className="p-4 space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1 flex-1">
+                            <span className="text-sm font-medium">{format(clientMetricsWeekStart || new Date(), "MMMM")}, </span>
+                            <Select value={clientMetricsWeekStart ? format(clientMetricsWeekStart, "yyyy") : format(new Date(), "yyyy")} onValueChange={(val) => {
+                              const newDate = new Date(clientMetricsWeekStart || new Date());
+                              newDate.setFullYear(parseInt(val));
+                              setClientMetricsWeekStart(newDate);
+                            }}>
+                              <SelectTrigger className="h-auto p-0 border-0 shadow-none focus:ring-0 w-auto">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
+                                  <SelectItem key={year} value={year.toString()}>
+                                    {year}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
+                              const newDate = new Date(clientMetricsWeekStart || new Date());
+                              newDate.setMonth(newDate.getMonth() - 1);
+                              setClientMetricsWeekStart(newDate);
+                            }} type="button">
+                              <ChevronUp className="h-4 w-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
+                              const newDate = new Date(clientMetricsWeekStart || new Date());
+                              newDate.setMonth(newDate.getMonth() + 1);
+                              setClientMetricsWeekStart(newDate);
+                            }} type="button">
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <Calendar
+                          mode="single"
+                          selected={clientMetricsWeekStart}
+                          onSelect={setClientMetricsWeekStart}
+                          initialFocus
+                        />
+                        <div className="flex justify-between border-t pt-3">
+                          <Button variant="ghost" size="sm" onClick={() => setClientMetricsWeekStart(undefined)} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
+                            Clear
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setClientMetricsWeekStart(new Date())} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
+                            Today
+                          </Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
+                
+                {clientMetricsPeriod === "monthly" && (
+                  <div className="flex items-center gap-2">
+                    <Select value={clientMetricsMonth} onValueChange={setClientMetricsMonth}>
+                      <SelectTrigger className="w-32" data-testid="select-client-metrics-month">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="January">January</SelectItem>
+                        <SelectItem value="February">February</SelectItem>
+                        <SelectItem value="March">March</SelectItem>
+                        <SelectItem value="April">April</SelectItem>
+                        <SelectItem value="May">May</SelectItem>
+                        <SelectItem value="June">June</SelectItem>
+                        <SelectItem value="July">July</SelectItem>
+                        <SelectItem value="August">August</SelectItem>
+                        <SelectItem value="September">September</SelectItem>
+                        <SelectItem value="October">October</SelectItem>
+                        <SelectItem value="November">November</SelectItem>
+                        <SelectItem value="December">December</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={clientMetricsYear} onValueChange={setClientMetricsYear}>
+                      <SelectTrigger className="w-24" data-testid="select-client-metrics-year">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
+                          <SelectItem key={year} value={year.toString()}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                
+                <Select value={clientMetricsPeriod} onValueChange={setClientMetricsPeriod}>
                   <SelectTrigger className="w-24" data-testid="select-client-metrics-period">
-                    <SelectValue defaultValue="Monthly" placeholder="Monthly" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="monthly">Monthly</SelectItem>
