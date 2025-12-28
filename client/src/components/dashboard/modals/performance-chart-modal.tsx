@@ -15,8 +15,7 @@ interface PerformanceChartModalProps {
 }
 
 interface PerformanceDataItem {
-  memberIndex: number;
-  member: string;
+  period: string;
   resumesA: number;
   resumesB: number;
 }
@@ -196,16 +195,10 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} />
                     <XAxis 
-                      dataKey="member"
+                      dataKey="period"
                       stroke="#6b7280" 
                       style={{ fontSize: '11px' }}
                       tick={{ fill: '#6b7280' }}
-                      tickFormatter={(value, index) => {
-                        if (filteredPerformanceData[index]?.memberIndex !== undefined) {
-                          return `${filteredPerformanceData[index].memberIndex}. ${value}`;
-                        }
-                        return value;
-                      }}
                     />
                     <YAxis 
                       stroke="#6b7280" 

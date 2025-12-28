@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 interface AddRequirementModalProps {
   isOpen: boolean;
@@ -43,26 +44,17 @@ export default function AddRequirementModal({ isOpen, onClose }: AddRequirementM
 
   const createRequirementMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      const response = await fetch('/api/admin/requirements', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...data,
-          // Admin doesn't assign TA - TL will assign later
-          talentAdvisor: null,
-          teamLead: data.teamLead === 'Unassigned' ? null : data.teamLead,
-          createdAt: new Date().toISOString()
-        }),
+      const response = await apiRequest('POST', '/api/admin/requirements', {
+        ...data,
+        // Admin doesn't assign TA - TL will assign later
+        talentAdvisor: null,
+        teamLead: data.teamLead === 'Unassigned' ? null : data.teamLead,
+        createdAt: new Date().toISOString()
       });
-      if (!response.ok) {
-        throw new Error('Failed to create requirement');
-      }
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin', 'requirements'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/requirements'] });
       toast({
         title: "Success",
         description: "Requirement added successfully!",

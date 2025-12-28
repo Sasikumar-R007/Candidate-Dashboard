@@ -22,8 +22,6 @@ import { SearchBar } from '@/components/ui/search-bar';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { DatePicker } from "@/components/ui/date-picker";
 import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -416,8 +414,11 @@ interface RevenueChartProps {
 }
 
 function RevenueChart({ data, height = "100%", benchmarkValue = 230000 }: RevenueChartProps) {
+  // Filter out zero values
+  const filteredData = data?.filter(item => item.revenue > 0) || [];
+  
   // Show empty state if no data
-  if (!data || data.length === 0) {
+  if (!filteredData || filteredData.length === 0) {
     return (
       <div className="flex items-center justify-center w-full h-full bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
         <div className="text-center">
@@ -428,9 +429,19 @@ function RevenueChart({ data, height = "100%", benchmarkValue = 230000 }: Revenu
     );
   }
 
+  // Calculate min and max revenue values for Y-axis domain
+  const revenueValues = filteredData.map(item => item.revenue);
+  const minRevenue = Math.min(...revenueValues);
+  const maxRevenue = Math.max(...revenueValues);
+  const benchmark = benchmarkValue || 0;
+  
+  // Set Y-axis domain to start from minimum value (not zero) with some padding
+  const yAxisMin = Math.max(0, minRevenue * 0.9); // Start slightly below minimum
+  const yAxisMax = Math.max(maxRevenue, benchmark) * 1.1; // Go slightly above maximum or benchmark
+
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <ComposedChart data={data}>
+      <ComposedChart data={filteredData}>
         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
         <XAxis 
           dataKey="member" 
@@ -443,6 +454,7 @@ function RevenueChart({ data, height = "100%", benchmarkValue = 230000 }: Revenu
           style={{ fontSize: '12px' }}
           tick={{ fill: '#6b7280' }}
           tickFormatter={(value) => value != null ? `${value / 1000}K` : '0K'}
+          domain={[yAxisMin, yAxisMax]}
         />
         <Tooltip 
           contentStyle={{ 
@@ -470,8 +482,8 @@ function RevenueChart({ data, height = "100%", benchmarkValue = 230000 }: Revenu
         <Line 
           type="monotone" 
           dataKey="revenue" 
-          stroke="#8b5cf6" 
-          strokeWidth={3} 
+          stroke="#8b5cf6"
+          strokeWidth={3}
           dot={{ fill: '#8b5cf6', r: 5 }}
           activeDot={{ r: 7 }}
           name="Revenue"
@@ -1209,6 +1221,7 @@ export default function AdminDashboard() {
   const [ceoMeetingsData, setCeoMeetingsData] = useState(initialCeoMeetingsData);
   const [isAllMessagesModalOpen, setIsAllMessagesModalOpen] = useState(false);
   const [selectedPerformanceTeam, setSelectedPerformanceTeam] = useState<string>("all");
+  const [selectedPerformancePeriod, setSelectedPerformancePeriod] = useState<string>("monthly");
   const [isResumeDatabaseModalOpen, setIsResumeDatabaseModalOpen] = useState(false);
   const [isPerformanceDataModalOpen, setIsPerformanceDataModalOpen] = useState(false);
   const [isEditingFeedbackModal, setIsEditingFeedbackModal] = useState(false);
@@ -1579,12 +1592,30 @@ export default function AdminDashboard() {
     );
   }, [closureReportsData, closureReportsSearch]);
 
-  // Fetch revenue analysis data from API
+  // Fetch revenue analysis data from API (with team filter)
   const { data: revenueAnalysis } = useQuery<{
     data: Array<{ member: string; revenue: number }>;
     benchmark: number;
   }>({
-    queryKey: ['/api/admin/revenue-analysis'],
+    queryKey: ['/api/admin/revenue-analysis', revenueTeam, revenueDateFrom?.toISOString(), revenueDateTo?.toISOString(), revenuePeriod],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (revenueTeam && revenueTeam !== 'all') {
+        params.append('teamId', revenueTeam);
+      }
+      if (revenueDateFrom) {
+        params.append('dateFrom', revenueDateFrom.toISOString());
+      }
+      if (revenueDateTo) {
+        params.append('dateTo', revenueDateTo.toISOString());
+      }
+      if (revenuePeriod) {
+        params.append('period', revenuePeriod);
+      }
+      const url = `/api/admin/revenue-analysis${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await apiRequest('GET', url);
+      return await response.json();
+    },
   });
 
   // Fetch monthly performance data from API for the Performance LineChart
@@ -1596,10 +1627,40 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/monthly-performance'],
   });
 
+  // Fetch performance graph data for outer Performance graph (with period support)
+  const { data: outerPerformanceGraphData = [] } = useQuery<Array<{
+    period: string;
+    resumesA: number;
+    resumesB: number;
+  }>>({
+    queryKey: ['/api/admin/performance-graph', selectedPerformanceTeam, undefined, undefined, selectedPerformancePeriod],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedPerformanceTeam && selectedPerformanceTeam !== 'all') {
+        params.append('teamId', selectedPerformanceTeam);
+      }
+      if (selectedPerformancePeriod) {
+        params.append('period', selectedPerformancePeriod);
+      }
+      const url = `/api/admin/performance-graph${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await apiRequest('GET', url);
+      return await response.json();
+    },
+  });
+
   // Monthly Performance chart data - uses backend data only
   const monthlyChartData = useMemo(() => {
     return monthlyPerformanceData?.data ?? [];
   }, [monthlyPerformanceData]);
+  
+  // Outer Performance graph data - uses performance-graph endpoint with period support
+  const outerPerformanceChartData = useMemo(() => {
+    return outerPerformanceGraphData.map(item => ({
+      period: item.period,
+      delivered: item.resumesA,
+      required: item.resumesB
+    }));
+  }, [outerPerformanceGraphData]);
 
   // Performance chart data - uses backend data or empty array
   const performanceData = useMemo(() => {
@@ -2669,70 +2730,12 @@ export default function AdminDashboard() {
               </SelectContent>
             </Select>
             
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="flex items-center space-x-1 h-7 px-2" data-testid="button-daily-metrics-date">
-                  <CalendarIcon className="h-3 w-3" />
-                  <span className="text-sm">{format(selectedDate, "dd-MMM-yyyy")}</span>
-                  <EditIcon className="h-3 w-3" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <div className="p-4 space-y-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1 flex-1">
-                      <span className="text-sm font-medium">{format(selectedDate, "MMMM")}, </span>
-                      <Select value={format(selectedDate, "yyyy")} onValueChange={(val) => {
-                        const newDate = new Date(selectedDate);
-                        newDate.setFullYear(parseInt(val));
-                        setSelectedDate(newDate);
-                      }}>
-                        <SelectTrigger className="h-auto p-0 border-0 shadow-none focus:ring-0 w-auto">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
-                            <SelectItem key={year} value={year.toString()}>
-                              {year}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
-                        const newDate = new Date(selectedDate);
-                        newDate.setMonth(newDate.getMonth() - 1);
-                        setSelectedDate(newDate);
-                      }} type="button">
-                        <ChevronUp className="h-4 w-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
-                        const newDate = new Date(selectedDate);
-                        newDate.setMonth(newDate.getMonth() + 1);
-                        setSelectedDate(newDate);
-                      }} type="button">
-                        <ChevronDown className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => date && setSelectedDate(date)}
-                    initialFocus
-                  />
-                  <div className="flex justify-between border-t pt-3">
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedDate(new Date())} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
-                      Clear
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedDate(new Date())} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
-                      Today
-                    </Button>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
+            <StandardDatePicker
+              value={selectedDate}
+              onChange={(date) => date && setSelectedDate(date)}
+              placeholder="Select date"
+              className="w-auto"
+            />
           </div>
         </CardHeader>
         
@@ -4022,7 +4025,7 @@ export default function AdminDashboard() {
                   </SelectContent>
                 </Select>
                 
-                <Select defaultValue="monthly">
+                <Select value={selectedPerformancePeriod} onValueChange={setSelectedPerformancePeriod}>
                   <SelectTrigger className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm w-32">
                     <SelectValue />
                   </SelectTrigger>
@@ -4051,7 +4054,7 @@ export default function AdminDashboard() {
                       </Button>
                     </div>
                     <div className="h-[260px]">
-                      {(!monthlyChartData || monthlyChartData.length === 0) ? (
+                      {(!outerPerformanceChartData || outerPerformanceChartData.length === 0) ? (
                         <div className="flex items-center justify-center w-full h-full bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
                           <div className="text-center">
                             <p className="text-gray-600 dark:text-gray-400 text-sm">No performance data available</p>
@@ -4060,52 +4063,42 @@ export default function AdminDashboard() {
                         </div>
                       ) : (
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={monthlyChartData}>
+                        <AreaChart data={outerPerformanceChartData}>
+                          <defs>
+                            <linearGradient id="colorDeliveredOuter" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                              <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
+                            </linearGradient>
+                            <linearGradient id="colorRequiredOuter" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+                              <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
+                            </linearGradient>
+                          </defs>
                           <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="month" />
+                          <XAxis dataKey="period" />
                           <YAxis />
-                          <Tooltip formatter={(value: number) => `₹${value.toLocaleString()}`} />
+                          <Tooltip />
                           <Legend />
-                          {selectedPerformanceTeam === 'all' && (
-                            <>
-                              {monthlyPerformanceData?.teams?.map((team, index) => {
-                                const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6'];
-                                return (
-                                  <Line 
-                                    key={team} 
-                                    type="monotone" 
-                                    dataKey={team} 
-                                    name={team} 
-                                    stroke={colors[index % colors.length]} 
-                                    strokeWidth={2} 
-                                    dot={{ fill: colors[index % colors.length] }} 
-                                  />
-                                );
-                              })}
-                            </>
-                          )}
-                          {selectedPerformanceTeam !== 'all' && (
-                            <>
-                              {monthlyPerformanceData?.members
-                                ?.filter(m => m.teamLeader?.toLowerCase() === selectedPerformanceTeam)
-                                ?.slice(0, 4)
-                                .map((member, index) => {
-                                  const colors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'];
-                                  return (
-                                    <Line 
-                                      key={member.key} 
-                                      type="monotone" 
-                                      dataKey={member.key} 
-                                      name={member.name} 
-                                      stroke={colors[index % colors.length]} 
-                                      strokeWidth={2} 
-                                      dot={{ fill: colors[index % colors.length] }} 
-                                    />
-                                  );
-                                })}
-                            </>
-                          )}
-                        </LineChart>
+                          <Area 
+                            type="monotone" 
+                            dataKey="delivered" 
+                            stroke="#ef4444" 
+                            strokeWidth={2} 
+                            fill="url(#colorDeliveredOuter)"
+                            dot={{ fill: '#ef4444', r: 4 }}
+                            name="Delivered"
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="required" 
+                            stroke="#22c55e" 
+                            strokeWidth={2} 
+                            fill="url(#colorRequiredOuter)"
+                            fillOpacity={0.6}
+                            dot={{ fill: '#22c55e', r: 4 }}
+                            name="Required"
+                          />
+                        </AreaChart>
                       </ResponsiveContainer>
                       )}
                     </div>
@@ -4747,69 +4740,12 @@ export default function AdminDashboard() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="btn-rounded input-styled">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {format(selectedDate, "dd-MMM-yyyy")}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="end">
-                        <div className="p-4 space-y-3">
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1 flex-1">
-                              <span className="text-sm font-medium">{format(selectedDate, "MMMM")}, </span>
-                              <Select value={format(selectedDate, "yyyy")} onValueChange={(val) => {
-                                const newDate = new Date(selectedDate);
-                                newDate.setFullYear(parseInt(val));
-                                setSelectedDate(newDate);
-                              }}>
-                                <SelectTrigger className="h-auto p-0 border-0 shadow-none focus:ring-0 w-auto">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
-                                    <SelectItem key={year} value={year.toString()}>
-                                      {year}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
-                                const newDate = new Date(selectedDate);
-                                newDate.setMonth(newDate.getMonth() - 1);
-                                setSelectedDate(newDate);
-                              }} type="button">
-                                <ChevronUp className="h-4 w-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
-                                const newDate = new Date(selectedDate);
-                                newDate.setMonth(newDate.getMonth() + 1);
-                                setSelectedDate(newDate);
-                              }} type="button">
-                                <ChevronDown className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                          <Calendar
-                            mode="single"
-                            selected={selectedDate}
-                            onSelect={(date) => date && setSelectedDate(date)}
-                            initialFocus
-                          />
-                          <div className="flex justify-between border-t pt-3">
-                            <Button variant="ghost" size="sm" onClick={() => setSelectedDate(new Date())} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
-                              Clear
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => setSelectedDate(new Date())} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
-                              Today
-                            </Button>
-                          </div>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
+                    <StandardDatePicker
+                      value={selectedDate}
+                      onChange={(date) => date && setSelectedDate(date)}
+                      placeholder="Select date"
+                      className="w-auto"
+                    />
                   </div>
                 </div>
 
@@ -5351,7 +5287,7 @@ export default function AdminDashboard() {
                     </SelectContent>
                   </Select>
                   
-                  <Select defaultValue="monthly">
+                  <Select value={selectedPerformancePeriod} onValueChange={setSelectedPerformancePeriod}>
                     <SelectTrigger className="w-32 bg-cyan-400 text-black">
                       <SelectValue />
                     </SelectTrigger>
@@ -5380,7 +5316,7 @@ export default function AdminDashboard() {
                       </Button>
                     </div>
                     <div className="h-[260px]">
-                      {(!monthlyChartData || monthlyChartData.length === 0) ? (
+                      {(!outerPerformanceChartData || outerPerformanceChartData.length === 0) ? (
                         <div className="flex items-center justify-center w-full h-full bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
                           <div className="text-center">
                             <p className="text-gray-600 dark:text-gray-400 text-sm">No performance data available</p>
@@ -5389,52 +5325,42 @@ export default function AdminDashboard() {
                         </div>
                       ) : (
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={monthlyChartData}>
+                        <AreaChart data={outerPerformanceChartData}>
+                          <defs>
+                            <linearGradient id="colorDeliveredOuterAlt" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                              <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
+                            </linearGradient>
+                            <linearGradient id="colorRequiredOuterAlt" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+                              <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
+                            </linearGradient>
+                          </defs>
                           <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="month" />
+                          <XAxis dataKey="period" />
                           <YAxis />
-                          <Tooltip formatter={(value: number) => `₹${value.toLocaleString()}`} />
+                          <Tooltip />
                           <Legend />
-                          {selectedPerformanceTeam === 'all' && (
-                            <>
-                              {monthlyPerformanceData?.teams?.map((team, index) => {
-                                const colors = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6'];
-                                return (
-                                  <Line 
-                                    key={team} 
-                                    type="monotone" 
-                                    dataKey={team} 
-                                    name={team} 
-                                    stroke={colors[index % colors.length]} 
-                                    strokeWidth={2} 
-                                    dot={{ fill: colors[index % colors.length] }} 
-                                  />
-                                );
-                              })}
-                            </>
-                          )}
-                          {selectedPerformanceTeam !== 'all' && (
-                            <>
-                              {monthlyPerformanceData?.members
-                                ?.filter(m => m.teamLeader?.toLowerCase() === selectedPerformanceTeam)
-                                ?.slice(0, 4)
-                                .map((member, index) => {
-                                  const colors = ['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6'];
-                                  return (
-                                    <Line 
-                                      key={member.key} 
-                                      type="monotone" 
-                                      dataKey={member.key} 
-                                      name={member.name} 
-                                      stroke={colors[index % colors.length]} 
-                                      strokeWidth={2} 
-                                      dot={{ fill: colors[index % colors.length] }} 
-                                    />
-                                  );
-                                })}
-                            </>
-                          )}
-                        </LineChart>
+                          <Area 
+                            type="monotone" 
+                            dataKey="delivered" 
+                            stroke="#ef4444" 
+                            strokeWidth={2} 
+                            fill="url(#colorDeliveredOuterAlt)"
+                            dot={{ fill: '#ef4444', r: 4 }}
+                            name="Delivered"
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="required" 
+                            stroke="#22c55e" 
+                            strokeWidth={2} 
+                            fill="url(#colorRequiredOuterAlt)"
+                            fillOpacity={0.6}
+                            dot={{ fill: '#22c55e', r: 4 }}
+                            name="Required"
+                          />
+                        </AreaChart>
                       </ResponsiveContainer>
                       )}
                     </div>
@@ -5908,64 +5834,12 @@ export default function AdminDashboard() {
                   {teamsPeriod === 'custom' && (
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Custom Date</label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full h-8 justify-start text-left text-sm" data-testid="button-teams-custom-date">
-                            <CalendarIcon className="h-3 w-3 mr-2" />
-                            {teamsCustomDate ? format(teamsCustomDate, 'PPP') : 'Pick date'}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <div className="p-4 space-y-3">
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex items-center gap-1 flex-1">
-                                <span className="text-sm font-medium">{format(teamsCustomDate || new Date(), "MMMM")}, </span>
-                                <Select value={teamsCustomDate ? format(teamsCustomDate, "yyyy") : format(new Date(), "yyyy")} onValueChange={(val) => {
-                                  const newDate = new Date(teamsCustomDate || new Date());
-                                  newDate.setFullYear(parseInt(val));
-                                  setTeamsCustomDate(newDate);
-                                }}>
-                                  <SelectTrigger className="h-auto p-0 border-0 shadow-none focus:ring-0 w-auto">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
-                                      <SelectItem key={year} value={year.toString()}>
-                                        {year}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
-                                  const newDate = new Date(teamsCustomDate || new Date());
-                                  newDate.setMonth(newDate.getMonth() - 1);
-                                  setTeamsCustomDate(newDate);
-                                }} type="button">
-                                  <ChevronUp className="h-4 w-4" />
-                                </Button>
-                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
-                                  const newDate = new Date(teamsCustomDate || new Date());
-                                  newDate.setMonth(newDate.getMonth() + 1);
-                                  setTeamsCustomDate(newDate);
-                                }} type="button">
-                                  <ChevronDown className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                            <Calendar mode="single" selected={teamsCustomDate} onSelect={setTeamsCustomDate} />
-                            <div className="flex justify-between border-t pt-3">
-                              <Button variant="ghost" size="sm" onClick={() => setTeamsCustomDate(undefined)} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
-                                Clear
-                              </Button>
-                              <Button variant="ghost" size="sm" onClick={() => setTeamsCustomDate(new Date())} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
-                                Today
-                              </Button>
-                            </div>
-                          </div>
-                        </PopoverContent>
-                      </Popover>
+                      <StandardDatePicker
+                        value={teamsCustomDate}
+                        onChange={setTeamsCustomDate}
+                        placeholder="Select date"
+                        className="w-full"
+                      />
                     </div>
                   )}
 
@@ -7328,85 +7202,12 @@ export default function AdminDashboard() {
             
             {/* Date with Floating Label */}
             <div className="relative">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={`w-full justify-start text-left font-normal bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded ${
-                      meetingDate ? 'pt-6 pb-2' : 'py-3'
-                    }`}
-                    data-testid="button-meeting-date"
-                  >
-                    {meetingDate ? (
-                      <>
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {format(meetingDate, "dd-MM-yyyy")}
-                      </>
-                    ) : (
-                      <>
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        <span className="text-gray-500 dark:text-gray-400">Date</span>
-                      </>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700" align="start">
-                  <div className="p-4 space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1 flex-1">
-                        <span className="text-sm font-medium">{format(meetingDate || new Date(), "MMMM")}, </span>
-                        <Select value={meetingDate ? format(meetingDate, "yyyy") : format(new Date(), "yyyy")} onValueChange={(val) => {
-                          const newDate = new Date(meetingDate || new Date());
-                          newDate.setFullYear(parseInt(val));
-                          setMeetingDate(newDate);
-                        }}>
-                          <SelectTrigger className="h-auto p-0 border-0 shadow-none focus:ring-0 w-auto">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
-                              <SelectItem key={year} value={year.toString()}>
-                                {year}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
-                          const newDate = new Date(meetingDate || new Date());
-                          newDate.setMonth(newDate.getMonth() - 1);
-                          setMeetingDate(newDate);
-                        }} type="button">
-                          <ChevronUp className="h-4 w-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
-                          const newDate = new Date(meetingDate || new Date());
-                          newDate.setMonth(newDate.getMonth() + 1);
-                          setMeetingDate(newDate);
-                        }} type="button">
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <Calendar
-                      mode="single"
-                      selected={meetingDate}
-                      onSelect={setMeetingDate}
-                      initialFocus
-                      className="dark:text-white"
-                    />
-                    <div className="flex justify-between border-t pt-3">
-                      <Button variant="ghost" size="sm" onClick={() => setMeetingDate(undefined)} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
-                        Clear
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setMeetingDate(new Date())} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
-                        Today
-                      </Button>
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
+              <StandardDatePicker
+                value={meetingDate}
+                onChange={setMeetingDate}
+                placeholder="Date"
+                className="w-full"
+              />
               {meetingDate && (
                 <label className="absolute left-10 top-1.5 text-xs text-gray-500 dark:text-gray-400 font-medium pointer-events-none">
                   Date
@@ -8189,86 +7990,15 @@ export default function AdminDashboard() {
                 </Select>
               </div>
               <div>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-start text-left font-normal input-styled rounded"
-                      data-testid="button-start-date"
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {clientStartDate ? format(clientStartDate, "PPP") : <span className="text-gray-500">Start Date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <div className="p-4 space-y-3">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1 flex-1">
-                          <span className="text-sm font-medium">{format(clientStartDate || new Date(), "MMMM")}, </span>
-                          <Select value={clientStartDate ? format(clientStartDate, "yyyy") : format(new Date(), "yyyy")} onValueChange={(val) => {
-                            const newDate = new Date(clientStartDate || new Date());
-                            newDate.setFullYear(parseInt(val));
-                            setClientStartDate(newDate);
-                            setClientForm({...clientForm, startDate: format(newDate, "yyyy-MM-dd")});
-                          }}>
-                            <SelectTrigger className="h-auto p-0 border-0 shadow-none focus:ring-0 w-auto">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
-                                <SelectItem key={year} value={year.toString()}>
-                                  {year}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
-                            const newDate = new Date(clientStartDate || new Date());
-                            newDate.setMonth(newDate.getMonth() - 1);
-                            setClientStartDate(newDate);
-                            setClientForm({...clientForm, startDate: format(newDate, "yyyy-MM-dd")});
-                          }} type="button">
-                            <ChevronUp className="h-4 w-4" />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
-                            const newDate = new Date(clientStartDate || new Date());
-                            newDate.setMonth(newDate.getMonth() + 1);
-                            setClientStartDate(newDate);
-                            setClientForm({...clientForm, startDate: format(newDate, "yyyy-MM-dd")});
-                          }} type="button">
-                            <ChevronDown className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      <Calendar
-                        mode="single"
-                        selected={clientStartDate}
-                        onSelect={(date) => {
-                          setClientStartDate(date);
-                          setClientForm({...clientForm, startDate: date ? format(date, "yyyy-MM-dd") : ''});
-                        }}
-                        initialFocus
-                      />
-                      <div className="flex justify-between border-t pt-3">
-                        <Button variant="ghost" size="sm" onClick={() => {
-                          setClientStartDate(undefined);
-                          setClientForm({...clientForm, startDate: ''});
-                        }} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
-                          Clear
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => {
-                          const today = new Date();
-                          setClientStartDate(today);
-                          setClientForm({...clientForm, startDate: format(today, "yyyy-MM-dd")});
-                        }} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
-                          Today
-                        </Button>
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                  <StandardDatePicker
+                    value={clientStartDate}
+                    onChange={(date) => {
+                      setClientStartDate(date);
+                      setClientForm({...clientForm, startDate: date ? format(date, "yyyy-MM-dd") : ''});
+                    }}
+                    placeholder="Start Date"
+                    className="w-full"
+                  />
               </div>
             </div>
 
@@ -8374,11 +8104,12 @@ export default function AdminDashboard() {
             {/* Row 4 - Date of Joining and Employment Status */}
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col w-full">
-                <DatePicker
-                  value={employeeForm.joiningDate}
-                  onChange={(date) => setEmployeeForm({...employeeForm, joiningDate: date})}
+                <StandardDatePicker
+                  value={employeeForm.joiningDate ? new Date(employeeForm.joiningDate) : undefined}
+                  onChange={(date) => setEmployeeForm({...employeeForm, joiningDate: date ? date.toISOString().split('T')[0] : ''})}
                   placeholder="DD-MM-YYYY"
                   maxDate={new Date()}
+                  className="w-full"
                 />
               </div>
               <div className="flex flex-col w-full">
@@ -8455,11 +8186,12 @@ export default function AdminDashboard() {
             {/* Row 7 - DoB and Mother Name */}
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col w-full">
-                <DatePicker
-                  value={employeeForm.fatherName}
-                  onChange={(date) => setEmployeeForm({...employeeForm, fatherName: date})}
+                <StandardDatePicker
+                  value={employeeForm.fatherName ? new Date(employeeForm.fatherName) : undefined}
+                  onChange={(date) => setEmployeeForm({...employeeForm, fatherName: date ? date.toISOString().split('T')[0] : ''})}
                   placeholder="DD-MM-YYYY"
                   maxDate={new Date()}
+                  className="w-full"
                 />
               </div>
               <div className="flex flex-col w-full">
@@ -9189,150 +8921,39 @@ export default function AdminDashboard() {
                 <SelectContent>
                   <SelectItem value="all">All Teams</SelectItem>
                   {teamLeads.map((tl: any) => (
-                    <SelectItem key={tl.id} value={tl.id.toLowerCase()}>
+                    <SelectItem key={tl.id} value={tl.id}>
                       {tl.name} (TL)
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={`w-48 justify-start text-left font-normal ${!revenueDateFrom && "text-gray-500 dark:text-gray-400"}`}
-                    data-testid="button-revenue-date-from"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {revenueDateFrom ? format(revenueDateFrom, "PPP") : <span>From Date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <div className="p-4 space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1 flex-1">
-                        <span className="text-sm font-medium">{format(revenueDateFrom || new Date(), "MMMM")}, </span>
-                        <Select value={revenueDateFrom ? format(revenueDateFrom, "yyyy") : format(new Date(), "yyyy")} onValueChange={(val) => {
-                          const newDate = new Date(revenueDateFrom || new Date());
-                          newDate.setFullYear(parseInt(val));
-                          setRevenueDateFrom(newDate);
-                        }}>
-                          <SelectTrigger className="h-auto p-0 border-0 shadow-none focus:ring-0 w-auto">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
-                              <SelectItem key={year} value={year.toString()}>
-                                {year}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
-                          const newDate = new Date(revenueDateFrom || new Date());
-                          newDate.setMonth(newDate.getMonth() - 1);
-                          setRevenueDateFrom(newDate);
-                        }} type="button">
-                          <ChevronUp className="h-4 w-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
-                          const newDate = new Date(revenueDateFrom || new Date());
-                          newDate.setMonth(newDate.getMonth() + 1);
-                          setRevenueDateFrom(newDate);
-                        }} type="button">
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <Calendar
-                      mode="single"
-                      selected={revenueDateFrom}
-                      onSelect={setRevenueDateFrom}
-                      initialFocus
-                    />
-                    <div className="flex justify-between border-t pt-3">
-                      <Button variant="ghost" size="sm" onClick={() => setRevenueDateFrom(undefined)} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
-                        Clear
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setRevenueDateFrom(new Date())} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
-                        Today
-                      </Button>
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
+              {revenuePeriod === 'monthly' && (
+                <>
+                  <StandardDatePicker
+                    value={revenueDateFrom}
+                    onChange={setRevenueDateFrom}
+                    placeholder="From Date"
+                    className="w-48"
+                  />
+                  
+                  <StandardDatePicker
+                    value={revenueDateTo}
+                    onChange={setRevenueDateTo}
+                    placeholder="To Date"
+                    className="w-48"
+                  />
+                </>
+              )}
               
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={`w-48 justify-start text-left font-normal ${!revenueDateTo && "text-gray-500 dark:text-gray-400"}`}
-                    data-testid="button-revenue-date-to"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {revenueDateTo ? format(revenueDateTo, "PPP") : <span>To Date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <div className="p-4 space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1 flex-1">
-                        <span className="text-sm font-medium">{format(revenueDateTo || new Date(), "MMMM")}, </span>
-                        <Select value={revenueDateTo ? format(revenueDateTo, "yyyy") : format(new Date(), "yyyy")} onValueChange={(val) => {
-                          const newDate = new Date(revenueDateTo || new Date());
-                          newDate.setFullYear(parseInt(val));
-                          setRevenueDateTo(newDate);
-                        }}>
-                          <SelectTrigger className="h-auto p-0 border-0 shadow-none focus:ring-0 w-auto">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
-                              <SelectItem key={year} value={year.toString()}>
-                                {year}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
-                          const newDate = new Date(revenueDateTo || new Date());
-                          newDate.setMonth(newDate.getMonth() - 1);
-                          setRevenueDateTo(newDate);
-                        }} type="button">
-                          <ChevronUp className="h-4 w-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
-                          const newDate = new Date(revenueDateTo || new Date());
-                          newDate.setMonth(newDate.getMonth() + 1);
-                          setRevenueDateTo(newDate);
-                        }} type="button">
-                          <ChevronDown className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <Calendar
-                      mode="single"
-                      selected={revenueDateTo}
-                      onSelect={setRevenueDateTo}
-                      initialFocus
-                    />
-                    <div className="flex justify-between border-t pt-3">
-                      <Button variant="ghost" size="sm" onClick={() => setRevenueDateTo(undefined)} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
-                        Clear
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setRevenueDateTo(new Date())} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
-                        Today
-                      </Button>
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-              
-              <Select value={revenuePeriod} onValueChange={setRevenuePeriod}>
+              <Select value={revenuePeriod} onValueChange={(value) => {
+                setRevenuePeriod(value);
+                // Clear date filters when switching away from monthly
+                if (value !== 'monthly') {
+                  setRevenueDateFrom(undefined);
+                  setRevenueDateTo(undefined);
+                }
+              }}>
                 <SelectTrigger className="w-32 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" data-testid="select-revenue-period">
                   <SelectValue />
                 </SelectTrigger>
@@ -9379,141 +9000,21 @@ export default function AdminDashboard() {
               <div className="flex items-center gap-4">
                 {/* Date/Period Selector */}
                 {clientMetricsPeriod === "daily" && (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <div className="flex items-center gap-2 cursor-pointer border rounded-md px-3 py-2 hover:bg-gray-50">
-                        <CalendarIcon className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm">
-                          {clientMetricsDate ? format(clientMetricsDate, "dd-MMM-yyyy") : "Select date"}
-                        </span>
-                      </div>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="end">
-                      <div className="p-4 space-y-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1 flex-1">
-                            <span className="text-sm font-medium">{format(clientMetricsDate || new Date(), "MMMM")}, </span>
-                            <Select value={clientMetricsDate ? format(clientMetricsDate, "yyyy") : format(new Date(), "yyyy")} onValueChange={(val) => {
-                              const newDate = new Date(clientMetricsDate || new Date());
-                              newDate.setFullYear(parseInt(val));
-                              setClientMetricsDate(newDate);
-                            }}>
-                              <SelectTrigger className="h-auto p-0 border-0 shadow-none focus:ring-0 w-auto">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
-                                  <SelectItem key={year} value={year.toString()}>
-                                    {year}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
-                              const newDate = new Date(clientMetricsDate || new Date());
-                              newDate.setMonth(newDate.getMonth() - 1);
-                              setClientMetricsDate(newDate);
-                            }} type="button">
-                              <ChevronUp className="h-4 w-4" />
-                            </Button>
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
-                              const newDate = new Date(clientMetricsDate || new Date());
-                              newDate.setMonth(newDate.getMonth() + 1);
-                              setClientMetricsDate(newDate);
-                            }} type="button">
-                              <ChevronDown className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        <Calendar
-                          mode="single"
-                          selected={clientMetricsDate}
-                          onSelect={setClientMetricsDate}
-                          initialFocus
-                        />
-                        <div className="flex justify-between border-t pt-3">
-                          <Button variant="ghost" size="sm" onClick={() => setClientMetricsDate(undefined)} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
-                            Clear
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setClientMetricsDate(new Date())} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
-                            Today
-                          </Button>
-                        </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+                  <StandardDatePicker
+                    value={clientMetricsDate}
+                    onChange={setClientMetricsDate}
+                    placeholder="Select date"
+                    className="w-auto"
+                  />
                 )}
                 
                 {clientMetricsPeriod === "weekly" && (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <div className="flex items-center gap-2 cursor-pointer border rounded-md px-3 py-2 hover:bg-gray-50">
-                        <CalendarIcon className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm">
-                          {clientMetricsWeekStart 
-                            ? `${format(clientMetricsWeekStart, "dd-MMM-yyyy")} - ${format(new Date(clientMetricsWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000), "dd-MMM-yyyy")}`
-                            : "Select start date"}
-                        </span>
-                      </div>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="end">
-                      <div className="p-4 space-y-3">
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1 flex-1">
-                            <span className="text-sm font-medium">{format(clientMetricsWeekStart || new Date(), "MMMM")}, </span>
-                            <Select value={clientMetricsWeekStart ? format(clientMetricsWeekStart, "yyyy") : format(new Date(), "yyyy")} onValueChange={(val) => {
-                              const newDate = new Date(clientMetricsWeekStart || new Date());
-                              newDate.setFullYear(parseInt(val));
-                              setClientMetricsWeekStart(newDate);
-                            }}>
-                              <SelectTrigger className="h-auto p-0 border-0 shadow-none focus:ring-0 w-auto">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
-                                  <SelectItem key={year} value={year.toString()}>
-                                    {year}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
-                              const newDate = new Date(clientMetricsWeekStart || new Date());
-                              newDate.setMonth(newDate.getMonth() - 1);
-                              setClientMetricsWeekStart(newDate);
-                            }} type="button">
-                              <ChevronUp className="h-4 w-4" />
-                            </Button>
-                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => {
-                              const newDate = new Date(clientMetricsWeekStart || new Date());
-                              newDate.setMonth(newDate.getMonth() + 1);
-                              setClientMetricsWeekStart(newDate);
-                            }} type="button">
-                              <ChevronDown className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        <Calendar
-                          mode="single"
-                          selected={clientMetricsWeekStart}
-                          onSelect={setClientMetricsWeekStart}
-                          initialFocus
-                        />
-                        <div className="flex justify-between border-t pt-3">
-                          <Button variant="ghost" size="sm" onClick={() => setClientMetricsWeekStart(undefined)} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
-                            Clear
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setClientMetricsWeekStart(new Date())} className="text-blue-600 hover:text-blue-700 hover:bg-transparent p-0 h-auto" type="button">
-                            Today
-                          </Button>
-                        </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+                  <StandardDatePicker
+                    value={clientMetricsWeekStart}
+                    onChange={setClientMetricsWeekStart}
+                    placeholder="Select start date"
+                    className="w-auto"
+                  />
                 )}
                 
                 {clientMetricsPeriod === "monthly" && (

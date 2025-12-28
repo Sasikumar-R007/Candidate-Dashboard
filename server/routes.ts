@@ -4154,7 +4154,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validatedData = credentialsSchema.parse(req.body);
       
       // Generate client code
-      const clientCode = await storage.generateNextClientCode();
+      let clientCode: string;
+      try {
+        clientCode = await storage.generateNextClientCode();
+        console.log('Generated client code:', clientCode);
+      } catch (error: any) {
+        console.error('Error generating client code:', error);
+        return res.status(500).json({ 
+          message: "Failed to generate client code", 
+          error: error.message || String(error) 
+        });
+      }
 
       // Create minimal client record with just the essential information
       // Mark as login-only so it doesn't appear in Master Data tables
@@ -4167,7 +4177,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date().toISOString(),
       };
       
-      const client = await storage.createClient(minimalClientData);
+      let client;
+      try {
+        client = await storage.createClient(minimalClientData);
+        console.log('Client created successfully:', client.id);
+      } catch (error: any) {
+        console.error('Error creating client:', error);
+        console.error('Client data:', minimalClientData);
+        return res.status(500).json({ 
+          message: "Failed to create client record", 
+          error: error.message || String(error),
+          details: error.code || error.detail || 'Unknown database error'
+        });
+      }
       
       // Create employee profile for client login
       // SECURITY: Always set role to "client" on server-side to prevent privilege escalation
@@ -4185,7 +4207,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date().toISOString(),
       };
       
-      await storage.createEmployee(employeeData);
+      try {
+        await storage.createEmployee(employeeData);
+        console.log('Employee created successfully for client:', clientCode);
+      } catch (error: any) {
+        console.error('Error creating employee:', error);
+        console.error('Employee data:', { ...employeeData, password: '[REDACTED]' });
+        // Try to clean up the client record if employee creation fails
+        try {
+          await storage.deleteClient(client.id);
+          console.log('Cleaned up client record after employee creation failure');
+        } catch (cleanupError) {
+          console.error('Failed to clean up client record:', cleanupError);
+        }
+        return res.status(500).json({ 
+          message: "Failed to create employee profile", 
+          error: error.message || String(error),
+          details: error.code || error.detail || 'Unknown database error'
+        });
+      }
       
       res.status(201).json({ 
         message: "Client credentials created successfully", 
@@ -4194,13 +4234,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error('Create client credentials error:', error);
+      console.error('Error stack:', error.stack);
+      console.error('Request body:', req.body);
+      
       if (error.name === 'ZodError') {
-        return res.status(400).json({ message: "Invalid credentials data", errors: error.errors });
+        return res.status(400).json({ 
+          message: "Invalid credentials data", 
+          errors: error.errors 
+        });
       }
-      if (error.message?.includes('duplicate') || error.message?.includes('unique')) {
-        return res.status(409).json({ message: "Client with this email already exists" });
+      if (error.message?.includes('duplicate') || error.message?.includes('unique') || error.code === '23505') {
+        return res.status(409).json({ 
+          message: "Client with this email already exists",
+          error: error.message || String(error)
+        });
       }
-      res.status(500).json({ message: "Failed to create client credentials" });
+      res.status(500).json({ 
+        message: "Failed to create client credentials",
+        error: error.message || String(error),
+        details: error.code || error.detail || 'Unknown error'
+      });
     }
   });
 
@@ -4626,23 +4679,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===================== PERFORMANCE PAGE API ENDPOINTS =====================
 
-  // Performance Graph Data - Returns resume delivery counts by team member
+  // Performance Graph Data - Returns resume delivery counts grouped by time period
   app.get("/api/admin/performance-graph", requireAdminAuth, async (req, res) => {
     try {
-      const { teamId, dateFrom, dateTo, period } = req.query;
+      const { teamId, dateFrom, dateTo, period = 'monthly' } = req.query;
       const { employees, deliveries, requirements } = await import("@shared/schema");
-      
-      // Get all recruiters/talent advisors
-      const allEmployees = await db.select().from(employees);
-      const recruiters = allEmployees.filter(emp => 
-        (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.isActive === true
-      );
       
       // Get all deliveries
       const allDeliveries = await db.select().from(deliveries);
       
+      // Get all requirements
+      const allRequirements = await db.select().from(requirements);
+      
       // Filter by date range if provided
       let filteredDeliveries = allDeliveries;
+      let filteredRequirements = allRequirements;
+      
       if (dateFrom || dateTo) {
         filteredDeliveries = allDeliveries.filter(delivery => {
           const deliveryDate = new Date(delivery.deliveredAt);
@@ -4650,39 +4702,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (dateTo && new Date(dateTo as string) < deliveryDate) return false;
           return true;
         });
+        
+        filteredRequirements = allRequirements.filter(req => {
+          const reqDate = new Date(req.createdAt);
+          if (dateFrom && new Date(dateFrom as string) > reqDate) return false;
+          if (dateTo && new Date(dateTo as string) < reqDate) return false;
+          return true;
+        });
       }
       
-      // Calculate resume counts per recruiter (delivered vs required based on requirements)
-      const allRequirements = await db.select().from(requirements);
+      // Group data by time period
+      const periodData: Record<string, { resumesA: number; resumesB: number }> = {};
       
-      const performanceData = recruiters.slice(0, 10).map((recruiter, index) => {
-        // Count deliveries by this recruiter
-        const recruiterDeliveries = filteredDeliveries.filter(d => 
-          d.recruiterName.toLowerCase() === recruiter.name.toLowerCase()
-        );
+      // Helper function to get period key
+      const getPeriodKey = (date: Date, periodType: string): string => {
+        if (periodType === 'monthly') {
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          return `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+        } else if (periodType === 'quarterly') {
+          const quarter = Math.floor(date.getMonth() / 3) + 1;
+          return `Q${quarter} ${date.getFullYear()}`;
+        } else { // yearly
+          return date.getFullYear().toString();
+        }
+      };
+      
+      // Process deliveries (Delivered - resumesA)
+      filteredDeliveries.forEach(delivery => {
+        const deliveryDate = new Date(delivery.deliveredAt);
+        const periodKey = getPeriodKey(deliveryDate, period as string);
         
-        // Count requirements assigned to this recruiter/TA
-        const assignedRequirements = allRequirements.filter(req => 
-          req.talentAdvisor?.toLowerCase() === recruiter.name.toLowerCase()
-        );
-        
-        // Calculate expected resumes based on criticality
-        let expectedResumes = 0;
-        assignedRequirements.forEach(req => {
-          if (req.criticality === 'HIGH') expectedResumes += 1;
-          else if (req.criticality === 'MEDIUM') expectedResumes += 3;
-          else expectedResumes += 5;
-        });
-        
-        return {
-          memberIndex: index + 1,
-          member: recruiter.name,
-          resumesA: recruiterDeliveries.length, // Delivered
-          resumesB: expectedResumes // Required
-        };
+        if (!periodData[periodKey]) {
+          periodData[periodKey] = { resumesA: 0, resumesB: 0 };
+        }
+        periodData[periodKey].resumesA += 1;
       });
       
-      res.json(performanceData);
+      // Process requirements (Required - resumesB)
+      filteredRequirements.forEach(req => {
+        const reqDate = new Date(req.createdAt);
+        const periodKey = getPeriodKey(reqDate, period as string);
+        
+        if (!periodData[periodKey]) {
+          periodData[periodKey] = { resumesA: 0, resumesB: 0 };
+        }
+        
+        // Calculate expected resumes based on criticality
+        if (req.criticality === 'HIGH') periodData[periodKey].resumesB += 1;
+        else if (req.criticality === 'MEDIUM') periodData[periodKey].resumesB += 3;
+        else periodData[periodKey].resumesB += 5;
+      });
+      
+      // Convert to array and sort by period
+      const performanceData = Object.entries(periodData).map(([periodKey, data]) => ({
+        period: periodKey,
+        resumesA: data.resumesA,
+        resumesB: data.resumesB
+      }));
+      
+      // Sort by period
+      performanceData.sort((a, b) => {
+        if (period === 'monthly') {
+          // Parse "Jan 2024" format
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          const [monthA, yearA] = a.period.split(' ');
+          const [monthB, yearB] = b.period.split(' ');
+          if (yearA !== yearB) return parseInt(yearA) - parseInt(yearB);
+          return monthNames.indexOf(monthA) - monthNames.indexOf(monthB);
+        } else if (period === 'quarterly') {
+          const [qA, yA] = a.period.split(' ');
+          const [qB, yB] = b.period.split(' ');
+          if (yA !== yB) return parseInt(yA) - parseInt(yB);
+          return parseInt(qA.substring(1)) - parseInt(qB.substring(1));
+        } else { // yearly
+          return parseInt(a.period) - parseInt(b.period);
+        }
+      });
+      
+      // Fill in missing periods to ensure complete display
+      const now = new Date();
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const completeData: Array<{ period: string; resumesA: number; resumesB: number }> = [];
+      const periodMap = new Map(performanceData.map(item => [item.period, item]));
+      
+      if (period === 'monthly') {
+        // Show all 12 months of the current year (or year range if data spans multiple years)
+        const years = new Set(performanceData.map(item => item.period.split(' ')[1] || now.getFullYear().toString()));
+        const yearList = years.size > 0 ? Array.from(years).map(y => parseInt(y)).sort() : [now.getFullYear()];
+        
+        // If data spans multiple years, show all months for all years
+        if (yearList.length > 1) {
+          for (const year of yearList) {
+            for (let month = 0; month < 12; month++) {
+              const periodKey = `${monthNames[month]} ${year}`;
+              const existing = periodMap.get(periodKey);
+              completeData.push({
+                period: periodKey,
+                resumesA: existing?.resumesA ?? 0,
+                resumesB: existing?.resumesB ?? 0
+              });
+            }
+          }
+        } else {
+          // Single year - show last 12 months
+          for (let i = 11; i >= 0; i--) {
+            const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const periodKey = `${monthNames[date.getMonth()]} ${date.getFullYear()}`;
+            const existing = periodMap.get(periodKey);
+            completeData.push({
+              period: periodKey,
+              resumesA: existing?.resumesA ?? 0,
+              resumesB: existing?.resumesB ?? 0
+            });
+          }
+        }
+      } else if (period === 'quarterly') {
+        // Show all 4 quarters for years that have data
+        const years = new Set(performanceData.map(item => {
+          const parts = item.period.split(' ');
+          return parts.length > 1 ? parts[1] : now.getFullYear().toString();
+        }));
+        const yearList = years.size > 0 ? Array.from(years).map(y => parseInt(y)).sort() : [now.getFullYear()];
+        
+        for (const year of yearList) {
+          for (let q = 1; q <= 4; q++) {
+            const periodKey = `Q${q} ${year}`;
+            const existing = periodMap.get(periodKey);
+            completeData.push({
+              period: periodKey,
+              resumesA: existing?.resumesA ?? 0,
+              resumesB: existing?.resumesB ?? 0
+            });
+          }
+        }
+      } else { // yearly
+        // Show all years that have data (no need to fill gaps)
+        return res.json(performanceData);
+      }
+      
+      res.json(completeData);
     } catch (error) {
       console.error("Performance graph error:", error);
       res.status(500).json({ message: "Failed to get performance graph data" });
@@ -4894,23 +5052,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Revenue Analysis Data - Returns revenue by team member for chart
   app.get("/api/admin/revenue-analysis", requireAdminAuth, async (req, res) => {
     try {
+      const { teamId, dateFrom, dateTo, period = 'monthly' } = req.query;
       const { employees, revenueMappings } = await import("@shared/schema");
       
-      // Get all active recruiters
+      // Get all active employees
       const allEmployees = await db.select().from(employees);
+      const teamLeaders = allEmployees.filter(emp => emp.role === 'team_leader' && emp.isActive === true);
       const recruiters = allEmployees.filter(emp => 
         (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.isActive === true
       );
       
       // Get all revenue mappings
-      const allRevenueMappings = await db.select().from(revenueMappings);
+      let allRevenueMappings = await db.select().from(revenueMappings);
+      
+      // Filter by date range if provided
+      if (dateFrom || dateTo) {
+        allRevenueMappings = allRevenueMappings.filter(rm => {
+          const rmDate = rm.closureDate ? new Date(rm.closureDate) : new Date(rm.createdAt);
+          if (dateFrom && new Date(dateFrom as string) > rmDate) return false;
+          if (dateTo && new Date(dateTo as string) < rmDate) return false;
+          return true;
+        });
+      }
+      
+      let targetMembers: typeof recruiters = [];
+      
+      // Filter by team if specified
+      if (teamId && teamId !== 'all') {
+        // Find the team leader - try matching by id, name, or employeeId (case-insensitive)
+        const teamIdLower = (teamId as string).toLowerCase();
+        const teamLeader = teamLeaders.find(tl => 
+          tl.id.toLowerCase() === teamIdLower ||
+          tl.name.toLowerCase() === teamIdLower ||
+          (tl.employeeId && tl.employeeId.toLowerCase() === teamIdLower)
+        );
+        
+        if (teamLeader) {
+          // Get only recruiters (TAs) reporting to this team leader (exclude TL)
+          targetMembers = allEmployees.filter(rec => 
+            rec.role === 'recruiter' &&
+            rec.isActive === true &&
+            (rec.reportingTo === teamLeader.employeeId || 
+             rec.reportingTo === teamLeader.name ||
+             rec.reportingTo === teamLeader.id ||
+             (teamLeader.employeeId && rec.reportingTo?.toLowerCase() === teamLeader.employeeId.toLowerCase()) ||
+             (teamLeader.name && rec.reportingTo?.toLowerCase() === teamLeader.name.toLowerCase()))
+          );
+        } else {
+          // If team leader not found, return empty data
+          return res.json({
+            data: [],
+            benchmark: 0
+          });
+        }
+      } else {
+        // All teams - show only team leaders (TLs), not all recruiters
+        targetMembers = teamLeaders;
+      }
       
       // Calculate total revenue per member
-      const revenueData = recruiters.slice(0, 10).map(member => {
+      const revenueData = targetMembers.slice(0, 20).map(member => {
         const memberRevenue = allRevenueMappings
           .filter(rm => 
             rm.talentAdvisorId === member.id || 
-            rm.talentAdvisorName.toLowerCase() === member.name.toLowerCase()
+            rm.talentAdvisorName?.toLowerCase() === member.name.toLowerCase()
           )
           .reduce((sum, rm) => sum + (rm.revenue || 0), 0);
         
@@ -4918,7 +5123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           member: member.name,
           revenue: memberRevenue
         };
-      });
+      }).filter(item => item.revenue > 0); // Filter out zero values
       
       // Calculate average for benchmark
       const totalRevenue = revenueData.reduce((sum, d) => sum + d.revenue, 0);

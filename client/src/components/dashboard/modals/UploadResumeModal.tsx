@@ -4,11 +4,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Upload } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Upload, Check, ChevronsUpDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { cn } from '@/lib/utils';
 
 interface ResumeFormData {
   firstName: string;
@@ -62,6 +65,135 @@ export default function UploadResumeModal({
   const [deliverToRequirement, setDeliverToRequirement] = useState(false);
   const [selectedRequirement, setSelectedRequirement] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [locationOpen, setLocationOpen] = useState(false);
+  const [domainOpen, setDomainOpen] = useState(false);
+
+  // Location suggestions - Tamil Nadu cities and other top Indian cities
+  const locations = [
+    // Tamil Nadu Cities
+    { value: 'chennai', label: 'Chennai' },
+    { value: 'coimbatore', label: 'Coimbatore' },
+    { value: 'madurai', label: 'Madurai' },
+    { value: 'trichy', label: 'Trichy' },
+    { value: 'salem', label: 'Salem' },
+    { value: 'tirunelveli', label: 'Tirunelveli' },
+    { value: 'erode', label: 'Erode' },
+    { value: 'vellore', label: 'Vellore' },
+    { value: 'dindigul', label: 'Dindigul' },
+    { value: 'thanjavur', label: 'Thanjavur' },
+    { value: 'tiruppur', label: 'Tiruppur' },
+    { value: 'karur', label: 'Karur' },
+    { value: 'hosur', label: 'Hosur' },
+    { value: 'nagercoil', label: 'Nagercoil' },
+    { value: 'kanchipuram', label: 'Kanchipuram' },
+    // Other Top Indian Cities
+    { value: 'mumbai', label: 'Mumbai' },
+    { value: 'delhi', label: 'Delhi' },
+    { value: 'bangalore', label: 'Bangalore' },
+    { value: 'pune', label: 'Pune' },
+    { value: 'hyderabad', label: 'Hyderabad' },
+    { value: 'kolkata', label: 'Kolkata' },
+    { value: 'ahmedabad', label: 'Ahmedabad' },
+    { value: 'jaipur', label: 'Jaipur' },
+    { value: 'surat', label: 'Surat' },
+    { value: 'lucknow', label: 'Lucknow' },
+    { value: 'nagpur', label: 'Nagpur' },
+    { value: 'indore', label: 'Indore' },
+    { value: 'gurgaon', label: 'Gurgaon' },
+    { value: 'noida', label: 'Noida' },
+    { value: 'kochi', label: 'Kochi' },
+    { value: 'visakhapatnam', label: 'Visakhapatnam' },
+    { value: 'vadodara', label: 'Vadodara' },
+  ];
+
+  // Company domain suggestions - Common industries
+  const domains = [
+    { value: 'technology', label: 'Technology' },
+    { value: 'finance', label: 'Finance' },
+    { value: 'banking', label: 'Banking' },
+    { value: 'healthcare', label: 'Healthcare' },
+    { value: 'pharmaceuticals', label: 'Pharmaceuticals' },
+    { value: 'retail', label: 'Retail' },
+    { value: 'e-commerce', label: 'E-commerce' },
+    { value: 'manufacturing', label: 'Manufacturing' },
+    { value: 'automotive', label: 'Automotive' },
+    { value: 'education', label: 'Education' },
+    { value: 'consulting', label: 'Consulting' },
+    { value: 'telecommunications', label: 'Telecommunications' },
+    { value: 'media', label: 'Media & Entertainment' },
+    { value: 'hospitality', label: 'Hospitality' },
+    { value: 'real-estate', label: 'Real Estate' },
+    { value: 'logistics', label: 'Logistics & Supply Chain' },
+    { value: 'energy', label: 'Energy & Utilities' },
+    { value: 'aerospace', label: 'Aerospace & Defense' },
+    { value: 'agriculture', label: 'Agriculture' },
+    { value: 'construction', label: 'Construction' },
+    { value: 'fashion', label: 'Fashion & Apparel' },
+    { value: 'food-beverage', label: 'Food & Beverage' },
+    { value: 'insurance', label: 'Insurance' },
+    { value: 'legal', label: 'Legal Services' },
+    { value: 'marketing', label: 'Marketing & Advertising' },
+    { value: 'non-profit', label: 'Non-profit' },
+    { value: 'government', label: 'Government' },
+    { value: 'transportation', label: 'Transportation' },
+  ];
+
+  // Validation functions
+  const validateTextOnly = (value: string): boolean => {
+    return /^[a-zA-Z\s]*$/.test(value);
+  };
+
+  const validateEmail = (email: string): boolean => {
+    if (!email.trim()) return true; // Allow empty for optional fields
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validateURL = (url: string): boolean => {
+    if (!url.trim()) return true; // Allow empty for optional fields
+    try {
+      new URL(url.startsWith('http') ? url : `https://${url}`);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleNameChange = (field: 'firstName' | 'lastName', value: string) => {
+    if (validateTextOnly(value) || value === '') {
+      setFormData({ ...formData, [field]: value });
+    } else {
+      toast({
+        title: "Invalid input",
+        description: `${field === 'firstName' ? 'First Name' : 'Last Name'} should contain only letters and spaces.`,
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handlePhoneChange = (field: 'mobileNumber' | 'whatsappNumber', value: string) => {
+    // Only allow numbers, +, -, spaces, and parentheses for phone format
+    const phoneRegex = /^[\d+\-()\s]*$/;
+    if (phoneRegex.test(value) || value === '') {
+      setFormData({ ...formData, [field]: value });
+    } else {
+      toast({
+        title: "Invalid input",
+        description: `${field === 'mobileNumber' ? 'Mobile Number' : 'WhatsApp Number'} should contain only numbers and phone formatting characters (+, -, spaces, parentheses).`,
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleEmailChange = (field: 'primaryEmail' | 'secondaryEmail', value: string) => {
+    // Only update the value, validation happens on blur
+    setFormData({ ...formData, [field]: value });
+  };
+
+  const handleURLChange = (field: 'linkedin' | 'website' | 'portfolio1' | 'portfolio2' | 'portfolio3', value: string) => {
+    // Only update the value, validation happens on blur
+    setFormData({ ...formData, [field]: value });
+  };
   
   // Mutation for creating candidate
   const createCandidateMutation = useMutation({
@@ -154,6 +286,41 @@ export default function UploadResumeModal({
       setFormError('Please fill out all required fields and add at least one skill');
       return;
     }
+
+    // Validate email formats
+    if (!validateEmail(formData.primaryEmail)) {
+      setFormError('Please enter a valid primary email address');
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid primary email address.",
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (formData.secondaryEmail.trim() && !validateEmail(formData.secondaryEmail)) {
+      setFormError('Please enter a valid secondary email address');
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid secondary email address.",
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Validate URL formats
+    const urlFields: Array<'linkedin' | 'website' | 'portfolio1' | 'portfolio2' | 'portfolio3'> = ['linkedin', 'website', 'portfolio1', 'portfolio2', 'portfolio3'];
+    for (const field of urlFields) {
+      if (formData[field].trim() && !validateURL(formData[field])) {
+        setFormError(`Please enter a valid URL for ${field}`);
+        toast({
+          title: "Invalid URL",
+          description: `Please enter a valid URL for ${field}.`,
+          variant: 'destructive'
+        });
+        return;
+      }
+    }
     
     setIsSubmitting(true);
     setFormError('');
@@ -210,14 +377,14 @@ export default function UploadResumeModal({
             <div className="grid grid-cols-2 gap-4">
               <Input
                 value={formData.firstName}
-                onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                onChange={(e) => handleNameChange('firstName', e.target.value)}
                 className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
                 placeholder="First Name *"
                 data-testid="input-first-name"
               />
               <Input
                 value={formData.lastName}
-                onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                onChange={(e) => handleNameChange('lastName', e.target.value)}
                 className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
                 placeholder="Last Name *"
                 data-testid="input-last-name"
@@ -227,18 +394,22 @@ export default function UploadResumeModal({
             {/* Row 2: Mobile Number, WhatsApp Number */}
             <div className="grid grid-cols-2 gap-4">
               <Input
+                type="tel"
                 value={formData.mobileNumber}
-                onChange={(e) => setFormData({...formData, mobileNumber: e.target.value})}
+                onChange={(e) => handlePhoneChange('mobileNumber', e.target.value)}
                 className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
                 placeholder="Mobile Number *"
                 data-testid="input-mobile-number"
+                pattern="[0-9+\-()\s]*"
               />
               <Input
+                type="tel"
                 value={formData.whatsappNumber}
-                onChange={(e) => setFormData({...formData, whatsappNumber: e.target.value})}
+                onChange={(e) => handlePhoneChange('whatsappNumber', e.target.value)}
                 className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
                 placeholder="WhatsApp Number"
                 data-testid="input-whatsapp-number"
+                pattern="[0-9+\-()\s]*"
               />
             </div>
 
@@ -247,7 +418,16 @@ export default function UploadResumeModal({
               <Input
                 type="email"
                 value={formData.primaryEmail}
-                onChange={(e) => setFormData({...formData, primaryEmail: e.target.value})}
+                onChange={(e) => handleEmailChange('primaryEmail', e.target.value)}
+                onBlur={(e) => {
+                  if (e.target.value.trim() && !validateEmail(e.target.value)) {
+                    toast({
+                      title: "Invalid email format",
+                      description: "Please enter a valid primary email address.",
+                      variant: 'destructive'
+                    });
+                  }
+                }}
                 className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
                 placeholder="Primary Email *"
                 data-testid="input-primary-email"
@@ -255,7 +435,16 @@ export default function UploadResumeModal({
               <Input
                 type="email"
                 value={formData.secondaryEmail}
-                onChange={(e) => setFormData({...formData, secondaryEmail: e.target.value})}
+                onChange={(e) => handleEmailChange('secondaryEmail', e.target.value)}
+                onBlur={(e) => {
+                  if (e.target.value.trim() && !validateEmail(e.target.value)) {
+                    toast({
+                      title: "Invalid email format",
+                      description: "Please enter a valid secondary email address.",
+                      variant: 'destructive'
+                    });
+                  }
+                }}
                 className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
                 placeholder="Secondary Email"
                 data-testid="input-secondary-email"
@@ -289,7 +478,16 @@ export default function UploadResumeModal({
             <div className="grid grid-cols-2 gap-4">
               <Input
                 value={formData.linkedin}
-                onChange={(e) => setFormData({...formData, linkedin: e.target.value})}
+                onChange={(e) => handleURLChange('linkedin', e.target.value)}
+                onBlur={(e) => {
+                  if (e.target.value.trim() && !validateURL(e.target.value)) {
+                    toast({
+                      title: "Invalid URL format",
+                      description: "Please enter a valid LinkedIn URL.",
+                      variant: 'destructive'
+                    });
+                  }
+                }}
                 className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
                 placeholder="LinkedIn Profile"
                 data-testid="input-linkedin"
@@ -308,19 +506,49 @@ export default function UploadResumeModal({
 
             {/* Row 6: Current Location, Notice Period */}
             <div className="grid grid-cols-2 gap-4">
-              <Select value={formData.currentLocation} onValueChange={(value) => setFormData({...formData, currentLocation: value})}>
-                <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0">
-                  <SelectValue placeholder="Current Location *" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mumbai">Mumbai</SelectItem>
-                  <SelectItem value="delhi">Delhi</SelectItem>
-                  <SelectItem value="bangalore">Bangalore</SelectItem>
-                  <SelectItem value="pune">Pune</SelectItem>
-                  <SelectItem value="hyderabad">Hyderabad</SelectItem>
-                  <SelectItem value="chennai">Chennai</SelectItem>
-                </SelectContent>
-              </Select>
+              <Popover open={locationOpen} onOpenChange={setLocationOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={locationOpen}
+                    className="w-full justify-between bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 h-10 font-normal"
+                  >
+                    {formData.currentLocation
+                      ? locations.find((loc) => loc.value === formData.currentLocation)?.label
+                      : "Current Location *"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search location..." />
+                    <CommandList>
+                      <CommandEmpty>No location found.</CommandEmpty>
+                      <CommandGroup>
+                        {locations.map((location) => (
+                          <CommandItem
+                            key={location.value}
+                            value={location.value}
+                            onSelect={() => {
+                              setFormData({...formData, currentLocation: location.value});
+                              setLocationOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                formData.currentLocation === location.value ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {location.label}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               <Select value={formData.noticePeriod} onValueChange={(value) => setFormData({...formData, noticePeriod: value})}>
                 <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0">
                   <SelectValue placeholder="Notice Period" />
@@ -339,14 +567,32 @@ export default function UploadResumeModal({
             <div className="grid grid-cols-2 gap-4">
               <Input
                 value={formData.website}
-                onChange={(e) => setFormData({...formData, website: e.target.value})}
+                onChange={(e) => handleURLChange('website', e.target.value)}
+                onBlur={(e) => {
+                  if (e.target.value.trim() && !validateURL(e.target.value)) {
+                    toast({
+                      title: "Invalid URL format",
+                      description: "Please enter a valid website URL.",
+                      variant: 'destructive'
+                    });
+                  }
+                }}
                 className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
                 placeholder="Website URL"
                 data-testid="input-website"
               />
               <Input
                 value={formData.portfolio1}
-                onChange={(e) => setFormData({...formData, portfolio1: e.target.value})}
+                onChange={(e) => handleURLChange('portfolio1', e.target.value)}
+                onBlur={(e) => {
+                  if (e.target.value.trim() && !validateURL(e.target.value)) {
+                    toast({
+                      title: "Invalid URL format",
+                      description: "Please enter a valid portfolio URL.",
+                      variant: 'destructive'
+                    });
+                  }
+                }}
                 className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
                 placeholder="Portfolio 1 URL"
                 data-testid="input-portfolio1"
@@ -364,7 +610,16 @@ export default function UploadResumeModal({
               />
               <Input
                 value={formData.portfolio2}
-                onChange={(e) => setFormData({...formData, portfolio2: e.target.value})}
+                onChange={(e) => handleURLChange('portfolio2', e.target.value)}
+                onBlur={(e) => {
+                  if (e.target.value.trim() && !validateURL(e.target.value)) {
+                    toast({
+                      title: "Invalid URL format",
+                      description: "Please enter a valid portfolio URL.",
+                      variant: 'destructive'
+                    });
+                  }
+                }}
                 className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
                 placeholder="Portfolio 2 URL"
                 data-testid="input-portfolio2"
@@ -382,7 +637,16 @@ export default function UploadResumeModal({
               />
               <Input
                 value={formData.portfolio3}
-                onChange={(e) => setFormData({...formData, portfolio3: e.target.value})}
+                onChange={(e) => handleURLChange('portfolio3', e.target.value)}
+                onBlur={(e) => {
+                  if (e.target.value.trim() && !validateURL(e.target.value)) {
+                    toast({
+                      title: "Invalid URL format",
+                      description: "Please enter a valid portfolio URL.",
+                      variant: 'destructive'
+                    });
+                  }
+                }}
                 className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
                 placeholder="Portfolio 3 URL"
                 data-testid="input-portfolio3"
@@ -391,18 +655,49 @@ export default function UploadResumeModal({
 
             {/* Row 10: Company Domain, Company Level */}
             <div className="grid grid-cols-2 gap-4">
-              <Select value={formData.companyDomain} onValueChange={(value) => setFormData({...formData, companyDomain: value})}>
-                <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0">
-                  <SelectValue placeholder="Company Domain *" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="technology">Technology</SelectItem>
-                  <SelectItem value="finance">Finance</SelectItem>
-                  <SelectItem value="healthcare">Healthcare</SelectItem>
-                  <SelectItem value="retail">Retail</SelectItem>
-                  <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                </SelectContent>
-              </Select>
+              <Popover open={domainOpen} onOpenChange={setDomainOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={domainOpen}
+                    className="w-full justify-between bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 h-10 font-normal"
+                  >
+                    {formData.companyDomain
+                      ? domains.find((dom) => dom.value === formData.companyDomain)?.label
+                      : "Company Domain *"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search domain..." />
+                    <CommandList>
+                      <CommandEmpty>No domain found.</CommandEmpty>
+                      <CommandGroup>
+                        {domains.map((domain) => (
+                          <CommandItem
+                            key={domain.value}
+                            value={domain.value}
+                            onSelect={() => {
+                              setFormData({...formData, companyDomain: domain.value});
+                              setDomainOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                formData.companyDomain === domain.value ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {domain.label}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               <Select value={formData.companyLevel} onValueChange={(value) => setFormData({...formData, companyLevel: value})}>
                 <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0">
                   <SelectValue placeholder="Company Level *" />

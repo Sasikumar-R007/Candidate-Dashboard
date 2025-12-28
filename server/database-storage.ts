@@ -608,15 +608,23 @@ export class DatabaseStorage implements IStorage {
   async generateNextClientCode(): Promise<string> {
     const prefix = 'STCL';
     
-    const allClients = await db.select().from(clients);
-    const maxNumber = allClients
-      .filter(c => c.clientCode.startsWith(prefix))
-      .map(c => parseInt(c.clientCode.replace(prefix, '')))
-      .filter(n => !isNaN(n))
-      .reduce((max, current) => Math.max(max, current), 0);
-    
-    const nextNumber = maxNumber + 1;
-    return `${prefix}${nextNumber.toString().padStart(3, '0')}`;
+    try {
+      const allClients = await db.select().from(clients);
+      const maxNumber = allClients
+        .filter(c => c.clientCode && c.clientCode.startsWith(prefix))
+        .map(c => {
+          const numStr = c.clientCode.replace(prefix, '');
+          return parseInt(numStr);
+        })
+        .filter(n => !isNaN(n))
+        .reduce((max, current) => Math.max(max, current), 0);
+      
+      const nextNumber = maxNumber + 1;
+      return `${prefix}${nextNumber.toString().padStart(3, '0')}`;
+    } catch (error) {
+      console.error('Error generating client code:', error);
+      throw new Error(`Failed to generate client code: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   async createClient(client: InsertClient): Promise<Client> {
