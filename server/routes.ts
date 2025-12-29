@@ -6056,13 +6056,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const parsed = await parseResumeFile(req.file.path, req.file.mimetype);
       
+      // Generate file URL for the uploaded resume
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
+        : `http://${req.get('host')}`;
+      const fileUrl = `${baseUrl}/uploads/resumes/${path.basename(req.file.path)}`;
+      
       res.json({
         success: true,
         data: {
           fullName: parsed.fullName,
           email: parsed.email,
           phone: parsed.phone,
-          filePath: req.file.path,
+          designation: parsed.designation,
+          experience: parsed.experience,
+          skills: parsed.skills,
+          location: parsed.location,
+          company: parsed.company,
+          education: parsed.education,
+          linkedinUrl: parsed.linkedinUrl,
+          portfolioUrl: parsed.portfolioUrl,
+          websiteUrl: parsed.websiteUrl,
+          currentRole: parsed.currentRole,
+          filePath: fileUrl,
           fileName: req.file.originalname
         }
       });
@@ -6091,20 +6107,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const successCount = results.filter(r => r.success).length;
       const failedCount = results.filter(r => !r.success).length;
 
+      // Generate base URL for file paths
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
+        : `http://${req.get('host')}`;
+
       res.json({
         total: results.length,
         successCount,
         failedCount,
-        results: results.map(r => ({
-          fileName: r.fileName,
-          success: r.success,
-          data: r.success ? {
-            fullName: r.data?.fullName,
-            email: r.data?.email,
-            phone: r.data?.phone
-          } : null,
-          error: r.error
-        }))
+        results: results.map((r, index) => {
+          if (r.success && files[index]) {
+            const fileUrl = `${baseUrl}/uploads/resumes/${path.basename(files[index].path)}`;
+            return {
+              fileName: r.fileName,
+              success: r.success,
+              data: {
+                fullName: r.data?.fullName,
+                email: r.data?.email,
+                phone: r.data?.phone,
+                designation: r.data?.designation,
+                experience: r.data?.experience,
+                skills: r.data?.skills,
+                location: r.data?.location,
+                company: r.data?.company,
+                education: r.data?.education,
+                linkedinUrl: r.data?.linkedinUrl,
+                portfolioUrl: r.data?.portfolioUrl,
+                websiteUrl: r.data?.websiteUrl,
+                currentRole: r.data?.currentRole,
+                filePath: fileUrl
+              },
+              error: r.error
+            };
+          }
+          return {
+            fileName: r.fileName,
+            success: r.success,
+            data: null,
+            error: r.error
+          };
+        })
       });
     } catch (error) {
       console.error('Bulk parse resume error:', error);
@@ -6115,7 +6158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Import single candidate from resume
   app.post("/api/admin/import-candidate", requireAdminAuth, async (req, res) => {
     try {
-      const { fullName, email, phone, designation, experience, skills, location, resumeFilePath, addedBy } = req.body;
+      const { fullName, email, phone, designation, experience, skills, location, company, education, linkedinUrl, portfolioUrl, websiteUrl, currentRole, resumeFilePath, addedBy } = req.body;
 
       if (!fullName || !email) {
         return res.status(400).json({ message: "Full name and email are required" });
@@ -6138,6 +6181,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         experience: experience || null,
         skills: skills || null,
         location: location || null,
+        company: company || null,
+        education: education || null,
+        linkedinUrl: linkedinUrl || null,
+        portfolioUrl: portfolioUrl || null,
+        websiteUrl: websiteUrl || null,
+        currentRole: currentRole || null,
         resumeFile: resumeFilePath || null,
         addedBy: addedBy || 'Admin Import',
         pipelineStatus: 'New',
@@ -6200,11 +6249,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fullName: candidate.fullName,
             email: candidate.email.toLowerCase(),
             phone: candidate.phone || null,
-            designation: null,
-            experience: null,
-            skills: null,
-            location: null,
-            resumeFile: null,
+            designation: candidate.designation || null,
+            experience: candidate.experience || null,
+            skills: candidate.skills || null,
+            location: candidate.location || null,
+            company: candidate.company || null,
+            education: candidate.education || null,
+            linkedinUrl: candidate.linkedinUrl || null,
+            portfolioUrl: candidate.portfolioUrl || null,
+            websiteUrl: candidate.websiteUrl || null,
+            currentRole: candidate.currentRole || null,
+            resumeFile: candidate.filePath || null,
             addedBy: addedBy || 'Admin Bulk Import',
             pipelineStatus: 'New',
             isActive: true,

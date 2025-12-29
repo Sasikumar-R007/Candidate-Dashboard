@@ -144,16 +144,12 @@ export default function CandidateRegistration() {
       if (response.requiresVerification) {
         toast({
           title: "Registration Successful!",
-          description: `Your candidate ID is ${response.candidateId}. Please verify with OTP.`,
+          description: `Verification code sent to ${response.email}. Please check your email.`,
         });
-        // Show OTP in alert for demo
-        if (response.otp) {
-          alert(`Demo OTP: ${response.otp}`);
-        }
-        // Navigate to login page to verify OTP
+        // Navigate to login page with email pre-filled and OTP form shown
         setTimeout(() => {
-          setLocation("/candidate-login");
-        }, 2000);
+          setLocation(`/candidate-login?email=${encodeURIComponent(response.email)}&verify=true`);
+        }, 1500);
       } else {
         toast({
           title: "Registration Complete!",

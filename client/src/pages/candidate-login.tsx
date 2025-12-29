@@ -196,6 +196,28 @@ export default function CandidateLogin() {
     }
   });
 
+  // Check URL params to auto-show OTP form when coming from registration
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const email = params.get('email');
+    const verify = params.get('verify');
+    
+    if (verify === 'true' && email) {
+      setCurrentEmail(email);
+      setShowOTP(true);
+      setOtpExpiry(600); // Reset timer to 10 minutes
+      setIsLogin(false); // Hide login form
+      
+      // Clean up URL params
+      window.history.replaceState({}, '', window.location.pathname);
+      
+      toast({
+        title: "Verification Required",
+        description: `Please check your email (${email}) for the verification code.`,
+      });
+    }
+  }, []);
+
   // OTP expiry timer
   useEffect(() => {
     if (showOTP && otpExpiry > 0) {

@@ -10,7 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Filter, Search, MoreVertical, X, Share2, Download, Loader2, Upload, FileText, CheckCircle, XCircle } from "lucide-react";
+import { ArrowLeft, Filter, Search, MoreVertical, X, Download, Loader2, Upload, FileText, CheckCircle, XCircle } from "lucide-react";
 import { useDropzone } from 'react-dropzone';
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -95,8 +95,8 @@ export default function MasterDatabase() {
   const [isBulkUpload, setIsBulkUpload] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [bulkFiles, setBulkFiles] = useState<File[]>([]);
-  const [parsedData, setParsedData] = useState<{fullName: string | null; email: string | null; phone: string | null; filePath?: string} | null>(null);
-  const [bulkParsedResults, setBulkParsedResults] = useState<Array<{fileName: string; success: boolean; data?: {fullName: string | null; email: string | null; phone: string | null}; error?: string}>>([]);
+  const [parsedData, setParsedData] = useState<{fullName: string | null; email: string | null; phone: string | null; designation?: string | null; experience?: string | null; skills?: string | null; location?: string | null; filePath?: string} | null>(null);
+  const [bulkParsedResults, setBulkParsedResults] = useState<Array<{fileName: string; success: boolean; data?: {fullName: string | null; email: string | null; phone: string | null; designation?: string | null; experience?: string | null; skills?: string | null; location?: string | null; filePath?: string}; error?: string}>>([]);
   const [importStep, setImportStep] = useState<'upload' | 'confirm' | 'result'>('upload');
   const [isProcessing, setIsProcessing] = useState(false);
   const [singleCandidateForm, setSingleCandidateForm] = useState({
@@ -519,16 +519,25 @@ export default function MasterDatabase() {
     }
   };
 
-  // Handle share resume
-  const handleShareResume = () => {
-    // Frontend only - just show a toast or alert
-    alert('Share functionality - Frontend only');
-  };
-
   // Handle download resume
   const handleDownloadResume = () => {
-    // Frontend only - just show a toast or alert
-    alert('Download functionality - Frontend only');
+    if (!selectedResume || !('resumeFile' in selectedResume) || !selectedResume.resumeFile) {
+      toast({
+        title: "Error",
+        description: "Resume file not available",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const resumeUrl = selectedResume.resumeFile;
+    const link = document.createElement('a');
+    link.href = resumeUrl;
+    link.download = `${selectedResume.name || 'resume'}.pdf`;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // Get initials for avatar fallback
@@ -556,7 +565,13 @@ export default function MasterDatabase() {
       designation: '',
       experience: '',
       skills: '',
-      location: ''
+      location: '',
+      company: '',
+      education: '',
+      linkedinUrl: '',
+      portfolioUrl: '',
+      websiteUrl: '',
+      currentRole: ''
     });
     setImportResults(null);
   };
@@ -588,7 +603,17 @@ export default function MasterDatabase() {
           ...prev,
           fullName: result.data.fullName || '',
           email: result.data.email || '',
-          phone: result.data.phone || ''
+          phone: result.data.phone || '',
+          designation: result.data.designation || '',
+          experience: result.data.experience || '',
+          skills: result.data.skills || '',
+          location: result.data.location || '',
+          company: result.data.company || '',
+          education: result.data.education || '',
+          linkedinUrl: result.data.linkedinUrl || '',
+          portfolioUrl: result.data.portfolioUrl || '',
+          websiteUrl: result.data.websiteUrl || '',
+          currentRole: result.data.currentRole || ''
         }));
         setImportStep('confirm');
       } catch (error) {
@@ -676,7 +701,19 @@ export default function MasterDatabase() {
     
     try {
       const response = await apiRequest('POST', '/api/admin/import-candidate', {
-        ...singleCandidateForm,
+        fullName: singleCandidateForm.fullName,
+        email: singleCandidateForm.email,
+        phone: singleCandidateForm.phone || null,
+        designation: singleCandidateForm.designation || null,
+        experience: singleCandidateForm.experience || null,
+        skills: singleCandidateForm.skills || null,
+        location: singleCandidateForm.location || null,
+        company: singleCandidateForm.company || null,
+        education: singleCandidateForm.education || null,
+        linkedinUrl: singleCandidateForm.linkedinUrl || null,
+        portfolioUrl: singleCandidateForm.portfolioUrl || null,
+        websiteUrl: singleCandidateForm.websiteUrl || null,
+        currentRole: singleCandidateForm.currentRole || null,
         resumeFilePath: parsedData?.filePath,
         addedBy: 'Admin Import'
       });
@@ -708,6 +745,17 @@ export default function MasterDatabase() {
         fullName: r.data!.fullName,
         email: r.data!.email,
         phone: r.data!.phone,
+        designation: r.data!.designation,
+        experience: r.data!.experience,
+        skills: r.data!.skills,
+        location: r.data!.location,
+        company: r.data!.company,
+        education: r.data!.education,
+        linkedinUrl: r.data!.linkedinUrl,
+        portfolioUrl: r.data!.portfolioUrl,
+        websiteUrl: r.data!.websiteUrl,
+        currentRole: r.data!.currentRole,
+        filePath: r.data!.filePath,
         fileName: r.fileName
       }));
     
@@ -847,13 +895,11 @@ export default function MasterDatabase() {
       </div>
 
       {/* Main Content Area - Side by Side Layout */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex overflow-hidden">
 
         {/* Table Section */}
-        <div className={`flex-1 flex overflow-hidden p-6`}>
-          <div className={`bg-white dark:bg-gray-800 rounded-md overflow-hidden flex-1 flex flex-col relative ${
-            isResumeDrawerOpen ? 'flex-1' : 'w-full'
-          }`}>
+        <div className={`${isResumeDrawerOpen ? 'flex-1' : 'w-full'} overflow-hidden p-6 transition-all duration-300`}>
+          <div className="bg-white dark:bg-gray-800 rounded-md overflow-hidden h-full flex flex-col">
             <div className="overflow-x-auto flex-1">
               <table className="w-full">
                 <thead>
@@ -862,9 +908,9 @@ export default function MasterDatabase() {
                     {profileType === 'resume' && (
                       <>
                         <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Position</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Experience</th>
+                        <th className={`text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100 ${isResumeDrawerOpen ? 'hidden' : ''}`}>Experience</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Skills</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Status</th>
+                        <th className={`text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100 ${isResumeDrawerOpen ? 'hidden' : ''}`}>Status</th>
                       </>
                     )}
                     {profileType === 'employee' && (
@@ -890,7 +936,7 @@ export default function MasterDatabase() {
                 <tbody>
                   {isLoading ? (
                     <tr>
-                      <td colSpan={8} className="py-12 text-center">
+                      <td colSpan={profileType === 'resume' ? (isResumeDrawerOpen ? 6 : 8) : 8} className="py-12 text-center">
                         <div className="flex flex-col items-center justify-center gap-2">
                           <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
                           <span className="text-gray-500 dark:text-gray-400">Loading {getProfileTypeLabel().toLowerCase()}s...</span>
@@ -899,7 +945,7 @@ export default function MasterDatabase() {
                     </tr>
                   ) : filteredData.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-12 text-center">
+                      <td colSpan={profileType === 'resume' ? (isResumeDrawerOpen ? 6 : 8) : 8} className="py-12 text-center">
                         <div className="flex flex-col items-center justify-center gap-2">
                           <span className="text-gray-500 dark:text-gray-400">
                             {searchQuery || statusFilter !== 'all' 
@@ -930,11 +976,11 @@ export default function MasterDatabase() {
                         {profileType === 'resume' && (
                           <>
                             <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.position}</td>
-                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.experience}</td>
+                            <td className={`py-3 px-4 text-gray-900 dark:text-gray-100 ${isResumeDrawerOpen ? 'hidden' : ''}`}>{item.experience}</td>
                             <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
                               {item.skills && item.skills !== '-' ? (item.skills.split(',')[0] + (item.skills.includes(',') ? '...' : '')) : '-'}
                             </td>
-                            <td className="py-3 px-4">
+                            <td className={`py-3 px-4 ${isResumeDrawerOpen ? 'hidden' : ''}`}>
                               <Badge className={`${getStatusBadgeColor(item.status)} rounded-full px-3 py-1`}>
                                 {item.status}
                               </Badge>
@@ -1007,9 +1053,9 @@ export default function MasterDatabase() {
           </div>
         </div>
 
-        {/* Resume Display Section - Side Panel */}
+        {/* Resume Display Section - Right Side Panel */}
         {isResumeDrawerOpen && selectedResume && (
-          <div className="w-full max-w-md h-screen border-l-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 flex flex-col">
+          <div className="w-full max-w-lg min-w-[450px] h-full border-l-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 flex flex-col">
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* Candidate Profile Header - Redesigned */}
@@ -1055,34 +1101,101 @@ export default function MasterDatabase() {
               </div>
 
               {/* Resume Display Area */}
-              <div className="space-y-3">
-                <div className="bg-gray-100 dark:bg-gray-900 rounded-md p-8 min-h-[400px] flex items-center justify-center relative">
-                  <div className="text-center">
-                    <p className="text-xl font-semibold text-gray-900 dark:text-gray-100">Resume</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">Resume Not Available</p>
-                  </div>
-                  
-                  {/* Share and Download Buttons */}
-                  <div className="absolute bottom-4 right-4 flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleShareResume}
-                      className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800"
-                      data-testid="button-share-resume"
-                    >
-                      <Share2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleDownloadResume}
-                      className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800"
-                      data-testid="button-download-resume"
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                  </div>
+              <div className="space-y-3 flex-1 flex flex-col">
+                <div className="bg-gray-100 dark:bg-gray-900 rounded-md flex flex-col relative overflow-hidden" style={{ height: 'calc(100vh - 280px)', minHeight: '800px' }}>
+                  {selectedResume && 'resumeFile' in selectedResume && selectedResume.resumeFile ? (
+                    <>
+                      {(() => {
+                        const resumeUrl = selectedResume.resumeFile;
+                        const lowerUrl = resumeUrl.toLowerCase();
+                        // Check file extension from URL (handle URLs with query params)
+                        const urlWithoutQuery = lowerUrl.split('?')[0];
+                        const isPdf = urlWithoutQuery.endsWith('.pdf');
+                        const isDocx = urlWithoutQuery.endsWith('.docx');
+                        const isDoc = urlWithoutQuery.endsWith('.doc') && !isDocx;
+                        
+                        if (isPdf) {
+                          return (
+                            <iframe
+                              key={resumeUrl}
+                              src={resumeUrl}
+                              className="w-full h-full border-0"
+                              title="Resume Preview"
+                              data-testid="resume-iframe"
+                            />
+                          );
+                        } else if (isDocx || isDoc) {
+                          // Word documents can't be displayed directly in browser
+                          return (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                              <div className="text-center space-y-4 p-8 max-w-md">
+                                <FileText className="h-16 w-16 mx-auto text-gray-400" />
+                                <div>
+                                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                    Word Document
+                                  </p>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                                    Word documents cannot be previewed in the browser. Please download the file to view it.
+                                  </p>
+                                  <Button
+                                    onClick={handleDownloadResume}
+                                    className="bg-blue-600 text-white hover:bg-blue-700"
+                                  >
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Download Resume
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        } else {
+                          // Try to display as image (fallback for other file types)
+                          return (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                              <div className="text-center space-y-4 p-8 max-w-md">
+                                <FileText className="h-16 w-16 mx-auto text-gray-400" />
+                                <div>
+                                  <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                    Resume File
+                                  </p>
+                                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                                    This file type cannot be previewed. Please download to view.
+                                  </p>
+                                  <Button
+                                    onClick={handleDownloadResume}
+                                    className="bg-blue-600 text-white hover:bg-blue-700"
+                                  >
+                                    <Download className="h-4 w-4 mr-2" />
+                                    Download Resume
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+                      })()}
+                      {/* Download Button */}
+                      <div className="absolute top-4 right-4 z-10">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleDownloadResume}
+                          className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800 shadow-md"
+                          data-testid="button-download-resume"
+                          title="Download Resume"
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex-1 flex items-center justify-center">
+                      <div className="text-center">
+                        <p className="text-xl font-semibold text-gray-900 dark:text-gray-100">Resume</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">Resume Not Available</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Uploaded Date Badge - Moved Below Resume */}
@@ -1501,10 +1614,10 @@ export default function MasterDatabase() {
                                 <span className="text-sm font-medium truncate">{result.fileName}</span>
                               </div>
                               {result.success && result.data ? (
-                                <div className="mt-1 text-xs text-muted-foreground ml-6">
-                                  <span>{result.data.fullName || 'No name'}</span>
-                                  <span className="mx-2">|</span>
-                                  <span>{result.data.email || 'No email'}</span>
+                                <div className="mt-1 text-xs text-muted-foreground ml-6 space-y-1">
+                                  <div>{result.data.fullName || 'No name'} {result.data.email ? `| ${result.data.email}` : ''}</div>
+                                  {result.data.designation && <div className="text-xs">Position: {result.data.designation}</div>}
+                                  {result.data.experience && <div className="text-xs">Experience: {result.data.experience}</div>}
                                 </div>
                               ) : (
                                 <div className="mt-1 text-xs text-red-600 ml-6">
