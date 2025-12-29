@@ -24,6 +24,11 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// API base URL - uses environment variable in production, empty string (relative) in development
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+
+const createApiUrl = (path: string) => `${API_BASE_URL}${path}`;
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,7 +36,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const verifySession = useCallback(async (): Promise<boolean> => {
     try {
-      const response = await fetch('/api/auth/verify-session', {
+      const response = await fetch(createApiUrl('/api/auth/verify-session'), {
         credentials: 'include'
       });
       
@@ -89,7 +94,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const logout = useCallback(async () => {
     try {
-      await fetch('/api/auth/logout', {
+      await fetch(createApiUrl('/api/auth/logout'), {
         method: 'POST',
         credentials: 'include'
       });

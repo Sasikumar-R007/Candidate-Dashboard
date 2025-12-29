@@ -16,7 +16,7 @@ import { db } from "./db";
 import { eq, desc, sql } from "drizzle-orm";
 import { logRequirementAdded, logCandidateSubmitted, logClosureMade, logCandidatePipelineChanged } from "./activity-logger";
 import { parseResumeFile, parseBulkResumes } from "./resume-parser";
-import { sendEmployeeWelcomeEmail, sendCandidateWelcomeEmail } from "./email-service";
+import { sendEmployeeWelcomeEmail, sendCandidateWelcomeEmail, sendOTPEmail } from "./email-service";
 import { setupGoogleAuth } from "./passport-google";
 
 // Ensure uploads directory exists
@@ -160,7 +160,7 @@ const candidateLoginSchema = z.object({
 
 const otpVerificationSchema = z.object({
   email: z.string().email("Invalid email format"),
-  otp: z.string().length(6, "OTP must be 6 digits")
+  otp: z.string().length(4, "OTP must be 4 digits")
 });
 
 // Authentication middleware for candidate routes
@@ -492,8 +492,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date().toISOString()
       });
 
-      // Generate 6-digit OTP for verification
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      // Generate 4-digit OTP for verification
+      const otp = Math.floor(1000 + Math.random() * 9000).toString();
       
       // Store OTP with expiry (10 minutes)
       await storage.storeOTP(candidateData.email, otp);
@@ -501,7 +501,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send welcome email to new candidate
       const loginUrl = process.env.REPLIT_DEV_DOMAIN 
         ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-        : 'http://localhost:5000';
+        : process.env.FRONTEND_URL || 'http://localhost:5000';
       
       await sendCandidateWelcomeEmail({
         fullName: newCandidate.fullName,
@@ -509,14 +509,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         candidateId: newCandidate.candidateId,
         loginUrl
       });
+
+      // Send OTP via email
+      await sendOTPEmail({
+        fullName: newCandidate.fullName,
+        email: newCandidate.email,
+        otp: otp,
+        expiresInMinutes: 10
+      });
       
-      // For demo purposes, show OTP in alert as requested by user
-      // In production, this would be sent via email
       res.json({
         success: true,
-        message: "Registration successful! Please verify with OTP",
+        message: "Registration successful! Please check your email for the verification code.",
         candidateId: newCandidate.candidateId,
-        otp: otp, // For demo only - in production, would send via email
         email: newCandidate.email,
         requiresVerification: true
       });
@@ -611,14 +616,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if candidate is verified
       if (!candidate.isVerified) {
-        // Generate new OTP for unverified accounts
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        // Generate new 4-digit OTP for unverified accounts
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
         await storage.storeOTP(candidate.email, otp);
         
+        // Send OTP via email
+        await sendOTPEmail({
+          fullName: candidate.fullName,
+          email: candidate.email,
+          otp: otp,
+          expiresInMinutes: 10
+        });
+        
         return res.status(403).json({
-          message: "Account not verified. Please verify with OTP",
+          message: "Account not verified. Please check your email for the verification code.",
           requiresVerification: true,
-          otp: otp, // For demo only - in production, would send via email
           email: candidate.email
         });
       }
@@ -640,6 +652,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Candidate login error:', error);
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Resend OTP endpoint
+  app.post("/api/auth/resend-otp", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const candidate = await storage.getCandidateByEmail(email);
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+
+      // Generate new OTP
+      const otp = Math.floor(1000 + Math.random() * 9000).toString();
+      await storage.storeOTP(email, otp);
+
+      // Send OTP via email
+      await sendOTPEmail({
+        fullName: candidate.fullName,
+        email: candidate.email,
+        otp: otp,
+        expiresInMinutes: 10
+      });
+
+      res.json({
+        success: true,
+        message: "New verification code has been sent to your email"
+      });
+    } catch (error) {
+      console.error('Resend OTP error:', error);
+      res.status(500).json({ message: "Failed to resend OTP" });
     }
   });
 

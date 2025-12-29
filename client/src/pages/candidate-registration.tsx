@@ -78,6 +78,17 @@ export default function CandidateRegistration() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resumeFileName, setResumeFileName] = useState<string>("");
   const [certificateFileNames, setCertificateFileNames] = useState<string[]>([]);
+  
+  // Check if candidate already exists when email is entered in step 2
+  const checkExistingCandidate = async (email: string) => {
+    if (!email) return;
+    try {
+      // We'll check this when they try to submit, but we can also check on blur
+      // For now, we'll handle it in the registration mutation error handler
+    } catch (error) {
+      // Silent check - we'll show error on submit
+    }
+  };
 
   const step1Form = useForm();
   const step2Form = useForm();
@@ -124,11 +135,65 @@ export default function CandidateRegistration() {
     }
   };
 
+  const registrationMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("POST", "/api/auth/candidate-register", data);
+      return await res.json();
+    },
+    onSuccess: (response) => {
+      if (response.requiresVerification) {
+        toast({
+          title: "Registration Successful!",
+          description: `Your candidate ID is ${response.candidateId}. Please verify with OTP.`,
+        });
+        // Show OTP in alert for demo
+        if (response.otp) {
+          alert(`Demo OTP: ${response.otp}`);
+        }
+        // Navigate to login page to verify OTP
+        setTimeout(() => {
+          setLocation("/candidate-login");
+        }, 2000);
+      } else {
+        toast({
+          title: "Registration Complete!",
+          description: "Your profile has been successfully created.",
+        });
+        setTimeout(() => {
+          setLocation("/candidate");
+        }, 1500);
+      }
+    },
+    onError: (error: any) => {
+      const errorMessage = error.message || "Failed to complete registration";
+      // apiRequest throws errors in format "409: Email already registered"
+      if (errorMessage.includes("409") || errorMessage.includes("already registered") || errorMessage.includes("Email already registered")) {
+        toast({
+          title: "Account Already Exists",
+          description: "An account with this email already exists. Please login instead.",
+          variant: "destructive",
+        });
+        // Redirect to login after showing error
+        setTimeout(() => {
+          setLocation("/candidate-login");
+        }, 2000);
+      } else {
+        toast({
+          title: "Registration Failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
+    },
+  });
+
   const onSubmit = async () => {
     setIsSubmitting(true);
     try {
+      const step2Data = step2Form.getValues();
       const step6Data = step6Form.getValues();
 
+      // Validate password
       if (step6Data.password !== step6Data.confirmPassword) {
         toast({
           title: "Password Mismatch",
@@ -149,14 +214,30 @@ export default function CandidateRegistration() {
         return;
       }
 
-      toast({
-        title: "Registration Complete!",
-        description: "Your profile has been successfully created.",
-      });
+      // Validate required fields
+      if (!step2Data.primaryEmail || !step2Data.firstName || !step2Data.lastName) {
+        toast({
+          title: "Missing Information",
+          description: "Please fill in all required fields (Name and Email)",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
 
-      setTimeout(() => {
-        setLocation("/candidate");
-      }, 1500);
+      // Prepare registration data
+      const registrationData = {
+        fullName: `${step2Data.firstName} ${step2Data.lastName}`,
+        email: step2Data.primaryEmail,
+        password: step6Data.password,
+        phone: step2Data.mobileNumber || undefined,
+        location: step5Form.getValues().currentLocation || undefined,
+        company: step4Form.getValues().currentCompany || undefined,
+        designation: step4Form.getValues().currentRole || undefined,
+      };
+
+      // Call registration API
+      registrationMutation.mutate(registrationData);
     } catch (error) {
       toast({
         title: "Error",

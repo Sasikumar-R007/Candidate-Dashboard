@@ -16,6 +16,13 @@ interface CandidateWelcomeEmailData {
   loginUrl: string;
 }
 
+interface OTPEmailData {
+  fullName: string;
+  email: string;
+  otp: string;
+  expiresInMinutes: number;
+}
+
 export async function sendEmployeeWelcomeEmail(data: EmployeeWelcomeEmailData): Promise<boolean> {
   try {
     const { client: resend, fromEmail } = await getUncachableResendClient();
@@ -255,6 +262,84 @@ Team StaffOS
     return true;
   } catch (error) {
     console.error('Error sending candidate welcome email:', error);
+    return false;
+  }
+}
+
+export async function sendOTPEmail(data: OTPEmailData): Promise<boolean> {
+  try {
+    const { client: resend, fromEmail } = await getUncachableResendClient();
+
+    const emailContent = `
+Hi ${data.fullName},
+
+Your verification code for StaffOS is: ${data.otp}
+
+This code will expire in ${data.expiresInMinutes} minutes.
+
+If you didn't request this code, please ignore this email.
+
+Warm regards,
+Team StaffOS
+    `.trim();
+
+    const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background-color: #4F46E5; color: white; padding: 20px; text-align: center; }
+    .content { padding: 30px 20px; background-color: #f9f9f9; }
+    .otp-box { background-color: white; padding: 30px; margin: 20px 0; text-align: center; border: 2px dashed #4F46E5; border-radius: 8px; }
+    .otp-code { font-size: 32px; font-weight: bold; color: #4F46E5; letter-spacing: 8px; font-family: monospace; }
+    .footer { text-align: center; padding: 20px; color: #666; font-size: 14px; }
+    .warning { background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>StaffOS Verification Code</h1>
+    </div>
+    <div class="content">
+      <p>Hi ${data.fullName},</p>
+      
+      <p>Please use the following code to verify your account:</p>
+      
+      <div class="otp-box">
+        <div class="otp-code">${data.otp}</div>
+      </div>
+      
+      <div class="warning">
+        <strong>⚠️ Important:</strong> This code will expire in ${data.expiresInMinutes} minutes. Do not share this code with anyone.
+      </div>
+      
+      <p>If you didn't request this verification code, please ignore this email or contact our support team.</p>
+      
+      <div class="footer">
+        <p><strong>Warm regards,<br>Team StaffOS</strong></p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+    `.trim();
+
+    const senderEmail = fromEmail || 'StaffOS <onboarding@resend.dev>';
+    await resend.emails.send({
+      from: senderEmail,
+      to: data.email,
+      subject: `Your StaffOS Verification Code: ${data.otp}`,
+      text: emailContent,
+      html: htmlContent,
+    });
+
+    console.log(`OTP email sent successfully to ${data.email}`);
+    return true;
+  } catch (error) {
+    console.error('Error sending OTP email:', error);
     return false;
   }
 }

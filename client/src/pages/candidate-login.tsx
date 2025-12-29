@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -55,22 +55,44 @@ export default function CandidateLogin() {
   const { toast } = useToast();
   const [currentEmail, setCurrentEmail] = useState("");
   const [candidateId, setCandidateId] = useState("");
+  const [otpExpiry, setOtpExpiry] = useState(600); // 10 minutes in seconds
 
   const loginMutation = useMutation({
     mutationFn: async (data: LoginForm) => {
-      const res = await apiRequest('POST', '/api/auth/candidate-login', data);
-      return await res.json();
+      // Use fetch directly to handle 403 responses properly
+      const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+      const fullUrl = `${API_BASE_URL}/api/auth/candidate-login`;
+      
+      const res = await fetch(fullUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+        credentials: 'include',
+      });
+
+      const responseData = await res.json();
+
+      // If 403 with requiresVerification, treat as success
+      if (res.status === 403 && responseData.requiresVerification) {
+        return responseData;
+      }
+
+      // For other non-ok responses, throw error
+      if (!res.ok) {
+        throw new Error(`${res.status}: ${JSON.stringify(responseData)}`);
+      }
+
+      return responseData;
     },
     onSuccess: (response) => {
       if (response.requiresVerification) {
         setCurrentEmail(response.email);
         setShowOTP(true);
-        if (response.otp) {
-          alert(`Demo OTP: ${response.otp}`);
-        }
+        setOtpExpiry(600); // Reset timer to 10 minutes
+        // OTP is now sent via email, no need for alert
         toast({
           title: "Verification Required",
-          description: response.message,
+          description: response.message || "Please check your email for the verification code",
         });
       } else if (response.success && response.candidate) {
         setUser({
@@ -106,18 +128,38 @@ export default function CandidateLogin() {
       setCurrentEmail(response.email);
       setCandidateId(response.candidateId);
       setShowOTP(true);
-      if (response.otp) {
-        alert(`Demo OTP: ${response.otp}`);
-      }
+      setOtpExpiry(600); // Reset timer to 10 minutes
+      // OTP is now sent via email, no need for alert
       toast({
         title: "Registration Successful",
-        description: `Your candidate ID is ${response.candidateId}. Please verify with OTP.`,
+        description: `Your candidate ID is ${response.candidateId}. Please check your email for the verification code.`,
       });
     },
     onError: (error: any) => {
       toast({
         title: "Registration Failed",
         description: error.message || "Registration failed",
+        variant: "destructive"
+      });
+    }
+  });
+
+  const resendOTPMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/auth/resend-otp', { email: currentEmail });
+      return await res.json();
+    },
+    onSuccess: () => {
+      setOtpExpiry(600); // Reset timer to 10 minutes
+      toast({
+        title: "Code Sent",
+        description: "A new verification code has been sent to your email",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Resend",
+        description: error.message || "Please try again later",
         variant: "destructive"
       });
     }
@@ -154,6 +196,22 @@ export default function CandidateLogin() {
     }
   });
 
+  // OTP expiry timer
+  useEffect(() => {
+    if (showOTP && otpExpiry > 0) {
+      const timer = setInterval(() => {
+        setOtpExpiry(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [showOTP, otpExpiry]);
+
   const onLogin = (data: LoginForm) => {
     setCurrentEmail(data.email);
     loginMutation.mutate(data);
@@ -175,7 +233,7 @@ export default function CandidateLogin() {
     verifyOTPMutation.mutate(data);
   };
 
-  const isLoading = loginMutation.isPending || registerMutation.isPending || verifyOTPMutation.isPending;
+  const isLoading = loginMutation.isPending || registerMutation.isPending || verifyOTPMutation.isPending || resendOTPMutation.isPending;
 
   if (showOTP) {
     return (
@@ -261,22 +319,29 @@ export default function CandidateLogin() {
                 </div>
               </div>
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Enter Verification Code</h2>
-              <p className="text-gray-500 dark:text-gray-400">We sent a code to {currentEmail}</p>
+              <p className="text-gray-500 dark:text-gray-400">We sent a 4-digit code to {currentEmail}</p>
+              {otpExpiry > 0 ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Code expires in {Math.floor(otpExpiry / 60)}:{(otpExpiry % 60).toString().padStart(2, '0')}
+                </p>
+              ) : (
+                <p className="text-sm text-red-500 dark:text-red-400">Code expired. Please request a new one.</p>
+              )}
             </div>
 
             <form onSubmit={handleSubmitOTP(onVerifyOTP)} className="space-y-6" data-testid="form-otp-verification">
               <div>
                 <Input
                   type="text"
-                  placeholder="Enter 6-digit code"
+                  placeholder="Enter 4-digit code"
                   className="w-full h-14 text-center text-2xl font-mono tracking-widest border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 dark:bg-gray-800 dark:text-white"
                   data-testid="input-otp"
-                  maxLength={6}
+                  maxLength={4}
                   {...registerOTP("otp", {
                     required: "OTP is required",
                     pattern: {
-                      value: /^\d{6}$/,
-                      message: "Please enter a valid 6-digit OTP",
+                      value: /^\d{4}$/,
+                      message: "Please enter a valid 4-digit OTP",
                     },
                   })}
                 />
@@ -305,10 +370,12 @@ export default function CandidateLogin() {
                 </button>
                 <button
                   type="button"
-                  className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium transition-colors"
+                  onClick={() => resendOTPMutation.mutate()}
+                  disabled={resendOTPMutation.isPending || otpExpiry > 0}
+                  className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="button-resend-otp"
                 >
-                  Resend Code
+                  {resendOTPMutation.isPending ? "Sending..." : "Resend Code"}
                 </button>
               </div>
             </form>
@@ -525,7 +592,13 @@ export default function CandidateLogin() {
                   variant="outline"
                   className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 text-base font-medium rounded-xl flex items-center justify-center transition-all"
                   data-testid="button-google-login"
-                  onClick={() => window.location.href = '/api/auth/google'}
+                  onClick={() => {
+                    toast({
+                      title: "Google Login Not Available",
+                      description: "Currently this page doesn't support Google Login. This feature will be implemented later.",
+                      variant: "default",
+                    });
+                  }}
                 >
                   <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
                     <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
