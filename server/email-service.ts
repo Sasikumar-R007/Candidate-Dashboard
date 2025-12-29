@@ -328,7 +328,10 @@ Team StaffOS
     `.trim();
 
     const senderEmail = fromEmail || 'StaffOS <onboarding@resend.dev>';
-    await resend.emails.send({
+    
+    console.log(`[OTP Email] Attempting to send OTP to ${data.email} from ${senderEmail}`);
+    
+    const result = await resend.emails.send({
       from: senderEmail,
       to: data.email,
       subject: `Your StaffOS Verification Code: ${data.otp}`,
@@ -336,10 +339,20 @@ Team StaffOS
       html: htmlContent,
     });
 
-    console.log(`OTP email sent successfully to ${data.email}`);
+    if (result.error) {
+      console.error(`[OTP Email] Resend API error:`, result.error);
+      return false;
+    }
+
+    console.log(`[OTP Email] Successfully sent OTP email to ${data.email}. Email ID: ${result.data?.id || 'N/A'}`);
+    console.log(`[OTP Email] Full Resend response:`, JSON.stringify(result, null, 2));
     return true;
   } catch (error) {
-    console.error('Error sending OTP email:', error);
+    console.error('[OTP Email] Error sending OTP email:', error);
+    if (error instanceof Error) {
+      console.error('[OTP Email] Error message:', error.message);
+      console.error('[OTP Email] Error stack:', error.stack);
+    }
     return false;
   }
 }

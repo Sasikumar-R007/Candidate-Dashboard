@@ -511,12 +511,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Send OTP via email
-      await sendOTPEmail({
+      const otpEmailSent = await sendOTPEmail({
         fullName: newCandidate.fullName,
         email: newCandidate.email,
         otp: otp,
         expiresInMinutes: 10
       });
+      
+      if (!otpEmailSent) {
+        console.error(`[Registration] Failed to send OTP email to ${newCandidate.email}`);
+      }
       
       res.json({
         success: true,
@@ -621,12 +625,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.storeOTP(candidate.email, otp);
         
         // Send OTP via email
-        await sendOTPEmail({
+        const otpEmailSent = await sendOTPEmail({
           fullName: candidate.fullName,
           email: candidate.email,
           otp: otp,
           expiresInMinutes: 10
         });
+        
+        if (!otpEmailSent) {
+          console.error(`[Login] Failed to send OTP email to ${candidate.email}`);
+        }
         
         return res.status(403).json({
           message: "Account not verified. Please check your email for the verification code.",
@@ -674,12 +682,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.storeOTP(email, otp);
 
       // Send OTP via email
-      await sendOTPEmail({
+      const otpEmailSent = await sendOTPEmail({
         fullName: candidate.fullName,
         email: candidate.email,
         otp: otp,
         expiresInMinutes: 10
       });
+      
+      if (!otpEmailSent) {
+        console.error(`[Resend OTP] Failed to send OTP email to ${candidate.email}`);
+      }
 
       res.json({
         success: true,
@@ -3282,6 +3294,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requirement.company,
         requirement.id
       );
+      
+      // Recalculate and update daily metrics snapshot for today
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const metrics = await storage.calculateOrgDailyMetrics(today);
+        
+        // Get or create snapshot for today
+        const existingSnapshot = await storage.getDailyMetricsSnapshot(today, 'organization');
+        
+        if (existingSnapshot) {
+          // Update existing snapshot
+          await storage.updateDailyMetricsSnapshot(existingSnapshot.id, {
+            delivered: metrics.delivered,
+            defaulted: metrics.defaulted,
+            requirementCount: metrics.requirementCount,
+            updatedAt: new Date().toISOString()
+          });
+        } else {
+          // Create new snapshot
+          await storage.createDailyMetricsSnapshot({
+            date: today,
+            scopeType: 'organization',
+            scopeId: null,
+            scopeName: 'Organization',
+            delivered: metrics.delivered,
+            defaulted: metrics.defaulted,
+            requirementCount: metrics.requirementCount,
+            createdAt: new Date().toISOString()
+          });
+        }
+      } catch (metricsError) {
+        // Log error but don't fail the requirement creation
+        console.error('Error updating daily metrics after requirement creation:', metricsError);
+      }
       
       res.status(201).json(requirement);
     } catch (error) {
