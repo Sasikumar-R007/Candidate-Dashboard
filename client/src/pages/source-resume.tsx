@@ -4,27 +4,30 @@ import {
   MapPin,
   GraduationCap,
   Clock,
-  CheckSquare,
-  Square,
   RotateCw,
-  ArrowLeft,
-  Download,
-  Bookmark,
-  BookmarkCheck,
-  Phone,
-  Mail,
-  ChevronDown,
-  Send,
-  X,
+  ArrowRight,
+  Search,
+  Lightbulb,
+  Building,
   DollarSign,
   Calendar,
-  Building,
+  User,
+  X,
+  Check,
+  Star,
+  Bookmark,
+  Phone,
+  Mail,
+  Linkedin,
+  Github,
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
   Loader2,
+  FileText,
 } from "lucide-react";
 import { useLocation } from "wouter";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -34,105 +37,329 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
-interface ComboInputProps {
-  value: string;
-  onChange: (value: string) => void;
-  suggestions: string[];
-  placeholder: string;
-  label?: string;
-  icon?: React.ReactNode;
-  testId?: string;
+// Location data (same as Upload Resume)
+const locations = [
+  { value: 'chennai', label: 'Chennai' },
+  { value: 'coimbatore', label: 'Coimbatore' },
+  { value: 'madurai', label: 'Madurai' },
+  { value: 'trichy', label: 'Trichy' },
+  { value: 'salem', label: 'Salem' },
+  { value: 'tirunelveli', label: 'Tirunelveli' },
+  { value: 'erode', label: 'Erode' },
+  { value: 'vellore', label: 'Vellore' },
+  { value: 'dindigul', label: 'Dindigul' },
+  { value: 'thanjavur', label: 'Thanjavur' },
+  { value: 'tiruppur', label: 'Tiruppur' },
+  { value: 'karur', label: 'Karur' },
+  { value: 'hosur', label: 'Hosur' },
+  { value: 'nagercoil', label: 'Nagercoil' },
+  { value: 'kanchipuram', label: 'Kanchipuram' },
+  { value: 'mumbai', label: 'Mumbai' },
+  { value: 'delhi', label: 'Delhi' },
+  { value: 'bangalore', label: 'Bangalore' },
+  { value: 'pune', label: 'Pune' },
+  { value: 'hyderabad', label: 'Hyderabad' },
+  { value: 'kolkata', label: 'Kolkata' },
+  { value: 'ahmedabad', label: 'Ahmedabad' },
+  { value: 'jaipur', label: 'Jaipur' },
+  { value: 'surat', label: 'Surat' },
+  { value: 'lucknow', label: 'Lucknow' },
+  { value: 'nagpur', label: 'Nagpur' },
+  { value: 'indore', label: 'Indore' },
+  { value: 'gurgaon', label: 'Gurgaon' },
+  { value: 'noida', label: 'Noida' },
+  { value: 'kochi', label: 'Kochi' },
+  { value: 'visakhapatnam', label: 'Visakhapatnam' },
+  { value: 'vadodara', label: 'Vadodara' },
+  { value: 'remote', label: 'Remote' },
+];
+
+// Sample data for dropdowns
+const allRoles = [
+  "Full Stack Developer",
+  "Backend Developer",
+  "Frontend Engineer",
+  "DevOps Engineer",
+  "Software Engineer",
+  "Senior Software Engineer",
+  "Tech Lead",
+  "Product Manager",
+  "Data Scientist",
+  "Machine Learning Engineer",
+  "UI/UX Designer",
+  "QA Engineer",
+  "System Administrator",
+  "Cloud Architect",
+];
+
+const allCompanies = [
+  "Tech Solutions Inc.",
+  "Freshworks",
+  "Google",
+  "Amazon",
+  "Microsoft",
+  "Infosys",
+  "TCS",
+  "Wipro",
+  "Accenture",
+  "IBM",
+  "Oracle",
+  "Cognizant",
+];
+
+const allNoticePeriods = [
+  "Immediate",
+  "15 days",
+  "30 days",
+  "45 days",
+  "60 days",
+  "90 days",
+  "Any",
+];
+
+const allAvailability = [
+  "Immediate",
+  "15 days",
+  "30 days",
+  "60 days",
+  "90 days",
+  "Any",
+];
+
+const allEducationUG = [
+  "BCA",
+  "B.Tech",
+  "BE",
+  "B.Sc",
+  "B.Com",
+  "BA",
+  "BBA",
+  "B.E",
+  "B.Sc IT",
+  "BCS",
+];
+
+const allEducationPG = [
+  "MCA",
+  "M.Tech",
+  "ME",
+  "M.Sc",
+  "MBA",
+  "MS",
+  "M.E",
+  "PGDM",
+  "M.Sc IT",
+];
+
+const allEmploymentTypes = [
+  "Full-time",
+  "Part-time",
+  "Contract",
+  "Freelance",
+  "Internship",
+];
+
+const allJobTypes = [
+  "Permanent",
+  "Contract",
+  "Temporary",
+  "Internship",
+  "Any",
+];
+
+const allWorkPermits = [
+  "India",
+  "USA",
+  "UK",
+  "Canada",
+  "Australia",
+  "Any",
+];
+
+const allPedigreeLevels = [
+  "Tier 1",
+  "Tier 2",
+  "Tier 3",
+  "Others",
+];
+
+const allCompanyLevels = [
+  "Startup",
+  "Mid-size",
+  "Enterprise",
+  "MNC",
+];
+
+const allCompanySectors = [
+  "Technology",
+  "Finance",
+  "Healthcare",
+  "E-commerce",
+  "Consulting",
+  "Manufacturing",
+  "Education",
+];
+
+const allProductServices = [
+  "SaaS",
+  "Product",
+  "Service",
+  "Hybrid",
+];
+
+const allProductCategories = [
+  "B2B",
+  "B2C",
+  "B2B2C",
+];
+
+const allSkills = [
+  "React",
+  "Node.js",
+  "Python",
+  "AWS",
+  "MongoDB",
+  "Express",
+  "Docker",
+  "Redis",
+  "TypeScript",
+  "Kubernetes",
+  "Java",
+  "JavaScript",
+  "Angular",
+  "Vue.js",
+  "SQL",
+  "PostgreSQL",
+  "MySQL",
+];
+
+interface FilterState {
+  keywords: string[];
+  excludedKeywords: string[];
+  specificSkills: string[];
+  searchQuery: string;
+  booleanMode: boolean;
+  experience: [number, number];
+  ctcMin: string;
+  ctcMax: string;
+  location: string;
+  role: string;
+  noticePeriod: string;
+  preferredLocation: string;
+  company: string;
+  excludedCompanies: string[];
+  educationUG: string;
+  educationPG: string;
+  additionalDegrees: string[];
+  employmentType: string;
+  jobType: string;
+  workPermit: string;
+  candidateStatus: string;
+  showWith: string[];
 }
 
-function ComboInput({ value, onChange, suggestions, placeholder, label, icon, testId }: ComboInputProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [inputValue, setInputValue] = useState(value);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+interface RecentSearch {
+  id: string;
+  keywords: string[];
+  experience: [number, number];
+  location: string;
+  role: string;
+  noticePeriod: string;
+  timestamp: number;
+}
 
-  useEffect(() => {
-    setInputValue(value);
-  }, [value]);
+const initialFilters: FilterState = {
+  keywords: [],
+  excludedKeywords: [],
+  specificSkills: [],
+  searchQuery: "",
+  booleanMode: false,
+  experience: [0, 15],
+  ctcMin: "",
+  ctcMax: "",
+  location: "",
+  role: "",
+  noticePeriod: "",
+  preferredLocation: "",
+  company: "",
+  excludedCompanies: [],
+  educationUG: "",
+  educationPG: "",
+  additionalDegrees: [],
+  employmentType: "",
+  jobType: "",
+  workPermit: "",
+  candidateStatus: "all",
+  showWith: ["resume"],
+};
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current && 
-        !dropdownRef.current.contains(event.target as Node) &&
-        inputRef.current &&
-        !inputRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+// Filterable Dropdown Component
+interface FilterableDropdownProps {
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[] | string[];
+  placeholder: string;
+  icon?: React.ReactNode;
+}
 
-  const filteredSuggestions = suggestions.filter(s => 
-    s.toLowerCase().includes(inputValue.toLowerCase())
+function FilterableDropdown({ value, onChange, options, placeholder, icon }: FilterableDropdownProps) {
+  const [open, setOpen] = useState(false);
+  
+  const optionsList = options.map(opt => 
+    typeof opt === 'string' ? { value: opt, label: opt } : opt
   );
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setInputValue(newValue);
-    onChange(newValue);
-    setIsOpen(true);
-  };
-
-  const handleSuggestionClick = (suggestion: string) => {
-    setInputValue(suggestion);
-    onChange(suggestion);
-    setIsOpen(false);
-  };
-
-  const handleClear = () => {
-    setInputValue("");
-    onChange("");
-  };
+  
+  const selectedLabel = optionsList.find(opt => opt.value === value)?.label || placeholder;
 
   return (
-    <div className="relative">
-      <div className="relative">
-        <input
-          ref={inputRef}
-          type="text"
-          className="w-full border-2 border-gray-200 rounded-xl px-3 py-2.5 pr-8 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-          placeholder={placeholder}
-          value={inputValue}
-          onChange={handleInputChange}
-          onFocus={() => setIsOpen(true)}
-          data-testid={testId}
-        />
-        {inputValue && (
-          <button
-            type="button"
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            onClick={handleClear}
-          >
-            <X size={16} />
-          </button>
-        )}
-      </div>
-      {isOpen && filteredSuggestions.length > 0 && (
-        <div
-          ref={dropdownRef}
-          className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto"
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between bg-white border-gray-200 rounded-lg h-10 font-normal text-gray-700 hover:bg-gray-50"
         >
-          {filteredSuggestions.map((suggestion, index) => (
-            <button
-              key={index}
-              type="button"
-              className="w-full text-left px-3 py-2 hover:bg-purple-50 text-sm transition-colors"
-              onClick={() => handleSuggestionClick(suggestion)}
-            >
-              {suggestion}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+          <span className="flex items-center gap-2 flex-1 min-w-0">
+            {icon && <span className="text-purple-600 flex-shrink-0">{icon}</span>}
+            <span className="truncate">{selectedLabel}</span>
+          </span>
+          <X className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-full p-0" align="start">
+        <Command>
+          <CommandInput placeholder={`Search ${placeholder.toLowerCase()}...`} />
+          <CommandList>
+            <CommandEmpty>No results found.</CommandEmpty>
+            <CommandGroup>
+              {optionsList.map((option) => (
+                <CommandItem
+                  key={option.value}
+                  value={option.value}
+                  onSelect={() => {
+                    onChange(option.value === value ? "" : option.value);
+                    setOpen(false);
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === option.value ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  {option.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -162,6 +389,12 @@ interface DatabaseCandidate {
   productDomain?: string;
   employmentType?: string;
   createdAt: string;
+  linkedinUrl?: string;
+  websiteUrl?: string;
+  portfolioUrl?: string;
+  highestQualification?: string;
+  collegeName?: string;
+  preferredLocation?: string;
 }
 
 interface CandidateDisplay {
@@ -169,19 +402,18 @@ interface CandidateDisplay {
   name: string;
   title: string;
   location: string;
+  preferredLocation: string;
   experience: number;
   education: string;
   currentCompany: string;
-  lastActive: string;
-  skills: string[];
-  summary: string;
-  resumeUrl: string;
-  profilePic: string;
-  noticePeriod: string;
-  ctc: string;
-  expectedCtc: string;
   email: string;
   phone: string;
+  ctc: string;
+  skills: string[];
+  summary: string;
+  profilePic: string;
+  noticePeriod: string;
+  university: string;
   saved: boolean;
   pedigreeLevel: string;
   companyLevel: string;
@@ -190,7 +422,10 @@ interface CandidateDisplay {
   productCategory: string;
   productDomain: string;
   employmentType: string;
-  availability: string;
+  linkedinUrl?: string;
+  websiteUrl?: string;
+  portfolioUrl?: string;
+  lastSeen: string;
 }
 
 function mapDatabaseCandidateToDisplay(dbCandidate: DatabaseCandidate): CandidateDisplay {
@@ -205,27 +440,26 @@ function mapDatabaseCandidateToDisplay(dbCandidate: DatabaseCandidate): Candidat
   const createdDate = new Date(dbCandidate.createdAt);
   const now = new Date();
   const diffMs = now.getTime() - createdDate.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const lastActive = diffDays === 0 ? 'Today' : diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const lastSeen = diffHours < 1 ? 'Just now' : diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;
 
   return {
     id: dbCandidate.id,
     name: dbCandidate.fullName,
     title: dbCandidate.designation || dbCandidate.currentRole || dbCandidate.position || 'Not specified',
     location: dbCandidate.location || 'Not specified',
+    preferredLocation: dbCandidate.preferredLocation || dbCandidate.location || 'Not specified',
     experience: experienceNum,
-    education: dbCandidate.education || 'Not specified',
+    education: dbCandidate.education || dbCandidate.highestQualification || 'Not specified',
     currentCompany: dbCandidate.company || 'Not specified',
-    lastActive,
-    skills: skillsArray,
-    summary: `Candidate profile for ${dbCandidate.fullName}`,
-    resumeUrl: '#',
-    profilePic: dbCandidate.profilePicture || '',
-    noticePeriod: dbCandidate.noticePeriod || 'Not specified',
-    ctc: dbCandidate.ctc || 'Not specified',
-    expectedCtc: dbCandidate.ectc || 'Not specified',
     email: dbCandidate.email,
     phone: dbCandidate.phone || '',
+    ctc: dbCandidate.ctc || 'Not specified',
+    skills: skillsArray,
+    summary: `Experienced professional with a proven track record of delivering quality work on time. Interested in a role that values efficiency, ownership, and continuous learning.`,
+    profilePic: dbCandidate.profilePicture || '',
+    noticePeriod: dbCandidate.noticePeriod || 'Not specified',
+    university: dbCandidate.collegeName || 'Not specified',
     saved: false,
     pedigreeLevel: dbCandidate.pedigreeLevel || '',
     companyLevel: dbCandidate.companyLevel || '',
@@ -234,498 +468,663 @@ function mapDatabaseCandidateToDisplay(dbCandidate: DatabaseCandidate): Candidat
     productCategory: dbCandidate.productCategory || '',
     productDomain: dbCandidate.productDomain || '',
     employmentType: dbCandidate.employmentType || '',
-    availability: dbCandidate.noticePeriod || 'Not specified',
+    linkedinUrl: dbCandidate.linkedinUrl,
+    websiteUrl: dbCandidate.websiteUrl,
+    portfolioUrl: dbCandidate.portfolioUrl,
+    lastSeen,
   };
 }
 
-const allSkills = [
-  "React",
-  "Node.js",
-  "Python",
-  "AWS",
-  "MongoDB",
-  "Express",
-  "Docker",
-  "Redis",
-  "TypeScript",
-  "Kubernetes",
+// Sample candidates for testing (defined outside component to avoid recreation)
+const sampleCandidates: CandidateDisplay[] = [
+  {
+    id: 'sample-1',
+    name: 'Rajesh Kumar',
+    title: 'Senior Frontend Developer',
+    location: 'Bangalore',
+    preferredLocation: 'Mumbai, Maharashtra, Karnataka, Tamil Nadu',
+    experience: 8,
+    education: 'B.Tech, M.Tech',
+    currentCompany: 'Techcorp',
+    email: 'rajesh.kumar@example.com',
+    phone: '+91 9876543210',
+    ctc: '30L',
+    skills: ['React', 'Node.js', 'Kubernetes', 'Python', 'Redis', 'TypeScript'],
+    summary: 'Experienced professional with a proven track record of delivering quality work on time. Interested in a role that values efficiency, ownership, and continuous learning.',
+    profilePic: '',
+    noticePeriod: '30 days',
+    university: 'IIT Madras',
+    saved: false,
+    pedigreeLevel: 'Tier 1',
+    companyLevel: 'MNC',
+    companySector: 'Technology',
+    productService: 'Product',
+    productCategory: 'B2B',
+    productDomain: 'Software development',
+    employmentType: 'Full-time',
+    linkedinUrl: 'https://linkedin.com/in/rajesh-kumar',
+    websiteUrl: 'https://rajeshkumar.dev',
+    portfolioUrl: 'https://portfolio.rajeshkumar.dev',
+    lastSeen: '2 hours ago',
+  },
+  {
+    id: 'sample-2',
+    name: 'Priya Sharma',
+    title: 'Full Stack Developer',
+    location: 'Mumbai',
+    preferredLocation: 'Mumbai, Pune, Bangalore',
+    experience: 5,
+    education: 'B.Tech, MCA',
+    currentCompany: 'Freshworks',
+    email: 'priya.sharma@example.com',
+    phone: '+91 9876543211',
+    ctc: '25L',
+    skills: ['React', 'Node.js', 'MongoDB', 'Express', 'Docker', 'AWS'],
+    summary: 'Experienced professional with a proven track record of delivering quality work on time. Interested in a role that values efficiency, ownership, and continuous learning.',
+    profilePic: '',
+    noticePeriod: '60 days',
+    university: 'IIT Delhi',
+    saved: false,
+    pedigreeLevel: 'Tier 1',
+    companyLevel: 'MNC',
+    companySector: 'Technology',
+    productService: 'SaaS',
+    productCategory: 'B2B',
+    productDomain: 'Cloud Computing',
+    employmentType: 'Full-time',
+    linkedinUrl: 'https://linkedin.com/in/priya-sharma',
+    websiteUrl: '',
+    portfolioUrl: 'https://portfolio.priyasharma.dev',
+    lastSeen: '1 hour ago',
+  },
+  {
+    id: 'sample-3',
+    name: 'Amit Patel',
+    title: 'Backend Developer',
+    location: 'Pune',
+    preferredLocation: 'Pune, Mumbai, Bangalore',
+    experience: 6,
+    education: 'B.Tech',
+    currentCompany: 'Google',
+    email: 'amit.patel@example.com',
+    phone: '+91 9876543212',
+    ctc: '28L',
+    skills: ['Python', 'Docker', 'Kubernetes', 'Redis', 'PostgreSQL', 'AWS'],
+    summary: 'Experienced professional with a proven track record of delivering quality work on time. Interested in a role that values efficiency, ownership, and continuous learning.',
+    profilePic: '',
+    noticePeriod: '45 days',
+    university: 'IIT Bombay',
+    saved: false,
+    pedigreeLevel: 'Tier 1',
+    companyLevel: 'MNC',
+    companySector: 'Technology',
+    productService: 'Product',
+    productCategory: 'B2C',
+    productDomain: 'AI/ML',
+    employmentType: 'Full-time',
+    linkedinUrl: 'https://linkedin.com/in/amit-patel',
+    websiteUrl: 'https://amitpatel.dev',
+    portfolioUrl: '',
+    lastSeen: '3 hours ago',
+  },
+  {
+    id: 'sample-4',
+    name: 'Sneha Reddy',
+    title: 'DevOps Engineer',
+    location: 'Hyderabad',
+    preferredLocation: 'Hyderabad, Bangalore, Chennai',
+    experience: 7,
+    education: 'B.Tech, M.Tech',
+    currentCompany: 'Amazon',
+    email: 'sneha.reddy@example.com',
+    phone: '+91 9876543213',
+    ctc: '32L',
+    skills: ['Kubernetes', 'Docker', 'AWS', 'Terraform', 'Jenkins', 'Python'],
+    summary: 'Experienced professional with a proven track record of delivering quality work on time. Interested in a role that values efficiency, ownership, and continuous learning.',
+    profilePic: '',
+    noticePeriod: '90 days',
+    university: 'IIT Kanpur',
+    saved: false,
+    pedigreeLevel: 'Tier 1',
+    companyLevel: 'MNC',
+    companySector: 'Technology',
+    productService: 'Service',
+    productCategory: 'B2B',
+    productDomain: 'Cloud Computing',
+    employmentType: 'Full-time',
+    linkedinUrl: 'https://linkedin.com/in/sneha-reddy',
+    websiteUrl: '',
+    portfolioUrl: '',
+    lastSeen: '4 hours ago',
+  },
+  {
+    id: 'sample-5',
+    name: 'Vikram Singh',
+    title: 'Frontend Engineer',
+    location: 'Delhi',
+    preferredLocation: 'Delhi, Noida, Gurgaon',
+    experience: 4,
+    education: 'B.Tech',
+    currentCompany: 'Microsoft',
+    email: 'vikram.singh@example.com',
+    phone: '+91 9876543214',
+    ctc: '22L',
+    skills: ['React', 'TypeScript', 'Angular', 'Vue.js', 'JavaScript', 'Node.js'],
+    summary: 'Experienced professional with a proven track record of delivering quality work on time. Interested in a role that values efficiency, ownership, and continuous learning.',
+    profilePic: '',
+    noticePeriod: '30 days',
+    university: 'IIT Roorkee',
+    saved: false,
+    pedigreeLevel: 'Tier 1',
+    companyLevel: 'MNC',
+    companySector: 'Technology',
+    productService: 'Product',
+    productCategory: 'B2B2C',
+    productDomain: 'Web Development',
+    employmentType: 'Full-time',
+    linkedinUrl: 'https://linkedin.com/in/vikram-singh',
+    websiteUrl: 'https://vikramsingh.dev',
+    portfolioUrl: 'https://portfolio.vikramsingh.dev',
+    lastSeen: '5 hours ago',
+  },
 ];
-const allRoles = [
-  "Full Stack Developer",
-  "Backend Developer",
-  "Frontend Engineer",
-  "DevOps Engineer",
-];
-const allCompanies = ["Tech Solutions Inc.", "Freshworks", "Google", "Amazon"];
-const allLocations = ["Mumbai, Maharashtra", "Remote", "Bangalore, India", "Chennai, India"];
-const allPedigreeLevels = ["Tier 1", "Tier 2", "Tier 3", "Others"];
-const allCompanyLevels = ["Startup", "Mid-size", "Enterprise", "MNC"];
-const allCompanySectors = ["Technology", "Finance", "Healthcare", "E-commerce", "Consulting"];
-const allProductServices = ["SaaS", "Product", "Service", "Hybrid"];
-const allProductCategories = ["B2B", "B2C", "B2B2C"];
-const allProductDomains = ["Web Development", "Mobile Apps", "Cloud Computing", "AI/ML", "Data Analytics"];
-const allEmploymentTypes = ["Full-time", "Part-time", "Contract", "Freelance", "Internship"];
-const allNoticePeriods = ["Immediate", "15 days", "30 days", "60 days", "90 days"];
-const allAvailability = ["Immediate", "15 days", "30 days", "60 days", "90 days"];
-
-const initialFilters = {
-  location: "",
-  experience: [0, 15] as [number, number],
-  skills: [] as string[],
-  role: "",
-  company: "",
-  pedigreeLevel: "",
-  companyLevel: "",
-  companySector: "",
-  productService: "",
-  productCategory: "",
-  productDomain: "",
-  employmentType: "",
-  noticePeriod: "",
-  ctcMin: "",
-  ctcMax: "",
-  availability: "",
-};
-
-function exportToCSV(data: any[]) {
-  const csvRows = [];
-  const headers = [
-    "Name",
-    "Title",
-    "Location",
-    "Experience",
-    "Education",
-    "Company",
-    "Skills",
-    "Last Active",
-  ];
-  csvRows.push(headers.join(","));
-  for (const c of data) {
-    csvRows.push(
-      [
-        c.name,
-        c.title,
-        c.location,
-        c.experience,
-        c.education,
-        c.currentCompany,
-        c.skills.join(" | "),
-        c.lastActive,
-      ]
-        .map((v) => '"' + v + '"')
-        .join(",")
-    );
-  }
-  const blob = new Blob([csvRows.join("\n")], { type: "text/csv" });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "candidates.csv";
-  a.click();
-  window.URL.revokeObjectURL(url);
-}
 
 const SourceResume = () => {
-  const [step, setStep] = useState(1);
-  const [showDownloadDropdown, setShowDownloadDropdown] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [booleanMode, setBooleanMode] = useState(false);
-  const [filters, setFilters] = useState(initialFilters);
-  const [candidates, setCandidates] = useState<CandidateDisplay[]>([]);
+  const [view, setView] = useState<'search' | 'results'>('search');
+  const [filters, setFilters] = useState<FilterState>(initialFilters);
+  const [locationOpen, setLocationOpen] = useState(false);
+  const [preferredLocationOpen, setPreferredLocationOpen] = useState(false);
+  const [keywordInput, setKeywordInput] = useState("");
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateDisplay | null>(null);
+  const [savedCandidates, setSavedCandidates] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
-  const [sidebarView, setSidebarView] = useState("all");
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [showBulkDropdown, setShowBulkDropdown] = useState(false);
-  const [showDeliverModal, setShowDeliverModal] = useState(false);
-  const [selectedRequirement, setSelectedRequirement] = useState("");
-  const [candidateToDeliver, setCandidateToDeliver] = useState<any>(null);
-  const [isDelivering, setIsDelivering] = useState(false);
-  const resultsPerPage = 6;
+  const [resultsSearchQuery, setResultsSearchQuery] = useState("");
+  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
+  const [showSavedProfiles, setShowSavedProfiles] = useState(false);
+  
+  // State for showing/hiding input fields
+  const [showExcludeKeywords, setShowExcludeKeywords] = useState(false);
+  const [showSpecificSkills, setShowSpecificSkills] = useState(false);
+  const [showExcludeCompany, setShowExcludeCompany] = useState(false);
+  const [showAddDegree, setShowAddDegree] = useState(false);
+  
+  // Input values for new fields
+  const [excludeKeywordInput, setExcludeKeywordInput] = useState("");
+  const [specificSkillInput, setSpecificSkillInput] = useState("");
+  const [excludeCompanyInput, setExcludeCompanyInput] = useState("");
+  const [addDegreeInput, setAddDegreeInput] = useState("");
+  
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
-  // Fetch candidates from the database
-  const { data: dbCandidates = [], isLoading: isLoadingCandidates, isError: isErrorCandidates } = useQuery<DatabaseCandidate[]>({
+  // Load recent searches from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem('sourceResumeRecentSearches');
+    if (stored) {
+      try {
+        setRecentSearches(JSON.parse(stored));
+      } catch (e) {
+        console.error('Failed to load recent searches', e);
+      }
+    }
+  }, []);
+
+  // Fetch candidates to get unique values
+  const { data: dbCandidates = [], isLoading: isLoadingCandidates } = useQuery<DatabaseCandidate[]>({
     queryKey: ['/api/admin/candidates'],
   });
 
-  // Map database candidates to display format and update state
+  // Map candidates to display format
+  const [candidates, setCandidates] = useState<CandidateDisplay[]>([]);
+  
   useEffect(() => {
-    const mappedCandidates = dbCandidates.map(mapDatabaseCandidateToDisplay);
-    setCandidates(mappedCandidates);
-    // Reset pagination when data changes
-    setCurrentPage(1);
-    if (mappedCandidates.length > 0) {
-      if (!selectedCandidate || !mappedCandidates.find(c => c.id === selectedCandidate.id)) {
-        setSelectedCandidate(mappedCandidates[0]);
-      }
-    } else {
-      setSelectedCandidate(null);
-    }
+    const mapped = dbCandidates.map(mapDatabaseCandidateToDisplay);
+    // Combine database candidates with sample candidates
+    setCandidates([...mapped, ...sampleCandidates]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dbCandidates]);
 
-  // Derive unique values from candidates for filter suggestions
-  const uniqueLocations = Array.from(new Set(candidates.map(c => c.location).filter(Boolean)));
-  const uniqueRoles = Array.from(new Set(candidates.map(c => c.title).filter(Boolean)));
-  const uniqueCompanies = Array.from(new Set(candidates.map(c => c.currentCompany).filter(Boolean)));
-  const uniqueCompanyLevels = Array.from(new Set(candidates.map(c => c.companyLevel).filter(Boolean)));
-  const uniqueProductDomains = Array.from(new Set(candidates.map(c => c.productDomain).filter(Boolean)));
-  const uniqueEmploymentTypes = Array.from(new Set(candidates.map(c => c.employmentType).filter(Boolean)));
-  const uniquePedigreeLevels = Array.from(new Set(candidates.map(c => c.pedigreeLevel).filter(Boolean)));
-  const uniqueCompanySectors = Array.from(new Set(candidates.map(c => c.companySector).filter(Boolean)));
-  const uniqueProductServices = Array.from(new Set(candidates.map(c => c.productService).filter(Boolean)));
-  const uniqueProductCategories = Array.from(new Set(candidates.map(c => c.productCategory).filter(Boolean)));
-
-  // Fetch only requirements assigned to this recruiter (not all admin requirements)
-  const { data: requirements = [], isLoading: isLoadingRequirements, isError: isErrorRequirements } = useQuery({
-    queryKey: ['/api/recruiter/requirements'],
-    enabled: step === 2,
-  });
-
-  // Mutation for creating job application when delivering candidate to requirement
-  const deliverToRequirementMutation = useMutation({
-    mutationFn: async (data: { 
-      candidateName: string;
-      candidateEmail: string;
-      candidatePhone: string;
-      jobTitle: string;
-      company: string;
-      requirementId: string;
-      experience: string;
-      skills: string[];
-      location: string;
-    }) => {
-      const response = await apiRequest('POST', '/api/recruiter/applications', data);
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/applications'] });
-      toast({
-        title: "Success!",
-        description: `${candidateToDeliver?.name} has been delivered to the requirement successfully.`,
-        className: "bg-green-50 border-green-200 text-green-800",
-      });
-      setShowDeliverModal(false);
-      setSelectedRequirement("");
-      setCandidateToDeliver(null);
-      setIsDelivering(false);
-    },
-    onError: (error: any) => {
-      console.error("Delivery error:", error);
-      const errorMessage = error?.message?.includes('401') 
-        ? "Authentication required. Please log in as a recruiter."
-        : "Failed to deliver candidate to requirement. Please try again.";
-      toast({
-        title: "Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
-      setIsDelivering(false);
-    }
-  });
-
-  // Show error toast if requirements fetch fails
-  React.useEffect(() => {
-    if (isErrorRequirements && step === 2) {
-      toast({
-        title: "Error",
-        description: "Failed to load requirements. Please try again later.",
-        variant: "destructive",
-      });
-    }
-  }, [isErrorRequirements, step, toast]);
-
-  const resetFilters = () => {
-    setFilters(initialFilters);
-    setSearchQuery("");
-    setBooleanMode(false);
-    setCurrentPage(1);
+  // Save search to recent searches
+  const saveSearchToHistory = () => {
+    const newSearch: RecentSearch = {
+      id: Date.now().toString(),
+      keywords: filters.keywords,
+      experience: filters.experience,
+      location: filters.location,
+      role: filters.role,
+      noticePeriod: filters.noticePeriod,
+      timestamp: Date.now(),
+    };
+    
+    const updated = [newSearch, ...recentSearches].slice(0, 3); // Keep only last 3
+    setRecentSearches(updated);
+    localStorage.setItem('sourceResumeRecentSearches', JSON.stringify(updated));
   };
 
-  // Reset pagination when filters, search, or sidebar view change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filters, searchQuery, sidebarView]);
+  // Apply recent search filters
+  const applyRecentSearch = (search: RecentSearch) => {
+    setFilters({
+      ...filters,
+      keywords: search.keywords,
+      experience: search.experience,
+      location: search.location,
+      role: search.role,
+      noticePeriod: search.noticePeriod,
+    });
+    toast({
+      title: "Filters applied",
+      description: "Search filters from recent search have been applied",
+    });
+  };
 
-  // Filtering logic
-  const filterCandidates = () => {
-    let list = candidates;
-    if (sidebarView === "saved") list = list.filter((c) => c.saved);
-    return list.filter((c) => {
-      if (booleanMode && searchQuery.trim()) {
-        const terms = searchQuery.split(/\s+(AND|OR)\s+/i);
-        let match = false;
-        if (terms.includes("AND")) {
-          match = terms
-            .filter((t) => t !== "AND")
-            .every((t) =>
-              [c.name, c.title, ...c.skills]
-                .join(" ")
-                .toLowerCase()
-                .includes(t.toLowerCase())
-            );
-        } else if (terms.includes("OR")) {
-          match = terms
-            .filter((t) => t !== "OR")
-            .some((t) =>
-              [c.name, c.title, ...c.skills]
-                .join(" ")
-                .toLowerCase()
-                .includes(t.toLowerCase())
-            );
+  const handleKeywordAdd = (keyword: string) => {
+    if (keyword && !filters.keywords.includes(keyword)) {
+      setFilters({ ...filters, keywords: [...filters.keywords, keyword] });
+    }
+    setKeywordInput("");
+  };
+
+  const handleKeywordRemove = (keyword: string) => {
+    setFilters({
+      ...filters,
+      keywords: filters.keywords.filter((k) => k !== keyword),
+    });
+  };
+
+  const handleExcludeKeywordAdd = (keyword: string) => {
+    if (keyword && !filters.excludedKeywords.includes(keyword)) {
+      setFilters({ ...filters, excludedKeywords: [...filters.excludedKeywords, keyword] });
+    }
+    setExcludeKeywordInput("");
+  };
+
+  const handleExcludeKeywordRemove = (keyword: string) => {
+    setFilters({
+      ...filters,
+      excludedKeywords: filters.excludedKeywords.filter((k) => k !== keyword),
+    });
+  };
+
+  const handleSpecificSkillAdd = (skill: string) => {
+    if (skill && !filters.specificSkills.includes(skill)) {
+      setFilters({ ...filters, specificSkills: [...filters.specificSkills, skill] });
+    }
+    setSpecificSkillInput("");
+  };
+
+  const handleSpecificSkillRemove = (skill: string) => {
+    setFilters({
+      ...filters,
+      specificSkills: filters.specificSkills.filter((s) => s !== skill),
+    });
+  };
+
+  const handleExcludeCompanyAdd = (company: string) => {
+    if (company && !filters.excludedCompanies.includes(company)) {
+      setFilters({ ...filters, excludedCompanies: [...filters.excludedCompanies, company] });
+    }
+    setExcludeCompanyInput("");
+  };
+
+  const handleExcludeCompanyRemove = (company: string) => {
+    setFilters({
+      ...filters,
+      excludedCompanies: filters.excludedCompanies.filter((c) => c !== company),
+    });
+  };
+
+  const handleAddDegree = (degree: string) => {
+    if (degree && !filters.additionalDegrees.includes(degree)) {
+      setFilters({ ...filters, additionalDegrees: [...filters.additionalDegrees, degree] });
+    }
+    setAddDegreeInput("");
+  };
+
+  const handleRemoveDegree = (degree: string) => {
+    setFilters({
+      ...filters,
+      additionalDegrees: filters.additionalDegrees.filter((d) => d !== degree),
+    });
+  };
+
+  const handleSkillAdd = (skill: string) => {
+    handleKeywordAdd(skill);
+  };
+
+  const handleShowWithToggle = (value: string) => {
+    setFilters({
+      ...filters,
+      showWith: filters.showWith.includes(value)
+        ? filters.showWith.filter((v) => v !== value)
+        : [...filters.showWith, value],
+    });
+  };
+
+  // Boolean search parser
+  const parseBooleanSearch = (query: string): boolean => {
+    if (!filters.booleanMode) return true;
+    
+    const andPattern = /AND/gi;
+    const orPattern = /OR/gi;
+    
+    if (andPattern.test(query)) {
+      const terms = query.split(/AND/gi).map(t => t.trim()).filter(Boolean);
+      return terms.every(term => 
+        resultsSearchQuery.toLowerCase().includes(term.toLowerCase())
+      );
+    } else if (orPattern.test(query)) {
+      const terms = query.split(/OR/gi).map(t => t.trim()).filter(Boolean);
+      return terms.some(term => 
+        resultsSearchQuery.toLowerCase().includes(term.toLowerCase())
+      );
+    }
+    return true;
+  };
+
+  // Filter candidates based on search criteria
+  const filterCandidates = (candidatesList: CandidateDisplay[]): CandidateDisplay[] => {
+    return candidatesList.filter((candidate) => {
+      // Excluded keywords filter (must not contain)
+      if (filters.excludedKeywords.length > 0) {
+        const hasExcluded = filters.excludedKeywords.some(keyword =>
+          candidate.skills.some(skill => skill.toLowerCase().includes(keyword.toLowerCase())) ||
+          candidate.name.toLowerCase().includes(keyword.toLowerCase()) ||
+          candidate.title.toLowerCase().includes(keyword.toLowerCase()) ||
+          candidate.currentCompany.toLowerCase().includes(keyword.toLowerCase())
+        );
+        if (hasExcluded) return false;
+      }
+
+      // Excluded companies filter
+      if (filters.excludedCompanies.length > 0) {
+        const hasExcludedCompany = filters.excludedCompanies.some(company =>
+          candidate.currentCompany.toLowerCase().includes(company.toLowerCase())
+        );
+        if (hasExcludedCompany) return false;
+      }
+
+      // Keywords filter
+      if (filters.keywords.length > 0) {
+        const hasKeyword = filters.keywords.some(keyword =>
+          candidate.skills.some(skill => skill.toLowerCase().includes(keyword.toLowerCase())) ||
+          candidate.name.toLowerCase().includes(keyword.toLowerCase()) ||
+          candidate.title.toLowerCase().includes(keyword.toLowerCase())
+        );
+        if (!hasKeyword) return false;
+      }
+
+      // Specific skills filter (must have all)
+      if (filters.specificSkills.length > 0) {
+        const hasAllSkills = filters.specificSkills.every(skill =>
+          candidate.skills.some(cSkill => cSkill.toLowerCase().includes(skill.toLowerCase()))
+        );
+        if (!hasAllSkills) return false;
+      }
+
+      // Search query filter with Boolean support
+      if (resultsSearchQuery.trim()) {
+        if (filters.booleanMode) {
+          // Boolean search: parse AND/OR logic
+          const query = resultsSearchQuery.toLowerCase();
+          const andMatch = /AND/gi.test(query);
+          const orMatch = /OR/gi.test(query);
+          
+          if (andMatch) {
+            const terms = query.split(/AND/gi).map(t => t.trim()).filter(Boolean);
+            const allMatch = terms.every(term => {
+              const searchText = `${candidate.name} ${candidate.title} ${candidate.currentCompany} ${candidate.skills.join(' ')}`.toLowerCase();
+              return searchText.includes(term);
+            });
+            if (!allMatch) return false;
+          } else if (orMatch) {
+            const terms = query.split(/OR/gi).map(t => t.trim()).filter(Boolean);
+            const anyMatch = terms.some(term => {
+              const searchText = `${candidate.name} ${candidate.title} ${candidate.currentCompany} ${candidate.skills.join(' ')}`.toLowerCase();
+              return searchText.includes(term);
+            });
+            if (!anyMatch) return false;
+          } else {
+            // Single term search
+            const searchText = `${candidate.name} ${candidate.title} ${candidate.currentCompany} ${candidate.skills.join(' ')}`.toLowerCase();
+            if (!searchText.includes(query)) return false;
+          }
         } else {
-          match = [c.name, c.title, ...c.skills]
-            .join(" ")
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase());
-        }
-        if (!match) return false;
-      } else if (searchQuery.trim()) {
-        if (
-          !(
-            c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            c.skills.some((s) =>
-              s.toLowerCase().includes(searchQuery.toLowerCase())
-            )
-          )
-        ) {
-          return false;
+          const query = resultsSearchQuery.toLowerCase();
+          const matches = 
+            candidate.name.toLowerCase().includes(query) ||
+            candidate.title.toLowerCase().includes(query) ||
+            candidate.currentCompany.toLowerCase().includes(query) ||
+            candidate.skills.some(skill => skill.toLowerCase().includes(query));
+          if (!matches) return false;
         }
       }
-      if (filters.location && !c.location.toLowerCase().includes(filters.location.toLowerCase())) return false;
-      if (
-        c.experience < filters.experience[0] ||
-        c.experience > filters.experience[1]
-      )
+
+      // Experience filter
+      if (candidate.experience < filters.experience[0] || candidate.experience > filters.experience[1]) {
         return false;
-      if (
-        filters.skills.length > 0 &&
-        !filters.skills.every((s) => c.skills.some(cs => cs.toLowerCase().includes(s.toLowerCase())))
-      )
+      }
+
+      // Location filter
+      if (filters.location && filters.location !== "All Location" && 
+          !candidate.location.toLowerCase().includes(filters.location.toLowerCase())) {
         return false;
-      if (filters.role && !c.title.toLowerCase().includes(filters.role.toLowerCase())) return false;
-      if (filters.company && !c.currentCompany.toLowerCase().includes(filters.company.toLowerCase())) return false;
-      if (filters.pedigreeLevel && c.pedigreeLevel && !c.pedigreeLevel.toLowerCase().includes(filters.pedigreeLevel.toLowerCase())) return false;
-      if (filters.companyLevel && !c.companyLevel.toLowerCase().includes(filters.companyLevel.toLowerCase())) return false;
-      if (filters.companySector && c.companySector && !c.companySector.toLowerCase().includes(filters.companySector.toLowerCase())) return false;
-      if (filters.productService && c.productService && !c.productService.toLowerCase().includes(filters.productService.toLowerCase())) return false;
-      if (filters.productCategory && c.productCategory && !c.productCategory.toLowerCase().includes(filters.productCategory.toLowerCase())) return false;
-      if (filters.productDomain && !c.productDomain.toLowerCase().includes(filters.productDomain.toLowerCase())) return false;
-      if (filters.employmentType && !c.employmentType.toLowerCase().includes(filters.employmentType.toLowerCase())) return false;
-      if (filters.noticePeriod && c.noticePeriod && !c.noticePeriod.toLowerCase().includes(filters.noticePeriod.toLowerCase())) return false;
-      if (filters.availability && c.availability && !c.availability.toLowerCase().includes(filters.availability.toLowerCase())) return false;
-      if (filters.ctcMin && parseInt(c.ctc.replace(/[^\d]/g, '')) < parseInt(filters.ctcMin)) return false;
-      if (filters.ctcMax && parseInt(c.ctc.replace(/[^\d]/g, '')) > parseInt(filters.ctcMax)) return false;
+      }
+
+      // Role filter
+      if (filters.role && filters.role !== "All roles" && 
+          !candidate.title.toLowerCase().includes(filters.role.toLowerCase())) {
+        return false;
+      }
+
+      // Company filter
+      if (filters.company && filters.company !== "XYZ company" && 
+          !candidate.currentCompany.toLowerCase().includes(filters.company.toLowerCase())) {
+        return false;
+      }
+
+      // Notice period filter
+      if (filters.noticePeriod && filters.noticePeriod !== "Any" && 
+          !candidate.noticePeriod.toLowerCase().includes(filters.noticePeriod.toLowerCase())) {
+        return false;
+      }
+
+      // Education filter
+      if (filters.educationUG && !candidate.education.toLowerCase().includes(filters.educationUG.toLowerCase())) {
+        return false;
+      }
+
+      if (filters.educationPG && !candidate.education.toLowerCase().includes(filters.educationPG.toLowerCase())) {
+        return false;
+      }
+
+      // Additional degrees filter
+      if (filters.additionalDegrees.length > 0) {
+        const hasDegree = filters.additionalDegrees.some(degree =>
+          candidate.education.toLowerCase().includes(degree.toLowerCase())
+        );
+        if (!hasDegree) return false;
+      }
+
+      // Employment type filter
+      if (filters.employmentType && filters.employmentType !== "Any" && candidate.employmentType && 
+          !candidate.employmentType.toLowerCase().includes(filters.employmentType.toLowerCase())) {
+        return false;
+      }
+
+      // Display Details - Show candidate with
+      if (filters.showWith.includes("resume") && !candidate.profilePic) {
+        // If resume is required but candidate doesn't have one, skip
+        // This is a placeholder - you may need to check actual resume availability
+      }
+
+      if (filters.showWith.includes("portfolio") && !candidate.portfolioUrl) {
+        return false;
+      }
+
+      if (filters.showWith.includes("website") && !candidate.websiteUrl) {
+        return false;
+      }
+
+      // Candidate status filter
+      if (filters.candidateStatus === "new_registration") {
+        // Filter for new candidates (e.g., created in last 7 days)
+        const createdDate = new Date();
+        // This would need actual creation date from candidate data
+      }
+
+      if (filters.candidateStatus === "modified_candidates") {
+        // Filter for recently modified candidates
+        // This would need actual modification date from candidate data
+      }
+
       return true;
     });
   };
 
-  const filteredCandidates = filterCandidates();
-  const totalPages = Math.ceil(filteredCandidates.length / resultsPerPage) || 1;
+  const filteredCandidates = filterCandidates(candidates);
   
-  // Clamp currentPage to valid range whenever filtered results change
-  useEffect(() => {
-    const maxPage = Math.max(1, Math.ceil(filteredCandidates.length / resultsPerPage));
-    if (currentPage > maxPage) {
-      setCurrentPage(maxPage);
-    }
-  }, [filteredCandidates.length, currentPage, resultsPerPage]);
+  // Filter to show only saved candidates if showSavedProfiles is true
+  const displayCandidates = showSavedProfiles 
+    ? filteredCandidates.filter(c => savedCandidates.has(c.id))
+    : filteredCandidates;
   
-  const paginatedCandidates = filteredCandidates.slice(
-    (currentPage - 1) * resultsPerPage,
-    currentPage * resultsPerPage
+  const candidatesPerPage = 10;
+  const totalPages = Math.ceil(displayCandidates.length / candidatesPerPage);
+  const paginatedCandidates = displayCandidates.slice(
+    (currentPage - 1) * candidatesPerPage,
+    currentPage * candidatesPerPage
   );
 
-  // Handlers
-  const handleSkillAdd = (skill: string) => {
-    if (skill && !filters.skills.includes(skill)) {
-      setFilters({ ...filters, skills: [...filters.skills, skill] });
-    }
-  };
-  const handleSkillRemove = (skill: string) => {
-    setFilters({
-      ...filters,
-      skills: filters.skills.filter((s) => s !== skill),
+  // Recommended candidates (other matching candidates when one is selected)
+  const recommendedCandidates = selectedCandidate
+    ? displayCandidates
+        .filter(c => c.id !== selectedCandidate.id)
+        .filter(c => {
+          // Show candidates with similar skills or experience
+          const hasCommonSkills = c.skills.some(skill => 
+            selectedCandidate.skills.some(selectedSkill => 
+              skill.toLowerCase().includes(selectedSkill.toLowerCase()) ||
+              selectedSkill.toLowerCase().includes(skill.toLowerCase())
+            )
+          );
+          const similarExperience = Math.abs(c.experience - selectedCandidate.experience) <= 2;
+          return hasCommonSkills || similarExperience;
+        })
+        .slice(0, 5)
+    : displayCandidates.slice(0, 5);
+
+  const handleSourceResume = () => {
+    // Save to recent searches
+    saveSearchToHistory();
+    
+    setView('results');
+    setCurrentPage(1);
+    setShowSavedProfiles(false); // Reset to show all candidates on new search
+    toast({
+      title: "Search initiated",
+      description: `Found ${filteredCandidates.length} candidates matching your criteria`,
     });
   };
-  const handleSaveCandidate = (id: string) => {
-    setCandidates((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, saved: !c.saved } : c))
-    );
-    if (selectedCandidate && selectedCandidate.id === id) {
-      setSelectedCandidate((prev) => prev ? { ...prev, saved: !prev.saved } : null);
-    }
-  };
-  const handleSelectCandidate = (id: string) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((sid) => sid !== id) : [...prev, id]
-    );
-  };
-  const handleSelectAll = () => {
-    if (paginatedCandidates.every((c) => selectedIds.includes(c.id))) {
-      setSelectedIds((prev) =>
-        prev.filter((id) => !paginatedCandidates.some((c) => c.id === id))
-      );
+
+  const selectedCandidateRef = useRef<HTMLDivElement>(null);
+
+  const handleCandidateClick = (candidate: CandidateDisplay) => {
+    if (selectedCandidate?.id === candidate.id) {
+      setSelectedCandidate(null);
     } else {
-      setSelectedIds((prev) => 
-        Array.from(new Set([...prev, ...paginatedCandidates.map((c) => c.id)]))
-      );
-    }
-  };
-  const handleBulkAction = (action: string) => {
-    if (action === "save") {
-      setCandidates((prev) =>
-        prev.map((c) =>
-          selectedIds.includes(c.id) ? { ...c, saved: true } : c
-        )
-      );
-    } else if (action === "unsave") {
-      setCandidates((prev) =>
-        prev.map((c) =>
-          selectedIds.includes(c.id) ? { ...c, saved: false } : c
-        )
-      );
-    }
-    setShowBulkDropdown(false);
-    setSelectedIds([]);
-  };
-
-  const handleDeliverToRequirement = (candidate: any) => {
-    setCandidateToDeliver(candidate);
-    setShowDeliverModal(true);
-  };
-
-  const handleConfirmDelivery = () => {
-    if (selectedRequirement && candidateToDeliver) {
-      setIsDelivering(true);
-      
-      const selectedReq = (requirements as any[]).find((req: any) => req.id === selectedRequirement);
-      
-      deliverToRequirementMutation.mutate({
-        candidateName: candidateToDeliver.name,
-        candidateEmail: candidateToDeliver.email || '',
-        candidatePhone: candidateToDeliver.phone || '',
-        jobTitle: selectedReq?.position || candidateToDeliver.title,
-        company: selectedReq?.company || '',
-        requirementId: selectedRequirement,
-        experience: candidateToDeliver.experience?.toString() || '',
-        skills: candidateToDeliver.skills || [],
-        location: candidateToDeliver.location || '',
-      });
+      setSelectedCandidate(candidate);
+      // Scroll to the selected candidate after a short delay
+      setTimeout(() => {
+        selectedCandidateRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
     }
   };
 
-  // UI
-  if (step === 1) {
+  const handleSaveCandidate = (candidateId: string) => {
+    setSavedCandidates(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(candidateId)) {
+        newSet.delete(candidateId);
+        toast({ title: "Removed from saved", description: "Candidate removed from saved profiles" });
+      } else {
+        newSet.add(candidateId);
+        toast({ title: "Saved", description: "Candidate added to saved profiles" });
+      }
+      return newSet;
+    });
+  };
+
+  const savedCount = savedCandidates.size;
+
+  const resetFilters = () => {
+    setFilters(initialFilters);
+    setKeywordInput("");
+    setExcludeKeywordInput("");
+    setSpecificSkillInput("");
+    setExcludeCompanyInput("");
+    setAddDegreeInput("");
+    setShowExcludeKeywords(false);
+    setShowSpecificSkills(false);
+    setShowExcludeCompany(false);
+    setShowAddDegree(false);
+  };
+
+  const suggestedKeywords = allSkills.filter(
+    (skill) => !filters.keywords.includes(skill)
+  );
+
+  // Results View
+  if (view === 'results') {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 p-4">
-        <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-5xl">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                Source Resume
-              </h2>
-              <p className="text-gray-600 mt-1">
-                {isLoadingCandidates 
-                  ? "Loading candidates..." 
-                  : `Find the perfect candidates from ${candidates.length} profiles`}
-              </p>
-            </div>
+      <div className="flex h-screen bg-gray-50">
+        {/* Left Sidebar - Filters (Static) */}
+        <div className="w-80 bg-white border-r border-gray-200 flex flex-col overflow-hidden">
+          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-gray-900">Filters</h2>
             <button
-              onClick={resetFilters}
-              className="p-2.5 rounded-full hover:bg-gray-100 transition-colors"
-              data-testid="button-reset-filters"
+              onClick={() => setView('search')}
+              className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-1"
             >
-              <RotateCw className="w-5 h-5 text-gray-600" />
+              <ChevronLeft className="w-4 h-4" />
+              Back
             </button>
           </div>
-
-          <div className="mb-6">
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Quick Search</label>
-            <div className="flex items-center gap-4">
-              <div className="flex-1 relative">
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {/* Keywords */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Keywords
+              </label>
+              <div className="flex items-center gap-2 mb-2">
                 <input
-                  type="text"
-                  className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-                  placeholder={
-                    booleanMode
-                      ? "Boolean search (e.g. React AND Node.js)"
-                      : "Search by name, skill, company..."
-                  }
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  data-testid="input-search-filter"
+                  type="checkbox"
+                  checked={filters.booleanMode}
+                  onChange={(e) => setFilters({ ...filters, booleanMode: e.target.checked })}
+                  className="rounded"
                 />
-                <button
-                  className={`absolute right-3 top-3 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                    booleanMode
-                      ? "bg-purple-600 text-white shadow-md"
-                      : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}
-                  onClick={() => setBooleanMode((v) => !v)}
-                  type="button"
-                  data-testid="button-boolean-toggle"
-                >
-                  Boolean
-                </button>
+                <span className="text-sm text-gray-600">Boolean search</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {filters.keywords.map((keyword) => (
+                  <span
+                    key={keyword}
+                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                      filters.keywords.includes(keyword)
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    <Star className="w-3 h-3" />
+                    {keyword}
+                  </span>
+                ))}
               </div>
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            {/* Location */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <MapPin size={16} className="text-purple-600" />
-                Location
-              </label>
-              <ComboInput
-                value={filters.location}
-                onChange={(value) => setFilters({ ...filters, location: value })}
-                suggestions={[...allLocations, ...uniqueLocations]}
-                placeholder="Type or select location..."
-                testId="input-location"
-              />
-            </div>
-
-            {/* Role */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <Briefcase size={16} className="text-purple-600" />
-                Role
-              </label>
-              <ComboInput
-                value={filters.role}
-                onChange={(value) => setFilters({ ...filters, role: value })}
-                suggestions={[...allRoles, ...uniqueRoles]}
-                placeholder="Type or select role..."
-                testId="input-role"
-              />
-            </div>
-
-            {/* Notice Period */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <Calendar size={16} className="text-purple-600" />
-                Notice Period
-              </label>
-              <ComboInput
-                value={filters.noticePeriod}
-                onChange={(value) => setFilters({ ...filters, noticePeriod: value })}
-                suggestions={allNoticePeriods}
-                placeholder="Type or select notice period..."
-                testId="input-notice-period"
-              />
-            </div>
-
-            {/* Experience Range */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <Briefcase size={16} className="text-purple-600" />
-                Experience (years)
+            {/* Experience */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Experience
               </label>
               <div className="flex gap-2 items-center">
                 <input
@@ -736,14 +1135,755 @@ const SourceResume = () => {
                   onChange={(e) =>
                     setFilters({
                       ...filters,
-                      experience: [
-                        parseInt(e.target.value) || 0,
-                        filters.experience[1],
-                      ],
+                      experience: [parseInt(e.target.value) || 0, filters.experience[1]],
                     })
                   }
-                  className="w-20 border-2 border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  data-testid="input-exp-min"
+                  className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-sm"
+                />
+                <span className="text-gray-500">-</span>
+                <input
+                  type="number"
+                  min={filters.experience[0]}
+                  max={15}
+                  value={filters.experience[1]}
+                  onChange={(e) =>
+                    setFilters({
+                      ...filters,
+                      experience: [filters.experience[0], parseInt(e.target.value) || 15],
+                    })
+                  }
+                  className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-sm"
+                />
+              </div>
+            </div>
+
+            {/* CTC Range */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                CTC Range (Lakhs)
+              </label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={filters.ctcMin}
+                  onChange={(e) => setFilters({ ...filters, ctcMin: e.target.value })}
+                  className="w-20 border border-gray-200 rounded-lg px-2 py-1 text-sm"
+                />
+                <span className="text-gray-500">-</span>
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={filters.ctcMax}
+                  onChange={(e) => setFilters({ ...filters, ctcMax: e.target.value })}
+                  className="w-20 border border-gray-200 rounded-lg px-2 py-1 text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Designation */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Designation
+              </label>
+              <FilterableDropdown
+                value={filters.role}
+                onChange={(value) => setFilters({ ...filters, role: value })}
+                options={allRoles}
+                placeholder="Frontend Developer"
+              />
+            </div>
+
+            {/* Notice Period */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Notice period
+              </label>
+              <FilterableDropdown
+                value={filters.noticePeriod}
+                onChange={(value) => setFilters({ ...filters, noticePeriod: value })}
+                options={allNoticePeriods}
+                placeholder="1 month"
+              />
+            </div>
+
+            {/* Company */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Company
+              </label>
+              <FilterableDropdown
+                value={filters.company}
+                onChange={(value) => setFilters({ ...filters, company: value })}
+                options={allCompanies}
+                placeholder="All Location"
+              />
+            </div>
+
+            {/* Location */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Location
+              </label>
+              <FilterableDropdown
+                value={filters.location}
+                onChange={(value) => setFilters({ ...filters, location: value })}
+                options={locations.map(l => l.label)}
+                placeholder="All Location"
+              />
+            </div>
+
+            {/* Preferred Location */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Preferred Location
+              </label>
+              <FilterableDropdown
+                value={filters.preferredLocation}
+                onChange={(value) => setFilters({ ...filters, preferredLocation: value })}
+                options={locations.map(l => l.label)}
+                placeholder="Any location"
+              />
+            </div>
+
+            {/* Education UG */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Education UG
+              </label>
+              <FilterableDropdown
+                value={filters.educationUG}
+                onChange={(value) => setFilters({ ...filters, educationUG: value })}
+                options={allEducationUG}
+                placeholder="Any"
+              />
+            </div>
+
+            {/* Education PG */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Education PG
+              </label>
+              <FilterableDropdown
+                value={filters.educationPG}
+                onChange={(value) => setFilters({ ...filters, educationPG: value })}
+                options={allEducationPG}
+                placeholder="Any"
+              />
+            </div>
+
+            {/* Employment Type */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Employment Type
+              </label>
+              <FilterableDropdown
+                value={filters.employmentType}
+                onChange={(value) => setFilters({ ...filters, employmentType: value })}
+                options={allEmploymentTypes}
+                placeholder="Any"
+              />
+            </div>
+
+            {/* Job Type */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Job Type
+              </label>
+              <FilterableDropdown
+                value={filters.jobType}
+                onChange={(value) => setFilters({ ...filters, jobType: value })}
+                options={allJobTypes}
+                placeholder="Any"
+              />
+            </div>
+
+            {/* Work Permit */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Work Permit for
+              </label>
+              <FilterableDropdown
+                value={filters.workPermit}
+                onChange={(value) => setFilters({ ...filters, workPermit: value })}
+                options={allWorkPermits}
+                placeholder="Any"
+              />
+            </div>
+
+            {/* Candidate Status */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Show
+              </label>
+              <div className="flex flex-col gap-2">
+                {["All Candidates", "New registration", "Modified Candidates"].map((option) => {
+                  const value = option === "All Candidates" ? "all" : option.toLowerCase().replace(" ", "_");
+                  return (
+                    <button
+                      key={option}
+                      onClick={() => setFilters({ ...filters, candidateStatus: value })}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors text-left ${
+                        filters.candidateStatus === value
+                          ? "bg-blue-600 text-white"
+                          : "bg-white border border-blue-200 text-gray-700 hover:bg-blue-50"
+                      }`}
+                    >
+                      {option}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Show Candidate With */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Show candidate with
+              </label>
+              <div className="flex flex-col gap-2">
+                {[
+                  { value: "resume", label: "Attached Resume" },
+                  { value: "portfolio", label: "Attached Portfolio" },
+                  { value: "website", label: "Attached Website" },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => handleShowWithToggle(option.value)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors text-left ${
+                      filters.showWith.includes(option.value)
+                        ? "bg-blue-600 text-white"
+                        : "bg-white border border-blue-200 text-gray-700 hover:bg-blue-50"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Middle Section - Candidate Cards (Scrollable) */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Top Search Bar */}
+          <div className="bg-white border-b border-gray-200 p-3">
+            <div className="flex items-center gap-3">
+              <div className="w-80 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={resultsSearchQuery}
+                  onChange={(e) => setResultsSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  placeholder="Enter the skills, company, designation..."
+                />
+              </div>
+              <button
+                onClick={() => {
+                  setShowSavedProfiles(!showSavedProfiles);
+                  setCurrentPage(1); // Reset to first page when toggling
+                  if (!showSavedProfiles) {
+                    toast({
+                      title: "Showing Saved Profiles",
+                      description: `Displaying ${savedCount} saved profile${savedCount !== 1 ? 's' : ''}`,
+                    });
+                  } else {
+                    toast({
+                      title: "Showing All Candidates",
+                      description: "Displaying all filtered candidates",
+                    });
+                  }
+                }}
+                className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
+                  showSavedProfiles 
+                    ? "bg-purple-600 text-white hover:bg-purple-700" 
+                    : "bg-blue-600 text-white hover:bg-blue-700"
+                }`}
+              >
+                {showSavedProfiles ? "Show All" : `Saved Profiles (${savedCount})`}
+              </button>
+            </div>
+            <div className="flex items-center justify-between mt-2">
+              <div className="flex items-center gap-3">
+                {filters.booleanMode && (
+                  <span className="text-xs text-blue-600 cursor-pointer">Boolean search</span>
+                )}
+                <span className="text-xs text-gray-600">Total Profiles {displayCandidates.length}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="p-1 rounded hover:bg-gray-100 disabled:opacity-50"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-xs text-gray-600">Pages</span>
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  const page = currentPage <= 3 ? i + 1 : currentPage - 2 + i;
+                  if (page > totalPages) return null;
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`px-2 py-0.5 rounded text-xs ${
+                        currentPage === page
+                          ? "bg-blue-600 text-white"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-1 rounded hover:bg-gray-100 disabled:opacity-50"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Candidate Cards List - Scrollable */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {isLoadingCandidates ? (
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+              </div>
+            ) : paginatedCandidates.length === 0 ? (
+              <div className="flex items-center justify-center h-64">
+                <p className="text-gray-500">No candidates found matching your criteria</p>
+              </div>
+            ) : (
+              <>
+                {paginatedCandidates.map((candidate) => (
+                  <div
+                    key={candidate.id}
+                    ref={selectedCandidate?.id === candidate.id ? selectedCandidateRef : null}
+                    className={`bg-white rounded-lg border p-6 hover:shadow-md transition-all cursor-pointer ${
+                      selectedCandidate?.id === candidate.id
+                        ? "border-blue-500 shadow-lg"
+                        : "border-gray-200"
+                    }`}
+                    onClick={() => handleCandidateClick(candidate)}
+                  >
+                    <div className="flex gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h3 className="text-xl font-bold text-gray-900">{candidate.name}</h3>
+                            <p className="text-blue-600 font-medium">{candidate.title} in {candidate.currentCompany}</p>
+                            <p className="text-sm text-gray-600 mt-1">{candidate.email}</p>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSaveCandidate(candidate.id);
+                            }}
+                            className="p-2 hover:bg-gray-100 rounded-full"
+                          >
+                            <Bookmark
+                              className={`w-5 h-5 ${
+                                savedCandidates.has(candidate.id)
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-gray-400"
+                              }`}
+                            />
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mb-3 text-sm">
+                          <div><span className="font-semibold">CTC:</span> {candidate.ctc}</div>
+                          <div><span className="font-semibold">Education:</span> {candidate.education}</div>
+                          <div><span className="font-semibold">Experience:</span> +{candidate.experience} years</div>
+                          <div><span className="font-semibold">Location:</span> {candidate.location}</div>
+                        </div>
+                        <div className="mb-3">
+                          <span className="font-semibold text-sm">Preferred Location: </span>
+                          <span className="text-sm text-gray-600">{candidate.preferredLocation}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {candidate.skills.slice(0, 5).map((skill, idx) => (
+                            <span
+                              key={idx}
+                              className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium"
+                            >
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                        <p className="text-sm text-gray-600 line-clamp-2">{candidate.summary}</p>
+                      </div>
+                      <div className="flex-shrink-0 text-right">
+                        {candidate.profilePic ? (
+                          <img
+                            src={candidate.profilePic}
+                            alt={candidate.name}
+                            className="w-20 h-20 rounded-full object-cover mb-2"
+                          />
+                        ) : (
+                          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-400 to-blue-400 flex items-center justify-center text-white font-bold text-xl mb-2">
+                            {candidate.name.split(' ').map(n => n[0]).join('')}
+                          </div>
+                        )}
+                        <p className="text-xs text-gray-600">University: {candidate.university}</p>
+                        <p className="text-xs text-gray-600">Education: {candidate.education}</p>
+                        <div className="flex gap-2 mt-2 justify-end">
+                          {candidate.linkedinUrl && (
+                            <a href={candidate.linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700">
+                              <Linkedin className="w-4 h-4" />
+                            </a>
+                          )}
+                          {candidate.websiteUrl && (
+                            <a href={candidate.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700">
+                              <ExternalLink className="w-4 h-4" />
+                            </a>
+                          )}
+                          <a href={`mailto:${candidate.email}`} className="text-blue-600 hover:text-blue-700">
+                            <Mail className="w-4 h-4" />
+                          </a>
+                          {candidate.phone && (
+                            <a href={`tel:${candidate.phone}`} className="text-blue-600 hover:text-blue-700">
+                              <Phone className="w-4 h-4" />
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Expanded Details (shown when selected) */}
+                    {selectedCandidate?.id === candidate.id && (
+                      <div className="mt-6 pt-6 border-t border-gray-200">
+                        <div className="grid grid-cols-2 gap-6 mb-6">
+                          <div>
+                            <h4 className="font-semibold text-gray-900 mb-3">Key Skills</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {candidate.skills.map((skill, idx) => (
+                                <span
+                                  key={idx}
+                                  className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium"
+                                >
+                                  {skill}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-gray-900 mb-3">Work Summary</h4>
+                            <div className="space-y-2 text-sm">
+                              <div><span className="font-medium">Current Company:</span> {candidate.currentCompany}</div>
+                              <div><span className="font-medium">Role:</span> {candidate.title}</div>
+                              <div><span className="font-medium">Company Sector:</span> {candidate.companySector || 'N/A'}</div>
+                              <div><span className="font-medium">Company Type:</span> {candidate.productService || 'N/A'}</div>
+                              <div><span className="font-medium">Product Category:</span> {candidate.productCategory || 'N/A'}</div>
+                              <div><span className="font-medium">Product Domain:</span> {candidate.productDomain || 'N/A'}</div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mb-6">
+                          <h4 className="font-semibold text-gray-900 mb-3">Work Preference</h4>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div><span className="font-medium">Job Title:</span> {candidate.title}</div>
+                            <div><span className="font-medium">Employment Type:</span> {candidate.employmentType || 'Full time'}</div>
+                            <div><span className="font-medium">Preferred Location:</span> {candidate.preferredLocation}</div>
+                            <div><span className="font-medium">Current Status:</span> Seeking for job</div>
+                            <div><span className="font-medium">Candidate Type:</span> Experienced</div>
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900 mb-3">Resume</h4>
+                          <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                            <div className="flex items-center gap-2 text-gray-600">
+                              <FileText className="w-5 h-5" />
+                              <span>Resume preview will be displayed here</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Right Sidebar - Recommended Candidates (Static) */}
+        <div className="w-80 bg-white border-l border-gray-200 flex flex-col overflow-hidden">
+          <div className="p-4 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-900">Recommended candidates</h2>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {recommendedCandidates.map((candidate) => (
+              <div
+                key={candidate.id}
+                className="bg-gray-50 rounded-lg border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => handleCandidateClick(candidate)}
+              >
+                <div className="flex gap-3 mb-3">
+                  {candidate.profilePic ? (
+                    <img
+                      src={candidate.profilePic}
+                      alt={candidate.name}
+                      className="w-12 h-12 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-400 to-blue-400 flex items-center justify-center text-white font-bold text-sm">
+                      {candidate.name.split(' ').map(n => n[0]).join('')}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold text-gray-900 truncate">{candidate.name}</h4>
+                    <p className="text-sm text-blue-600 truncate">{candidate.title} in {candidate.currentCompany}</p>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-600 mb-2">{candidate.email}</p>
+                <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                  <div><span className="font-medium">CTC:</span> {candidate.ctc}</div>
+                  <div><span className="font-medium">Education:</span> {candidate.education}</div>
+                  <div><span className="font-medium">Experience:</span> +{candidate.experience} years</div>
+                  <div><span className="font-medium">Location:</span> {candidate.location}</div>
+                </div>
+                <div className="mb-2">
+                  <span className="text-xs font-medium">Preferred Location: </span>
+                  <span className="text-xs text-gray-600">{candidate.preferredLocation}</span>
+                </div>
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {candidate.skills.slice(0, 4).map((skill, idx) => (
+                    <span
+                      key={idx}
+                      className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <button className="flex-1 px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700">
+                    View Profile
+                  </button>
+                  <button className="flex-1 px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-xs font-medium hover:bg-gray-50">
+                    Reply
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-2 text-right">last seen: {candidate.lastSeen}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Search Form View
+  return (
+    <div className="flex h-screen bg-gray-50">
+      {/* Main Content Area - Scrollable */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-6xl mx-auto p-6 space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Source Resume</h1>
+              <p className="text-gray-600 mt-1">
+                Find the perfect candidates for your requirements
+              </p>
+            </div>
+            <button
+              onClick={resetFilters}
+              className="p-2 rounded-full hover:bg-gray-100 transition-colors"
+              title="Reset filters"
+            >
+              <RotateCw className="w-5 h-5 text-gray-600" />
+            </button>
+          </div>
+
+          {/* Keywords Section */}
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Keywords</h2>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">Boolean search</span>
+                <button
+                  onClick={() => setFilters({ ...filters, booleanMode: !filters.booleanMode })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    filters.booleanMode ? "bg-purple-600" : "bg-gray-300"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      filters.booleanMode ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {/* Selected Keywords */}
+            {filters.keywords.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {filters.keywords.map((keyword) => (
+                  <span
+                    key={keyword}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
+                  >
+                    <Star className="w-3 h-3" />
+                    {keyword}
+                    <button
+                      onClick={() => handleKeywordRemove(keyword)}
+                      className="ml-1 hover:text-blue-900"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Suggested Keywords */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              {suggestedKeywords.slice(0, 6).map((skill) => (
+                <button
+                  key={skill}
+                  onClick={() => handleSkillAdd(skill)}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-gray-200 transition-colors"
+                >
+                  <Star className="w-3 h-3" />
+                  {skill}
+                </button>
+              ))}
+            </div>
+
+            {/* Search Input */}
+            <div className="relative mb-2">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <input
+                type="text"
+                value={keywordInput}
+                onChange={(e) => setKeywordInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && keywordInput.trim()) {
+                    handleKeywordAdd(keywordInput.trim());
+                  }
+                }}
+                className="w-full max-w-md border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                placeholder="Enter the skills,company,designation...."
+              />
+            </div>
+
+            {/* AI Suggestions Link */}
+            <div className="flex items-center gap-4 mt-3">
+              <button className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700">
+                <Lightbulb className="w-4 h-4" />
+                AI Suggestions
+              </button>
+              <button 
+                onClick={() => setShowExcludeKeywords(!showExcludeKeywords)}
+                className="text-sm text-blue-600 hover:text-blue-700"
+              >
+                + Exclude Keywords
+              </button>
+              <button 
+                onClick={() => setShowSpecificSkills(!showSpecificSkills)}
+                className="text-sm text-blue-600 hover:text-blue-700"
+              >
+                + Add Specific Skills
+              </button>
+            </div>
+
+            {/* Exclude Keywords Input */}
+            {showExcludeKeywords && (
+              <div className="mt-4 space-y-2">
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {filters.excludedKeywords.map((keyword) => (
+                    <span
+                      key={keyword}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-800 rounded-full text-sm font-medium"
+                    >
+                      {keyword}
+                      <button
+                        onClick={() => handleExcludeKeywordRemove(keyword)}
+                        className="ml-1 hover:text-red-900"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  value={excludeKeywordInput}
+                  onChange={(e) => setExcludeKeywordInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && excludeKeywordInput.trim()) {
+                      handleExcludeKeywordAdd(excludeKeywordInput.trim());
+                    }
+                  }}
+                  className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  placeholder="Enter keywords to exclude..."
+                />
+              </div>
+            )}
+
+            {/* Specific Skills Input */}
+            {showSpecificSkills && (
+              <div className="mt-4 space-y-2">
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {filters.specificSkills.map((skill) => (
+                    <span
+                      key={skill}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-800 rounded-full text-sm font-medium"
+                    >
+                      {skill}
+                      <button
+                        onClick={() => handleSpecificSkillRemove(skill)}
+                        className="ml-1 hover:text-green-900"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  value={specificSkillInput}
+                  onChange={(e) => setSpecificSkillInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && specificSkillInput.trim()) {
+                      handleSpecificSkillAdd(specificSkillInput.trim());
+                    }
+                  }}
+                  className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  placeholder="Enter specific skills (must have all)..."
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Experience, CTC Range, Location - Combined with Keywords */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            {/* Experience */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                <Briefcase className="w-4 h-4 text-purple-600" />
+                Experience
+              </label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="number"
+                  min={0}
+                  max={filters.experience[1]}
+                  value={filters.experience[0]}
+                  onChange={(e) =>
+                    setFilters({
+                      ...filters,
+                      experience: [parseInt(e.target.value) || 0, filters.experience[1]],
+                    })
+                  }
+                  className="w-20 border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 />
                 <span className="text-gray-500">to</span>
                 <input
@@ -754,14 +1894,10 @@ const SourceResume = () => {
                   onChange={(e) =>
                     setFilters({
                       ...filters,
-                      experience: [
-                        filters.experience[0],
-                        parseInt(e.target.value) || 15,
-                      ],
+                      experience: [filters.experience[0], parseInt(e.target.value) || 15],
                     })
                   }
-                  className="w-20 border-2 border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  data-testid="input-exp-max"
+                  className="w-20 border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 />
               </div>
             </div>
@@ -769,7 +1905,7 @@ const SourceResume = () => {
             {/* CTC Range */}
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <DollarSign size={16} className="text-purple-600" />
+                <DollarSign className="w-4 h-4 text-purple-600" />
                 CTC Range (Lakhs)
               </label>
               <div className="flex gap-2 items-center">
@@ -777,995 +1913,533 @@ const SourceResume = () => {
                   type="number"
                   placeholder="Min"
                   value={filters.ctcMin}
-                  onChange={(e) =>
-                    setFilters({ ...filters, ctcMin: e.target.value })
-                  }
-                  className="w-20 border-2 border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  data-testid="input-ctc-min"
+                  onChange={(e) => setFilters({ ...filters, ctcMin: e.target.value })}
+                  className="w-20 border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 />
                 <span className="text-gray-500">to</span>
                 <input
                   type="number"
                   placeholder="Max"
                   value={filters.ctcMax}
-                  onChange={(e) =>
-                    setFilters({ ...filters, ctcMax: e.target.value })
-                  }
-                  className="w-20 border-2 border-gray-200 rounded-xl px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  data-testid="input-ctc-max"
+                  onChange={(e) => setFilters({ ...filters, ctcMax: e.target.value })}
+                  className="w-20 border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                 />
               </div>
             </div>
 
-            {/* Availability */}
+            {/* Location */}
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <Clock size={16} className="text-purple-600" />
-                Availability
+                <MapPin className="w-4 h-4 text-purple-600" />
+                Location
               </label>
-              <ComboInput
-                value={filters.availability}
-                onChange={(value) => setFilters({ ...filters, availability: value })}
-                suggestions={allAvailability}
-                placeholder="Type or select availability..."
-                testId="input-availability"
-              />
-            </div>
-
-            {/* Skills */}
-            <div className="md:col-span-3 space-y-2">
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <GraduationCap size={16} className="text-purple-600" />
-                Skills
-              </label>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {filters.skills.map((skill) => (
-                  <span
-                    key={skill}
-                    className="inline-flex items-center rounded-full bg-purple-100 px-3 py-1.5 text-sm text-purple-800 font-medium"
+              <Popover open={locationOpen} onOpenChange={setLocationOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={locationOpen}
+                    className="w-full justify-between bg-white border-gray-200 rounded-lg h-10 font-normal text-gray-700 hover:bg-gray-50"
                   >
-                    {skill}
-                    <button
-                      type="button"
-                      onClick={() => handleSkillRemove(skill)}
-                      className="ml-2 rounded-full bg-purple-200 px-1.5 text-xs text-purple-800 hover:bg-purple-300 transition-colors"
-                    >
-                      &times;
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <input
-                type="text"
-                className="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                placeholder="Type a skill and press Enter"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && (e.target as HTMLInputElement).value) {
-                    handleSkillAdd((e.target as HTMLInputElement).value);
-                    (e.target as HTMLInputElement).value = "";
-                  }
-                }}
-                data-testid="input-skill-add"
-              />
-              <div className="flex flex-wrap gap-2 mt-3">
-                {allSkills.map((skill) => (
-                  <button
-                    key={skill}
-                    type="button"
-                    className="text-sm bg-gradient-to-r from-gray-100 to-gray-50 text-gray-800 px-3 py-1.5 rounded-lg hover:from-purple-100 hover:to-purple-50 hover:text-purple-700 transition-all font-medium border border-gray-200"
-                    onClick={() => handleSkillAdd(skill)}
-                    data-testid={`button-skill-${skill.toLowerCase()}`}
-                  >
-                    + {skill}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Advanced Filters */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                <Building size={16} className="text-purple-600" />
-                Company
-              </label>
-              <ComboInput
-                value={filters.company}
-                onChange={(value) => setFilters({ ...filters, company: value })}
-                suggestions={[...allCompanies, ...uniqueCompanies]}
-                placeholder="Type or select company..."
-                testId="input-company"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">Pedigree Level</label>
-              <ComboInput
-                value={filters.pedigreeLevel}
-                onChange={(value) => setFilters({ ...filters, pedigreeLevel: value })}
-                suggestions={[...allPedigreeLevels, ...uniquePedigreeLevels]}
-                placeholder="Type or select pedigree level..."
-                testId="input-pedigree"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">Company Level</label>
-              <ComboInput
-                value={filters.companyLevel}
-                onChange={(value) => setFilters({ ...filters, companyLevel: value })}
-                suggestions={allCompanyLevels}
-                placeholder="Type or select company level..."
-                testId="input-company-level"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">Company Sector</label>
-              <ComboInput
-                value={filters.companySector}
-                onChange={(value) => setFilters({ ...filters, companySector: value })}
-                suggestions={[...allCompanySectors, ...uniqueCompanySectors]}
-                placeholder="Type or select company sector..."
-                testId="input-company-sector"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">Product/Service</label>
-              <ComboInput
-                value={filters.productService}
-                onChange={(value) => setFilters({ ...filters, productService: value })}
-                suggestions={[...allProductServices, ...uniqueProductServices]}
-                placeholder="Type or select product/service..."
-                testId="input-product-service"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">Product Category</label>
-              <ComboInput
-                value={filters.productCategory}
-                onChange={(value) => setFilters({ ...filters, productCategory: value })}
-                suggestions={[...allProductCategories, ...uniqueProductCategories]}
-                placeholder="Type or select product category..."
-                testId="input-product-category"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">Product Domain</label>
-              <ComboInput
-                value={filters.productDomain}
-                onChange={(value) => setFilters({ ...filters, productDomain: value })}
-                suggestions={allProductDomains}
-                placeholder="Type or select product domain..."
-                testId="input-product-domain"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">Employment Type</label>
-              <ComboInput
-                value={filters.employmentType}
-                onChange={(value) => setFilters({ ...filters, employmentType: value })}
-                suggestions={allEmploymentTypes}
-                placeholder="Type or select employment type..."
-                testId="input-employment-type"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Floating Source Resume Button */}
-        <button
-          className="fixed bottom-8 right-8 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-full font-semibold text-lg shadow-2xl hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-3 z-50"
-          onClick={() => setStep(2)}
-          data-testid="button-source-resume"
-        >
-          <span>Source Resume</span>
-          <ArrowLeft className="rotate-180" size={20} />
-        </button>
-      </div>
-    );
-  }
-
-  // Step 2: Results UI - Three section layout
-  return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      <div className="flex flex-1 overflow-hidden">
-      {/* Left Section - Filters */}
-      <aside className="bg-white border-r w-80 flex-shrink-0 flex flex-col p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-purple-700">Filters</h2>
-          <button
-            onClick={resetFilters}
-            className="p-1.5 rounded-full hover:bg-gray-100"
-            data-testid="button-reset-filters-results"
-          >
-            <RotateCw className="w-5 h-5 text-gray-600" />
-          </button>
-        </div>
-        
-        <div className="flex items-center justify-center mb-4 bg-gray-100 rounded-lg p-1">
-          <button
-            className={`flex-1 text-center px-3 py-2 rounded-md text-sm font-medium transition-all ${
-              sidebarView === "all"
-                ? "bg-white text-blue-600 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-            onClick={() => setSidebarView("all")}
-            data-testid="button-all-candidates"
-          >
-            All Candidates
-          </button>
-          <button
-            className={`flex-1 text-center px-3 py-2 rounded-md text-sm font-medium transition-all ${
-              sidebarView === "saved"
-                ? "bg-white text-blue-600 shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-            onClick={() => setSidebarView("saved")}
-            data-testid="button-saved-candidates"
-          >
-            Saved
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto space-y-4">
-          <div>
-            <label className="block text-base font-medium mb-1">Search</label>
-            <input
-              type="text"
-              className="w-full border rounded-lg px-3 py-2 text-base focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-              placeholder="Search by name, skill, company..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              data-testid="input-search-sidebar"
-            />
-            <button
-              className={`mt-1 px-2 py-1 rounded text-sm ${
-                booleanMode
-                  ? "bg-purple-600 text-white"
-                  : "bg-gray-200 text-gray-700"
-              }`}
-              onClick={() => setBooleanMode((v) => !v)}
-              type="button"
-              data-testid="button-boolean-sidebar"
-            >
-              Boolean
-            </button>
-          </div>
-
-          <div>
-            <label className="block text-base font-medium mb-1">Location</label>
-            <ComboInput
-              value={filters.location}
-              onChange={(value) => setFilters({ ...filters, location: value })}
-              suggestions={[...allLocations, ...uniqueLocations]}
-              placeholder="Type or select location..."
-              testId="input-location-sidebar"
-            />
-          </div>
-
-          <div>
-            <label className="block text-base font-medium mb-1">Experience (years)</label>
-            <div className="flex gap-2 items-center">
-              <input
-                type="number"
-                min={0}
-                max={filters.experience[1]}
-                value={filters.experience[0]}
-                onChange={(e) =>
-                  setFilters({
-                    ...filters,
-                    experience: [
-                      parseInt(e.target.value) || 0,
-                      filters.experience[1],
-                    ],
-                  })
-                }
-                className="w-16 border rounded-lg px-2 py-1 text-base"
-              />
-              <span className="text-base">-</span>
-              <input
-                type="number"
-                min={filters.experience[0]}
-                max={15}
-                value={filters.experience[1]}
-                onChange={(e) =>
-                  setFilters({
-                    ...filters,
-                    experience: [
-                      filters.experience[0],
-                      parseInt(e.target.value) || 15,
-                    ],
-                  })
-                }
-                className="w-16 border rounded-lg px-2 py-1 text-base"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-base font-medium mb-1">Notice Period</label>
-            <select
-              className="w-full border rounded-lg px-3 py-2 text-base"
-              value={filters.noticePeriod}
-              onChange={(e) =>
-                setFilters({ ...filters, noticePeriod: e.target.value })
-              }
-              data-testid="select-notice-sidebar"
-            >
-              <option value="">Any</option>
-              {allNoticePeriods.map((period) => (
-                <option key={period} value={period}>
-                  {period}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-base font-medium mb-1">CTC Range (₹L)</label>
-            <div className="flex gap-2 items-center">
-              <input
-                type="number"
-                placeholder="Min"
-                value={filters.ctcMin}
-                onChange={(e) =>
-                  setFilters({ ...filters, ctcMin: e.target.value })
-                }
-                className="w-20 border rounded-lg px-2 py-1 text-sm"
-              />
-              <span>-</span>
-              <input
-                type="number"
-                placeholder="Max"
-                value={filters.ctcMax}
-                onChange={(e) =>
-                  setFilters({ ...filters, ctcMax: e.target.value })
-                }
-                className="w-20 border rounded-lg px-2 py-1 text-sm"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-base font-medium mb-1">Availability</label>
-            <select
-              className="w-full border rounded-lg px-3 py-2 text-base"
-              value={filters.availability}
-              onChange={(e) =>
-                setFilters({ ...filters, availability: e.target.value })
-              }
-              data-testid="select-availability-sidebar"
-            >
-              <option value="">Any</option>
-              {allAvailability.map((avail) => (
-                <option key={avail} value={avail}>
-                  {avail}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-base font-medium mb-1">Skills</label>
-            <div className="mb-2">
-              {filters.skills.map((skill) => (
-                <span
-                  key={skill}
-                  className="inline-flex items-center rounded-full bg-purple-100 px-2 py-1 text-sm text-purple-800 mr-1 mb-1"
-                >
-                  {skill}
-                  <button
-                    type="button"
-                    onClick={() => handleSkillRemove(skill)}
-                    className="ml-1 rounded-full bg-purple-200 px-1 text-xs text-purple-800 hover:bg-purple-300"
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-            <input
-              type="text"
-              className="w-full border rounded-lg px-3 py-2 text-base"
-              placeholder="Add a skill and press Enter"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.target as HTMLInputElement).value) {
-                  handleSkillAdd((e.target as HTMLInputElement).value);
-                  (e.target as HTMLInputElement).value = "";
-                }
-              }}
-            />
-            <div className="flex flex-wrap gap-1 mt-2">
-              {allSkills.map((skill) => (
-                <button
-                  key={skill}
-                  type="button"
-                  className="text-sm px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-purple-100"
-                  onClick={() => handleSkillAdd(skill)}
-                >
-                  {skill}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-base font-medium mb-1">Role</label>
-            <ComboInput
-              value={filters.role}
-              onChange={(value) => setFilters({ ...filters, role: value })}
-              suggestions={[...allRoles, ...uniqueRoles]}
-              placeholder="Type or select role..."
-              testId="input-role-sidebar"
-            />
-          </div>
-
-          <div>
-            <label className="block text-base font-medium mb-1">Pedigree Level</label>
-            <ComboInput
-              value={filters.pedigreeLevel}
-              onChange={(value) => setFilters({ ...filters, pedigreeLevel: value })}
-              suggestions={Array.from(new Set([...allPedigreeLevels, ...uniquePedigreeLevels]))}
-              placeholder="Type or select pedigree level..."
-              testId="input-pedigree-sidebar"
-            />
-          </div>
-
-          <div>
-            <label className="block text-base font-medium mb-1">Company Level</label>
-            <ComboInput
-              value={filters.companyLevel}
-              onChange={(value) => setFilters({ ...filters, companyLevel: value })}
-              suggestions={Array.from(new Set([...allCompanyLevels, ...uniqueCompanyLevels]))}
-              placeholder="Type or select company level..."
-              testId="input-company-level-sidebar"
-            />
-          </div>
-
-          <div>
-            <label className="block text-base font-medium mb-1">Company Sector</label>
-            <ComboInput
-              value={filters.companySector}
-              onChange={(value) => setFilters({ ...filters, companySector: value })}
-              suggestions={Array.from(new Set([...allCompanySectors, ...uniqueCompanySectors]))}
-              placeholder="Type or select company sector..."
-              testId="input-company-sector-sidebar"
-            />
-          </div>
-
-          <div>
-            <label className="block text-base font-medium mb-1">Product/Service</label>
-            <ComboInput
-              value={filters.productService}
-              onChange={(value) => setFilters({ ...filters, productService: value })}
-              suggestions={Array.from(new Set([...allProductServices, ...uniqueProductServices]))}
-              placeholder="Type or select product/service..."
-              testId="input-product-service-sidebar"
-            />
-          </div>
-
-          <div>
-            <label className="block text-base font-medium mb-1">Product Category</label>
-            <ComboInput
-              value={filters.productCategory}
-              onChange={(value) => setFilters({ ...filters, productCategory: value })}
-              suggestions={Array.from(new Set([...allProductCategories, ...uniqueProductCategories]))}
-              placeholder="Type or select product category..."
-              testId="input-product-category-sidebar"
-            />
-          </div>
-
-          <div>
-            <label className="block text-base font-medium mb-1">Product Domain</label>
-            <ComboInput
-              value={filters.productDomain}
-              onChange={(value) => setFilters({ ...filters, productDomain: value })}
-              suggestions={Array.from(new Set([...allProductDomains, ...uniqueProductDomains]))}
-              placeholder="Type or select product domain..."
-              testId="input-product-domain-sidebar"
-            />
-          </div>
-
-          <div>
-            <label className="block text-base font-medium mb-1">Employment Type</label>
-            <ComboInput
-              value={filters.employmentType}
-              onChange={(value) => setFilters({ ...filters, employmentType: value })}
-              suggestions={Array.from(new Set([...allEmploymentTypes, ...uniqueEmploymentTypes]))}
-              placeholder="Type or select employment type..."
-              testId="input-employment-type-sidebar"
-            />
-          </div>
-        </div>
-      </aside>
-
-      {/* Center Section - Profiles (Scrollable) */}
-      <main className="flex-1 flex flex-col bg-white border-r">
-        {/* Search Header - Fixed */}
-        <div className="p-4 border-b bg-white">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex-1 relative max-w-md">
-              <input
-                type="text"
-                className="w-full border rounded px-4 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                placeholder="Search by name, skill, company..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                data-testid="input-search-main"
-              />
-              <button
-                className={`absolute right-2 top-2 px-2 py-1 rounded text-xs ${
-                  booleanMode
-                    ? "bg-purple-600 text-white"
-                    : "bg-gray-200 text-gray-700"
-                }`}
-                onClick={() => setBooleanMode((v) => !v)}
-                type="button"
-                data-testid="button-boolean-main"
-              >
-                Boolean
-              </button>
-            </div>
-            <div className="flex items-center gap-2 ml-4">
-              <button
-                className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded text-sm hover:bg-purple-700"
-                data-testid="button-bulk-actions"
-              >
-                Bulk Actions
-              </button>
-              <button 
-                onClick={() => exportToCSV(filteredCandidates)}
-                className="flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50"
-                data-testid="button-export"
-              >
-                Export
-              </button>
-              <button
-                onClick={() => {
-                  if (window.history.length > 1) {
-                    window.history.back();
-                  } else {
-                    setLocation('/recruiter-login-2');
-                  }
-                }}
-                className="flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50"
-                data-testid="button-back"
-              >
-                <ArrowLeft size={16} />
-                Back
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Profiles List - Scrollable */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {/* Loading State */}
-          {isLoadingCandidates && (
-            <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-              <Loader2 className="w-8 h-8 animate-spin mb-4 text-purple-600" />
-              <p>Loading candidates...</p>
-            </div>
-          )}
-          
-          {/* Error State */}
-          {isErrorCandidates && !isLoadingCandidates && (
-            <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-              <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-                <p className="text-red-600 font-medium">Failed to load candidates</p>
-                <p className="text-red-500 text-sm mt-1">Please try refreshing the page</p>
-              </div>
-            </div>
-          )}
-          
-          {/* Empty State */}
-          {!isLoadingCandidates && !isErrorCandidates && candidates.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-                <p className="font-medium">No candidates found</p>
-                <p className="text-sm mt-1">Add candidates through Master Database or candidate registrations</p>
-              </div>
-            </div>
-          )}
-          
-          {/* No Results State */}
-          {!isLoadingCandidates && !isErrorCandidates && candidates.length > 0 && filteredCandidates.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
-                <p className="text-yellow-700 font-medium">No matches found</p>
-                <p className="text-yellow-600 text-sm mt-1">Try adjusting your filters or search criteria</p>
-                <button
-                  onClick={resetFilters}
-                  className="mt-3 px-4 py-2 bg-purple-600 text-white rounded-lg text-sm hover:bg-purple-700"
-                >
-                  Reset Filters
-                </button>
-              </div>
-            </div>
-          )}
-          
-          {/* Candidates List - Only show when we have candidates on this page */}
-          {!isLoadingCandidates && !isErrorCandidates && paginatedCandidates.length > 0 && (
-          <div className="space-y-4">
-            {paginatedCandidates.map((candidate) => (
-              <div
-                key={candidate.id}
-                className={`border-2 rounded-2xl p-4 cursor-pointer transition-all ${
-                  selectedCandidate?.id === candidate.id
-                    ? "border-purple-500 bg-purple-50"
-                    : "border-purple-200 hover:border-purple-300 bg-white"
-                }`}
-                onClick={() => setSelectedCandidate(candidate)}
-                data-testid={`card-candidate-${candidate.id}`}
-              >
-                <div className="flex items-start gap-4">
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(candidate.id)}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      handleSelectCandidate(candidate.id);
-                    }}
-                    className="mt-2"
-                    data-testid={`checkbox-candidate-${candidate.id}`}
-                  />
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-lg text-gray-900">{candidate.name}</h3>
-                        <p className="text-blue-600 font-medium">{candidate.title}</p>
-                        <div className="flex items-center gap-6 mt-1 text-sm text-gray-500">
-                          <span className="flex items-center gap-1">
-                            <Briefcase size={16} />
-                            {candidate.experience} years
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <MapPin size={16} />
-                            {candidate.location}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <GraduationCap size={16} />
-                            {candidate.education}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1 mt-1 text-sm text-gray-500">
-                          <Briefcase size={16} />
-                          {candidate.currentCompany}
-                        </div>
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {candidate.skills.map((skill, index) => (
-                            <span
-                              key={index}
-                              className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs"
-                            >
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                        <p className="text-sm text-gray-600 mt-2 line-clamp-2">{candidate.summary}</p>
-                        <div className="flex items-center gap-1 mt-1 text-sm text-gray-500">
-                          <Clock size={12} />
-                          Last active: {candidate.lastActive}
-                        </div>
-
-                        {/* Buttons at Bottom */}
-                        <div className="flex items-center gap-2 mt-3">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSaveCandidate(candidate.id);
-                            }}
-                            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                              candidate.saved
-                                ? "bg-purple-100 text-purple-700 border border-purple-300"
-                                : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                            }`}
-                            data-testid={`button-save-${candidate.id}`}
-                          >
-                            {candidate.saved ? "Saved" : "Save"}
-                          </button>
-                          <button 
-                            onClick={(e) => e.stopPropagation()}
-                            className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-                            data-testid={`button-view-resume-${candidate.id}`}
-                          >
-                            View Resume
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeliverToRequirement(candidate);
-                            }}
-                            className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 flex items-center gap-1"
-                            data-testid={`button-deliver-${candidate.id}`}
-                          >
-                            <Send size={14} />
-                            Tag to Requirement
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Profile Pic on Right */}
-                      <div className="flex-shrink-0">
-                        {candidate.profilePic ? (
-                          <img
-                            src={candidate.profilePic}
-                            alt={candidate.name}
-                            className="w-20 h-20 rounded-full object-cover"
+                    {filters.location
+                      ? locations.find((loc) => loc.value === filters.location)?.label
+                      : "All Location"}
+                    <X className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search location..." />
+                    <CommandList>
+                      <CommandEmpty>No location found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="all"
+                          onSelect={() => {
+                            setFilters({ ...filters, location: "" });
+                            setLocationOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              !filters.location ? "opacity-100" : "opacity-0"
+                            )}
                           />
-                        ) : (
-                          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-400 to-blue-400 text-white flex items-center justify-center font-semibold text-xl shadow-md">
-                            {candidate.name.split(' ').map(n => n[0]).join('')}
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                          All Location
+                        </CommandItem>
+                        {locations.map((location) => (
+                          <CommandItem
+                            key={location.value}
+                            value={location.value}
+                            onSelect={() => {
+                              setFilters({ ...filters, location: location.value });
+                              setLocationOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                filters.location === location.value ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {location.label}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+
+          {/* Employee Details */}
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Employee Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+
+              {/* Role */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <User className="w-4 h-4 text-purple-600" />
+                  Role
+                </label>
+                <FilterableDropdown
+                  value={filters.role}
+                  onChange={(value) => setFilters({ ...filters, role: value })}
+                  options={allRoles}
+                  placeholder="All roles"
+                  icon={<Briefcase className="w-4 h-4" />}
+                />
+              </div>
+
+              {/* Preferred Location */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <MapPin className="w-4 h-4 text-purple-600" />
+                  Preferred Location
+                </label>
+                <Popover open={preferredLocationOpen} onOpenChange={setPreferredLocationOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={preferredLocationOpen}
+                      className="w-full justify-between bg-white border-gray-200 rounded-lg h-10 font-normal text-gray-700 hover:bg-gray-50"
+                    >
+                      {filters.preferredLocation
+                        ? locations.find((loc) => loc.value === filters.preferredLocation)?.label
+                        : "Any location"}
+                      <X className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search location..." />
+                      <CommandList>
+                        <CommandEmpty>No location found.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem
+                            value="any"
+                            onSelect={() => {
+                              setFilters({ ...filters, preferredLocation: "" });
+                              setPreferredLocationOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                !filters.preferredLocation ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            Any location
+                          </CommandItem>
+                          {locations.map((location) => (
+                            <CommandItem
+                              key={location.value}
+                              value={location.value}
+                              onSelect={() => {
+                                setFilters({ ...filters, preferredLocation: location.value });
+                                setPreferredLocationOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  filters.preferredLocation === location.value ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {location.label}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Company */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <Building className="w-4 h-4 text-purple-600" />
+                  Company
+                </label>
+                <FilterableDropdown
+                  value={filters.company}
+                  onChange={(value) => setFilters({ ...filters, company: value })}
+                  options={allCompanies}
+                  placeholder="XYZ company"
+                  icon={<Building className="w-4 h-4" />}
+                />
+              </div>
+
+              {/* Notice Period */}
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <Clock className="w-4 h-4 text-purple-600" />
+                  Notice period
+                </label>
+                <FilterableDropdown
+                  value={filters.noticePeriod}
+                  onChange={(value) => setFilters({ ...filters, noticePeriod: value })}
+                  options={allNoticePeriods}
+                  placeholder="Any"
+                  icon={<Calendar className="w-4 h-4" />}
+                />
+                {/* Quick Select Buttons */}
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {["+3 Months", "Current Designation", "+1 Months", "+1 Week", "Any"].map((option) => (
+                    <button
+                      key={option}
+                      onClick={() => {
+                        if (option === "Any") {
+                          setFilters({ ...filters, noticePeriod: "" });
+                        } else if (option === "+3 Months") {
+                          setFilters({ ...filters, noticePeriod: "90 days" });
+                        } else if (option === "+1 Months") {
+                          setFilters({ ...filters, noticePeriod: "30 days" });
+                        } else if (option === "+1 Week") {
+                          setFilters({ ...filters, noticePeriod: "15 days" });
+                        }
+                      }}
+                      className="px-3 py-1 text-xs border border-blue-200 rounded-full text-gray-700 hover:bg-blue-50 transition-colors"
+                    >
+                      {option}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-2">
+              <button 
+                onClick={() => setShowExcludeCompany(!showExcludeCompany)}
+                className="text-sm text-blue-600 hover:text-blue-700"
+              >
+                + Exclude Company
+              </button>
+              
+              {/* Exclude Company Input */}
+              {showExcludeCompany && (
+                <div className="mt-2">
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {filters.excludedCompanies.map((company) => (
+                      <span
+                        key={company}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-800 rounded-full text-sm font-medium"
+                      >
+                        {company}
+                        <button
+                          onClick={() => handleExcludeCompanyRemove(company)}
+                          className="ml-1 hover:text-red-900"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
                   </div>
+                  <input
+                    type="text"
+                    value={excludeCompanyInput}
+                    onChange={(e) => setExcludeCompanyInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && excludeCompanyInput.trim()) {
+                        handleExcludeCompanyAdd(excludeCompanyInput.trim());
+                      }
+                    }}
+                    className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    placeholder="Enter company names to exclude..."
+                  />
                 </div>
-              </div>
-            ))}
-          </div>
-          )}
-        </div>
-      </main>
-
-      {/* Right Section - Candidate Details (Larger) */}
-      {selectedCandidate && (
-        <aside className="w-96 bg-white p-4">
-          <div className="flex flex-col items-center text-center mb-4">
-            {selectedCandidate.profilePic ? (
-              <img
-                src={selectedCandidate.profilePic}
-                alt={selectedCandidate.name}
-                className="w-20 h-20 rounded-full object-cover mb-3"
-              />
-            ) : (
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-400 to-blue-400 text-white flex items-center justify-center font-semibold text-2xl mb-3 shadow-md">
-                {selectedCandidate.name.split(' ').map(n => n[0]).join('')}
-              </div>
-            )}
-            <h3 className="font-bold text-xl text-gray-900">{selectedCandidate.name}</h3>
-            <p className="text-purple-600 font-medium text-lg">{selectedCandidate.title}</p>
-            <p className="text-gray-500">{selectedCandidate.location}</p>
-          </div>
-
-          <div className="space-y-3">
-            <div>
-              <p className="text-gray-700 text-sm leading-relaxed">{selectedCandidate.summary}</p>
-            </div>
-
-            <div>
-              <p className="font-semibold text-gray-900">Current Company: <span className="font-normal">{selectedCandidate.currentCompany}</span></p>
-            </div>
-
-            <div>
-              <p className="font-semibold text-gray-900">Experience: <span className="font-normal">{selectedCandidate.experience} years</span></p>
-            </div>
-
-            <div>
-              <p className="font-semibold text-gray-900">Education: <span className="font-normal">{selectedCandidate.education}</span></p>
-            </div>
-
-            <div>
-              <p className="font-semibold text-gray-900">Notice Period: <span className="font-normal">{selectedCandidate.noticePeriod}</span></p>
-            </div>
-
-            <div className="flex justify-between">
-              <div>
-                <p className="font-semibold text-gray-900">CTC: <span className="font-normal">{selectedCandidate.ctc}</span></p>
-              </div>
-              <div>
-                <p className="font-semibold text-gray-900">Expected: <span className="font-normal">{selectedCandidate.expectedCtc}</span></p>
-              </div>
-            </div>
-
-            <div>
-              <p className="font-semibold text-gray-900">Email: <span className="font-normal">{selectedCandidate.email}</span></p>
-            </div>
-
-            <div>
-              <p className="font-semibold text-gray-900">Phone: <span className="font-normal">{selectedCandidate.phone}</span></p>
-            </div>
-
-            <div className="flex flex-wrap gap-1">
-              {selectedCandidate.skills.map((skill, index) => (
-                <span
-                  key={index}
-                  className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs"
-                >
-                  {skill}
-                </span>
-              ))}
-            </div>
-
-            <div className="flex gap-2 mt-4">
-              <button 
-                onClick={() => {
-                  handleSaveCandidate(selectedCandidate.id);
-                }}
-                className={`p-2 border rounded-lg transition-colors ${
-                  selectedCandidate.saved
-                    ? "bg-blue-100 border-blue-300 text-blue-600 hover:bg-blue-200"
-                    : "border-gray-300 text-gray-600 hover:bg-gray-50"
-                }`}
-                data-testid="button-save-candidate"
-              >
-                {selectedCandidate.saved ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
-              </button>
-              <button 
-                onClick={() => {
-                  if (window.confirm(`Do you want to call ${selectedCandidate.name} at ${selectedCandidate.phone}?`)) {
-                    // Handle phone call action
-                  }
-                }}
-                className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
-                data-testid="button-call-candidate"
-              >
-                <Phone size={16} />
-              </button>
-              <button 
-                onClick={() => {
-                  if (window.confirm(`Do you want to send an email to ${selectedCandidate.name} at ${selectedCandidate.email}?`)) {
-                    // Handle email action
-                  }
-                }}
-                className="p-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50"
-                data-testid="button-email-candidate"
-              >
-                <Mail size={16} />
-              </button>
-            </div>
-          </div>
-        </aside>
-      )}
-
-      {/* Fixed Download Button with Dropdown - Bottom Right */}
-      {selectedCandidate && (
-        <div className="fixed bottom-6 right-6 z-50">
-          <div className="relative">
-            <button 
-              onClick={() => setShowDownloadDropdown(!showDownloadDropdown)}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors shadow-lg"
-              data-testid="button-download-dropdown"
-            >
-              <Download size={20} />
-              Download
-              <ChevronDown size={16} className={`transition-transform ${showDownloadDropdown ? 'rotate-180' : ''}`} />
-            </button>
-            
-            {showDownloadDropdown && (
-              <div className="absolute bottom-full right-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-xl py-2 min-w-48">
-                <button 
-                  onClick={() => {
-                    setShowDownloadDropdown(false);
-                  }}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
-                  data-testid="button-download-resume"
-                >
-                  <Download size={16} />
-                  Resume (PDF)
-                </button>
-                <button 
-                  onClick={() => {
-                    setShowDownloadDropdown(false);
-                  }}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
-                  data-testid="button-download-profile"
-                >
-                  <Download size={16} />
-                  Profile Summary
-                </button>
-                <button 
-                  onClick={() => {
-                    setShowDownloadDropdown(false);
-                  }}
-                  className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
-                  data-testid="button-download-contact"
-                >
-                  <Download size={16} />
-                  Contact Details
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-      </div>
-
-      {/* Tag to Requirement Modal */}
-      <Dialog open={showDeliverModal} onOpenChange={setShowDeliverModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Tag Candidate to Requirement</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <p className="text-sm text-gray-600">
-                Delivering: <span className="font-semibold text-gray-900">{candidateToDeliver?.name}</span>
-              </p>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Select Requirement</label>
-              {isLoadingRequirements ? (
-                <div 
-                  className="flex h-10 w-full items-center justify-between rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500 cursor-not-allowed"
-                  data-testid="select-requirement-loading"
-                >
-                  <span className="flex items-center gap-2">
-                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Loading requirements...
-                  </span>
-                </div>
-              ) : isErrorRequirements ? (
-                <div 
-                  className="flex h-10 w-full items-center justify-between rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 cursor-not-allowed"
-                  data-testid="select-requirement-error"
-                >
-                  <span className="flex items-center gap-2">
-                    <X className="h-4 w-4" />
-                    Error loading requirements
-                  </span>
-                </div>
-              ) : (
-                <Select value={selectedRequirement} onValueChange={setSelectedRequirement}>
-                  <SelectTrigger data-testid="select-requirement">
-                    <SelectValue placeholder="Choose a requirement" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(requirements as any[]).length === 0 ? (
-                      <div className="p-4 text-sm text-gray-500 text-center">
-                        No requirements assigned to you. Requirements will appear once your Team Lead assigns them.
-                      </div>
-                    ) : (
-                      (requirements as any[])
-                        .filter((req: any) => !req.isArchived && req.status !== 'completed')
-                        .map((req: any) => (
-                          <SelectItem key={req.id} value={req.id} data-testid={`option-req-${req.id}`}>
-                            <div className="flex flex-col">
-                              <span className="font-medium">{req.position}</span>
-                              <span className="text-xs text-gray-500">
-                                {req.company} - {req.criticality}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))
-                    )}
-                  </SelectContent>
-                </Select>
               )}
             </div>
           </div>
-          <div className="flex gap-2 justify-end">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowDeliverModal(false);
-                setSelectedRequirement("");
-                setCandidateToDeliver(null);
-              }}
-              data-testid="button-cancel-deliver"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleConfirmDelivery}
-              disabled={!selectedRequirement || isDelivering}
-              className="bg-green-600 hover:bg-green-700"
-              data-testid="button-confirm-deliver"
-            >
-              {isDelivering ? "Delivering..." : "Confirm Delivery"}
-            </Button>
+
+          {/* Education Details */}
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Education Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <GraduationCap className="w-4 h-4 text-purple-600" />
+                  Education UG
+                </label>
+                <FilterableDropdown
+                  value={filters.educationUG}
+                  onChange={(value) => setFilters({ ...filters, educationUG: value })}
+                  options={allEducationUG}
+                  placeholder="BCA, Btech..."
+                  icon={<GraduationCap className="w-4 h-4" />}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                  <GraduationCap className="w-4 h-4 text-purple-600" />
+                  Education PG
+                </label>
+                <FilterableDropdown
+                  value={filters.educationPG}
+                  onChange={(value) => setFilters({ ...filters, educationPG: value })}
+                  options={allEducationPG}
+                  placeholder="MCA, Mtech...."
+                  icon={<GraduationCap className="w-4 h-4" />}
+                />
+              </div>
+            </div>
+            <div className="mt-4 space-y-2">
+              <button 
+                onClick={() => setShowAddDegree(!showAddDegree)}
+                className="text-sm text-blue-600 hover:text-blue-700"
+              >
+                + Add More degree or certificates
+              </button>
+              
+              {/* Additional Degrees Input */}
+              {showAddDegree && (
+                <div className="mt-2">
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {filters.additionalDegrees.map((degree) => (
+                      <span
+                        key={degree}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-100 text-purple-800 rounded-full text-sm font-medium"
+                      >
+                        {degree}
+                        <button
+                          onClick={() => handleRemoveDegree(degree)}
+                          className="ml-1 hover:text-purple-900"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <input
+                    type="text"
+                    value={addDegreeInput}
+                    onChange={(e) => setAddDegreeInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && addDegreeInput.trim()) {
+                        handleAddDegree(addDegreeInput.trim());
+                      }
+                    }}
+                    className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    placeholder="Enter degree or certificate name..."
+                  />
+                </div>
+              )}
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+
+          {/* Work Details */}
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Work Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Employment Type</label>
+                <FilterableDropdown
+                  value={filters.employmentType}
+                  onChange={(value) => setFilters({ ...filters, employmentType: value })}
+                  options={allEmploymentTypes}
+                  placeholder="Any"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Job Type</label>
+                <FilterableDropdown
+                  value={filters.jobType}
+                  onChange={(value) => setFilters({ ...filters, jobType: value })}
+                  options={allJobTypes}
+                  placeholder="Any"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-gray-700">Work Permit for</label>
+                <FilterableDropdown
+                  value={filters.workPermit}
+                  onChange={(value) => setFilters({ ...filters, workPermit: value })}
+                  options={allWorkPermits}
+                  placeholder="Any"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Display Details */}
+          <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Display Details</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">Show</label>
+                <div className="flex gap-2">
+                  {["All Candidates", "New registration", "Modified Candidates"].map((option) => {
+                    const value = option === "All Candidates" ? "all" : option.toLowerCase().replace(" ", "_");
+                    return (
+                      <button
+                        key={option}
+                        onClick={() => setFilters({ ...filters, candidateStatus: value })}
+                        className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                          filters.candidateStatus === value
+                            ? "bg-blue-600 text-white"
+                            : "bg-white border border-blue-200 text-gray-700 hover:bg-blue-50"
+                        }`}
+                      >
+                        {option}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">
+                  Show candidate with
+                </label>
+                <div className="flex gap-2">
+                  {[
+                    { value: "resume", label: "Attached Resume" },
+                    { value: "portfolio", label: "Attached Portfolio" },
+                    { value: "website", label: "Attached Website" },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => handleShowWithToggle(option.value)}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                        filters.showWith.includes(option.value)
+                          ? "bg-blue-600 text-white"
+                          : "bg-white border border-blue-200 text-gray-700 hover:bg-blue-50"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* Recent Searches Sidebar - Static (Not Scrollable) */}
+      <div className="w-80 bg-white border-l border-gray-200 p-6 flex flex-col">
+        <h2 className="text-xl font-bold text-gray-900 mb-6">Recent Searches</h2>
+
+        <div className="space-y-4 flex-1 overflow-y-auto">
+          {recentSearches.length === 0 ? (
+            <p className="text-sm text-gray-500">No recent searches</p>
+          ) : (
+            recentSearches.map((search) => (
+              <div key={search.id} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div className="space-y-3">
+                  {/* Keywords */}
+                  {search.keywords.length > 0 && (
+                    <div>
+                      <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 mb-1">
+                        <Search className="w-3 h-3 text-purple-600" />
+                        Keywords
+                      </label>
+                      <div className="flex flex-wrap gap-1">
+                        {search.keywords.slice(0, 3).map((keyword: string) => (
+                          <span
+                            key={keyword}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs font-medium"
+                          >
+                            <Star className="w-2 h-2" />
+                            {keyword}
+                          </span>
+                        ))}
+                        {search.keywords.length > 3 && (
+                          <span className="text-xs text-gray-500">+{search.keywords.length - 3} more</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Experience */}
+                  <div>
+                    <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 mb-1">
+                      <Briefcase className="w-3 h-3 text-purple-600" />
+                      Experience
+                    </label>
+                    <p className="text-xs text-gray-600">{search.experience[0]} - {search.experience[1]} years</p>
+                  </div>
+
+                  {/* Location */}
+                  {search.location && (
+                    <div>
+                      <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 mb-1">
+                        <MapPin className="w-3 h-3 text-purple-600" />
+                        Location
+                      </label>
+                      <p className="text-xs text-gray-600">{search.location}</p>
+                    </div>
+                  )}
+
+                  {/* Role */}
+                  {search.role && (
+                    <div>
+                      <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 mb-1">
+                        <User className="w-3 h-3 text-purple-600" />
+                        Role
+                      </label>
+                      <p className="text-xs text-gray-600">{search.role}</p>
+                    </div>
+                  )}
+
+                  {/* Notice Period */}
+                  {search.noticePeriod && (
+                    <div>
+                      <label className="flex items-center gap-2 text-xs font-semibold text-gray-700 mb-1">
+                        <Clock className="w-3 h-3 text-purple-600" />
+                        Notice period
+                      </label>
+                      <p className="text-xs text-gray-600">{search.noticePeriod}</p>
+                    </div>
+                  )}
+
+                  {/* Continue with button */}
+                  <button
+                    onClick={() => applyRecentSearch(search)}
+                    className="w-full mt-2 px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    Continue with
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Fixed Source Resume Button - Bottom Right */}
+      <button
+        onClick={handleSourceResume}
+        className="fixed bottom-8 right-8 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-full font-semibold text-lg shadow-2xl hover:shadow-purple-500/50 hover:scale-105 transition-all duration-300 flex items-center gap-3 z-50"
+      >
+        <span>Source Resume</span>
+        <ArrowRight className="w-5 h-5" />
+      </button>
     </div>
   );
 };

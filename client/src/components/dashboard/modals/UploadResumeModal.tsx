@@ -278,7 +278,7 @@ export default function UploadResumeModal({
   
   const handleSubmit = async () => {
     // Basic validation
-    const required = ['firstName', 'lastName', 'mobileNumber', 'primaryEmail', 'highestQualification', 'collegeName', 'pedigreeLevel', 'currentLocation', 'currentCompany', 'currentRole', 'companyDomain', 'companyLevel'];
+    const required = ['firstName', 'lastName', 'mobileNumber', 'primaryEmail', 'highestQualification', 'collegeName', 'pedigreeLevel', 'currentLocation'];
     const hasEmptyRequired = required.some(field => !(formData[field as keyof ResumeFormData] as string).trim());
     const hasSkills = formData.skills.some(skill => skill.trim());
     
@@ -605,7 +605,7 @@ export default function UploadResumeModal({
                 value={formData.currentCompany}
                 onChange={(e) => setFormData({...formData, currentCompany: e.target.value})}
                 className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
-                placeholder="Current Company *"
+                placeholder="Current Company"
                 data-testid="input-current-company"
               />
               <Input
@@ -632,7 +632,7 @@ export default function UploadResumeModal({
                 value={formData.currentRole}
                 onChange={(e) => setFormData({...formData, currentRole: e.target.value})}
                 className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
-                placeholder="Current Role *"
+                placeholder="Current Role"
                 data-testid="input-current-role"
               />
               <Input
@@ -665,7 +665,7 @@ export default function UploadResumeModal({
                   >
                     {formData.companyDomain
                       ? domains.find((dom) => dom.value === formData.companyDomain)?.label
-                      : "Company Domain *"}
+                      : "Company Domain"}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -700,7 +700,7 @@ export default function UploadResumeModal({
               </Popover>
               <Select value={formData.companyLevel} onValueChange={(value) => setFormData({...formData, companyLevel: value})}>
                 <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0">
-                  <SelectValue placeholder="Company Level *" />
+                  <SelectValue placeholder="Company Level" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="startup">Startup</SelectItem>

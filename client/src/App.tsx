@@ -19,6 +19,7 @@ import ClientDashboard from "@/pages/client-dashboard";
 import SourceResume from "@/pages/source-resume";
 import RecruiterActiveJobs from "@/pages/recruiter-active-jobs";
 import RecruiterNewApplications from "@/pages/recruiter-new-applications";
+import RecruiterApplicants from "@/pages/recruiter-applicants";
 import NotFound from "@/pages/not-found";
 import Archives from "@/pages/archives";
 import MasterDatabase from "@/pages/master-database";
@@ -72,6 +73,12 @@ function Router() {
       <Route path="/recruiter-new-applications">
         <ProtectedRoute userType="employee" allowedRoles={["recruiter", "talent_advisor", "teamLead", "team_leader", "admin"]}>
           <RecruiterNewApplications />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/recruiter-applicants">
+        <ProtectedRoute userType="employee" allowedRoles={["recruiter", "talent_advisor", "teamLead", "team_leader", "admin"]}>
+          <RecruiterApplicants />
         </ProtectedRoute>
       </Route>
       

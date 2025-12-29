@@ -14,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
+import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, ExternalLink, Phone, Star, Copy, FileText } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -126,6 +126,7 @@ export default function RecruiterDashboard2() {
   const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
   const [isUploadResumeModalOpen, setIsUploadResumeModalOpen] = useState(false);
   const [showSuccessAlert, setShowSuccessAlert] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string>('');
   const [formError, setFormError] = useState('');
   const [resumeFormData, setResumeFormData] = useState({
     firstName: '',
@@ -269,9 +270,13 @@ export default function RecruiterDashboard2() {
     }
     
     setIsPostJobModalOpen(false);
+    setSuccessMessage('Job posted successfully!');
     setShowSuccessAlert(true);
     setFormError(''); // Clear any form errors
-    setTimeout(() => setShowSuccessAlert(false), 3000);
+    setTimeout(() => {
+      setShowSuccessAlert(false);
+      setSuccessMessage('');
+    }, 3000);
     
     // Reset form
     setJobFormData({
@@ -749,7 +754,7 @@ export default function RecruiterDashboard2() {
               {/* Success Alert */}
               {showSuccessAlert && (
                 <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-                  Resume Uploaded Successfully!
+                  {successMessage || 'Operation completed successfully!'}
                 </div>
               )}
 
@@ -771,7 +776,7 @@ export default function RecruiterDashboard2() {
                       Upload Resume
                     </button>
                     <button 
-                      onClick={() => navigate('/source-resume')}
+                      onClick={() => window.open('/source-resume', '_blank')}
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
                       data-testid="button-source-resume">
                       Source Resume
@@ -932,23 +937,12 @@ export default function RecruiterDashboard2() {
                 <CardHeader className="flex flex-row items-center justify-between pb-4 pt-6">
                   <CardTitle className="text-lg font-semibold text-gray-900">Daily Metrics</CardTitle>
                   <div className="flex items-center space-x-2">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="flex items-center space-x-1 h-8 px-3" data-testid="button-date-picker">
-                          <CalendarIcon className="h-4 w-4" />
-                          <span className="text-sm">12-Aug-2025</span>
-                          <EditIcon className="h-4 w-4" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="end">
-                        <Calendar
-                          mode="single"
-                          selected={selectedDate}
-                          onSelect={(date) => date && setSelectedDate(date)}
-                          className="rounded-md border"
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <StandardDatePicker
+                      value={selectedDate}
+                      onChange={(date) => date && setSelectedDate(date)}
+                      placeholder="Select date"
+                      className="h-8 w-40"
+                    />
                   </div>
                 </CardHeader>
                 
@@ -1523,26 +1517,13 @@ export default function RecruiterDashboard2() {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-900">Pipeline</h2>
                 <div className="flex items-center gap-4">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-60 justify-start text-left font-normal"
-                        data-testid="button-pipeline-date-picker"
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {pipelineDate ? format(pipelineDate, "dd-MMM-yyyy") : <span>Pick a date</span>}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={pipelineDate}
-                        onSelect={(date) => date && setPipelineDate(date)}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <StandardDatePicker
+                    value={pipelineDate}
+                    onChange={(date) => date && setPipelineDate(date)}
+                    placeholder="Pick a date"
+                    className="w-60"
+                    data-testid="button-pipeline-date-picker"
+                  />
                 </div>
               </div>
 
@@ -2626,8 +2607,12 @@ export default function RecruiterDashboard2() {
         isOpen={isPostJobModalOpen}
         onClose={() => setIsPostJobModalOpen(false)}
         onSuccess={() => {
+          setSuccessMessage('Job posted successfully!');
           setShowSuccessAlert(true);
-          setTimeout(() => setShowSuccessAlert(false), 3000);
+          setTimeout(() => {
+            setShowSuccessAlert(false);
+            setSuccessMessage('');
+          }, 3000);
         }}
         formData={jobFormData}
         setFormData={setJobFormData}
@@ -2640,8 +2625,12 @@ export default function RecruiterDashboard2() {
         isOpen={isUploadResumeModalOpen}
         onClose={() => setIsUploadResumeModalOpen(false)}
         onSuccess={() => {
+          setSuccessMessage('Resume uploaded successfully!');
           setShowSuccessAlert(true);
-          setTimeout(() => setShowSuccessAlert(false), 3000);
+          setTimeout(() => {
+            setShowSuccessAlert(false);
+            setSuccessMessage('');
+          }, 3000);
         }}
         formData={resumeFormData}
         setFormData={setResumeFormData}

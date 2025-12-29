@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLocation } from "wouter";
-import { ArrowLeft, MapPin, Calendar, Users, DollarSign, Briefcase, Edit, Trash2, XCircle, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Users, DollarSign, Briefcase, Edit, Trash2, CheckCircle, AlertCircle, Loader2, Building } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -20,7 +20,6 @@ export default function RecruiterActiveJobs() {
   const [editingJob, setEditingJob] = useState<RecruiterJob | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
   const { toast } = useToast();
   const jobsPerPage = 6;
@@ -54,39 +53,17 @@ export default function RecruiterActiveJobs() {
 
   const deleteJobMutation = useMutation({
     mutationFn: async (id: string) => {
-      const response = await apiRequest('DELETE', `/api/recruiter/jobs/${id}`);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/jobs'] });
-      toast({
-        title: "Job deleted",
-        description: "The job has been deleted successfully.",
-      });
-      setShowDeleteConfirm(false);
-      setSelectedJobId(null);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to delete job",
-        variant: "destructive",
-      });
-    }
-  });
-
-  const closeJobMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await apiRequest('POST', `/api/recruiter/jobs/${id}/close`);
+      // Instead of deleting, update status to "Closed"
+      const response = await apiRequest('PUT', `/api/recruiter/jobs/${id}`, { status: 'Closed' });
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/recruiter/jobs'] });
       toast({
         title: "Job closed",
-        description: "The job has been marked as closed.",
+        description: "The job has been moved to Closed status.",
       });
-      setShowCloseConfirm(false);
+      setShowDeleteConfirm(false);
       setSelectedJobId(null);
     },
     onError: (error: Error) => {
@@ -97,6 +74,7 @@ export default function RecruiterActiveJobs() {
       });
     }
   });
+
 
   const filteredJobs = jobs.filter(job => {
     const matchesSearch = job.role?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -146,7 +124,8 @@ export default function RecruiterActiveJobs() {
   const parseSkills = (skillsString: string | null): string[] => {
     if (!skillsString) return [];
     try {
-      return JSON.parse(skillsString);
+      const parsed = JSON.parse(skillsString);
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return skillsString.split(',').map(s => s.trim()).filter(Boolean);
     }
@@ -162,10 +141,6 @@ export default function RecruiterActiveJobs() {
     setShowDeleteConfirm(true);
   };
 
-  const handleClose = (jobId: string) => {
-    setSelectedJobId(jobId);
-    setShowCloseConfirm(true);
-  };
 
   const handleSaveEdit = () => {
     if (!editingJob) return;
@@ -181,6 +156,9 @@ export default function RecruiterActiveJobs() {
         aboutCompany: editingJob.aboutCompany,
         roleDefinitions: editingJob.roleDefinitions,
         status: editingJob.status,
+        market: editingJob.market,
+        field: editingJob.field,
+        noOfPositions: editingJob.noOfPositions,
       }
     });
   };
@@ -287,127 +265,180 @@ export default function RecruiterActiveJobs() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {currentJobs.map((job) => (
-              <div 
-                key={job.id} 
-                className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-5"
-                data-testid={`card-job-${job.id}`}
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid={`text-job-title-${job.id}`}>
-                        {job.role}
-                      </h3>
-                      <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(job.status || 'Active')}`}>
-                        {getStatusIcon(job.status || 'Active')}
-                        {job.status || 'Active'}
-                      </span>
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">{job.companyName}</div>
-                    <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 flex-wrap">
-                      {job.location && (
-                        <span className="flex items-center gap-1">
-                          <MapPin size={14} />
-                          {job.location}
-                        </span>
-                      )}
-                      {job.experience && (
-                        <span className="flex items-center gap-1">
-                          <Briefcase size={14} />
-                          {job.experience}
-                        </span>
-                      )}
-                      {job.salaryPackage && (
-                        <span className="flex items-center gap-1">
-                          <DollarSign size={14} />
-                          {job.salaryPackage}
-                        </span>
-                      )}
-                      <span className="flex items-center gap-1">
-                        <Calendar size={14} />
-                        Posted {formatDate(job.postedDate)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 ml-2">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
-                      onClick={() => handleEdit(job)}
-                      data-testid={`button-edit-job-${job.id}`}
-                    >
-                      <Edit size={16} />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-                      onClick={() => handleDelete(job.id)}
-                      data-testid={`button-delete-job-${job.id}`}
-                    >
-                      <Trash2 size={16} />
-                    </Button>
-                  </div>
-                </div>
+            {currentJobs.map((job, index) => {
+              const getBackgroundColor = () => {
+                const colors = ['bg-green-100', 'bg-pink-100', 'bg-purple-100', 'bg-blue-100', 'bg-yellow-100'];
+                return colors[index % colors.length];
+              };
+              
+              const allSkills = [
+                ...parseSkills(job.primarySkills),
+                ...parseSkills(job.secondarySkills),
+                ...parseSkills(job.knowledgeOnly)
+              ].filter(Boolean);
 
-                {job.aboutCompany && (
-                  <p className="text-gray-700 dark:text-gray-300 mb-3 text-sm line-clamp-2">{job.aboutCompany}</p>
-                )}
-                
-                <div className="flex flex-wrap gap-1.5 mb-3">
-                  {parseSkills(job.primarySkills).slice(0, 5).map((skill, index) => (
-                    <span key={index} className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-0.5 rounded text-xs font-medium">
-                      {skill}
-                    </span>
-                  ))}
-                  {parseSkills(job.primarySkills).length > 5 && (
-                    <span className="text-gray-500 dark:text-gray-400 text-xs">
-                      +{parseSkills(job.primarySkills).length - 5} more
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-1">
-                      <Users size={14} className="text-gray-400 dark:text-gray-500" />
-                      <span className="text-sm text-gray-600 dark:text-gray-400">
-                        <span className="font-medium">{job.applicationCount || 0}</span> applications
-                      </span>
+              return (
+                <div 
+                  key={job.id} 
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex"
+                  data-testid={`card-job-${job.id}`}
+                >
+                  {/* Company Logo Section - Left Side */}
+                  <div className={`${getBackgroundColor()} dark:bg-gray-700 w-32 flex-shrink-0 flex items-center justify-center p-4`}>
+                    <div className="text-center">
+                      {job.companyLogo ? (
+                        <img
+                          src={job.companyLogo}
+                          alt={`${job.companyName} logo`}
+                          className="w-12 h-12 rounded object-cover mx-auto mb-2"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded bg-gray-200 dark:bg-gray-600 flex items-center justify-center mx-auto mb-2">
+                          <Briefcase className="w-6 h-6 text-gray-400" />
+                        </div>
+                      )}
+                      <div className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                        {job.companyName ? job.companyName.split(' ')[0] : 'Company'}
+                      </div>
                     </div>
-                    {job.workMode && (
-                      <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {job.workMode}
-                      </span>
-                    )}
                   </div>
-                  <div className="flex gap-2">
-                    {job.status === 'Active' && (
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:text-orange-400 dark:border-orange-700 dark:hover:bg-orange-900/20"
-                        onClick={() => handleClose(job.id)}
-                        data-testid={`button-close-job-${job.id}`}
-                      >
-                        <XCircle size={14} className="mr-1" />
-                        Close Job
-                      </Button>
+
+                  {/* Job Details Section - Right Side */}
+                  <div className="flex-1 p-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100" data-testid={`text-job-title-${job.id}`}>
+                            {job.role}
+                          </h3>
+                          <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadge(job.status || 'Active')}`}>
+                            {getStatusIcon(job.status || 'Active')}
+                            {job.status || 'Active'}
+                          </span>
+                        </div>
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">{job.companyName}</div>
+                        {job.companyTagline && (
+                          <div className="text-sm text-gray-500 dark:text-gray-400 mb-2 italic">{job.companyTagline}</div>
+                        )}
+                        <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 flex-wrap">
+                          {job.location && (
+                            <span className="flex items-center gap-1">
+                              <MapPin size={14} />
+                              {job.location}
+                            </span>
+                          )}
+                          {job.experience && (
+                            <span className="flex items-center gap-1">
+                              <Briefcase size={14} />
+                              {job.experience}
+                            </span>
+                          )}
+                          {job.salaryPackage && (
+                            <span className="flex items-center gap-1">
+                              <DollarSign size={14} />
+                              {job.salaryPackage}
+                            </span>
+                          )}
+                          {job.workMode && (
+                            <span className="text-sm text-gray-500 dark:text-gray-400">
+                              {job.workMode}
+                            </span>
+                          )}
+                          {(job as any).employmentType && (
+                            <span className="text-sm text-gray-500 dark:text-gray-400">
+                              {(job as any).employmentType}
+                            </span>
+                          )}
+                          {job.noOfPositions && (
+                            <span className="text-sm text-gray-500 dark:text-gray-400">
+                              {job.noOfPositions} Position{job.noOfPositions > 1 ? 's' : ''}
+                            </span>
+                          )}
+                          <span className="flex items-center gap-1">
+                            <Calendar size={14} />
+                            Posted {formatDate(job.postedDate)}
+                          </span>
+                        </div>
+                        {(job.market || job.field) && (
+                          <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mt-2 flex-wrap">
+                            {job.market && (
+                              <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">
+                                Market: {job.market}
+                              </span>
+                            )}
+                            {job.field && (
+                              <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">
+                                Field: {job.field}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 ml-2">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400"
+                          onClick={() => handleEdit(job)}
+                          data-testid={`button-edit-job-${job.id}`}
+                        >
+                          <Edit size={16} />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-gray-500 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
+                          onClick={() => handleDelete(job.id)}
+                          data-testid={`button-delete-job-${job.id}`}
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {job.aboutCompany && (
+                      <p className="text-gray-700 dark:text-gray-300 mb-3 text-sm line-clamp-2">{job.aboutCompany}</p>
                     )}
-                    <Button 
-                      size="sm" 
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                      onClick={() => setLocation(`/recruiter/jobs/${job.id}/applications`)}
-                      data-testid={`button-view-applications-${job.id}`}
-                    >
-                      View Applications
-                    </Button>
+                    
+                    {allSkills.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {allSkills.slice(0, 5).map((skill, index) => (
+                          <span key={index} className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-0.5 rounded text-xs font-medium">
+                            {skill}
+                          </span>
+                        ))}
+                        {allSkills.length > 5 && (
+                          <span className="text-gray-500 dark:text-gray-400 text-xs">
+                            +{allSkills.length - 5} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1">
+                          <Users size={14} className="text-gray-400 dark:text-gray-500" />
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            <span className="font-medium">{job.applicationCount || 0}</span> applications
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                          onClick={() => setLocation(`/recruiter-applicants?jobId=${job.id}`)}
+                          data-testid={`button-view-applications-${job.id}`}
+                        >
+                          View Applications
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -515,6 +546,56 @@ export default function RecruiterActiveJobs() {
                   </Select>
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="market">Market</Label>
+                  <Input
+                    id="market"
+                    value={editingJob.market || ''}
+                    onChange={(e) => setEditingJob({ ...editingJob, market: e.target.value })}
+                    data-testid="input-edit-market"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="field">Field</Label>
+                  <Input
+                    id="field"
+                    value={editingJob.field || ''}
+                    onChange={(e) => setEditingJob({ ...editingJob, field: e.target.value })}
+                    data-testid="input-edit-field"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="noOfPositions">No. of Positions</Label>
+                  <Input
+                    id="noOfPositions"
+                    type="number"
+                    min="1"
+                    value={editingJob.noOfPositions || 1}
+                    onChange={(e) => setEditingJob({ ...editingJob, noOfPositions: parseInt(e.target.value) || 1 })}
+                    data-testid="input-edit-no-of-positions"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="employmentType">Employment Type</Label>
+                  <Select 
+                    value={(editingJob as any).employmentType || 'Full-time'} 
+                    onValueChange={(value) => setEditingJob({ ...editingJob, employmentType: value } as any)}
+                  >
+                    <SelectTrigger data-testid="select-edit-employment-type">
+                      <SelectValue placeholder="Select employment type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Full-time">Full-time</SelectItem>
+                      <SelectItem value="Part-time">Part-time</SelectItem>
+                      <SelectItem value="Contract">Contract</SelectItem>
+                      <SelectItem value="Internship">Internship</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
                 <Select 
@@ -578,9 +659,9 @@ export default function RecruiterActiveJobs() {
       <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Job</DialogTitle>
+            <DialogTitle>Close Job</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this job? This action cannot be undone.
+              Are you sure you want to close this job? It will be moved to the Closed tab. This action can be reversed by editing the job status.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -596,37 +677,6 @@ export default function RecruiterActiveJobs() {
               {deleteJobMutation.isPending ? (
                 <>
                   <Loader2 className="animate-spin mr-2" size={16} />
-                  Deleting...
-                </>
-              ) : (
-                'Delete Job'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showCloseConfirm} onOpenChange={setShowCloseConfirm}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Close Job</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to close this job? Candidates will no longer be able to apply.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCloseConfirm(false)} data-testid="button-cancel-close">
-              Cancel
-            </Button>
-            <Button 
-              className="bg-orange-600 hover:bg-orange-700 text-white"
-              onClick={() => selectedJobId && closeJobMutation.mutate(selectedJobId)}
-              disabled={closeJobMutation.isPending}
-              data-testid="button-confirm-close"
-            >
-              {closeJobMutation.isPending ? (
-                <>
-                  <Loader2 className="animate-spin mr-2" size={16} />
                   Closing...
                 </>
               ) : (
@@ -636,6 +686,7 @@ export default function RecruiterActiveJobs() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }

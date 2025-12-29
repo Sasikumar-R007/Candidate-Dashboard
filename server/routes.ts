@@ -5684,6 +5684,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/recruiter/applications", requireEmployeeAuth, async (req, res) => {
     try {
       const session = req.session as any;
+      const { jobId, dateFrom, dateTo, status } = req.query;
       
       // Get this recruiter's jobs
       const jobs = await storage.getRecruiterJobsByRecruiterId(session.employeeId);
@@ -5695,10 +5696,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get all applications and filter to those for recruiter's jobs OR tagged requirements
       const allApplications = await storage.getAllJobApplications();
-      const recruiterApplications = allApplications.filter(app => 
+      let recruiterApplications = allApplications.filter(app => 
         (app.recruiterJobId && jobIds.includes(app.recruiterJobId)) ||
         (app.requirementId && requirementIds.includes(app.requirementId))
       );
+      
+      // Apply additional filters
+      if (jobId && typeof jobId === 'string') {
+        recruiterApplications = recruiterApplications.filter(app => app.recruiterJobId === jobId);
+      }
+      
+      if (status && typeof status === 'string') {
+        recruiterApplications = recruiterApplications.filter(app => app.status === status);
+      }
+      
+      if (dateFrom && typeof dateFrom === 'string') {
+        const fromDate = new Date(dateFrom);
+        recruiterApplications = recruiterApplications.filter(app => {
+          if (!app.appliedDate) return false;
+          return new Date(app.appliedDate) >= fromDate;
+        });
+      }
+      
+      if (dateTo && typeof dateTo === 'string') {
+        const toDate = new Date(dateTo);
+        toDate.setHours(23, 59, 59, 999); // Include entire day
+        recruiterApplications = recruiterApplications.filter(app => {
+          if (!app.appliedDate) return false;
+          return new Date(app.appliedDate) <= toDate;
+        });
+      }
       
       res.json(recruiterApplications);
     } catch (error) {

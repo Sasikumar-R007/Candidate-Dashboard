@@ -260,18 +260,9 @@ export default function RecruiterNewApplications() {
               <UserPlus className="w-10 h-10 text-gray-400" />
             </div>
             <h2 className="text-xl font-semibold text-gray-900 mb-2">No Applications Yet</h2>
-            <p className="text-gray-500 text-center max-w-md mb-6">
+            <p className="text-gray-500 text-center max-w-md">
               When candidates apply to your job postings or you tag candidates to requirements, they will appear here.
             </p>
-            <div className="flex gap-3">
-              <Button 
-                variant="outline"
-                onClick={() => setLocation('/recruiter-dashboard-2')}
-                data-testid="button-go-dashboard"
-              >
-                Go to Dashboard
-              </Button>
-            </div>
           </div>
         ) : currentCandidates.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16" data-testid="no-matching-candidates">
