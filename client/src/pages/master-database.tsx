@@ -898,9 +898,9 @@ export default function MasterDatabase() {
       <div className="flex-1 flex overflow-hidden">
 
         {/* Table Section */}
-        <div className={`${isResumeDrawerOpen ? 'flex-1' : 'w-full'} overflow-hidden p-6 transition-all duration-300`}>
-          <div className="bg-white dark:bg-gray-800 rounded-md overflow-hidden h-full flex flex-col">
-            <div className="overflow-x-auto flex-1">
+        <div className={`${isResumeDrawerOpen ? 'flex-1' : 'w-full'} overflow-hidden p-6 transition-all duration-300 flex flex-col`}>
+          <div className="bg-white dark:bg-gray-800 rounded-md overflow-hidden flex-1 flex flex-col">
+            <div className="overflow-x-auto overflow-y-auto flex-1">
               <table className="w-full">
                 <thead>
                   <tr className="bg-blue-200 dark:bg-blue-900 sticky top-0">
@@ -1055,9 +1055,9 @@ export default function MasterDatabase() {
 
         {/* Resume Display Section - Right Side Panel */}
         {isResumeDrawerOpen && selectedResume && (
-          <div className="w-full max-w-lg min-w-[450px] h-full border-l-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 flex flex-col">
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div className="w-full max-w-lg min-w-[450px] h-full border-l-2 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 flex flex-col overflow-hidden">
+            {/* Header - Fixed */}
+            <div className="flex-shrink-0 p-6 border-b border-gray-200 dark:border-gray-700">
               {/* Candidate Profile Header - Redesigned */}
               <div className="flex items-start justify-between gap-4">
                 {/* Left Side: Profile Info */}
@@ -1099,10 +1099,12 @@ export default function MasterDatabase() {
                   </Button>
                 </div>
               </div>
+            </div>
 
+            {/* Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {/* Resume Display Area */}
-              <div className="space-y-3 flex-1 flex flex-col">
-                <div className="bg-gray-100 dark:bg-gray-900 rounded-md flex flex-col relative overflow-hidden" style={{ height: 'calc(100vh - 280px)', minHeight: '800px' }}>
+              <div className="bg-gray-100 dark:bg-gray-900 rounded-md flex flex-col relative overflow-hidden" style={{ height: 'calc(100vh - 280px)', minHeight: '800px' }}>
                   {selectedResume && 'resumeFile' in selectedResume && selectedResume.resumeFile ? (
                     <>
                       {(() => {
@@ -1198,14 +1200,12 @@ export default function MasterDatabase() {
                   )}
                 </div>
                 
-                {/* Uploaded Date Badge - Moved Below Resume */}
-                <div className="flex justify-center">
+                {/* Uploaded Date Badge - Below Resume */}
+                <div className="flex justify-center mt-4">
                   <Badge variant="outline" className="rounded-full px-3 py-1 text-xs">
                     Uploaded: {selectedResume.uploadedDate}
                   </Badge>
                 </div>
-              </div>
-
             </div>
           </div>
         )}

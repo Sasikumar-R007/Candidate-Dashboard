@@ -25,11 +25,22 @@ import {
   ChevronRight,
   Loader2,
   FileText,
+  Download,
+  Send,
+  Database,
+  UserPlus,
 } from "lucide-react";
 import { useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -395,6 +406,7 @@ interface DatabaseCandidate {
   highestQualification?: string;
   collegeName?: string;
   preferredLocation?: string;
+  resumeFile?: string;
 }
 
 interface CandidateDisplay {
@@ -426,6 +438,7 @@ interface CandidateDisplay {
   websiteUrl?: string;
   portfolioUrl?: string;
   lastSeen: string;
+  resumeFile?: string;
 }
 
 function mapDatabaseCandidateToDisplay(dbCandidate: DatabaseCandidate): CandidateDisplay {
@@ -446,20 +459,20 @@ function mapDatabaseCandidateToDisplay(dbCandidate: DatabaseCandidate): Candidat
   return {
     id: dbCandidate.id,
     name: dbCandidate.fullName,
-    title: dbCandidate.designation || dbCandidate.currentRole || dbCandidate.position || 'Not specified',
-    location: dbCandidate.location || 'Not specified',
-    preferredLocation: dbCandidate.preferredLocation || dbCandidate.location || 'Not specified',
+    title: dbCandidate.designation || dbCandidate.currentRole || dbCandidate.position || 'Not Available',
+    location: dbCandidate.location || 'Not Available',
+    preferredLocation: dbCandidate.preferredLocation || dbCandidate.location || 'Not Available',
     experience: experienceNum,
-    education: dbCandidate.education || dbCandidate.highestQualification || 'Not specified',
-    currentCompany: dbCandidate.company || 'Not specified',
+    education: dbCandidate.education || dbCandidate.highestQualification || 'Not Available',
+    currentCompany: dbCandidate.company || 'Not Available',
     email: dbCandidate.email,
     phone: dbCandidate.phone || '',
-    ctc: dbCandidate.ctc || 'Not specified',
+    ctc: dbCandidate.ctc || dbCandidate.ectc || 'Not Available',
     skills: skillsArray,
     summary: `Experienced professional with a proven track record of delivering quality work on time. Interested in a role that values efficiency, ownership, and continuous learning.`,
     profilePic: dbCandidate.profilePicture || '',
-    noticePeriod: dbCandidate.noticePeriod || 'Not specified',
-    university: dbCandidate.collegeName || 'Not specified',
+    noticePeriod: dbCandidate.noticePeriod || 'Not Available',
+    university: dbCandidate.collegeName || 'Not Available',
     saved: false,
     pedigreeLevel: dbCandidate.pedigreeLevel || '',
     companyLevel: dbCandidate.companyLevel || '',
@@ -472,6 +485,9 @@ function mapDatabaseCandidateToDisplay(dbCandidate: DatabaseCandidate): Candidat
     websiteUrl: dbCandidate.websiteUrl,
     portfolioUrl: dbCandidate.portfolioUrl,
     lastSeen,
+    resumeFile: dbCandidate.resumeFile,
+    candidateId: dbCandidate.candidateId,
+    isFromDatabase: !!(dbCandidate.candidateId || dbCandidate.resumeFile),
   };
 }
 
@@ -669,9 +685,17 @@ const SourceResume = () => {
     }
   }, []);
 
+  const queryClient = useQueryClient();
+
   // Fetch candidates to get unique values
   const { data: dbCandidates = [], isLoading: isLoadingCandidates } = useQuery<DatabaseCandidate[]>({
     queryKey: ['/api/admin/candidates'],
+  });
+
+  // Fetch recruiter requirements
+  const { data: requirements = [], isLoading: isLoadingRequirements } = useQuery<any[]>({
+    queryKey: ['/api/recruiter/requirements'],
+    enabled: true,
   });
 
   // Map candidates to display format
@@ -679,8 +703,8 @@ const SourceResume = () => {
   
   useEffect(() => {
     const mapped = dbCandidates.map(mapDatabaseCandidateToDisplay);
-    // Combine database candidates with sample candidates
-    setCandidates([...mapped, ...sampleCandidates]);
+    // Use only database candidates (remove sample candidates)
+    setCandidates(mapped);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dbCandidates]);
 
@@ -1052,6 +1076,53 @@ const SourceResume = () => {
       }
       return newSet;
     });
+  };
+
+  // Tag candidate to requirement mutation
+  const tagToRequirementMutation = useMutation({
+    mutationFn: async ({ candidate, requirementId }: { candidate: CandidateDisplay; requirementId: string }) => {
+      const requirement = requirements.find((r: any) => r.id === requirementId);
+      if (!requirement) {
+        throw new Error('Requirement not found');
+      }
+
+      const response = await apiRequest('POST', '/api/recruiter/applications', {
+        candidateName: candidate.name,
+        candidateEmail: candidate.email,
+        candidatePhone: candidate.phone || null,
+        jobTitle: requirement.position || candidate.title,
+        company: requirement.company || candidate.currentCompany,
+        requirementId: requirementId,
+        experience: candidate.experience ? `${candidate.experience} years` : null,
+        skills: candidate.skills.length > 0 ? JSON.stringify(candidate.skills) : null,
+        location: candidate.location || null,
+      });
+
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Candidate tagged to requirement successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/applications'] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to tag candidate to requirement",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleTagToRequirement = (candidate: CandidateDisplay, requirementId: string) => {
+    tagToRequirementMutation.mutate({ candidate, requirementId });
+  };
+
+  const handleOpenCandidateDetails = (candidateId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.open(`/candidate-profile/${candidateId}`, '_blank');
   };
 
   const savedCount = savedCandidates.size;
@@ -1474,36 +1545,83 @@ const SourceResume = () => {
                     <div className="flex gap-4">
                       <div className="flex-1">
                         <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <h3 className="text-xl font-bold text-gray-900">{candidate.name}</h3>
-                            <p className="text-blue-600 font-medium">{candidate.title} in {candidate.currentCompany}</p>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="text-xl font-bold text-gray-900">{candidate.name}</h3>
+                              {candidate.isFromDatabase ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800" title="From Master Database">
+                                  <Database className="w-3 h-3" />
+                                  DB
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800" title="Direct Registration from StaffOS">
+                                  <UserPlus className="w-3 h-3" />
+                                  Registered
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-blue-600 font-medium">
+                              {candidate.title && candidate.title !== 'Not Available'
+                                ? `${candidate.title}${candidate.currentCompany && candidate.currentCompany !== 'Not Available' ? ` in ${candidate.currentCompany}` : ''}`
+                                : (candidate.currentCompany && candidate.currentCompany !== 'Not Available' ? candidate.currentCompany : 'Not Available')
+                              }
+                            </p>
                             <p className="text-sm text-gray-600 mt-1">{candidate.email}</p>
                           </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSaveCandidate(candidate.id);
-                            }}
-                            className="p-2 hover:bg-gray-100 rounded-full"
-                          >
-                            <Bookmark
-                              className={`w-5 h-5 ${
-                                savedCandidates.has(candidate.id)
-                                  ? "fill-yellow-400 text-yellow-400"
-                                  : "text-gray-400"
-                              }`}
-                            />
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenCandidateDetails(candidate.id, e);
+                              }}
+                              className="p-2 hover:bg-gray-100 rounded-full"
+                              title="Open candidate details in new tab"
+                            >
+                              <ExternalLink className="w-5 h-5 text-gray-400" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSaveCandidate(candidate.id);
+                              }}
+                              className="p-2 hover:bg-gray-100 rounded-full"
+                              title="Save candidate"
+                            >
+                              <Bookmark
+                                className={`w-5 h-5 ${
+                                  savedCandidates.has(candidate.id)
+                                    ? "fill-yellow-400 text-yellow-400"
+                                    : "text-gray-400"
+                                }`}
+                              />
+                            </button>
+                          </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4 mb-3 text-sm">
-                          <div><span className="font-semibold">CTC:</span> {candidate.ctc}</div>
-                          <div><span className="font-semibold">Education:</span> {candidate.education}</div>
-                          <div><span className="font-semibold">Experience:</span> +{candidate.experience} years</div>
-                          <div><span className="font-semibold">Location:</span> {candidate.location}</div>
+                          <div>
+                            <span className="font-semibold">CTC:</span>{' '}
+                            <span className={candidate.ctc === 'Not Available' ? 'text-gray-400' : ''}>{candidate.ctc}</span>
+                          </div>
+                          <div>
+                            <span className="font-semibold">Education:</span>{' '}
+                            <span className={candidate.education === 'Not Available' ? 'text-gray-400' : ''}>{candidate.education}</span>
+                          </div>
+                          <div>
+                            <span className="font-semibold">Experience:</span>{' '}
+                            <span className={candidate.experience === 0 ? 'text-gray-400' : ''}>
+                              {candidate.experience > 0 ? `+${candidate.experience} years` : 'Not Available'}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="font-semibold">Location:</span>{' '}
+                            <span className={candidate.location === 'Not Available' ? 'text-gray-400' : ''}>{candidate.location}</span>
+                          </div>
                         </div>
                         <div className="mb-3">
                           <span className="font-semibold text-sm">Preferred Location: </span>
-                          <span className="text-sm text-gray-600">{candidate.preferredLocation}</span>
+                          <span className={`text-sm ${candidate.preferredLocation === 'Not Available' ? 'text-gray-400' : 'text-gray-600'}`}>
+                            {candidate.preferredLocation}
+                          </span>
                         </div>
                         <div className="flex flex-wrap gap-2 mb-3">
                           {candidate.skills.slice(0, 5).map((skill, idx) => (
@@ -1517,39 +1635,84 @@ const SourceResume = () => {
                         </div>
                         <p className="text-sm text-gray-600 line-clamp-2">{candidate.summary}</p>
                       </div>
-                      <div className="flex-shrink-0 text-right">
-                        {candidate.profilePic ? (
-                          <img
-                            src={candidate.profilePic}
-                            alt={candidate.name}
-                            className="w-20 h-20 rounded-full object-cover mb-2"
-                          />
-                        ) : (
-                          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-400 to-blue-400 flex items-center justify-center text-white font-bold text-xl mb-2">
-                            {candidate.name.split(' ').map(n => n[0]).join('')}
+                      <div className="flex-shrink-0 flex flex-col items-end justify-between min-h-full">
+                        <div className="flex flex-col items-end">
+                          {candidate.profilePic ? (
+                            <img
+                              src={candidate.profilePic}
+                              alt={candidate.name}
+                              className="w-20 h-20 rounded-full object-cover mb-2"
+                            />
+                          ) : (
+                            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-400 to-blue-400 flex items-center justify-center text-white font-bold text-xl mb-2">
+                              {candidate.name.split(' ').map(n => n[0]).join('')}
+                            </div>
+                          )}
+                          <p className="text-xs text-gray-600 text-right mb-1">University: {candidate.university !== 'Not Available' ? candidate.university : 'Not Available'}</p>
+                          <p className="text-xs text-gray-600 text-right mb-2">Education: {candidate.education !== 'Not Available' ? candidate.education : 'Not Available'}</p>
+                          <div className="flex gap-2 mb-3 justify-end">
+                            {candidate.linkedinUrl && (
+                              <a href={candidate.linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700" onClick={(e) => e.stopPropagation()}>
+                                <Linkedin className="w-4 h-4" />
+                              </a>
+                            )}
+                            {candidate.portfolioUrl && (
+                              <a href={candidate.portfolioUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700" onClick={(e) => e.stopPropagation()}>
+                                <Github className="w-4 h-4" />
+                              </a>
+                            )}
+                            <a href={`mailto:${candidate.email}`} className="text-blue-600 hover:text-blue-700" onClick={(e) => e.stopPropagation()}>
+                              <Mail className="w-4 h-4" />
+                            </a>
+                            {candidate.websiteUrl && (
+                              <a href={candidate.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700" onClick={(e) => e.stopPropagation()}>
+                                <ExternalLink className="w-4 h-4" />
+                              </a>
+                            )}
+                            {candidate.phone && (
+                              <a href={`tel:${candidate.phone}`} className="text-blue-600 hover:text-blue-700" onClick={(e) => e.stopPropagation()}>
+                                <Phone className="w-4 h-4" />
+                              </a>
+                            )}
                           </div>
-                        )}
-                        <p className="text-xs text-gray-600">University: {candidate.university}</p>
-                        <p className="text-xs text-gray-600">Education: {candidate.education}</p>
-                        <div className="flex gap-2 mt-2 justify-end">
-                          {candidate.linkedinUrl && (
-                            <a href={candidate.linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700">
-                              <Linkedin className="w-4 h-4" />
-                            </a>
-                          )}
-                          {candidate.websiteUrl && (
-                            <a href={candidate.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700">
-                              <ExternalLink className="w-4 h-4" />
-                            </a>
-                          )}
-                          <a href={`mailto:${candidate.email}`} className="text-blue-600 hover:text-blue-700">
-                            <Mail className="w-4 h-4" />
-                          </a>
-                          {candidate.phone && (
-                            <a href={`tel:${candidate.phone}`} className="text-blue-600 hover:text-blue-700">
-                              <Phone className="w-4 h-4" />
-                            </a>
-                          )}
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <p className="text-xs text-gray-500">last seen: {candidate.lastSeen}</p>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                onClick={(e) => e.stopPropagation()}
+                                className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2 px-3 py-1.5 text-sm"
+                              >
+                                <Send className="w-3.5 h-3.5" />
+                                Tag to Requirement
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                              {isLoadingRequirements ? (
+                                <DropdownMenuItem disabled>
+                                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                  Loading requirements...
+                                </DropdownMenuItem>
+                              ) : requirements.length === 0 ? (
+                                <DropdownMenuItem disabled>
+                                  No requirements
+                                </DropdownMenuItem>
+                              ) : (
+                                requirements.map((req: any) => (
+                                  <DropdownMenuItem
+                                    key={req.id}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleTagToRequirement(candidate, req.id);
+                                    }}
+                                  >
+                                    {req.position} - {req.company}
+                                  </DropdownMenuItem>
+                                ))
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </div>
                     </div>
@@ -1574,32 +1737,174 @@ const SourceResume = () => {
                           <div>
                             <h4 className="font-semibold text-gray-900 mb-3">Work Summary</h4>
                             <div className="space-y-2 text-sm">
-                              <div><span className="font-medium">Current Company:</span> {candidate.currentCompany}</div>
-                              <div><span className="font-medium">Role:</span> {candidate.title}</div>
-                              <div><span className="font-medium">Company Sector:</span> {candidate.companySector || 'N/A'}</div>
-                              <div><span className="font-medium">Company Type:</span> {candidate.productService || 'N/A'}</div>
-                              <div><span className="font-medium">Product Category:</span> {candidate.productCategory || 'N/A'}</div>
-                              <div><span className="font-medium">Product Domain:</span> {candidate.productDomain || 'N/A'}</div>
+                              <div>
+                                <span className="font-medium">Current Company:</span>{' '}
+                                <span className={candidate.currentCompany === 'Not Available' ? 'text-gray-400' : ''}>
+                                  {candidate.currentCompany}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="font-medium">Role:</span>{' '}
+                                <span className={candidate.title === 'Not Available' ? 'text-gray-400' : ''}>
+                                  {candidate.title}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="font-medium">Company Sector:</span>{' '}
+                                <span className={!candidate.companySector ? 'text-gray-400' : ''}>
+                                  {candidate.companySector || 'Not Available'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="font-medium">Company Type:</span>{' '}
+                                <span className={!candidate.productService ? 'text-gray-400' : ''}>
+                                  {candidate.productService || 'Not Available'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="font-medium">Product Category:</span>{' '}
+                                <span className={!candidate.productCategory ? 'text-gray-400' : ''}>
+                                  {candidate.productCategory || 'Not Available'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="font-medium">Product Domain:</span>{' '}
+                                <span className={!candidate.productDomain ? 'text-gray-400' : ''}>
+                                  {candidate.productDomain || 'Not Available'}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
                         <div className="mb-6">
                           <h4 className="font-semibold text-gray-900 mb-3">Work Preference</h4>
                           <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div><span className="font-medium">Job Title:</span> {candidate.title}</div>
-                            <div><span className="font-medium">Employment Type:</span> {candidate.employmentType || 'Full time'}</div>
-                            <div><span className="font-medium">Preferred Location:</span> {candidate.preferredLocation}</div>
-                            <div><span className="font-medium">Current Status:</span> Seeking for job</div>
-                            <div><span className="font-medium">Candidate Type:</span> Experienced</div>
+                            <div>
+                              <span className="font-medium">Job Title:</span>{' '}
+                              <span className={candidate.title === 'Not Available' ? 'text-gray-400' : ''}>
+                                {candidate.title}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="font-medium">Employment Type:</span>{' '}
+                              <span className={!candidate.employmentType ? 'text-gray-400' : ''}>
+                                {candidate.employmentType || 'Not Available'}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="font-medium">Preferred Location:</span>{' '}
+                              <span className={candidate.preferredLocation === 'Not Available' ? 'text-gray-400' : ''}>
+                                {candidate.preferredLocation}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="font-medium">Notice Period:</span>{' '}
+                              <span className={candidate.noticePeriod === 'Not Available' ? 'text-gray-400' : ''}>
+                                {candidate.noticePeriod}
+                              </span>
+                            </div>
                           </div>
                         </div>
                         <div>
                           <h4 className="font-semibold text-gray-900 mb-3">Resume</h4>
-                          <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                            <div className="flex items-center gap-2 text-gray-600">
-                              <FileText className="w-5 h-5" />
-                              <span>Resume preview will be displayed here</span>
-                            </div>
+                          <div className="border border-gray-200 rounded-lg bg-gray-100 dark:bg-gray-900 flex flex-col relative overflow-hidden" style={{ minHeight: '600px', height: '600px' }}>
+                            {candidate.resumeFile ? (
+                              <>
+                                {(() => {
+                                  const resumeUrl = candidate.resumeFile;
+                                  const lowerUrl = resumeUrl.toLowerCase();
+                                  const urlWithoutQuery = lowerUrl.split('?')[0];
+                                  const isPdf = urlWithoutQuery.endsWith('.pdf');
+                                  const isDocx = urlWithoutQuery.endsWith('.docx');
+                                  const isDoc = urlWithoutQuery.endsWith('.doc') && !isDocx;
+                                  
+                                  if (isPdf) {
+                                    return (
+                                      <iframe
+                                        key={resumeUrl}
+                                        src={resumeUrl}
+                                        className="w-full h-full border-0"
+                                        title="Resume Preview"
+                                      />
+                                    );
+                                  } else if (isDocx || isDoc) {
+                                    return (
+                                      <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                                        <div className="text-center space-y-4 p-8 max-w-md">
+                                          <FileText className="h-16 w-16 mx-auto text-gray-400" />
+                                          <div>
+                                            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                              Word Document
+                                            </p>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                                              Word documents cannot be previewed in the browser. Please download the file to view it.
+                                            </p>
+                                            <Button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                window.open(resumeUrl, '_blank');
+                                              }}
+                                              className="bg-blue-600 text-white hover:bg-blue-700"
+                                            >
+                                              <Download className="h-4 w-4 mr-2" />
+                                              Download Resume
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  } else {
+                                    return (
+                                      <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                                        <div className="text-center space-y-4 p-8 max-w-md">
+                                          <FileText className="h-16 w-16 mx-auto text-gray-400" />
+                                          <div>
+                                            <p className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                              Resume File
+                                            </p>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                                              This file type cannot be previewed. Please download to view.
+                                            </p>
+                                            <Button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                window.open(resumeUrl, '_blank');
+                                              }}
+                                              className="bg-blue-600 text-white hover:bg-blue-700"
+                                            >
+                                              <Download className="h-4 w-4 mr-2" />
+                                              Download Resume
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+                                })()}
+                                <div className="absolute top-4 right-4 z-10">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      window.open(candidate.resumeFile, '_blank');
+                                    }}
+                                    className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800 shadow-md"
+                                    title="Download Resume"
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="flex-1 flex items-center justify-center">
+                                <div className="text-center">
+                                  <FileText className="h-16 w-16 mx-auto text-gray-400 mb-4" />
+                                  <p className="text-xl font-semibold text-gray-900 dark:text-gray-100">Resume</p>
+                                  <p className="text-sm text-gray-400 mt-4">Resume Not Available</p>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>

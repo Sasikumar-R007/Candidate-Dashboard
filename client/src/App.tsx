@@ -28,6 +28,7 @@ import SetupAdmin from "@/pages/setup-admin";
 import SetupSupport from "@/pages/setup-support";
 import SupportDashboard from "@/pages/support-dashboard";
 import SupportLogin from "@/pages/support-login";
+import CandidateProfile from "@/pages/candidate-profile";
 
 function Router() {
   return (
@@ -91,6 +92,12 @@ function Router() {
       <Route path="/master-database">
         <ProtectedRoute userType="employee" allowedRoles={["admin"]}>
           <MasterDatabase />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/candidate-profile/:id">
+        <ProtectedRoute userType="employee" allowedRoles={["recruiter", "talent_advisor", "teamLead", "team_leader", "admin"]}>
+          <CandidateProfile />
         </ProtectedRoute>
       </Route>
       

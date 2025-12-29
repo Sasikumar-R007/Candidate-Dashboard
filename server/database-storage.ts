@@ -425,10 +425,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteCandidate(id: string): Promise<boolean> {
-    // Soft delete by marking as inactive
+    // Permanently delete the candidate from database
     const result = await db
-      .update(candidates)
-      .set({ isActive: false })
+      .delete(candidates)
       .where(eq(candidates.id, id));
     return (result.rowCount ?? 0) > 0;
   }

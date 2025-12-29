@@ -6022,6 +6022,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get candidate by ID (accessible by admin and recruiters)
+  app.get("/api/admin/candidates/:id", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const candidate = await storage.getCandidateById(id);
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+      res.json(candidate);
+    } catch (error) {
+      console.error('Get candidate by ID error:', error);
+      res.status(500).json({ message: "Failed to get candidate" });
+    }
+  });
+
   // Delete candidate by ID
   app.delete("/api/admin/candidates/:id", requireAdminAuth, async (req, res) => {
     try {
@@ -6040,6 +6055,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Failed to delete candidate" });
       }
       
+      console.log(`Candidate ${id} permanently deleted from database`);
       res.json({ message: "Candidate deleted successfully" });
     } catch (error) {
       console.error('Delete candidate error:', error);
@@ -6164,8 +6180,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Full name and email are required" });
       }
 
-      // Check if candidate already exists
-      const existing = await storage.getCandidateByEmail(email);
+      // Check if candidate already exists (case-insensitive)
+      const existing = await storage.getCandidateByEmail(email.toLowerCase());
       if (existing) {
         return res.status(409).json({ message: "A candidate with this email already exists" });
       }
