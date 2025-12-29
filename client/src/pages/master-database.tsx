@@ -13,6 +13,12 @@ import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Filter, Search, MoreVertical, X, Download, Loader2, Upload, FileText, CheckCircle, XCircle } from "lucide-react";
 import { useDropzone } from 'react-dropzone';
 import { queryClient, apiRequest } from "@/lib/queryClient";
+
+// Helper to create API URL
+const createApiUrl = (path: string) => {
+  const apiUrl = import.meta.env.VITE_API_URL || '';
+  return `${apiUrl}${path}`;
+};
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
@@ -481,7 +487,7 @@ export default function MasterDatabase() {
           setIsPasswordDialogOpen(false);
           setItemToDelete(null);
           // Auto logout
-          await fetch('/api/admin/logout', { method: 'POST', credentials: 'include' });
+          await fetch(createApiUrl('/api/admin/logout'), { method: 'POST', credentials: 'include' });
           window.location.href = '/admin-login';
         } else {
           toast({
@@ -587,7 +593,7 @@ export default function MasterDatabase() {
         const formData = new FormData();
         formData.append('resume', file);
         
-        const response = await fetch('/api/admin/parse-resume', {
+        const response = await fetch(createApiUrl('/api/admin/parse-resume'), {
           method: 'POST',
           body: formData,
           credentials: 'include'
@@ -640,7 +646,7 @@ export default function MasterDatabase() {
         formData.append('resumes', file);
       });
       
-      const response = await fetch('/api/admin/parse-resumes-bulk', {
+      const response = await fetch(createApiUrl('/api/admin/parse-resumes-bulk'), {
         method: 'POST',
         body: formData,
         credentials: 'include'
@@ -771,7 +777,7 @@ export default function MasterDatabase() {
     setIsProcessing(true);
     
     try {
-      const response = await fetch('/api/admin/import-candidates-bulk', {
+      const response = await fetch(createApiUrl('/api/admin/import-candidates-bulk'), {
         method: 'POST',
         body: JSON.stringify({
           candidates: validCandidates,
