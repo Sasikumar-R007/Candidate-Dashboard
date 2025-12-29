@@ -118,7 +118,11 @@ Team StaffOS
     `.trim();
 
     const senderEmail = fromEmail || 'StaffOS <onboarding@resend.dev>';
-    await resend.emails.send({
+    
+    console.log(`[Welcome Email] Attempting to send welcome email to ${data.email} from ${senderEmail}`);
+    console.log(`[Welcome Email] Resend API Key present: ${process.env.RESEND_API_KEY ? 'Yes (length: ' + process.env.RESEND_API_KEY.length + ')' : 'NO - MISSING!'}`);
+    
+    const result = await resend.emails.send({
       from: senderEmail,
       to: data.email,
       subject: 'Welcome to StaffOS - Your Account is Ready!',
@@ -126,7 +130,22 @@ Team StaffOS
       html: htmlContent,
     });
 
-    console.log(`Welcome email sent successfully to ${data.email} from ${senderEmail}`);
+    if (result.error) {
+      console.error(`[Welcome Email] Resend API error:`, result.error);
+      console.error(`[Welcome Email] Error details:`, JSON.stringify(result.error, null, 2));
+      
+      // Check for 403 Forbidden specifically
+      if (result.error && typeof result.error === 'object' && 'message' in result.error) {
+        const errorMsg = String(result.error.message || '');
+        if (errorMsg.includes('403') || errorMsg.includes('Forbidden') || errorMsg.includes('unauthorized')) {
+          console.error(`[Welcome Email] ⚠️ 403 FORBIDDEN ERROR - Check RESEND_API_KEY and FROM_EMAIL configuration`);
+        }
+      }
+      
+      return false;
+    }
+
+    console.log(`[Welcome Email] Successfully sent welcome email to ${data.email} from ${senderEmail}. Email ID: ${result.data?.id || 'N/A'}`);
     return true;
   } catch (error) {
     console.error('Error sending employee welcome email:', error);
@@ -250,7 +269,11 @@ Team StaffOS
     `.trim();
 
     const senderEmail = fromEmail || 'StaffOS <onboarding@resend.dev>';
-    await resend.emails.send({
+    
+    console.log(`[Candidate Welcome Email] Attempting to send welcome email to ${data.email} from ${senderEmail}`);
+    console.log(`[Candidate Welcome Email] Resend API Key present: ${process.env.RESEND_API_KEY ? 'Yes (length: ' + process.env.RESEND_API_KEY.length + ')' : 'NO - MISSING!'}`);
+    
+    const result = await resend.emails.send({
       from: senderEmail,
       to: data.email,
       subject: 'Welcome to StaffOS - Start Your Career Journey!',
@@ -258,7 +281,22 @@ Team StaffOS
       html: htmlContent,
     });
 
-    console.log(`Welcome email sent successfully to ${data.email} from ${senderEmail}`);
+    if (result.error) {
+      console.error(`[Candidate Welcome Email] Resend API error:`, result.error);
+      console.error(`[Candidate Welcome Email] Error details:`, JSON.stringify(result.error, null, 2));
+      
+      // Check for 403 Forbidden specifically
+      if (result.error && typeof result.error === 'object' && 'message' in result.error) {
+        const errorMsg = String(result.error.message || '');
+        if (errorMsg.includes('403') || errorMsg.includes('Forbidden') || errorMsg.includes('unauthorized')) {
+          console.error(`[Candidate Welcome Email] ⚠️ 403 FORBIDDEN ERROR - Check RESEND_API_KEY and FROM_EMAIL configuration`);
+        }
+      }
+      
+      return false;
+    }
+
+    console.log(`[Candidate Welcome Email] Successfully sent welcome email to ${data.email} from ${senderEmail}. Email ID: ${result.data?.id || 'N/A'}`);
     return true;
   } catch (error) {
     console.error('Error sending candidate welcome email:', error);
@@ -330,6 +368,7 @@ Team StaffOS
     const senderEmail = fromEmail || 'StaffOS <onboarding@resend.dev>';
     
     console.log(`[OTP Email] Attempting to send OTP to ${data.email} from ${senderEmail}`);
+    console.log(`[OTP Email] Resend API Key present: ${process.env.RESEND_API_KEY ? 'Yes (length: ' + process.env.RESEND_API_KEY.length + ')' : 'NO - MISSING!'}`);
     
     const result = await resend.emails.send({
       from: senderEmail,
@@ -341,6 +380,22 @@ Team StaffOS
 
     if (result.error) {
       console.error(`[OTP Email] Resend API error:`, result.error);
+      console.error(`[OTP Email] Error type:`, typeof result.error);
+      console.error(`[OTP Email] Error details:`, JSON.stringify(result.error, null, 2));
+      
+      // Check for 403 Forbidden specifically
+      if (result.error && typeof result.error === 'object' && 'message' in result.error) {
+        const errorMsg = String(result.error.message || '');
+        if (errorMsg.includes('403') || errorMsg.includes('Forbidden') || errorMsg.includes('unauthorized')) {
+          console.error(`[OTP Email] ⚠️ 403 FORBIDDEN ERROR - This usually means:`);
+          console.error(`[OTP Email] 1. API key is invalid or incorrect`);
+          console.error(`[OTP Email] 2. API key doesn't have permission to send emails`);
+          console.error(`[OTP Email] 3. FROM_EMAIL domain is not verified in Resend`);
+          console.error(`[OTP Email] 4. API key format is wrong (should start with 're_')`);
+          console.error(`[OTP Email] Please check your RESEND_API_KEY and FROM_EMAIL in Render environment variables`);
+        }
+      }
+      
       return false;
     }
 
