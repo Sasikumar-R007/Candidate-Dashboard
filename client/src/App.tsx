@@ -47,7 +47,11 @@ function Router() {
       
       <Route path="/team-leader" component={TeamLeaderDashboard} />
       
-      <Route path="/admin" component={AdminDashboard} />
+      <Route path="/admin">
+        <ProtectedRoute userType="employee" allowedRoles={["admin"]}>
+          <AdminDashboard />
+        </ProtectedRoute>
+      </Route>
       
       <Route path="/recruiter-login-2" component={RecruiterDashboard2} />
       

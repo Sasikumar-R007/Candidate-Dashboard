@@ -305,7 +305,7 @@ const initialFilters: FilterState = {
   jobType: "",
   workPermit: "",
   candidateStatus: "all",
-  showWith: ["resume"],
+  showWith: [],
 };
 
 // Filterable Dropdown Component
@@ -319,54 +319,111 @@ interface FilterableDropdownProps {
 
 function FilterableDropdown({ value, onChange, options, placeholder, icon }: FilterableDropdownProps) {
   const [open, setOpen] = useState(false);
+  const [inputValue, setInputValue] = useState("");
   
   const optionsList = options.map(opt => 
     typeof opt === 'string' ? { value: opt, label: opt } : opt
   );
   
-  const selectedLabel = optionsList.find(opt => opt.value === value)?.label || placeholder;
+  const selectedLabel = optionsList.find(opt => opt.value === value)?.label || value || placeholder;
+
+  const handleSelect = (selectedValue: string) => {
+    onChange(selectedValue === value ? "" : selectedValue);
+    setOpen(false);
+    setInputValue("");
+  };
+
+  // Filter options based on input
+  const filteredOptions = inputValue.trim()
+    ? optionsList.filter(opt => 
+        opt.label.toLowerCase().includes(inputValue.toLowerCase()) ||
+        opt.value.toLowerCase().includes(inputValue.toLowerCase())
+      )
+    : optionsList;
+
+  const hasExactMatch = filteredOptions.some(opt => 
+    opt.value.toLowerCase() === inputValue.trim().toLowerCase() ||
+    opt.label.toLowerCase() === inputValue.trim().toLowerCase()
+  );
+  const showCustomOption = inputValue.trim() && !hasExactMatch;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(isOpen) => {
+      setOpen(isOpen);
+      if (!isOpen) setInputValue("");
+    }}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between bg-white border-gray-200 rounded-lg h-10 font-normal text-gray-700 hover:bg-gray-50"
+          onClick={(e) => {
+            e.preventDefault();
+            setOpen(true);
+            setInputValue("");
+          }}
         >
           <span className="flex items-center gap-2 flex-1 min-w-0">
             {icon && <span className="text-purple-600 flex-shrink-0">{icon}</span>}
             <span className="truncate">{selectedLabel}</span>
           </span>
-          <X className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          {value && (
+            <X 
+              className="ml-2 h-4 w-4 shrink-0 opacity-50 hover:opacity-100 cursor-pointer" 
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange("");
+                setOpen(false);
+              }}
+            />
+          )}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-full p-0" align="start">
-        <Command>
-          <CommandInput placeholder={`Search ${placeholder.toLowerCase()}...`} />
+        <Command shouldFilter={false}>
+          <CommandInput 
+            placeholder={`Search or type ${placeholder.toLowerCase()}...`}
+            value={inputValue}
+            onValueChange={setInputValue}
+          />
           <CommandList>
-            <CommandEmpty>No results found.</CommandEmpty>
-            <CommandGroup>
-              {optionsList.map((option) => (
+            {showCustomOption && (
+              <CommandGroup>
                 <CommandItem
-                  key={option.value}
-                  value={option.value}
-                  onSelect={() => {
-                    onChange(option.value === value ? "" : option.value);
-                    setOpen(false);
-                  }}
+                  onSelect={() => handleSelect(inputValue.trim())}
+                  className="text-blue-600 font-medium"
                 >
-                  <Check
-                    className={cn(
-                      "mr-2 h-4 w-4",
-                      value === option.value ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                  {option.label}
+                  <Check className="mr-2 h-4 w-4 opacity-0" />
+                  Use "{inputValue.trim()}"
                 </CommandItem>
-              ))}
-            </CommandGroup>
+              </CommandGroup>
+            )}
+            {filteredOptions.length > 0 ? (
+              <CommandGroup>
+                {filteredOptions.map((option) => (
+                  <CommandItem
+                    key={option.value}
+                    value={option.value}
+                    onSelect={() => handleSelect(option.value)}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === option.value ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    {option.label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ) : (
+              !showCustomOption && (
+                <CommandEmpty>
+                  No results found. Type to add a custom value.
+                </CommandEmpty>
+              )
+            )}
           </CommandList>
         </Command>
       </PopoverContent>
@@ -648,8 +705,6 @@ const sampleCandidates: CandidateDisplay[] = [
 const SourceResume = () => {
   const [view, setView] = useState<'search' | 'results'>('search');
   const [filters, setFilters] = useState<FilterState>(initialFilters);
-  const [locationOpen, setLocationOpen] = useState(false);
-  const [preferredLocationOpen, setPreferredLocationOpen] = useState(false);
   const [keywordInput, setKeywordInput] = useState("");
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateDisplay | null>(null);
   const [savedCandidates, setSavedCandidates] = useState<Set<string>>(new Set());
@@ -929,35 +984,43 @@ const SourceResume = () => {
       }
 
       // Location filter
-      if (filters.location && filters.location !== "All Location" && 
+      if (filters.location && filters.location.trim() !== "" && 
           !candidate.location.toLowerCase().includes(filters.location.toLowerCase())) {
         return false;
       }
 
+      // Preferred Location filter
+      if (filters.preferredLocation && filters.preferredLocation.trim() !== "" && 
+          !candidate.preferredLocation.toLowerCase().includes(filters.preferredLocation.toLowerCase())) {
+        return false;
+      }
+
       // Role filter
-      if (filters.role && filters.role !== "All roles" && 
+      if (filters.role && filters.role.trim() !== "" && 
           !candidate.title.toLowerCase().includes(filters.role.toLowerCase())) {
         return false;
       }
 
       // Company filter
-      if (filters.company && filters.company !== "XYZ company" && 
+      if (filters.company && filters.company.trim() !== "" && 
           !candidate.currentCompany.toLowerCase().includes(filters.company.toLowerCase())) {
         return false;
       }
 
       // Notice period filter
-      if (filters.noticePeriod && filters.noticePeriod !== "Any" && 
+      if (filters.noticePeriod && filters.noticePeriod.trim() !== "" && 
           !candidate.noticePeriod.toLowerCase().includes(filters.noticePeriod.toLowerCase())) {
         return false;
       }
 
       // Education filter
-      if (filters.educationUG && !candidate.education.toLowerCase().includes(filters.educationUG.toLowerCase())) {
+      if (filters.educationUG && filters.educationUG.trim() !== "" && 
+          !candidate.education.toLowerCase().includes(filters.educationUG.toLowerCase())) {
         return false;
       }
 
-      if (filters.educationPG && !candidate.education.toLowerCase().includes(filters.educationPG.toLowerCase())) {
+      if (filters.educationPG && filters.educationPG.trim() !== "" && 
+          !candidate.education.toLowerCase().includes(filters.educationPG.toLowerCase())) {
         return false;
       }
 
@@ -970,15 +1033,15 @@ const SourceResume = () => {
       }
 
       // Employment type filter
-      if (filters.employmentType && filters.employmentType !== "Any" && candidate.employmentType && 
+      if (filters.employmentType && filters.employmentType.trim() !== "" && candidate.employmentType && 
           !candidate.employmentType.toLowerCase().includes(filters.employmentType.toLowerCase())) {
         return false;
       }
 
       // Display Details - Show candidate with
-      if (filters.showWith.includes("resume") && !candidate.profilePic) {
+      if (filters.showWith.includes("resume") && !candidate.resumeFile && !candidate.profilePic) {
         // If resume is required but candidate doesn't have one, skip
-        // This is a placeholder - you may need to check actual resume availability
+        return false;
       }
 
       if (filters.showWith.includes("portfolio") && !candidate.portfolioUrl) {
@@ -1134,10 +1197,12 @@ const SourceResume = () => {
     setSpecificSkillInput("");
     setExcludeCompanyInput("");
     setAddDegreeInput("");
+    setResultsSearchQuery("");
     setShowExcludeKeywords(false);
     setShowSpecificSkills(false);
     setShowExcludeCompany(false);
     setShowAddDegree(false);
+    setCurrentPage(1);
   };
 
   const suggestedKeywords = allSkills.filter(
@@ -1261,7 +1326,7 @@ const SourceResume = () => {
                 value={filters.role}
                 onChange={(value) => setFilters({ ...filters, role: value })}
                 options={allRoles}
-                placeholder="Frontend Developer"
+                placeholder="All roles"
               />
             </div>
 
@@ -1274,7 +1339,7 @@ const SourceResume = () => {
                 value={filters.noticePeriod}
                 onChange={(value) => setFilters({ ...filters, noticePeriod: value })}
                 options={allNoticePeriods}
-                placeholder="1 month"
+                placeholder="Any"
               />
             </div>
 
@@ -1483,6 +1548,15 @@ const SourceResume = () => {
                 <span className="text-xs text-gray-600">Total Profiles {displayCandidates.length}</span>
               </div>
               <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={resetFilters}
+                  className="text-xs"
+                >
+                  <RotateCw className="w-3 h-3 mr-1" />
+                  Reset Filters
+                </Button>
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
@@ -2238,64 +2312,13 @@ const SourceResume = () => {
                 <MapPin className="w-4 h-4 text-purple-600" />
                 Location
               </label>
-              <Popover open={locationOpen} onOpenChange={setLocationOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={locationOpen}
-                    className="w-full justify-between bg-white border-gray-200 rounded-lg h-10 font-normal text-gray-700 hover:bg-gray-50"
-                  >
-                    {filters.location
-                      ? locations.find((loc) => loc.value === filters.location)?.label
-                      : "All Location"}
-                    <X className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-full p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search location..." />
-                    <CommandList>
-                      <CommandEmpty>No location found.</CommandEmpty>
-                      <CommandGroup>
-                        <CommandItem
-                          value="all"
-                          onSelect={() => {
-                            setFilters({ ...filters, location: "" });
-                            setLocationOpen(false);
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              !filters.location ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          All Location
-                        </CommandItem>
-                        {locations.map((location) => (
-                          <CommandItem
-                            key={location.value}
-                            value={location.value}
-                            onSelect={() => {
-                              setFilters({ ...filters, location: location.value });
-                              setLocationOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                filters.location === location.value ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {location.label}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+              <FilterableDropdown
+                value={filters.location}
+                onChange={(value) => setFilters({ ...filters, location: value })}
+                options={locations.map(l => l.label)}
+                placeholder="All Location"
+                icon={<MapPin className="w-4 h-4" />}
+              />
             </div>
           </div>
 
@@ -2325,64 +2348,13 @@ const SourceResume = () => {
                   <MapPin className="w-4 h-4 text-purple-600" />
                   Preferred Location
                 </label>
-                <Popover open={preferredLocationOpen} onOpenChange={setPreferredLocationOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={preferredLocationOpen}
-                      className="w-full justify-between bg-white border-gray-200 rounded-lg h-10 font-normal text-gray-700 hover:bg-gray-50"
-                    >
-                      {filters.preferredLocation
-                        ? locations.find((loc) => loc.value === filters.preferredLocation)?.label
-                        : "Any location"}
-                      <X className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Search location..." />
-                      <CommandList>
-                        <CommandEmpty>No location found.</CommandEmpty>
-                        <CommandGroup>
-                          <CommandItem
-                            value="any"
-                            onSelect={() => {
-                              setFilters({ ...filters, preferredLocation: "" });
-                              setPreferredLocationOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                !filters.preferredLocation ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            Any location
-                          </CommandItem>
-                          {locations.map((location) => (
-                            <CommandItem
-                              key={location.value}
-                              value={location.value}
-                              onSelect={() => {
-                                setFilters({ ...filters, preferredLocation: location.value });
-                                setPreferredLocationOpen(false);
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4",
-                                  filters.preferredLocation === location.value ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              {location.label}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                <FilterableDropdown
+                  value={filters.preferredLocation}
+                  onChange={(value) => setFilters({ ...filters, preferredLocation: value })}
+                  options={locations.map(l => l.label)}
+                  placeholder="Any location"
+                  icon={<MapPin className="w-4 h-4" />}
+                />
               </div>
 
               {/* Company */}

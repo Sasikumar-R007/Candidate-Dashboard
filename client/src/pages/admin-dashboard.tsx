@@ -32,7 +32,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
-import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users, ExternalLink, HelpCircle, MoreVertical, Download, Edit2, ChevronDown, ChevronUp, Plus, CheckCircle2 } from "lucide-react";
+import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users, ExternalLink, HelpCircle, MoreVertical, Download, Edit2, ChevronDown, ChevronUp, Plus, CheckCircle2, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ComposedChart, BarChart, Bar, Cell, AreaChart, Area } from 'recharts';
 import { useLocation } from "wouter";
@@ -1020,8 +1020,8 @@ export default function AdminDashboard() {
     );
   }, [cashoutForm]);
   
-  // Fetch target mappings from API
-  const { data: targetMappings = [], isLoading: isLoadingTargets } = useQuery<TargetMappings[]>({
+  // Fetch target mappings from API (enriched with teamLeadName, teamMemberName, teamMemberRole)
+  const { data: targetMappings = [], isLoading: isLoadingTargets } = useQuery<any[]>({
     queryKey: ["/api/admin/target-mappings"],
   });
   
@@ -1248,9 +1248,20 @@ export default function AdminDashboard() {
   // Password confirmation dialog state for user deletion
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<{id: string, name: string} | null>(null);
+  // Password confirmation dialog state for target deletion
+  const [targetToDelete, setTargetToDelete] = useState<{id: string, description: string} | null>(null);
+  const [isTargetPasswordDialogOpen, setIsTargetPasswordDialogOpen] = useState(false);
+  // Password confirmation dialog state for cash outflow deletion
+  const [cashoutToDelete, setCashoutToDelete] = useState<{id: string, description: string} | null>(null);
+  const [isCashoutPasswordDialogOpen, setIsCashoutPasswordDialogOpen] = useState(false);
+  // Password confirmation dialog state for revenue mapping deletion
+  const [revenueMappingToDelete, setRevenueMappingToDelete] = useState<{id: string, description: string} | null>(null);
+  const [isRevenueMappingPasswordDialogOpen, setIsRevenueMappingPasswordDialogOpen] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordAttempts, setPasswordAttempts] = useState(0);
   const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
+  const [editingTarget, setEditingTarget] = useState<any>(null);
+  const [editingCashout, setEditingCashout] = useState<any>(null);
   
   const [clientForm, setClientForm] = useState({
     brandName: '', incorporatedName: '', gstin: '',
@@ -1360,9 +1371,11 @@ export default function AdminDashboard() {
     if (!targetSearch.trim()) return targetMappings;
     const search = targetSearch.toLowerCase();
     return targetMappings.filter((mapping: any) => 
-      mapping.resource?.toLowerCase().includes(search) ||
-      mapping.role?.toLowerCase().includes(search) ||
-      mapping.quarter?.toLowerCase().includes(search)
+      mapping.teamLeadName?.toLowerCase().includes(search) ||
+      mapping.teamMemberName?.toLowerCase().includes(search) ||
+      mapping.teamMemberRole?.toLowerCase().includes(search) ||
+      mapping.quarter?.toLowerCase().includes(search) ||
+      mapping.year?.toString().includes(search)
     );
   }, [targetMappings, targetSearch]);
 
@@ -1455,7 +1468,9 @@ export default function AdminDashboard() {
     queryKey: ['/api/admin/daily-metrics', format(selectedDate, 'yyyy-MM-dd'), selectedDailyMetricsTeam],
     queryFn: async () => {
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
-      const response = await fetch(`/api/admin/daily-metrics?date=${dateStr}&team=${selectedDailyMetricsTeam}`, {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+      const createApiUrl = (path: string) => `${API_BASE_URL}${path}`;
+      const response = await fetch(createApiUrl(`/api/admin/daily-metrics?date=${dateStr}&team=${selectedDailyMetricsTeam}`), {
         credentials: 'include'
       });
       if (!response.ok) throw new Error('Failed to fetch daily metrics');
@@ -2435,11 +2450,357 @@ export default function AdminDashboard() {
     setUserToDelete(null);
   };
 
+  // Handle delete target
+  const handleDeleteTarget = (targetId: string, targetDescription: string) => {
+    setTargetToDelete({ id: targetId, description: targetDescription });
+    setPasswordAttempts(0);
+    setPasswordInput("");
+    setIsTargetPasswordDialogOpen(true);
+  };
+
+  // Handle password verification for target delete
+  const handleVerifyTargetPassword = async () => {
+    if (!passwordInput) {
+      toast({
+        title: "Error",
+        description: "Please enter your password",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsVerifyingPassword(true);
+    try {
+      const response = await apiRequest('POST', '/api/admin/verify-password', {
+        password: passwordInput
+      });
+      
+      const responseData = await response.json() as any;
+
+      if (responseData && responseData.success) {
+        // Password verified - proceed with actual deletion
+        if (targetToDelete) {
+          try {
+            const deleteResponse = await apiRequest('DELETE', `/api/admin/target-mappings/${targetToDelete.id}`, {});
+            const deleteResult = await deleteResponse.json();
+            
+            if (!deleteResponse.ok) {
+              throw new Error(deleteResult.message || 'Failed to delete target mapping');
+            }
+
+            queryClient.invalidateQueries({ queryKey: ['/api/admin/target-mappings'] });
+            
+            toast({
+              title: "Success",
+              description: "Target mapping deleted successfully",
+              className: "bg-green-50 border-green-200 text-green-800",
+            });
+            
+            setIsTargetPasswordDialogOpen(false);
+            setPasswordInput("");
+            setPasswordAttempts(0);
+            setTargetToDelete(null);
+          } catch (deleteError: any) {
+            console.error('Deletion failed:', deleteError);
+            toast({
+              title: "Error",
+              description: deleteError.message || "Failed to delete the target mapping. Please try again.",
+              variant: "destructive"
+            });
+          }
+        }
+      } else {
+        const newAttempts = passwordAttempts + 1;
+        setPasswordAttempts(newAttempts);
+        setPasswordInput("");
+
+        if (newAttempts >= 3) {
+          toast({
+            title: "Security Alert",
+            description: "Too many incorrect attempts. Please try again later.",
+            variant: "destructive"
+          });
+          setIsTargetPasswordDialogOpen(false);
+          setPasswordInput("");
+          setPasswordAttempts(0);
+          setTargetToDelete(null);
+        } else {
+          toast({
+            title: "Incorrect Password",
+            description: `${3 - newAttempts} attempt(s) remaining`,
+            variant: "destructive"
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete the target mapping. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsVerifyingPassword(false);
+    }
+  };
+
+  // Handle cancel target delete
+  const handleCancelTargetDelete = () => {
+    setIsTargetPasswordDialogOpen(false);
+    setPasswordInput("");
+    setPasswordAttempts(0);
+    setTargetToDelete(null);
+  };
+
+  // Handle edit target
+  const handleEditTarget = (target: any) => {
+    setEditingTarget(target);
+    setIsTargetMappingModalOpen(true);
+  };
+
   // Handle dialog close via backdrop or ESC
   const handlePasswordDialogOpenChange = (open: boolean) => {
     setIsPasswordDialogOpen(open);
     if (!open) {
       handleCancelDelete();
+    }
+  };
+
+  const handleTargetPasswordDialogOpenChange = (open: boolean) => {
+    setIsTargetPasswordDialogOpen(open);
+    if (!open) {
+      handleCancelTargetDelete();
+    }
+  };
+
+  // Handle delete cash outflow
+  const handleDeleteCashout = (cashoutId: string, cashoutDescription: string) => {
+    setCashoutToDelete({ id: cashoutId, description: cashoutDescription });
+    setPasswordAttempts(0);
+    setPasswordInput("");
+    setIsCashoutPasswordDialogOpen(true);
+  };
+
+  // Handle password verification for cash outflow delete
+  const handleVerifyCashoutPassword = async () => {
+    if (!passwordInput) {
+      toast({
+        title: "Error",
+        description: "Please enter your password",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsVerifyingPassword(true);
+    try {
+      const response = await apiRequest('POST', '/api/admin/verify-password', {
+        password: passwordInput
+      });
+      
+      const responseData = await response.json() as any;
+
+      if (responseData && responseData.success) {
+        if (cashoutToDelete) {
+          try {
+            const deleteResponse = await apiRequest('DELETE', `/api/admin/cash-outflows/${cashoutToDelete.id}`, {});
+            const deleteResult = await deleteResponse.json();
+            
+            if (!deleteResponse.ok) {
+              throw new Error(deleteResult.message || 'Failed to delete cash outflow');
+            }
+
+            queryClient.invalidateQueries({ queryKey: ['/api/admin/cash-outflows'] });
+            
+            toast({
+              title: "Success",
+              description: "Cash outflow deleted successfully",
+              className: "bg-green-50 border-green-200 text-green-800",
+            });
+            
+            setIsCashoutPasswordDialogOpen(false);
+            setPasswordInput("");
+            setPasswordAttempts(0);
+            setCashoutToDelete(null);
+          } catch (deleteError: any) {
+            console.error('Deletion failed:', deleteError);
+            toast({
+              title: "Error",
+              description: deleteError.message || "Failed to delete the cash outflow. Please try again.",
+              variant: "destructive"
+            });
+          }
+        }
+      } else {
+        const newAttempts = passwordAttempts + 1;
+        setPasswordAttempts(newAttempts);
+        setPasswordInput("");
+
+        if (newAttempts >= 3) {
+          toast({
+            title: "Security Alert",
+            description: "Too many incorrect attempts. Please try again later.",
+            variant: "destructive"
+          });
+          setIsCashoutPasswordDialogOpen(false);
+          setPasswordInput("");
+          setPasswordAttempts(0);
+          setCashoutToDelete(null);
+        } else {
+          toast({
+            title: "Incorrect Password",
+            description: `${3 - newAttempts} attempt(s) remaining`,
+            variant: "destructive"
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete the cash outflow. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsVerifyingPassword(false);
+    }
+  };
+
+  // Handle cancel cash outflow delete
+  const handleCancelCashoutDelete = () => {
+    setIsCashoutPasswordDialogOpen(false);
+    setPasswordInput("");
+    setPasswordAttempts(0);
+    setCashoutToDelete(null);
+  };
+
+  const handleCashoutPasswordDialogOpenChange = (open: boolean) => {
+    setIsCashoutPasswordDialogOpen(open);
+    if (!open) {
+      handleCancelCashoutDelete();
+    }
+  };
+
+  // Handle edit cash outflow
+  const handleEditCashout = (cashout: any) => {
+    setEditingCashout(cashout);
+    setCashoutForm({
+      month: cashout.month || '',
+      year: cashout.year || '',
+      employees: cashout.employees?.toString() || '',
+      salary: cashout.salary?.toString() || '',
+      incentive: cashout.incentive?.toString() || '',
+      tools: cashout.tools?.toString() || '',
+      rent: cashout.rent?.toString() || '',
+      others: cashout.others?.toString() || ''
+    });
+  };
+
+  // Handle delete revenue mapping
+  const handleDeleteRevenueMapping = (revenueMappingId: string, revenueMappingDescription: string) => {
+    setRevenueMappingToDelete({ id: revenueMappingId, description: revenueMappingDescription });
+    setPasswordAttempts(0);
+    setPasswordInput("");
+    setIsRevenueMappingPasswordDialogOpen(true);
+  };
+
+  // Handle password verification for revenue mapping delete
+  const handleVerifyRevenueMappingPassword = async () => {
+    if (!passwordInput) {
+      toast({
+        title: "Error",
+        description: "Please enter your password",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsVerifyingPassword(true);
+    try {
+      const response = await apiRequest('POST', '/api/admin/verify-password', {
+        password: passwordInput
+      });
+      
+      const responseData = await response.json() as any;
+
+      if (responseData && responseData.success) {
+        if (revenueMappingToDelete) {
+          try {
+            const deleteResponse = await apiRequest('DELETE', `/api/admin/revenue-mappings/${revenueMappingToDelete.id}`, {});
+            const deleteResult = await deleteResponse.json();
+            
+            if (!deleteResponse.ok) {
+              throw new Error(deleteResult.message || 'Failed to delete revenue mapping');
+            }
+
+            queryClient.invalidateQueries({ queryKey: ['/api/admin/revenue-mappings'] });
+            
+            toast({
+              title: "Success",
+              description: "Revenue mapping deleted successfully",
+              className: "bg-green-50 border-green-200 text-green-800",
+            });
+            
+            setIsRevenueMappingPasswordDialogOpen(false);
+            setPasswordInput("");
+            setPasswordAttempts(0);
+            setRevenueMappingToDelete(null);
+          } catch (deleteError: any) {
+            console.error('Deletion failed:', deleteError);
+            toast({
+              title: "Error",
+              description: deleteError.message || "Failed to delete the revenue mapping. Please try again.",
+              variant: "destructive"
+            });
+          }
+        }
+      } else {
+        const newAttempts = passwordAttempts + 1;
+        setPasswordAttempts(newAttempts);
+        setPasswordInput("");
+
+        if (newAttempts >= 3) {
+          toast({
+            title: "Security Alert",
+            description: "Too many incorrect attempts. Please try again later.",
+            variant: "destructive"
+          });
+          setIsRevenueMappingPasswordDialogOpen(false);
+          setPasswordInput("");
+          setPasswordAttempts(0);
+          setRevenueMappingToDelete(null);
+        } else {
+          toast({
+            title: "Incorrect Password",
+            description: `${3 - newAttempts} attempt(s) remaining`,
+            variant: "destructive"
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete the revenue mapping. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsVerifyingPassword(false);
+    }
+  };
+
+  // Handle cancel revenue mapping delete
+  const handleCancelRevenueMappingDelete = () => {
+    setIsRevenueMappingPasswordDialogOpen(false);
+    setPasswordInput("");
+    setPasswordAttempts(0);
+    setRevenueMappingToDelete(null);
+  };
+
+  const handleRevenueMappingPasswordDialogOpenChange = (open: boolean) => {
+    setIsRevenueMappingPasswordDialogOpen(open);
+    if (!open) {
+      handleCancelRevenueMappingDelete();
     }
   };
 
@@ -2668,38 +3029,78 @@ export default function AdminDashboard() {
             <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
               <thead>
                 <tr className="bg-gray-200 dark:bg-gray-700">
-                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">Resource</th>
-                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">Role</th>
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">TL</th>
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">TA</th>
                   <th className="text-left py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">Quarter</th>
                   <th className="text-left py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">Minimum Target</th>
                   <th className="text-left py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">Target Achieved</th>
                   <th className="text-left py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">Closures</th>
                   <th className="text-left py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">Incentives</th>
+                  <th className="text-left py-2 px-3 text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoadingTargets ? (
                   <tr>
-                    <td colSpan={7} className="py-4 px-3 text-sm text-gray-600 dark:text-gray-400 text-center">
+                    <td colSpan={8} className="py-4 px-3 text-sm text-gray-600 dark:text-gray-400 text-center">
                       Loading...
                     </td>
                   </tr>
                 ) : targetMappings.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-4 px-3 text-sm text-gray-600 dark:text-gray-400 text-center">
+                    <td colSpan={8} className="py-4 px-3 text-sm text-gray-600 dark:text-gray-400 text-center">
                       No target mappings found
                     </td>
                   </tr>
                 ) : (
                   targetMappings.slice(0, 5).map((target, index) => (
                     <tr key={target.id} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
+                      <td className="py-2 px-3 text-sm text-gray-900 dark:text-white font-medium">{target.teamLeadName || "-"}</td>
                       <td className="py-2 px-3 text-sm text-gray-900 dark:text-white font-medium">{target.teamMemberName}</td>
-                      <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.teamMemberRole}</td>
                       <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.quarter} {target.year}</td>
                       <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.minimumTarget}</td>
                       <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.targetAchieved || "-"}</td>
                       <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.closures || "-"}</td>
                       <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">{target.incentives || "-"}</td>
+                      <td className="py-2 px-3 text-sm text-gray-600 dark:text-gray-400">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={(e) => e.stopPropagation()}
+                              data-testid={`button-actions-target-${target.id}`}
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditTarget(target);
+                              }}
+                              className="cursor-pointer"
+                              data-testid={`button-edit-target-${target.id}`}
+                            >
+                              <EditIcon className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteTarget(target.id, `${target.teamMemberName} - ${target.quarter} ${target.year}`);
+                              }}
+                              className="cursor-pointer text-red-600 focus:text-red-600"
+                              data-testid={`button-delete-target-${target.id}`}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -2833,8 +3234,14 @@ export default function AdminDashboard() {
                       <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                     </Button>
                   </div>
-                  <div className={`text-4xl font-bold ${dailyMetricsData.overallPerformance === 'G' ? 'text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900' : 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900'} w-16 h-16 rounded-sm flex items-center justify-center`} data-testid="indicator-performance">
-                    {dailyMetricsData.overallPerformance}
+                  <div className={`text-4xl font-bold ${
+                    dailyMetricsData.overallPerformance === 'G' 
+                      ? 'text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900' 
+                      : dailyMetricsData.overallPerformance === 'A'
+                      ? 'text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900'
+                      : 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900'
+                  } w-16 h-16 rounded-sm flex items-center justify-center`} data-testid="indicator-performance">
+                    {dailyMetricsData.overallPerformance || 'G'}
                   </div>
                 </div>
                 <div className="flex justify-start space-x-2 mb-2">
@@ -4271,33 +4678,44 @@ export default function AdminDashboard() {
                                 </span>
                               </td>
                               <td className="py-3 px-4">
-                                <div className="flex gap-2">
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    onClick={() => {
-                                      setEditingRevenueMapping(mapping);
-                                      setIsRevenueMappingModalOpen(true);
-                                    }}
-                                    data-testid={`button-edit-revenue-${mapping.id}`}
-                                  >
-                                    <EditIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                                  </Button>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    onClick={() => {
-                                      if (confirm('Are you sure you want to delete this revenue mapping?')) {
-                                        deleteRevenueMappingMutation.mutate(mapping.id);
-                                      }
-                                    }}
-                                    data-testid={`button-delete-revenue-${mapping.id}`}
-                                  >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                  </Button>
-                                </div>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={(e) => e.stopPropagation()}
+                                      data-testid={`button-actions-revenue-${mapping.id}`}
+                                    >
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingRevenueMapping(mapping);
+                                        setIsRevenueMappingModalOpen(true);
+                                      }}
+                                      className="cursor-pointer"
+                                      data-testid={`button-edit-revenue-${mapping.id}`}
+                                    >
+                                      <EditIcon className="mr-2 h-4 w-4" />
+                                      Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteRevenueMapping(mapping.id, `${mapping.talentAdvisorName || 'N/A'} - ${mapping.position || 'N/A'}`);
+                                      }}
+                                      className="cursor-pointer text-red-600 focus:text-red-600"
+                                      data-testid={`button-delete-revenue-${mapping.id}`}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </td>
                             </tr>
                           ))}
@@ -4924,7 +5342,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Right Sidebar with Live Stats */}
-            <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700">
+            <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 h-full overflow-y-auto admin-scrollbar">
               <div className="p-4 space-y-1">
                 <div className="flex justify-between items-center py-3 px-4 bg-green-100 dark:bg-green-900 rounded">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">SOURCED</span>
@@ -4973,16 +5391,6 @@ export default function AdminDashboard() {
                 <div className="flex justify-between items-center py-3 px-4 bg-amber-500 dark:bg-amber-600 rounded">
                   <span className="text-sm font-medium text-white">OFFER DROP</span>
                   <span className="text-lg font-bold text-white">{getPipelineCandidatesByStage.offerDrop.length}</span>
-                </div>
-                
-                {/* See More button moved to bottom right */}
-                <div className="flex justify-end mt-4">
-                  <Button 
-                    className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded text-sm"
-                    onClick={() => setIsPipelineModalOpen(true)}
-                  >
-                    See More
-                  </Button>
                 </div>
               </div>
             </div>
@@ -5526,33 +5934,44 @@ export default function AdminDashboard() {
                               </span>
                             </td>
                             <td className="py-3 px-4">
-                              <div className="flex gap-2">
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    setEditingRevenueMapping(mapping);
-                                    setIsRevenueMappingModalOpen(true);
-                                  }}
-                                  data-testid={`button-edit-revenue-2-${mapping.id}`}
-                                >
-                                  <EditIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                                </Button>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    if (confirm('Are you sure you want to delete this revenue mapping?')) {
-                                      deleteRevenueMappingMutation.mutate(mapping.id);
-                                    }
-                                  }}
-                                  data-testid={`button-delete-revenue-2-${mapping.id}`}
-                                >
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                  </svg>
-                                </Button>
-                              </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={(e) => e.stopPropagation()}
+                                    data-testid={`button-actions-revenue-2-${mapping.id}`}
+                                  >
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setEditingRevenueMapping(mapping);
+                                      setIsRevenueMappingModalOpen(true);
+                                    }}
+                                    className="cursor-pointer"
+                                    data-testid={`button-edit-revenue-2-${mapping.id}`}
+                                  >
+                                    <EditIcon className="mr-2 h-4 w-4" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteRevenueMapping(mapping.id, `${mapping.talentAdvisorName || 'N/A'} - ${mapping.position || 'N/A'}`);
+                                    }}
+                                    className="cursor-pointer text-red-600 focus:text-red-600"
+                                    data-testid={`button-delete-revenue-2-${mapping.id}`}
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </td>
                           </tr>
                         ))}
@@ -6349,18 +6768,19 @@ export default function AdminDashboard() {
                             <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Tools Cost</th>
                             <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Rent</th>
                             <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Others Cost</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {isLoadingCashout ? (
                             <tr>
-                              <td colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                              <td colSpan={9} className="py-8 text-center text-gray-500 dark:text-gray-400">
                                 Loading cash outflow data...
                               </td>
                             </tr>
                           ) : cashoutData.length === 0 ? (
                             <tr>
-                              <td colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                              <td colSpan={9} className="py-8 text-center text-gray-500 dark:text-gray-400">
                                 No cash outflow data found. Add your first entry above.
                               </td>
                             </tr>
@@ -6375,6 +6795,45 @@ export default function AdminDashboard() {
                                 <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.tools.toLocaleString('en-IN')}</td>
                                 <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.rent.toLocaleString('en-IN')}</td>
                                 <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.others.toLocaleString('en-IN')}</td>
+                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={(e) => e.stopPropagation()}
+                                        data-testid={`button-actions-cashout-${row.id}`}
+                                      >
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleEditCashout(row);
+                                        }}
+                                        className="cursor-pointer"
+                                        data-testid={`button-edit-cashout-${row.id}`}
+                                      >
+                                        <EditIcon className="mr-2 h-4 w-4" />
+                                        Edit
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteCashout(row.id, `${row.month} ${row.year}`);
+                                        }}
+                                        className="cursor-pointer text-red-600 focus:text-red-600"
+                                        data-testid={`button-delete-cashout-${row.id}`}
+                                      >
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </td>
                               </tr>
                             ))
                           )}
@@ -6568,38 +7027,80 @@ export default function AdminDashboard() {
               <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
                 <thead>
                   <tr className="bg-gray-200 dark:bg-gray-700">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Resource</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Role</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">TL</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">TA</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Quarter</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Minimum Target</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Target Achieved</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Closures</th>
                     <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Incentives</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 border-b border-gray-300 dark:border-gray-600">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoadingTargets ? (
                     <tr>
-                      <td colSpan={7} className="py-4 px-4 text-sm text-gray-600 dark:text-gray-400 text-center">
+                      <td colSpan={8} className="py-4 px-4 text-sm text-gray-600 dark:text-gray-400 text-center">
                         Loading...
                       </td>
                     </tr>
                   ) : filteredTargetMappings.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-4 px-4 text-sm text-gray-600 dark:text-gray-400 text-center">
+                      <td colSpan={8} className="py-4 px-4 text-sm text-gray-600 dark:text-gray-400 text-center">
                         {targetSearch ? 'No matching target mappings found' : 'No target mappings found'}
                       </td>
                     </tr>
                   ) : (
                     filteredTargetMappings.map((target, index) => (
                       <tr key={target.id} className={index % 2 === 0 ? "bg-blue-50 dark:bg-blue-900/20" : "bg-white dark:bg-gray-800"}>
+                        <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{target.teamLeadName || "-"}</td>
                         <td className="py-3 px-4 text-sm text-gray-900 dark:text-white font-medium border-b border-gray-100 dark:border-gray-700">{target.teamMemberName}</td>
-                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.teamMemberRole}</td>
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.quarter} {target.year}</td>
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.minimumTarget}</td>
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.targetAchieved || "-"}</td>
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.closures || "-"}</td>
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{target.incentives || "-"}</td>
+                        <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={(e) => e.stopPropagation()}
+                                data-testid={`button-actions-target-all-${target.id}`}
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditTarget(target);
+                                  setIsTargetModalOpen(false);
+                                }}
+                                className="cursor-pointer"
+                                data-testid={`button-edit-target-all-${target.id}`}
+                              >
+                                <EditIcon className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteTarget(target.id, `${target.teamMemberName} - ${target.quarter} ${target.year}`);
+                                  setIsTargetModalOpen(false);
+                                }}
+                                className="cursor-pointer text-red-600 focus:text-red-600"
+                                data-testid={`button-delete-target-all-${target.id}`}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -7336,7 +7837,11 @@ export default function AdminDashboard() {
       {/* Target Mapping Modal */}
       <TargetMappingModal
         isOpen={isTargetMappingModalOpen}
-        onClose={() => setIsTargetMappingModalOpen(false)}
+        onClose={() => {
+          setIsTargetMappingModalOpen(false);
+          setEditingTarget(null);
+        }}
+        editingTarget={editingTarget}
       />
 
       {/* Revenue Mapping Modal */}
@@ -7388,6 +7893,195 @@ export default function AdminDashboard() {
         editData={editingUser && editingUser.role === 'Recruiter' ? editingUser : null}
         onSubmit={editingUser ? handleUpdateUser : handleAddUser}
       />
+
+      {/* Password Protected Delete Dialog for Revenue Mapping Management */}
+      <Dialog open={isRevenueMappingPasswordDialogOpen} onOpenChange={handleRevenueMappingPasswordDialogOpenChange} data-testid="dialog-password-delete-revenue-mapping">
+        <DialogContent className="max-w-md" data-testid="dialog-password-confirm-revenue-mapping">
+          <DialogHeader>
+            <DialogTitle>Confirm Revenue Mapping Deletion</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              To delete revenue mapping "{revenueMappingToDelete?.description}", please enter your admin password for security.
+            </p>
+            
+            <div className="space-y-2">
+              <Label htmlFor="delete-revenue-mapping-password">Admin Password</Label>
+              <PasswordInput
+                id="delete-revenue-mapping-password"
+                placeholder="Enter your password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isVerifyingPassword) {
+                    handleVerifyRevenueMappingPassword();
+                  }
+                }}
+                disabled={isVerifyingPassword || passwordAttempts >= 3}
+                data-testid="input-delete-revenue-mapping-password"
+              />
+            </div>
+
+            {passwordAttempts > 0 && passwordAttempts < 3 && (
+              <p className="text-sm text-red-600 dark:text-red-400">
+                {3 - passwordAttempts} attempt(s) remaining
+              </p>
+            )}
+
+            {passwordAttempts >= 3 && (
+              <p className="text-sm text-red-600 dark:text-red-400 font-semibold">
+                Maximum attempts reached. Please try again later.
+              </p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleCancelRevenueMappingDelete}
+              disabled={isVerifyingPassword}
+              data-testid="button-cancel-delete-revenue-mapping"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleVerifyRevenueMappingPassword}
+              disabled={isVerifyingPassword || passwordAttempts >= 3 || !passwordInput}
+              data-testid="button-confirm-delete-revenue-mapping"
+            >
+              {isVerifyingPassword ? "Verifying..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Protected Delete Dialog for Cash Outflow Management */}
+      <Dialog open={isCashoutPasswordDialogOpen} onOpenChange={handleCashoutPasswordDialogOpenChange} data-testid="dialog-password-delete-cashout">
+        <DialogContent className="max-w-md" data-testid="dialog-password-confirm-cashout">
+          <DialogHeader>
+            <DialogTitle>Confirm Cash Outflow Deletion</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              To delete cash outflow "{cashoutToDelete?.description}", please enter your admin password for security.
+            </p>
+            
+            <div className="space-y-2">
+              <Label htmlFor="delete-cashout-password">Admin Password</Label>
+              <PasswordInput
+                id="delete-cashout-password"
+                placeholder="Enter your password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isVerifyingPassword) {
+                    handleVerifyCashoutPassword();
+                  }
+                }}
+                disabled={isVerifyingPassword || passwordAttempts >= 3}
+                data-testid="input-delete-cashout-password"
+              />
+            </div>
+
+            {passwordAttempts > 0 && passwordAttempts < 3 && (
+              <p className="text-sm text-red-600 dark:text-red-400">
+                {3 - passwordAttempts} attempt(s) remaining
+              </p>
+            )}
+
+            {passwordAttempts >= 3 && (
+              <p className="text-sm text-red-600 dark:text-red-400 font-semibold">
+                Maximum attempts reached. Please try again later.
+              </p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleCancelCashoutDelete}
+              disabled={isVerifyingPassword}
+              data-testid="button-cancel-delete-cashout"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleVerifyCashoutPassword}
+              disabled={isVerifyingPassword || passwordAttempts >= 3 || !passwordInput}
+              data-testid="button-confirm-delete-cashout"
+            >
+              {isVerifyingPassword ? "Verifying..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Protected Delete Dialog for Target Management */}
+      <Dialog open={isTargetPasswordDialogOpen} onOpenChange={handleTargetPasswordDialogOpenChange} data-testid="dialog-password-delete-target">
+        <DialogContent className="max-w-md" data-testid="dialog-password-confirm-target">
+          <DialogHeader>
+            <DialogTitle>Confirm Target Deletion</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              To delete target "{targetToDelete?.description}", please enter your admin password for security.
+            </p>
+            
+            <div className="space-y-2">
+              <Label htmlFor="delete-target-password">Admin Password</Label>
+              <PasswordInput
+                id="delete-target-password"
+                placeholder="Enter your password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isVerifyingPassword) {
+                    handleVerifyTargetPassword();
+                  }
+                }}
+                disabled={isVerifyingPassword || passwordAttempts >= 3}
+                data-testid="input-delete-target-password"
+              />
+            </div>
+
+            {passwordAttempts > 0 && passwordAttempts < 3 && (
+              <p className="text-sm text-red-600 dark:text-red-400">
+                {3 - passwordAttempts} attempt(s) remaining
+              </p>
+            )}
+
+            {passwordAttempts >= 3 && (
+              <p className="text-sm text-red-600 dark:text-red-400 font-semibold">
+                Maximum attempts reached. Please try again later.
+              </p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={handleCancelTargetDelete}
+              disabled={isVerifyingPassword}
+              data-testid="button-cancel-delete-target"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleVerifyTargetPassword}
+              disabled={isVerifyingPassword || passwordAttempts >= 3 || !passwordInput}
+              data-testid="button-confirm-delete-target"
+            >
+              {isVerifyingPassword ? "Verifying..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Password Protected Delete Dialog for User Management */}
       <Dialog open={isPasswordDialogOpen} onOpenChange={handlePasswordDialogOpenChange} data-testid="dialog-password-delete">
@@ -7721,18 +8415,19 @@ export default function AdminDashboard() {
                     <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Tools Cost</th>
                     <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Rent</th>
                     <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Others Cost</th>
+                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoadingCashout ? (
                     <tr>
-                      <td colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                      <td colSpan={9} className="py-8 text-center text-gray-500 dark:text-gray-400">
                         Loading cash outflow data...
                       </td>
                     </tr>
                   ) : filteredCashoutData.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                      <td colSpan={9} className="py-8 text-center text-gray-500 dark:text-gray-400">
                         {cashoutSearch ? 'No matching cash outflow data found' : 'No cash outflow data found'}
                       </td>
                     </tr>
@@ -7747,6 +8442,47 @@ export default function AdminDashboard() {
                         <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.tools.toLocaleString('en-IN')}</td>
                         <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.rent.toLocaleString('en-IN')}</td>
                         <td className="py-3 px-3 text-gray-600 dark:text-gray-400">₹{row.others.toLocaleString('en-IN')}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={(e) => e.stopPropagation()}
+                                data-testid={`button-actions-cashout-all-${row.id}`}
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditCashout(row);
+                                  setIsCashoutModalOpen(false);
+                                }}
+                                className="cursor-pointer"
+                                data-testid={`button-edit-cashout-all-${row.id}`}
+                              >
+                                <EditIcon className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteCashout(row.id, `${row.month} ${row.year}`);
+                                  setIsCashoutModalOpen(false);
+                                }}
+                                className="cursor-pointer text-red-600 focus:text-red-600"
+                                data-testid={`button-delete-cashout-all-${row.id}`}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -8913,56 +9649,57 @@ export default function AdminDashboard() {
           </DialogHeader>
           <div className="space-y-4">
             {/* Filters Section */}
-            <div className="flex flex-wrap gap-4">
-              <Select value={revenueTeam} onValueChange={setRevenueTeam}>
-                <SelectTrigger className="w-48 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" data-testid="select-revenue-team">
-                  <SelectValue placeholder="Select Team" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Teams</SelectItem>
-                  {teamLeads.map((tl: any) => (
-                    <SelectItem key={tl.id} value={tl.id}>
-                      {tl.name} (TL)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex flex-row gap-4">
+              <div className="flex-1 space-y-1">
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Team</label>
+                <Select value={revenueTeam} onValueChange={setRevenueTeam}>
+                  <SelectTrigger className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" data-testid="select-revenue-team">
+                    <SelectValue placeholder="All Teams" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Teams</SelectItem>
+                    {teamLeads.map((tl: any) => (
+                      <SelectItem key={tl.id} value={tl.id}>
+                        {tl.name} (TL)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               
-              {revenuePeriod === 'monthly' && (
-                <>
-                  <StandardDatePicker
-                    value={revenueDateFrom}
-                    onChange={setRevenueDateFrom}
-                    placeholder="From Date"
-                    className="w-48"
-                  />
-                  
-                  <StandardDatePicker
-                    value={revenueDateTo}
-                    onChange={setRevenueDateTo}
-                    placeholder="To Date"
-                    className="w-48"
-                  />
-                </>
-              )}
+              <div className="flex-1 space-y-1">
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300">From</label>
+                <StandardDatePicker
+                  value={revenueDateFrom}
+                  onChange={setRevenueDateFrom}
+                  placeholder="dd-mm-yyyy"
+                  className="w-full"
+                />
+              </div>
               
-              <Select value={revenuePeriod} onValueChange={(value) => {
-                setRevenuePeriod(value);
-                // Clear date filters when switching away from monthly
-                if (value !== 'monthly') {
-                  setRevenueDateFrom(undefined);
-                  setRevenueDateTo(undefined);
-                }
-              }}>
-                <SelectTrigger className="w-32 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" data-testid="select-revenue-period">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                  <SelectItem value="quarterly">Quarterly</SelectItem>
-                  <SelectItem value="yearly">Yearly</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex-1 space-y-1">
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300">To</label>
+                <StandardDatePicker
+                  value={revenueDateTo}
+                  onChange={setRevenueDateTo}
+                  placeholder="dd-mm-yyyy"
+                  className="w-full"
+                />
+              </div>
+              
+              <div className="flex-1 space-y-1">
+                <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Period</label>
+                <Select value={revenuePeriod} onValueChange={setRevenuePeriod}>
+                  <SelectTrigger className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" data-testid="select-revenue-period">
+                    <SelectValue placeholder="Monthly" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Monthly</SelectItem>
+                    <SelectItem value="quarterly">Quarterly</SelectItem>
+                    <SelectItem value="yearly">Yearly</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="flex justify-start space-x-4">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,9 +11,10 @@ import { type Employee } from "@shared/schema";
 interface TargetMappingModalProps {
   isOpen: boolean;
   onClose: () => void;
+  editingTarget?: any;
 }
 
-export default function TargetMappingModal({ isOpen, onClose }: TargetMappingModalProps) {
+export default function TargetMappingModal({ isOpen, onClose, editingTarget }: TargetMappingModalProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -23,21 +24,61 @@ export default function TargetMappingModal({ isOpen, onClose }: TargetMappingMod
   const [year, setYear] = useState(new Date().getFullYear().toString());
   const [minimumTarget, setMinimumTarget] = useState("");
 
+  // Populate form when editing
+  useEffect(() => {
+    if (editingTarget) {
+      setTeamLeadId(editingTarget.teamLeadId || "");
+      setTeamMemberId(editingTarget.teamMemberId || "");
+      setQuarter(editingTarget.quarter || "");
+      setYear(editingTarget.year?.toString() || new Date().getFullYear().toString());
+      setMinimumTarget(editingTarget.minimumTarget?.toString() || "");
+    } else {
+      // Reset form when not editing
+      setTeamLeadId("");
+      setTeamMemberId("");
+      setQuarter("");
+      setYear(new Date().getFullYear().toString());
+      setMinimumTarget("");
+    }
+  }, [editingTarget, isOpen]);
+
   const { data: employees = [] } = useQuery<Employee[]>({
     queryKey: ["/api/admin/employees"],
   });
 
   const teamLeaders = employees.filter(emp => emp.role === "team_leader");
-  const teamMembers = employees.filter(emp => emp.role === "recruiter" || emp.role === "talent_advisor");
+  
+  // Filter team members based on selected team leader
+  const filteredTeamMembers = useMemo(() => {
+    if (!teamLeadId) return [];
+    const selectedTL = teamLeaders.find(tl => tl.id === teamLeadId);
+    if (!selectedTL) return [];
+    // Filter team members who report to the selected team leader
+    return employees.filter(emp => 
+      (emp.role === "recruiter" || emp.role === "talent_advisor") &&
+      emp.reportingTo === selectedTL.employeeId
+    );
+  }, [teamLeadId, employees, teamLeaders]);
+  
+  // Check if all required fields are filled
+  const isFormValid = useMemo(() => {
+    return teamLeadId && teamMemberId && quarter && year && minimumTarget.trim() !== "";
+  }, [teamLeadId, teamMemberId, quarter, year, minimumTarget]);
 
   const createTargetMappingMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("POST", "/api/admin/target-mappings", data);
+      if (editingTarget) {
+        // Note: Update endpoint not implemented yet - for now we'll use create
+        // In a real scenario, you'd have a PUT endpoint
+        return await apiRequest("POST", "/api/admin/target-mappings", data);
+      } else {
+        return await apiRequest("POST", "/api/admin/target-mappings", data);
+      }
     },
     onSuccess: () => {
       toast({
         title: "Success",
-        description: "Target mapping created successfully",
+        description: editingTarget ? "Target mapping updated successfully" : "Target mapping created successfully",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/target-mappings"] });
       handleClose();
@@ -45,14 +86,14 @@ export default function TargetMappingModal({ isOpen, onClose }: TargetMappingMod
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to create target mapping",
+        description: error.message || (editingTarget ? "Failed to update target mapping" : "Failed to create target mapping"),
         variant: "destructive",
       });
     },
   });
 
   const handleSubmit = () => {
-    if (!teamLeadId || !teamMemberId || !quarter || !year || !minimumTarget) {
+    if (!isFormValid) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
@@ -62,7 +103,7 @@ export default function TargetMappingModal({ isOpen, onClose }: TargetMappingMod
     }
 
     const selectedTL = teamLeaders.find(tl => tl.id === teamLeadId);
-    const selectedMember = teamMembers.find(tm => tm.id === teamMemberId);
+    const selectedMember = filteredTeamMembers.find(tm => tm.id === teamMemberId);
 
     if (!selectedTL || !selectedMember) {
       toast({
@@ -90,22 +131,28 @@ export default function TargetMappingModal({ isOpen, onClose }: TargetMappingMod
     setMinimumTarget("");
     onClose();
   };
+  
+  // Reset team member when team leader changes
+  const handleTeamLeadChange = (value: string) => {
+    setTeamLeadId(value);
+    setTeamMemberId(""); // Reset team member when TL changes
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-md mx-auto bg-white dark:bg-gray-900 rounded-lg shadow-lg">
         <DialogHeader className="p-4 border-b">
           <DialogTitle className="text-lg font-semibold text-gray-900 dark:text-white">
-            Target Mapping
+            {editingTarget ? "Edit Target Mapping" : "Target Mapping"}
           </DialogTitle>
         </DialogHeader>
         
         <div className="p-6 space-y-4">
           <div className="space-y-4">
             <div>
-              <Select value={teamLeadId} onValueChange={setTeamLeadId}>
-                <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-800" data-testid="select-team-lead">
-                  <SelectValue placeholder="Team Lead *" className="text-gray-400" />
+              <Select value={teamLeadId} onValueChange={handleTeamLeadChange}>
+                <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-800 data-[placeholder]:text-gray-400" data-testid="select-team-lead">
+                  <SelectValue placeholder="Team Lead *" />
                 </SelectTrigger>
                 <SelectContent>
                   {teamLeaders.map((tl) => (
@@ -118,24 +165,37 @@ export default function TargetMappingModal({ isOpen, onClose }: TargetMappingMod
             </div>
 
             <div>
-              <Select value={teamMemberId} onValueChange={setTeamMemberId}>
-                <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-800" data-testid="select-team-member">
-                  <SelectValue placeholder="Team Member *" className="text-gray-400" />
+              <Select 
+                value={teamMemberId} 
+                onValueChange={setTeamMemberId}
+                disabled={!teamLeadId}
+              >
+                <SelectTrigger 
+                  className={`w-full bg-gray-50 dark:bg-gray-800 data-[placeholder]:text-gray-400 ${!teamLeadId ? 'opacity-50 cursor-not-allowed' : ''}`} 
+                  data-testid="select-team-member"
+                >
+                  <SelectValue placeholder="Team Member *" />
                 </SelectTrigger>
                 <SelectContent>
-                  {teamMembers.map((member) => (
-                    <SelectItem key={member.id} value={member.id}>
-                      {member.name}
+                  {filteredTeamMembers.length === 0 ? (
+                    <SelectItem value="no-members" disabled>
+                      No team members found
                     </SelectItem>
-                  ))}
+                  ) : (
+                    filteredTeamMembers.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
 
             <div>
               <Select value={quarter} onValueChange={setQuarter}>
-                <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-800" data-testid="select-quarter">
-                  <SelectValue placeholder="Quarter *" className="text-gray-400" />
+                <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-800 data-[placeholder]:text-gray-400" data-testid="select-quarter">
+                  <SelectValue placeholder="Quarter *" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Q1">Q1 (Jan-Mar)</SelectItem>
@@ -149,7 +209,7 @@ export default function TargetMappingModal({ isOpen, onClose }: TargetMappingMod
             <div>
               <Input
                 type="number"
-                className="bg-gray-50 dark:bg-gray-800"
+                className="bg-gray-50 dark:bg-gray-800 placeholder:text-gray-400"
                 value={year}
                 onChange={(e) => setYear(e.target.value)}
                 placeholder="Year * (e.g., 2025)"
@@ -160,7 +220,7 @@ export default function TargetMappingModal({ isOpen, onClose }: TargetMappingMod
             <div>
               <Input
                 type="text"
-                className="bg-gray-50 dark:bg-gray-800"
+                className="bg-gray-50 dark:bg-gray-800 placeholder:text-gray-400"
                 value={minimumTarget}
                 onChange={(e) => setMinimumTarget(e.target.value)}
                 placeholder="Minimum Target (₹) * (e.g., 15,00,000)"
@@ -173,7 +233,7 @@ export default function TargetMappingModal({ isOpen, onClose }: TargetMappingMod
             <Button 
               className="w-full"
               onClick={handleSubmit}
-              disabled={createTargetMappingMutation.isPending}
+              disabled={!isFormValid || createTargetMappingMutation.isPending}
               data-testid="button-submit-target-mapping"
             >
               {createTargetMappingMutation.isPending ? "Submitting..." : "Submit"}

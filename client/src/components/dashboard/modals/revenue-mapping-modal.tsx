@@ -1,12 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
-import { format, getYear, getMonth } from "date-fns";
+import { StandardDatePicker } from "@/components/ui/standard-date-picker";
+import { format } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -17,75 +15,6 @@ interface RevenueMappingModalProps {
   editingRevenueMapping?: any;
 }
 
-// Google-style date picker component
-function GoogleStyleDatePicker({ selectedDate, onSelect }: { selectedDate?: Date; onSelect: (date: Date) => void }) {
-  const [displayYear, setDisplayYear] = useState(getYear(selectedDate || new Date()));
-  const [displayMonth, setDisplayMonth] = useState(getMonth(selectedDate || new Date()));
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  
-  const handleNextMonth = () => {
-    if (displayMonth === 11) {
-      setDisplayMonth(0);
-      setDisplayYear(displayYear + 1);
-    } else {
-      setDisplayMonth(displayMonth + 1);
-    }
-  };
-  
-  const handlePrevMonth = () => {
-    if (displayMonth === 0) {
-      setDisplayMonth(11);
-      setDisplayYear(displayYear - 1);
-    } else {
-      setDisplayMonth(displayMonth - 1);
-    }
-  };
-
-  return (
-    <div className="w-80 p-4 space-y-3">
-      {/* Year/Month selector */}
-      <div className="flex items-center justify-between gap-2">
-        <Select value={displayYear.toString()} onValueChange={(val) => setDisplayYear(parseInt(val))}>
-          <SelectTrigger className="flex-1 h-8 text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Array.from({ length: 10 }, (_, i) => displayYear - 5 + i).map((year) => (
-              <SelectItem key={year} value={year.toString()}>
-                {year}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        
-        <div className="flex items-center gap-1 flex-1">
-          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handlePrevMonth} data-testid="button-prev-month">
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1 text-center text-sm font-medium">{monthNames[displayMonth]}</div>
-          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleNextMonth} data-testid="button-next-month">
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Calendar */}
-      <Calendar
-        mode="single"
-        selected={selectedDate}
-        onSelect={(date) => {
-          if (date) onSelect(date);
-        }}
-        month={new Date(displayYear, displayMonth)}
-        onMonthChange={(date) => {
-          setDisplayYear(getYear(date));
-          setDisplayMonth(getMonth(date));
-        }}
-        className="w-full"
-      />
-    </div>
-  );
-}
 
 export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMapping }: RevenueMappingModalProps) {
   const queryClient = useQueryClient();
@@ -114,7 +43,7 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
 
   // Fetch employees for TA and TL dropdowns
   const { data: employees } = useQuery<any[]>({
-    queryKey: ['/api/employees'],
+    queryKey: ['/api/admin/employees'],
   });
 
   // Fetch clients for Client dropdown
@@ -135,6 +64,20 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
     emp.designation?.toLowerCase().includes('lead')
   );
 
+  // Filter TAs based on selected Team Lead
+  const filteredTalentAdvisors = useMemo(() => {
+    if (!teamLead) return [];
+    const selectedTL = teamLeads.find(tl => tl.id === teamLead);
+    if (!selectedTL) return [];
+    // Filter TAs who report to the selected team leader
+    return (employees || []).filter((emp: any) => 
+      (emp.role === 'recruiter' || emp.role === 'talent_advisor' || 
+       emp.designation?.toLowerCase().includes('advisor') || 
+       emp.designation?.toLowerCase().includes('recruiter')) &&
+      emp.reportingTo === selectedTL.employeeId
+    );
+  }, [teamLead, employees, teamLeads]);
+
   // Clear partnerName when clientType is not "Partner"
   useEffect(() => {
     if (clientType !== "Partner") {
@@ -149,13 +92,31 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
     }
   }, [source]);
 
+  // Reset talent advisor when team lead changes
+  useEffect(() => {
+    if (teamLead) {
+      setTalentAdvisor("");
+    }
+  }, [teamLead]);
+
+  // Map old quarter values to new ones
+  const mapQuarterValue = (quarter: string): string => {
+    const quarterMap: Record<string, string> = {
+      'JFM': 'Q1',
+      'AMJ': 'Q2',
+      'JAS': 'Q3',
+      'OND': 'Q4'
+    };
+    return quarterMap[quarter] || quarter;
+  };
+
   // Populate form when editing
   useEffect(() => {
     if (editingRevenueMapping) {
       setTalentAdvisor(editingRevenueMapping.talentAdvisorId || "");
       setTeamLead(editingRevenueMapping.teamLeadId || "");
       setYear(editingRevenueMapping.year?.toString() || "");
-      setQuarter(editingRevenueMapping.quarter || "");
+      setQuarter(mapQuarterValue(editingRevenueMapping.quarter || ""));
       setPosition(editingRevenueMapping.position || "");
       setClient(editingRevenueMapping.clientId || "");
       setClientType(editingRevenueMapping.clientType || "");
@@ -205,17 +166,9 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
   const revenueMappingMutation = useMutation({
     mutationFn: async (data: any) => {
       if (editingRevenueMapping) {
-        return await apiRequest(`/api/admin/revenue-mappings/${editingRevenueMapping.id}`, {
-          method: "PUT",
-          body: JSON.stringify(data),
-          headers: { "Content-Type": "application/json" },
-        });
+        return await apiRequest("PUT", `/api/admin/revenue-mappings/${editingRevenueMapping.id}`, data);
       } else {
-        return await apiRequest("/api/admin/revenue-mappings", {
-          method: "POST",
-          body: JSON.stringify(data),
-          headers: { "Content-Type": "application/json" },
-        });
+        return await apiRequest("POST", "/api/admin/revenue-mappings", data);
       }
     },
     onSuccess: () => {
@@ -303,7 +256,7 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
                 <SelectContent>
                   {teamLeads.map((tl: any) => (
                     <SelectItem key={tl.id} value={tl.id}>
-                      {tl.name} ({tl.employeeId})
+                      {tl.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -311,16 +264,29 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
             </div>
             <div>
               <RequiredLabel text="Talent Advisor" />
-              <Select value={talentAdvisor} onValueChange={setTalentAdvisor}>
-                <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700" data-testid="select-talent-advisor">
+              <Select 
+                value={talentAdvisor} 
+                onValueChange={setTalentAdvisor}
+                disabled={!teamLead}
+              >
+                <SelectTrigger 
+                  className={`w-full bg-gray-50 dark:bg-gray-700 ${!teamLead ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  data-testid="select-talent-advisor"
+                >
                   <SelectValue placeholder="Select Talent Advisor" />
                 </SelectTrigger>
                 <SelectContent>
-                  {talentAdvisors.map((ta: any) => (
-                    <SelectItem key={ta.id} value={ta.id}>
-                      {ta.name} ({ta.employeeId})
+                  {filteredTalentAdvisors.length === 0 ? (
+                    <SelectItem value="no-tas" disabled>
+                      No talent advisors found
                     </SelectItem>
-                  ))}
+                  ) : (
+                    filteredTalentAdvisors.map((ta: any) => (
+                      <SelectItem key={ta.id} value={ta.id}>
+                        {ta.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -349,10 +315,10 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
                   <SelectValue placeholder="Select Quarter" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="JFM">JFM (Jan-Feb-Mar)</SelectItem>
-                  <SelectItem value="AMJ">AMJ (Apr-May-Jun)</SelectItem>
-                  <SelectItem value="JAS">JAS (Jul-Aug-Sep)</SelectItem>
-                  <SelectItem value="OND">OND (Oct-Nov-Dec)</SelectItem>
+                  <SelectItem value="Q1">Q1 (Jan-Feb-Mar)</SelectItem>
+                  <SelectItem value="Q2">Q2 (Apr-May-Jun)</SelectItem>
+                  <SelectItem value="Q3">Q3 (Jul-Aug-Sep)</SelectItem>
+                  <SelectItem value="Q4">Q4 (Oct-Nov-Dec)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -380,7 +346,7 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
                 <SelectContent>
                   {clients?.map((c: any) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.brandName} ({c.clientCode})
+                      {c.brandName || c.incorporatedName || c.name || 'Unknown Client'}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -422,39 +388,21 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Offered Date</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal bg-gray-50 dark:bg-gray-700"
-                    data-testid="button-offered-date"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {offeredDate ? format(offeredDate, "MMM d, yyyy") : <span className="text-muted-foreground">Select date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <GoogleStyleDatePicker selectedDate={offeredDate} onSelect={setOfferedDate} />
-                </PopoverContent>
-              </Popover>
+              <StandardDatePicker
+                value={offeredDate}
+                onChange={setOfferedDate}
+                placeholder="Select date"
+                className="w-full bg-gray-50 dark:bg-gray-700"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Closure Date</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal bg-gray-50 dark:bg-gray-700"
-                    data-testid="button-closure-date"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {closureDate ? format(closureDate, "MMM d, yyyy") : <span className="text-muted-foreground">Select date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <GoogleStyleDatePicker selectedDate={closureDate} onSelect={setClosureDate} />
-                </PopoverContent>
-              </Popover>
+              <StandardDatePicker
+                value={closureDate}
+                onChange={setClosureDate}
+                placeholder="Select date"
+                className="w-full bg-gray-50 dark:bg-gray-700"
+              />
             </div>
           </div>
 
@@ -563,21 +511,12 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Invoice Date</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal bg-gray-50 dark:bg-gray-700"
-                    data-testid="button-invoice-date"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {invoiceDate ? format(invoiceDate, "MMM d, yyyy") : <span className="text-muted-foreground">Select date</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <GoogleStyleDatePicker selectedDate={invoiceDate} onSelect={setInvoiceDate} />
-                </PopoverContent>
-              </Popover>
+              <StandardDatePicker
+                value={invoiceDate}
+                onChange={setInvoiceDate}
+                placeholder="Select date"
+                className="w-full bg-gray-50 dark:bg-gray-700"
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Invoice Number</label>

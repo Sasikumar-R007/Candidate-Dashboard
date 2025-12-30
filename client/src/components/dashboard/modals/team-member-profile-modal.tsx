@@ -8,7 +8,7 @@ interface TeamMemberProfileModalProps {
     name: string;
     role: string;
     department: string;
-    image: string;
+    image: string | null;
     email: string;
     age: number;
     joiningDate: string;
@@ -20,41 +20,84 @@ interface TeamMemberProfileModalProps {
     targetAchievement: number;
     totalRevenue: string;
     teamMembers?: number;
+    teamLeaderName?: string;
+    teamLeaderId?: string;
   };
 }
 
 export default function TeamMemberProfileModal({ open, onOpenChange, member }: TeamMemberProfileModalProps) {
+  // Determine modal title based on role
+  const getModalTitle = () => {
+    const roleLower = member.role?.toLowerCase() || '';
+    if (roleLower.includes('recruiter') || roleLower.includes('talent') || roleLower.includes('advisor')) {
+      return 'Recruiter Profile';
+    } else if (roleLower.includes('team leader') || roleLower.includes('team_leader') || roleLower.includes('teamlead')) {
+      return 'Team Leader Profile';
+    } else if (roleLower.includes('client')) {
+      return 'Client Profile';
+    }
+    return 'Team Member Profile';
+  };
+
+  // Check if Team Leader info should be shown (only for Recruiters/Talent Advisors)
+  const shouldShowTeamLeader = () => {
+    const roleLower = member.role?.toLowerCase() || '';
+    return (roleLower.includes('recruiter') || roleLower.includes('talent') || roleLower.includes('advisor')) 
+           && (member.teamLeaderName || member.teamLeaderId);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto scrollbar-hide" data-testid="dialog-team-member-profile">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">Team Member Profile</DialogTitle>
+          <DialogTitle className="text-2xl font-bold">{getModalTitle()}</DialogTitle>
         </DialogHeader>
 
         {/* Profile Header */}
-        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 flex items-center space-x-4">
-          <div className="relative">
-            <img 
-              src={member.image}
-              alt={member.name}
-              className="w-20 h-20 rounded-full object-cover"
-              data-testid="img-member-avatar"
-            />
-            <div className="absolute bottom-0 right-0 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-medium" data-testid="status-online">
-              online
+        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="relative">
+              {member.image ? (
+                <img 
+                  src={member.image}
+                  alt={member.name}
+                  className="w-20 h-20 rounded-full object-cover"
+                  data-testid="img-member-avatar"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center" data-testid="img-member-avatar">
+                  <span className="text-white text-2xl font-semibold">
+                    {member.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+              )}
+              <div className="absolute bottom-0 right-0 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full font-medium" data-testid="status-online">
+                online
+              </div>
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100" data-testid="text-member-name">
+                {member.name}
+              </h2>
+              <p className="text-lg text-gray-700 dark:text-gray-300" data-testid="text-member-role">
+                {member.role}
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400" data-testid="text-member-department">
+                {member.department}
+              </p>
             </div>
           </div>
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100" data-testid="text-member-name">
-              {member.name}
-            </h2>
-            <p className="text-lg text-gray-700 dark:text-gray-300" data-testid="text-member-role">
-              {member.role}
-            </p>
-            <p className="text-sm text-gray-600 dark:text-gray-400" data-testid="text-member-department">
-              {member.department}
-            </p>
-          </div>
+          {shouldShowTeamLeader() && (
+            <div className="text-right">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Team Leader</p>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100" data-testid="text-team-leader">
+                {member.teamLeaderName || 'N/A'}
+                {member.teamLeaderId && (
+                  <span className="text-gray-500 dark:text-gray-400 ml-2">({member.teamLeaderId})</span>
+                )}
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Information Grid */}

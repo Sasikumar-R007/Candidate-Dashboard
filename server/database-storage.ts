@@ -744,6 +744,11 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(targetMappings).orderBy(desc(targetMappings.createdAt));
   }
 
+  async deleteTargetMapping(id: string): Promise<boolean> {
+    const result = await db.delete(targetMappings).where(eq(targetMappings.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
   async getTeamLeaderTargetSummary(teamLeadId: string): Promise<{
     currentQuarter: {
       quarter: string;

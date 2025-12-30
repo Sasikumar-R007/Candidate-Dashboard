@@ -1785,7 +1785,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalResumesRequired,
         dailyDeliveryDelivered: totalResumesDelivered,
         dailyDeliveryDefaulted: Math.max(0, totalResumesRequired - totalResumesDelivered),
-        overallPerformance: totalResumesDelivered >= totalResumesRequired ? "G" : "R",
+        overallPerformance: (() => {
+          if (totalResumesRequired === 0) return "G";
+          const performanceRatio = totalResumesDelivered / totalResumesRequired;
+          if (performanceRatio >= 1.0) return "G"; // Good: 100% or more
+          if (performanceRatio >= 0.5) return "A"; // Average: 50-99%
+          return "B"; // Bad: less than 50%
+        })(),
         deliveredItems: [],
         defaultedItems: [],
         performanceData,
@@ -2887,7 +2893,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalResumesRequired,
         dailyDeliveryDelivered: totalResumesDelivered,
         dailyDeliveryDefaulted: Math.max(0, totalResumesRequired - totalResumesDelivered),
-        overallPerformance: totalResumesDelivered >= totalResumesRequired ? "G" : "R",
+        overallPerformance: (() => {
+          if (totalResumesRequired === 0) return "G";
+          const performanceRatio = totalResumesDelivered / totalResumesRequired;
+          if (performanceRatio >= 1.0) return "G"; // Good: 100% or more
+          if (performanceRatio >= 0.5) return "A"; // Average: 50-99%
+          return "B"; // Bad: less than 50%
+        })(),
         delivered: totalResumesDelivered,
         defaulted: Math.max(0, totalResumesRequired - totalResumesDelivered),
         required: totalResumesRequired,
@@ -2987,7 +2999,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         required: metrics.required,
         requirementCount: metrics.requirementCount,
         performanceRatio: metrics.required > 0 ? (metrics.delivered / metrics.required * 100).toFixed(1) : '100',
-        overallPerformance: metrics.delivered >= metrics.required ? "G" : "R"
+        overallPerformance: (() => {
+          if (metrics.required === 0) return "G";
+          const performanceRatio = metrics.delivered / metrics.required;
+          if (performanceRatio >= 1.0) return "G"; // Good: 100% or more
+          if (performanceRatio >= 0.5) return "A"; // Average: 50-99%
+          return "B"; // Bad: less than 50%
+        })()
       });
     } catch (error) {
       console.error('Get team leader daily metrics error:', error);
@@ -3039,7 +3057,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         required: metrics.required,
         requirementCount: metrics.requirementCount,
         performanceRatio: metrics.required > 0 ? (metrics.delivered / metrics.required * 100).toFixed(1) : '100',
-        overallPerformance: metrics.delivered >= metrics.required ? "G" : "R"
+        overallPerformance: (() => {
+          if (metrics.required === 0) return "G";
+          const performanceRatio = metrics.delivered / metrics.required;
+          if (performanceRatio >= 1.0) return "G"; // Good: 100% or more
+          if (performanceRatio >= 0.5) return "A"; // Average: 50-99%
+          return "B"; // Bad: less than 50%
+        })()
       });
     } catch (error) {
       console.error('Get admin daily metrics error:', error);
@@ -3613,7 +3637,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalResumesRequired,
         dailyDeliveryDelivered: totalResumesDelivered,
         dailyDeliveryDefaulted: Math.max(0, totalResumesRequired - totalResumesDelivered),
-        overallPerformance: totalResumesDelivered >= totalResumesRequired ? "G" : "R",
+        overallPerformance: (() => {
+          if (totalResumesRequired === 0) return "G";
+          const performanceRatio = totalResumesDelivered / totalResumesRequired;
+          if (performanceRatio >= 1.0) return "G"; // Good: 100% or more
+          if (performanceRatio >= 0.5) return "A"; // Average: 50-99%
+          return "B"; // Bad: less than 50%
+        })(),
         date: selectedDate
       });
     } catch (error) {
@@ -4395,6 +4425,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Selected employee is not a team leader" });
       }
       
+      // Validate that team member reports to the selected team leader
+      if (teamMember.reportingTo !== teamLead.employeeId) {
+        return res.status(400).json({ message: "Selected team member does not report to the selected team leader" });
+      }
+      
       // Server-side derived data - createdAt is handled by database default
       const targetMappingData = insertTargetMappingsSchema.parse({
         teamLeadId,
@@ -4440,6 +4475,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get target mappings error:', error);
       res.status(500).json({ message: "Failed to get target mappings" });
+    }
+  });
+
+  // Delete target mapping
+  app.delete("/api/admin/target-mappings/:id", requireAdminAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteTargetMapping(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Target mapping not found" });
+      }
+      
+      res.json({ message: "Target mapping deleted successfully" });
+    } catch (error) {
+      console.error('Delete target mapping error:', error);
+      res.status(500).json({ message: "Failed to delete target mapping" });
     }
   });
 
@@ -6012,7 +6064,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all candidates (for Master Database)
-  app.get("/api/admin/candidates", requireAdminAuth, async (req, res) => {
+  app.get("/api/admin/candidates", requireEmployeeAuth, async (req, res) => {
     try {
       const candidatesList = await storage.getAllCandidates();
       res.json(candidatesList);

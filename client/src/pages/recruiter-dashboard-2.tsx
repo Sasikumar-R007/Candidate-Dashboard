@@ -999,8 +999,20 @@ export default function RecruiterDashboard2() {
                     {/* Right section - Performance */}
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <div className={`w-12 h-12 ${dailyMetrics?.overallPerformance === 'G' ? 'bg-green-100' : 'bg-red-100'} rounded-full flex items-center justify-center`} data-testid="indicator-performance">
-                          <span className={`${dailyMetrics?.overallPerformance === 'G' ? 'text-green-700' : 'text-red-700'} font-bold text-lg`}>{dailyMetrics?.overallPerformance ?? 'R'}</span>
+                        <div className={`w-12 h-12 ${
+                          dailyMetrics?.overallPerformance === 'G' 
+                            ? 'bg-green-100' 
+                            : dailyMetrics?.overallPerformance === 'A'
+                            ? 'bg-yellow-100'
+                            : 'bg-red-100'
+                        } rounded-full flex items-center justify-center`} data-testid="indicator-performance">
+                          <span className={`${
+                            dailyMetrics?.overallPerformance === 'G' 
+                              ? 'text-green-700' 
+                              : dailyMetrics?.overallPerformance === 'A'
+                              ? 'text-yellow-700'
+                              : 'text-red-700'
+                          } font-bold text-lg`}>{dailyMetrics?.overallPerformance ?? 'G'}</span>
                         </div>
                         <div className="text-right">
                           <Button size="sm" variant="link" className="text-blue-600 p-0" onClick={() => setIsPerformanceModalOpen(true)} data-testid="button-view-more-performance">

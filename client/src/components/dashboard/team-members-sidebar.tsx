@@ -222,6 +222,20 @@ export default function TeamMembersSidebar() {
           hm => hm.name.toLowerCase() === emp.name.toLowerCase()
         );
         
+        // Find Team Leader for Recruiters (only if reportingTo exists and matches a team_leader employee)
+        let teamLeaderName: string | undefined;
+        let teamLeaderId: string | undefined;
+        
+        if (emp.reportingTo && (emp.role === 'recruiter' || emp.role === 'talent_advisor')) {
+          const teamLeader = employees.find(
+            tl => tl.employeeId === emp.reportingTo && tl.role === 'team_leader'
+          );
+          if (teamLeader) {
+            teamLeaderName = teamLeader.name;
+            teamLeaderId = teamLeader.employeeId;
+          }
+        }
+        
         // If match found, use hardcoded detailed data; otherwise use defaults
         return {
           name: emp.name,
@@ -229,10 +243,10 @@ export default function TeamMembersSidebar() {
           year: hardcodedMatch?.year || new Date().getFullYear().toString(),
           count: hardcodedMatch?.count || 0,
           image: hardcodedMatch?.image || null,
-          role: hardcodedMatch?.role || (emp.role === 'recruiter' ? 'Recruiter' : emp.role === 'team_leader' ? 'Team Leader' : 'Client'),
+          role: hardcodedMatch?.role || (emp.role === 'recruiter' ? 'Recruiter' : emp.role === 'team_leader' ? 'Team Leader' : emp.role === 'talent_advisor' ? 'Talent Advisor' : 'Client'),
           department: hardcodedMatch?.department || emp.department || 'N/A',
           email: emp.email,
-          age: hardcodedMatch?.age || (emp.age ? parseInt(emp.age) : 0),
+          age: hardcodedMatch?.age || 0,
           joiningDate: hardcodedMatch?.joiningDate || emp.joiningDate || 'N/A',
           lastLogin: hardcodedMatch?.lastLogin || 'N/A',
           lastClosure: hardcodedMatch?.lastClosure || 'N/A',
@@ -240,7 +254,9 @@ export default function TeamMembersSidebar() {
           totalClosures: hardcodedMatch?.totalClosures || 0,
           quartersAchieved: hardcodedMatch?.quartersAchieved || 0,
           targetAchievement: hardcodedMatch?.targetAchievement || 0,
-          totalRevenue: hardcodedMatch?.totalRevenue || "0"
+          totalRevenue: hardcodedMatch?.totalRevenue || "0",
+          teamLeaderName,
+          teamLeaderId
         };
       });
   }, [employees]);
@@ -387,7 +403,9 @@ export default function TeamMembersSidebar() {
           totalClosures: selectedMember.totalClosures,
           quartersAchieved: selectedMember.quartersAchieved,
           targetAchievement: selectedMember.targetAchievement,
-          totalRevenue: selectedMember.totalRevenue
+          totalRevenue: selectedMember.totalRevenue,
+          teamLeaderName: selectedMember.teamLeaderName,
+          teamLeaderId: selectedMember.teamLeaderId
         }}
       />
     )}

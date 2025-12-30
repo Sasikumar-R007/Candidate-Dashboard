@@ -804,8 +804,14 @@ export default function TeamLeaderDashboard() {
                             <ExternalLink className="h-4 w-4 text-gray-600" />
                           </Button>
                         </div>
-                        <div className={`text-4xl font-bold ${dailyMetrics?.overallPerformance === 'G' ? 'text-green-600 bg-green-100' : 'text-red-600 bg-red-100'} w-16 h-16 rounded-sm flex items-center justify-center`} data-testid="indicator-performance">
-                          {dailyMetrics?.overallPerformance ?? 'R'}
+                        <div className={`text-4xl font-bold ${
+                          dailyMetrics?.overallPerformance === 'G' 
+                            ? 'text-green-600 bg-green-100' 
+                            : dailyMetrics?.overallPerformance === 'A'
+                            ? 'text-yellow-600 bg-yellow-100'
+                            : 'text-red-600 bg-red-100'
+                        } w-16 h-16 rounded-sm flex items-center justify-center`} data-testid="indicator-performance">
+                          {dailyMetrics?.overallPerformance ?? 'G'}
                         </div>
                       </div>
                       <div className="flex justify-start space-x-2 mb-2">
