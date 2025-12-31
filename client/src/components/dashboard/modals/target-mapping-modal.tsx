@@ -67,18 +67,12 @@ export default function TargetMappingModal({ isOpen, onClose, editingTarget }: T
 
   const createTargetMappingMutation = useMutation({
     mutationFn: async (data: any) => {
-      if (editingTarget) {
-        // Note: Update endpoint not implemented yet - for now we'll use create
-        // In a real scenario, you'd have a PUT endpoint
-        return await apiRequest("POST", "/api/admin/target-mappings", data);
-      } else {
-        return await apiRequest("POST", "/api/admin/target-mappings", data);
-      }
+      return await apiRequest("POST", "/api/admin/target-mappings", data);
     },
     onSuccess: () => {
       toast({
         title: "Success",
-        description: editingTarget ? "Target mapping updated successfully" : "Target mapping created successfully",
+        description: "Target mapping created successfully",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/target-mappings"] });
       handleClose();
@@ -86,7 +80,28 @@ export default function TargetMappingModal({ isOpen, onClose, editingTarget }: T
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || (editingTarget ? "Failed to update target mapping" : "Failed to create target mapping"),
+        description: error.message || "Failed to create target mapping",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateTargetMappingMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("PUT", `/api/admin/target-mappings/${editingTarget.id}`, data);
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Target mapping updated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/target-mappings"] });
+      handleClose();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update target mapping",
         variant: "destructive",
       });
     },
@@ -114,13 +129,19 @@ export default function TargetMappingModal({ isOpen, onClose, editingTarget }: T
       return;
     }
 
-    createTargetMappingMutation.mutate({
+    const data = {
       teamLeadId: selectedTL.id,
       teamMemberId: selectedMember.id,
       quarter,
       year: parseInt(year, 10),
       minimumTarget: parseInt(minimumTarget.replace(/,/g, ''), 10),
-    });
+    };
+
+    if (editingTarget) {
+      updateTargetMappingMutation.mutate(data);
+    } else {
+      createTargetMappingMutation.mutate(data);
+    }
   };
 
   const handleClose = () => {
@@ -233,10 +254,10 @@ export default function TargetMappingModal({ isOpen, onClose, editingTarget }: T
             <Button 
               className="w-full"
               onClick={handleSubmit}
-              disabled={!isFormValid || createTargetMappingMutation.isPending}
+              disabled={!isFormValid || createTargetMappingMutation.isPending || updateTargetMappingMutation.isPending}
               data-testid="button-submit-target-mapping"
             >
-              {createTargetMappingMutation.isPending ? "Submitting..." : "Submit"}
+              {(createTargetMappingMutation.isPending || updateTargetMappingMutation.isPending) ? "Submitting..." : "Submit"}
             </Button>
           </div>
         </div>

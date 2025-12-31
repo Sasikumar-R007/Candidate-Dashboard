@@ -203,8 +203,9 @@ export default function RecruiterDashboard2() {
   const applicationStats = useMemo(() => {
     const total = allApplications.length;
     const today = new Date().toISOString().split('T')[0];
+    // New applications = only self-applied (source: 'job_board') from today
     const newApps = allApplications.filter((app: any) => 
-      app.appliedDate && app.appliedDate.split('T')[0] === today
+      app.source === 'job_board' && app.appliedDate && app.appliedDate.split('T')[0] === today
     ).length;
     return { total, new: newApps };
   }, [allApplications]);
@@ -212,10 +213,18 @@ export default function RecruiterDashboard2() {
   // Mutation for updating application status
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      await apiRequest('PATCH', `/api/recruiter/applications/${id}/status`, { status });
+      const response = await apiRequest('PATCH', `/api/recruiter/applications/${id}/status`, { status });
+      return response;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Invalidate and refetch applications to ensure UI reflects database state
       queryClient.invalidateQueries({ queryKey: ['/api/recruiter/applications'] });
+      console.log('Status updated successfully:', data);
+    },
+    onError: (error: any) => {
+      console.error('Failed to update status:', error);
+      // Remove local override on error to revert UI
+      // The error will be logged but we don't show toast to avoid interrupting workflow
     }
   });
 
@@ -1147,16 +1156,23 @@ export default function RecruiterDashboard2() {
                   <span className="text-3xl font-bold text-gray-900" data-testid="text-total-jobs-count">{jobCounts?.total ?? 0}</span>
                 </div>
                 
-                {/* New Applications */}
-                <div className="flex items-center justify-between py-3 border-b border-gray-100">
-                  <span className="text-sm text-gray-700">New Applications</span>
+                {/* New Applications - Clickable Link with External Icon */}
+                <div 
+                  className="flex items-center justify-between py-3 border-b border-gray-100 cursor-pointer hover-elevate rounded-md px-2 -mx-2"
+                  onClick={() => navigate('/recruiter-new-applications')}
+                  data-testid="link-new-applications"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-blue-600 font-medium">New Applications</span>
+                    <ExternalLink className="h-4 w-4 text-blue-600" />
+                  </div>
                   <span className="text-3xl font-bold text-gray-900" data-testid="text-new-applications-count">{applicationStats.new}</span>
                 </div>
                 
                 {/* Total Candidates - Clickable Link with External Icon */}
                 <div 
                   className="flex items-center justify-between py-3 border-b border-gray-100 cursor-pointer hover-elevate rounded-md px-2 -mx-2"
-                  onClick={() => navigate('/recruiter-new-applications')}
+                  onClick={() => navigate('/recruiter-all-candidates')}
                   data-testid="link-total-candidates"
                 >
                   <div className="flex items-center gap-2">

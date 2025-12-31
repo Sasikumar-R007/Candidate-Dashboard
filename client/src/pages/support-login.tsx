@@ -114,7 +114,7 @@ export default function SupportLogin() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => navigate("/dashboard-selection")}
+                onClick={() => navigate("/employer-login")}
                 data-testid="button-back-dashboard"
                 className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               >

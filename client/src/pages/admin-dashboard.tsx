@@ -945,6 +945,8 @@ function ClientSettingsSection() {
 }
 
 export default function AdminDashboard() {
+  const queryClient = useQueryClient();
+  
   // Restore sidebarTab from sessionStorage for proper back navigation
   const initialSidebarTab = () => {
     const saved = sessionStorage.getItem('adminDashboardSidebarTab');
@@ -1004,7 +1006,6 @@ export default function AdminDashboard() {
     month: '', year: '', employees: '', salary: '', incentive: '', tools: '', rent: '', others: ''
   });
   const [selectedRequirement, setSelectedRequirement] = useState<any>(null);
-  const queryClient = useQueryClient();
   
   // Check if all cashout form fields are filled
   const isCashoutFormComplete = useMemo(() => {
@@ -1333,6 +1334,91 @@ export default function AdminDashboard() {
   const { data: requirements = [], isLoading: isLoadingRequirements } = useQuery({
     queryKey: ['/api/admin/requirements']
   });
+
+  // Client JDs API query
+  const { data: clientJDs = [], isLoading: isLoadingClientJDs, refetch: refetchClientJDs } = useQuery({
+    queryKey: ['/api/admin/client-jds'],
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
+  });
+  
+  // Debug: Log client JDs data
+  useEffect(() => {
+    console.log('Client JDs data:', clientJDs);
+    console.log('Client JDs count:', clientJDs.length);
+  }, [clientJDs]);
+
+  // State for JD preview modal
+  const [selectedJD, setSelectedJD] = useState<any>(null);
+  const [isJDPreviewModalOpen, setIsJDPreviewModalOpen] = useState(false);
+
+  // Client JDs Table Section Component - Defined at top level for proper scope access
+  const ClientJDsTableSection = () => {
+    return (
+      <div className="mb-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">JD from Client</h3>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              refetchClientJDs();
+            }}
+            className="text-xs"
+            disabled={isLoadingClientJDs}
+          >
+            {isLoadingClientJDs ? 'Loading...' : 'Refresh'}
+          </Button>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="border-b border-gray-200 dark:border-gray-700">
+                <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Client ID</th>
+                <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">SPOC Name</th>
+                <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Role</th>
+                <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Shared Date</th>
+                <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoadingClientJDs ? (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading JDs...</td>
+                </tr>
+              ) : clientJDs.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">No client-submitted JDs found.</td>
+                </tr>
+              ) : (
+                (clientJDs as any[]).map((jd: any) => (
+                  <tr key={jd.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="py-3 px-3 text-gray-900 dark:text-white text-sm">{jd.clientId}</td>
+                    <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{jd.spocName}</td>
+                    <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{jd.role}</td>
+                    <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{jd.sharedDate}</td>
+                    <td className="py-3 px-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedJD(jd.requirement);
+                          setIsJDPreviewModalOpen(true);
+                        }}
+                        className="text-xs"
+                      >
+                        View JD
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
 
   // Fetch employees from database
   const { data: employees = [], isLoading: isLoadingEmployees, refetch: refetchEmployees } = useQuery<Employee[]>({
@@ -1812,7 +1898,7 @@ export default function AdminDashboard() {
         email: clientData.email,
         password: clientData.password,
         joiningDate: clientData.joiningDate,
-        linkedinProfile: clientData.linkedinProfile,
+        clientId: clientData.clientId, // Company ID from Master Data
       });
       return response.json();
     },
@@ -2286,6 +2372,7 @@ export default function AdminDashboard() {
 
   const handleAddClientCredentials = (userData: any) => {
     // Use the dedicated client credentials mutation
+    // clientId is the company ID from Master Data
     createClientCredentialsMutation.mutate({
       firstName: userData.firstName,
       lastName: userData.lastName,
@@ -2294,7 +2381,7 @@ export default function AdminDashboard() {
       email: userData.email,
       password: userData.password,
       joiningDate: userData.joiningDate || '',
-      linkedinProfile: userData.linkedinProfile || '',
+      clientId: userData.clientId, // Company ID from Master Data
     });
     setUserList(prev => [...prev, userData]);
     setIsAddClientCredentialsModalOpen(false);
@@ -3609,6 +3696,9 @@ export default function AdminDashboard() {
               </div>
             </div>
             
+            {/* Client JDs Table */}
+            <ClientJDsTableSection />
+            
             <div className="flex gap-6 h-full">
               {/* Middle Section - Requirements Table */}
               <div className="flex-1 overflow-y-auto admin-scrollbar">
@@ -4320,56 +4410,33 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white">STCL001</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Whatfix</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Bangalore</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">David Wilson</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">www.whatfix.com</td>
-                        <td className="py-3 px-3">
-                          <span className="bg-green-100 text-green-800 text-sm font-semibold px-3 py-1 rounded-full">• ACTIVE</span>
-                        </td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white">STCL002</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Kombal</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Chennai</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Tom Anderson</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">www.kombal.com</td>
-                        <td className="py-3 px-3">
-                          <span className="bg-green-100 text-green-800 text-sm font-semibold px-3 py-1 rounded-full">• ACTIVE</span>
-                        </td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white">STCL003</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Vertas</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Gurgaon</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Robert Kim</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">www.vertas.com</td>
-                        <td className="py-3 px-3">
-                          <span className="bg-green-100 text-green-800 text-sm font-semibold px-3 py-1 rounded-full">• ACTIVE</span>
-                        </td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white">STCL004</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">SuperHire</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Pune</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Kevin Brown</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">www.superhire.com</td>
-                        <td className="py-3 px-3">
-                          <span className="bg-blue-100 text-blue-800 text-sm font-semibold px-3 py-1 rounded-full">• FROZEN</span>
-                        </td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white">STCL005</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Hitchcock</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Mumbai</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Mel Gibson</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">www.hitchcock.com</td>
-                        <td className="py-3 px-3">
-                          <span className="bg-red-100 text-red-800 text-sm font-semibold px-3 py-1 rounded-full">• CHURNED</span>
-                        </td>
-                      </tr>
+                      {isLoadingClients ? (
+                        <tr>
+                          <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading clients...</td>
+                        </tr>
+                      ) : masterDataClients.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">No clients found. Click "+ Add New Client" to add one.</td>
+                        </tr>
+                      ) : (
+                        masterDataClients.slice(0, 5).map((row: any, index: number) => {
+                          const statusClass = row.currentStatus === 'active' ? 'bg-green-100 text-green-800' : 
+                                            row.currentStatus === 'frozen' ? 'bg-orange-100 text-orange-800' : 
+                                            'bg-red-100 text-red-800';
+                          return (
+                            <tr key={row.id || index} className="border-b border-gray-100 dark:border-gray-800">
+                              <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.clientCode}</td>
+                              <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.brandName}</td>
+                              <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.location || 'N/A'}</td>
+                              <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.spoc || 'N/A'}</td>
+                              <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{row.website || 'N/A'}</td>
+                              <td className="py-3 px-3">
+                                <span className={`${statusClass} text-sm font-semibold px-3 py-1 rounded-full`}>• {(row.currentStatus || 'active').toUpperCase()}</span>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -5573,12 +5640,12 @@ export default function AdminDashboard() {
                           <tr>
                             <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading clients...</td>
                           </tr>
-                        ) : clients.length === 0 ? (
+                        ) : masterDataClients.length === 0 ? (
                           <tr>
                             <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">No clients found. Click "+ Add Client" to add one.</td>
                           </tr>
                         ) : (
-                          clients.slice(0, 5).map((row: any, index: number) => {
+                          masterDataClients.slice(0, 5).map((row: any, index: number) => {
                             const statusClass = row.currentStatus === 'active' ? 'bg-green-100 text-green-800' : 
                                               row.currentStatus === 'frozen' ? 'bg-orange-100 text-orange-800' : 
                                               'bg-red-100 text-red-800';
@@ -10008,6 +10075,70 @@ export default function AdminDashboard() {
         onClose={() => setIsChatOpen(false)} 
         userName="Support Team"
       />
+
+      {/* JD Preview Modal */}
+      <Dialog open={isJDPreviewModalOpen} onOpenChange={setIsJDPreviewModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Job Description Preview</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[calc(90vh-8rem)]">
+            {selectedJD && (
+              <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
+                {/* Company Header */}
+                <div className="flex items-center gap-4 pb-4 border-b border-gray-200">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-2xl shadow-md">
+                    {selectedJD.company?.charAt(0).toUpperCase() || 'C'}
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-gray-900">
+                      {selectedJD.company || 'Company Name'}
+                    </h3>
+                    <p className="text-sm text-gray-500">Job Description</p>
+                  </div>
+                </div>
+
+                {/* Job Description Content */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Position</h4>
+                    <div className="text-sm text-gray-600 bg-gray-50 p-4 rounded border border-gray-200">
+                      {selectedJD.position || 'N/A'}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Role ID</h4>
+                    <div className="text-sm text-gray-600 bg-gray-50 p-4 rounded border border-gray-200">
+                      {selectedJD.id || 'N/A'}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">SPOC</h4>
+                    <div className="text-sm text-gray-600 bg-gray-50 p-4 rounded border border-gray-200">
+                      {selectedJD.spoc || 'N/A'}
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Status</h4>
+                    <div className="text-sm text-gray-600 bg-gray-50 p-4 rounded border border-gray-200">
+                      {selectedJD.status || 'N/A'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 mt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsJDPreviewModalOpen(false)}
+              className="rounded"
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

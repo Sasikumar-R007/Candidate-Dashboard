@@ -164,6 +164,7 @@ export interface IStorage {
   // Target Mapping methods
   createTargetMapping(mapping: InsertTargetMappings): Promise<TargetMappings>;
   getAllTargetMappings(): Promise<TargetMappings[]>;
+  updateTargetMapping(id: string, updates: Partial<InsertTargetMappings>): Promise<TargetMappings | undefined>;
   deleteTargetMapping(id: string): Promise<boolean>;
   getTeamLeaderTargetSummary(teamLeadId: string): Promise<{
     currentQuarter: {

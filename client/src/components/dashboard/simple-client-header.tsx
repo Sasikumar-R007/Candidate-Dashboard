@@ -102,11 +102,10 @@ export default function SimpleClientHeader({
               className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:text-gray-900 transition-all duration-200 hover:bg-gray-100 rounded-lg"
               data-testid="button-client-user-dropdown"
             >
-              <img 
-                src={userImage} 
-                alt={userName}
-                className="w-8 h-8 rounded-full object-cover"
-              />
+              {/* Company Initial Avatar */}
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold text-sm shadow-sm">
+                {companyName && companyName !== 'Loading...' ? companyName.charAt(0).toUpperCase() : 'C'}
+              </div>
               <span className="text-sm font-medium">{userName}</span>
               <ChevronDown 
                 size={16} 
@@ -120,11 +119,10 @@ export default function SimpleClientHeader({
                 {/* Profile Section */}
                 <div className="px-4 pb-4 border-b border-gray-200">
                   <div className="flex items-center space-x-4">
-                    <img 
-                      src={userImage} 
-                      alt={userName}
-                      className="w-16 h-16 rounded-full object-cover flex-shrink-0"
-                    />
+                    {/* Company Initial Avatar */}
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-md flex-shrink-0">
+                      {companyName && companyName !== 'Loading...' ? companyName.charAt(0).toUpperCase() : 'C'}
+                    </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-lg font-semibold text-gray-900 truncate">
                         {userName}

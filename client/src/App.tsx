@@ -10,7 +10,6 @@ import Landing from "@/pages/landing";
 import EmployerLogin from "@/pages/employer-login";
 import CandidateLogin from "@/pages/candidate-login";
 import CandidateRegistration from "@/pages/candidate-registration";
-import DashboardSelection from "@/pages/dashboard-selection";
 import Dashboard from "@/pages/dashboard";
 import TeamLeaderDashboard from "@/pages/team-leader-dashboard";
 import AdminDashboard from "@/pages/admin-dashboard";
@@ -19,6 +18,7 @@ import ClientDashboard from "@/pages/client-dashboard";
 import SourceResume from "@/pages/source-resume";
 import RecruiterActiveJobs from "@/pages/recruiter-active-jobs";
 import RecruiterNewApplications from "@/pages/recruiter-new-applications";
+import RecruiterAllCandidates from "@/pages/recruiter-all-candidates";
 import RecruiterApplicants from "@/pages/recruiter-applicants";
 import NotFound from "@/pages/not-found";
 import Archives from "@/pages/archives";
@@ -40,8 +40,6 @@ function Router() {
       <Route path="/support-login" component={SupportLogin} />
       <Route path="/candidate-login" component={CandidateLogin} />
       <Route path="/candidate-registration" component={CandidateRegistration} />
-      
-      <Route path="/dashboard-selection" component={DashboardSelection} />
       
       <Route path="/candidate" component={Dashboard} />
       
@@ -78,6 +76,12 @@ function Router() {
       <Route path="/recruiter-new-applications">
         <ProtectedRoute userType="employee" allowedRoles={["recruiter", "talent_advisor", "teamLead", "team_leader", "admin"]}>
           <RecruiterNewApplications />
+        </ProtectedRoute>
+      </Route>
+      
+      <Route path="/recruiter-all-candidates">
+        <ProtectedRoute userType="employee" allowedRoles={["recruiter", "talent_advisor", "teamLead", "team_leader", "admin"]}>
+          <RecruiterAllCandidates />
         </ProtectedRoute>
       </Route>
       

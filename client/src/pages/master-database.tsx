@@ -202,23 +202,25 @@ export default function MasterDatabase() {
       }));
   }, [employeesRaw]);
 
-  // Map clients to ClientData format
+  // Map clients to ClientData format - Only show Master Data companies (exclude login-only clients)
   const clientData: ClientData[] = useMemo(() => {
-    return clientsRaw.map((client: any) => ({
-      id: client.id,
-      name: client.brandName || client.incorporatedName || '-',
-      position: client.category || '-',
-      experience: '-',
-      skills: client.spoc || '-',
-      source: client.source || 'Direct',
-      status: (client.currentStatus === 'active' ? 'Active' : 
-               client.currentStatus === 'frozen' ? 'On Hold' : 
-               client.currentStatus === 'churned' ? 'Terminated' : 'Inactive') as ClientStatus,
-      uploadedDate: formatDate(client.startDate || client.createdAt),
-      email: client.email,
-      website: client.website,
-      location: client.location,
-    }));
+    return clientsRaw
+      .filter((client: any) => !client.isLoginOnly) // Only show Master Data companies
+      .map((client: any) => ({
+        id: client.id,
+        name: client.brandName || client.incorporatedName || '-',
+        position: client.category || '-',
+        experience: '-',
+        skills: client.spoc || '-',
+        source: client.source || 'Direct',
+        status: (client.currentStatus === 'active' ? 'Active' : 
+                 client.currentStatus === 'frozen' ? 'On Hold' : 
+                 client.currentStatus === 'churned' ? 'Terminated' : 'Inactive') as ClientStatus,
+        uploadedDate: formatDate(client.startDate || client.createdAt),
+        email: client.email,
+        website: client.website,
+        location: client.location,
+      }));
   }, [clientsRaw]);
 
   // Get loading state

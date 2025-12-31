@@ -67,6 +67,8 @@ export default function UploadResumeModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
   const [domainOpen, setDomainOpen] = useState(false);
+  const [locationInput, setLocationInput] = useState("");
+  const [domainInput, setDomainInput] = useState("");
 
   // Location suggestions - Tamil Nadu cities and other top Indian cities
   const locations = [
@@ -506,7 +508,10 @@ export default function UploadResumeModal({
 
             {/* Row 6: Current Location, Notice Period */}
             <div className="grid grid-cols-2 gap-4">
-              <Popover open={locationOpen} onOpenChange={setLocationOpen}>
+              <Popover open={locationOpen} onOpenChange={(isOpen) => {
+                setLocationOpen(isOpen);
+                if (!isOpen) setLocationInput("");
+              }}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -515,36 +520,80 @@ export default function UploadResumeModal({
                     className="w-full justify-between bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 h-10 font-normal"
                   >
                     {formData.currentLocation
-                      ? locations.find((loc) => loc.value === formData.currentLocation)?.label
+                      ? locations.find((loc) => loc.value === formData.currentLocation)?.label || formData.currentLocation
                       : "Current Location *"}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-full p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search location..." />
+                  <Command shouldFilter={false}>
+                    <CommandInput 
+                      placeholder="Search or type location..." 
+                      value={locationInput}
+                      onValueChange={setLocationInput}
+                    />
                     <CommandList>
-                      <CommandEmpty>No location found.</CommandEmpty>
-                      <CommandGroup>
-                        {locations.map((location) => (
-                          <CommandItem
-                            key={location.value}
-                            value={location.value}
-                            onSelect={() => {
-                              setFormData({...formData, currentLocation: location.value});
-                              setLocationOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                formData.currentLocation === location.value ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {location.label}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
+                      {(() => {
+                        const filteredLocations = locationInput.trim()
+                          ? locations.filter(loc => 
+                              loc.label.toLowerCase().includes(locationInput.toLowerCase()) ||
+                              loc.value.toLowerCase().includes(locationInput.toLowerCase())
+                            )
+                          : locations;
+                        
+                        const hasExactMatch = filteredLocations.some(loc =>
+                          loc.value.toLowerCase() === locationInput.trim().toLowerCase() ||
+                          loc.label.toLowerCase() === locationInput.trim().toLowerCase()
+                        );
+                        const showCustomOption = locationInput.trim() && !hasExactMatch;
+
+                        return (
+                          <>
+                            {showCustomOption && (
+                              <CommandGroup>
+                                <CommandItem
+                                  onSelect={() => {
+                                    setFormData({...formData, currentLocation: locationInput.trim()});
+                                    setLocationOpen(false);
+                                    setLocationInput("");
+                                  }}
+                                  className="text-blue-600 font-medium"
+                                >
+                                  <Check className="mr-2 h-4 w-4 opacity-0" />
+                                  Use "{locationInput.trim()}"
+                                </CommandItem>
+                              </CommandGroup>
+                            )}
+                            {filteredLocations.length > 0 ? (
+                              <CommandGroup>
+                                {filteredLocations.map((location) => (
+                                  <CommandItem
+                                    key={location.value}
+                                    value={location.value}
+                                    onSelect={() => {
+                                      setFormData({...formData, currentLocation: location.value});
+                                      setLocationOpen(false);
+                                      setLocationInput("");
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        formData.currentLocation === location.value ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    {location.label}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            ) : (
+                              !showCustomOption && (
+                                <CommandEmpty>No location found. Type to add a custom value.</CommandEmpty>
+                              )
+                            )}
+                          </>
+                        );
+                      })()}
                     </CommandList>
                   </Command>
                 </PopoverContent>
@@ -655,7 +704,10 @@ export default function UploadResumeModal({
 
             {/* Row 10: Company Domain, Company Level */}
             <div className="grid grid-cols-2 gap-4">
-              <Popover open={domainOpen} onOpenChange={setDomainOpen}>
+              <Popover open={domainOpen} onOpenChange={(isOpen) => {
+                setDomainOpen(isOpen);
+                if (!isOpen) setDomainInput("");
+              }}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -664,36 +716,80 @@ export default function UploadResumeModal({
                     className="w-full justify-between bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 h-10 font-normal"
                   >
                     {formData.companyDomain
-                      ? domains.find((dom) => dom.value === formData.companyDomain)?.label
+                      ? domains.find((dom) => dom.value === formData.companyDomain)?.label || formData.companyDomain
                       : "Company Domain"}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-full p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search domain..." />
+                  <Command shouldFilter={false}>
+                    <CommandInput 
+                      placeholder="Search or type domain..." 
+                      value={domainInput}
+                      onValueChange={setDomainInput}
+                    />
                     <CommandList>
-                      <CommandEmpty>No domain found.</CommandEmpty>
-                      <CommandGroup>
-                        {domains.map((domain) => (
-                          <CommandItem
-                            key={domain.value}
-                            value={domain.value}
-                            onSelect={() => {
-                              setFormData({...formData, companyDomain: domain.value});
-                              setDomainOpen(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                formData.companyDomain === domain.value ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {domain.label}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
+                      {(() => {
+                        const filteredDomains = domainInput.trim()
+                          ? domains.filter(dom => 
+                              dom.label.toLowerCase().includes(domainInput.toLowerCase()) ||
+                              dom.value.toLowerCase().includes(domainInput.toLowerCase())
+                            )
+                          : domains;
+                        
+                        const hasExactMatch = filteredDomains.some(dom =>
+                          dom.value.toLowerCase() === domainInput.trim().toLowerCase() ||
+                          dom.label.toLowerCase() === domainInput.trim().toLowerCase()
+                        );
+                        const showCustomOption = domainInput.trim() && !hasExactMatch;
+
+                        return (
+                          <>
+                            {showCustomOption && (
+                              <CommandGroup>
+                                <CommandItem
+                                  onSelect={() => {
+                                    setFormData({...formData, companyDomain: domainInput.trim()});
+                                    setDomainOpen(false);
+                                    setDomainInput("");
+                                  }}
+                                  className="text-blue-600 font-medium"
+                                >
+                                  <Check className="mr-2 h-4 w-4 opacity-0" />
+                                  Use "{domainInput.trim()}"
+                                </CommandItem>
+                              </CommandGroup>
+                            )}
+                            {filteredDomains.length > 0 ? (
+                              <CommandGroup>
+                                {filteredDomains.map((domain) => (
+                                  <CommandItem
+                                    key={domain.value}
+                                    value={domain.value}
+                                    onSelect={() => {
+                                      setFormData({...formData, companyDomain: domain.value});
+                                      setDomainOpen(false);
+                                      setDomainInput("");
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        formData.companyDomain === domain.value ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    {domain.label}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            ) : (
+                              !showCustomOption && (
+                                <CommandEmpty>No domain found. Type to add a custom value.</CommandEmpty>
+                              )
+                            )}
+                          </>
+                        );
+                      })()}
                     </CommandList>
                   </Command>
                 </PopoverContent>

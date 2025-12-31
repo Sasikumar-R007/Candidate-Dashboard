@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { ArrowLeft, Mail, Phone, MapPin, Briefcase, Calendar, User, Download, Star, CheckCircle, XCircle, UserPlus, Loader2 } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Briefcase, Calendar, User, Download, Star, CheckCircle, XCircle, UserPlus, Loader2, Building } from "lucide-react";
 
 interface Candidate {
   id: string;
@@ -26,7 +26,7 @@ interface Candidate {
   source: string;
 }
 
-export default function RecruiterNewApplications() {
+export default function RecruiterAllCandidates() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'new' | 'reviewed' | 'shortlisted' | 'rejected'>('all');
@@ -50,9 +50,8 @@ export default function RecruiterNewApplications() {
     if (!allApplications || allApplications.length === 0) {
       return [];
     }
-    // Filter only self-applied candidates (source: 'job_board')
-    const selfAppliedApplications = allApplications.filter((app: any) => app.source === 'job_board');
-    return selfAppliedApplications.map((app: any) => {
+    // Show ALL applications (both self-applied and tagged)
+    return allApplications.map((app: any) => {
       const appliedDate = app.appliedDate ? new Date(app.appliedDate) : new Date();
       const now = new Date();
       const diffMs = now.getTime() - appliedDate.getTime();
@@ -172,7 +171,7 @@ export default function RecruiterNewApplications() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-          <p className="text-gray-600">Loading applications...</p>
+          <p className="text-gray-600">Loading candidates...</p>
         </div>
       </div>
     );
@@ -199,7 +198,7 @@ export default function RecruiterNewApplications() {
             <ArrowLeft size={16} />
             Back
           </Button>
-          <h1 className="text-2xl font-bold text-gray-900">New Applications (Self-Applied)</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Total Candidates</h1>
           <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium" data-testid="text-candidate-count">
             {filteredCandidates.length} Candidates
           </span>
@@ -257,11 +256,11 @@ export default function RecruiterNewApplications() {
       {/* Candidate Cards or Empty State */}
       <div className="p-6">
         {candidates.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16" data-testid="empty-applications">
+          <div className="flex flex-col items-center justify-center py-16" data-testid="empty-candidates">
             <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-6">
               <UserPlus className="w-10 h-10 text-gray-400" />
             </div>
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">No Applications Yet</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">No Candidates Yet</h2>
             <p className="text-gray-500 text-center max-w-md">
               When candidates apply to your job postings or you tag candidates to requirements, they will appear here.
             </p>
@@ -321,7 +320,7 @@ export default function RecruiterNewApplications() {
                     <span>Applied for: <span className="font-medium">{candidate.jobTitle}</span></span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Building className="w-3.5 h-3.5" />
+                    <Building size={14} />
                     <span>Current: <span className="font-medium">{candidate.currentCompany}</span></span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -444,19 +443,3 @@ export default function RecruiterNewApplications() {
   );
 }
 
-const Building = ({ className }: { className?: string }) => (
-  <svg
-    className={className}
-    fill="none"
-    stroke="currentColor"
-    viewBox="0 0 24 24"
-    xmlns="http://www.w3.org/2000/svg"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth={2}
-      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-    />
-  </svg>
-);

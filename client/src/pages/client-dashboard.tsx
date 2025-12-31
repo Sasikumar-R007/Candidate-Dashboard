@@ -12,6 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, MessageSquare, Minus, Users, Play, Trophy, ArrowLeft, Send, Calendar as CalendarIcon, MoreVertical, HelpCircle, Download } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -39,6 +40,14 @@ export default function ClientDashboard() {
   const [isJdModalOpen, setIsJdModalOpen] = useState(false);
   const [tempJdText, setTempJdText] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [pipelineDate, setPipelineDate] = useState<Date>(new Date());
+  const [metricsDate, setMetricsDate] = useState<Date>(new Date());
+  const [primarySkills, setPrimarySkills] = useState('');
+  const [secondarySkills, setSecondarySkills] = useState('');
+  const [knowledgeOnly, setKnowledgeOnly] = useState('');
+  const [specialInstructions, setSpecialInstructions] = useState('');
+  const [isJdPreviewModalOpen, setIsJdPreviewModalOpen] = useState(false);
+  const [jdPosition, setJdPosition] = useState('');
   const [selectedCandidate, setSelectedCandidate] = useState<{id: string, name: string, stage: string} | null>(null);
   const [candidatePopupPosition, setCandidatePopupPosition] = useState<{x: number, y: number} | null>(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -350,12 +359,12 @@ export default function ClientDashboard() {
               <div className="bg-white rounded border border-gray-200">
                 <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                   <h3 className="text-lg font-semibold text-gray-900">Roles & Status</h3>
-                  <button 
+                  <Button 
                     onClick={() => setIsRolesModalOpen(true)}
-                    className="text-sm text-blue-600 hover:underline cursor-pointer"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
                   >
                     View All
-                  </button>
+                  </Button>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -483,11 +492,24 @@ export default function ClientDashboard() {
                     </div>
                   </div>
 
+                  {/* Position Field */}
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Position/Role</label>
+                    <Input 
+                      value={jdPosition}
+                      onChange={(e) => setJdPosition(e.target.value)}
+                      placeholder="e.g., Senior Software Engineer" 
+                      className="bg-white border-gray-300 rounded"
+                    />
+                  </div>
+
                   {/* Skills Section */}
                   <div className="grid grid-cols-3 gap-6 mb-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Primary Skills</label>
                       <Input 
+                        value={primarySkills}
+                        onChange={(e) => setPrimarySkills(e.target.value)}
                         placeholder="Enter here..." 
                         className="bg-white border-gray-300 rounded"
                       />
@@ -495,6 +517,8 @@ export default function ClientDashboard() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Secondary Skills</label>
                       <Input 
+                        value={secondarySkills}
+                        onChange={(e) => setSecondarySkills(e.target.value)}
                         placeholder="Enter here..." 
                         className="bg-white border-gray-300 rounded"
                       />
@@ -502,6 +526,8 @@ export default function ClientDashboard() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Knowledge Only</label>
                       <Input 
+                        value={knowledgeOnly}
+                        onChange={(e) => setKnowledgeOnly(e.target.value)}
                         placeholder="Enter here..." 
                         className="bg-white border-gray-300 rounded"
                       />
@@ -511,6 +537,8 @@ export default function ClientDashboard() {
                   <div className="mb-6">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Special Instructions</label>
                     <Input 
+                      value={specialInstructions}
+                      onChange={(e) => setSpecialInstructions(e.target.value)}
                       placeholder="" 
                       className="bg-white border-gray-300 rounded"
                     />
@@ -518,7 +546,10 @@ export default function ClientDashboard() {
                   
                   {/* Preview & Submit Button */}
                   <div className="flex justify-end">
-                    <Button className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-8 py-2 rounded">
+                    <Button 
+                      onClick={() => setIsJdPreviewModalOpen(true)}
+                      className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-8 py-2 rounded"
+                    >
                       Preview & Submit
                     </Button>
                   </div>
@@ -556,22 +587,12 @@ export default function ClientDashboard() {
                         <SelectItem value="paused">Paused Roles</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="rounded">
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {format(selectedDate, "dd-MMM-yyyy")}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={selectedDate}
-                          onSelect={(date) => date && setSelectedDate(date)}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <StandardDatePicker
+                      value={pipelineDate}
+                      onChange={(date) => date && setPipelineDate(date)}
+                      placeholder="Select date"
+                      className="w-60"
+                    />
                   </div>
                 </div>
 
@@ -632,12 +653,12 @@ export default function ClientDashboard() {
                   <CardHeader className="bg-gray-50 border-b border-gray-200">
                     <div className="flex justify-between items-center">
                       <CardTitle className="text-lg font-semibold text-gray-900">Closure report</CardTitle>
-                      <button 
+                      <Button 
                         onClick={() => setIsClosureModalOpen(true)}
-                        className="text-sm text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm"
                       >
                         View All
-                      </button>
+                      </Button>
                     </div>
                   </CardHeader>
                   <CardContent className="p-0">
@@ -723,11 +744,12 @@ export default function ClientDashboard() {
                       <SelectItem value="active">Active Roles</SelectItem>
                     </SelectContent>
                   </Select>
-                  <div className="flex items-center space-x-2 bg-white px-3 py-2 rounded border">
-                    <CalendarIcon className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm">12-Aug-2025</span>
-                    <Edit3 className="h-4 w-4 text-gray-500" />
-                  </div>
+                  <StandardDatePicker
+                    value={metricsDate}
+                    onChange={(date) => date && setMetricsDate(date)}
+                    placeholder="Select date"
+                    className="w-60"
+                  />
                   <Select>
                     <SelectTrigger className="w-24">
                       <SelectValue defaultValue="Monthly" placeholder="Monthly" />
@@ -1208,68 +1230,6 @@ export default function ClientDashboard() {
           {renderMainContent()}
         </div>
         
-        {/* Right Sidebar - Chats - Only show on dashboard */}
-        {sidebarTab === 'dashboard' && (
-          <div className="w-80 bg-white border-l border-gray-200 flex flex-col print:hidden">
-            {/* Recent Chats Header */}
-            <div className="p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-800">Recent Chats</h3>
-            </div>
-            
-            {/* Chat List */}
-            <div className="flex-1 overflow-y-auto">
-              {recentChats.map((chat) => (
-                <Link 
-                  key={chat.id}
-                  href="/chat"
-                  data-testid={`link-chat-${chat.id}`}
-                >
-                  <div 
-                    className="p-4 border-b border-gray-100 hover:bg-gray-50 cursor-pointer"
-                    data-testid={`chat-preview-${chat.id}`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div className="relative">
-                        <Avatar className="w-10 h-10" data-testid={`avatar-chat-${chat.id}`}>
-                          <AvatarImage src={chat.avatar} alt={chat.name} />
-                          <AvatarFallback className="bg-blue-100 text-blue-600">
-                            {chat.name.charAt(0)}
-                          </AvatarFallback>
-                        </Avatar>
-                        {chat.status === 'online' && (
-                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white" data-testid={`status-online-${chat.id}`}></div>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium text-gray-900" data-testid={`text-chat-name-${chat.id}`}>{chat.name}</h4>
-                          <span className="text-lg font-bold text-gray-900" data-testid={`text-closures-${chat.id}`}>{chat.closures}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm text-gray-500" data-testid={`text-requirements-${chat.id}`}>{chat.requirements} Requirements</p>
-                          <span className="text-xs text-gray-400">Closures</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-            
-            {/* Chat Box Button */}
-            <div className="p-4 border-t border-gray-200">
-              <Link href="/chat" data-testid="link-open-chat">
-                <Button 
-                  className="w-full bg-cyan-400 hover:bg-cyan-500 text-black font-medium py-3 rounded"
-                  data-testid="button-open-chat"
-                >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Open Chat
-                </Button>
-              </Link>
-            </div>
-          </div>
-        )}
       </div>
       
       {/* Roles Modal */}
@@ -1352,6 +1312,156 @@ export default function ClientDashboard() {
                 Save JD Content
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* JD Preview Modal */}
+      <Dialog open={isJdPreviewModalOpen} onOpenChange={setIsJdPreviewModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Job Description Preview</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[calc(90vh-8rem)]">
+            {/* Job Card Design */}
+            <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
+              {/* Company Header */}
+              <div className="flex items-center gap-4 pb-4 border-b border-gray-200">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-2xl shadow-md">
+                  {(clientProfile as any)?.company && (clientProfile as any).company !== 'Loading...' 
+                    ? (clientProfile as any).company.charAt(0).toUpperCase() 
+                    : 'C'}
+                </div>
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900">
+                    {(clientProfile as any)?.company || 'Company Name'}
+                  </h3>
+                  <p className="text-sm text-gray-500">Job Description</p>
+                </div>
+              </div>
+
+              {/* Job Description Content */}
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Job Description</h4>
+                  <div className="text-sm text-gray-600 whitespace-pre-wrap bg-gray-50 p-4 rounded border border-gray-200 min-h-[100px]">
+                    {jdText || (uploadedFile ? `File: ${uploadedFile.name}` : 'No job description provided')}
+                  </div>
+                </div>
+
+                {/* Skills Section */}
+                {(primarySkills || secondarySkills || knowledgeOnly) && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Skills</h4>
+                    <div className="space-y-2">
+                      {primarySkills && (
+                        <div>
+                          <span className="text-xs font-medium text-gray-600">Primary Skills: </span>
+                          <span className="text-sm text-gray-700">{primarySkills}</span>
+                        </div>
+                      )}
+                      {secondarySkills && (
+                        <div>
+                          <span className="text-xs font-medium text-gray-600">Secondary Skills: </span>
+                          <span className="text-sm text-gray-700">{secondarySkills}</span>
+                        </div>
+                      )}
+                      {knowledgeOnly && (
+                        <div>
+                          <span className="text-xs font-medium text-gray-600">Knowledge Only: </span>
+                          <span className="text-sm text-gray-700">{knowledgeOnly}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Special Instructions */}
+                {specialInstructions && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Special Instructions</h4>
+                    <div className="text-sm text-gray-600 bg-gray-50 p-4 rounded border border-gray-200">
+                      {specialInstructions}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 mt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsJdPreviewModalOpen(false)}
+              className="rounded"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={async () => {
+                try {
+                  let jdFileUrl = null;
+                  
+                  // Upload file if present
+                  if (uploadedFile) {
+                    const formData = new FormData();
+                    formData.append('jdFile', uploadedFile);
+                    
+                    const uploadResponse = await fetch('/api/client/upload-jd-file', {
+                      method: 'POST',
+                      body: formData,
+                      credentials: 'include'
+                    });
+                    
+                    if (!uploadResponse.ok) {
+                      throw new Error('Failed to upload file');
+                    }
+                    
+                    const uploadData = await uploadResponse.json();
+                    jdFileUrl = uploadData.url;
+                  }
+                  
+                  // Submit JD
+                  const response = await apiRequest('POST', '/api/client/submit-jd', {
+                    jdText: jdText || null,
+                    jdFile: jdFileUrl,
+                    position: jdPosition,
+                    primarySkills,
+                    secondarySkills,
+                    knowledgeOnly,
+                    specialInstructions
+                  });
+                  
+                  if (response.ok) {
+                    toast({
+                      title: "JD Submitted",
+                      description: "Your job description has been submitted successfully.",
+                    });
+                    setIsJdPreviewModalOpen(false);
+                    // Reset form
+                    setJdText('');
+                    setUploadedFile(null);
+                    setPrimarySkills('');
+                    setSecondarySkills('');
+                    setKnowledgeOnly('');
+                    setSpecialInstructions('');
+                    setJdPosition('');
+                    // Refresh requirements list
+                    queryClient.invalidateQueries({ queryKey: ['/api/client/requirements'] });
+                  } else {
+                    throw new Error('Failed to submit JD');
+                  }
+                } catch (error: any) {
+                  toast({
+                    title: "Error",
+                    description: error.message || "Failed to submit job description. Please try again.",
+                    variant: "destructive"
+                  });
+                }
+              }}
+              className="bg-cyan-400 hover:bg-cyan-500 text-black rounded"
+            >
+              Submit
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

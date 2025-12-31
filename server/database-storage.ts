@@ -212,14 +212,25 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(requirements).where(eq(requirements.isArchived, false)).orderBy(desc(requirements.createdAt));
   }
 
-  async createRequirement(insertRequirement: InsertRequirement): Promise<Requirement> {
-    const requirementData = {
-      ...insertRequirement,
+  async createRequirement(insertRequirement: InsertRequirement & { id?: string }): Promise<Requirement> {
+    const { id, ...requirementDataWithoutId } = insertRequirement as any;
+    const requirementData: any = {
+      ...requirementDataWithoutId,
       isArchived: false,
       createdAt: new Date().toISOString()
     };
-    const [requirement] = await db.insert(requirements).values(requirementData).returning();
-    return requirement;
+    // If id is provided, use it (for Role ID format like STR25001)
+    if (id) {
+      requirementData.id = id;
+    }
+    try {
+      const [requirement] = await db.insert(requirements).values(requirementData).returning();
+      return requirement;
+    } catch (error: any) {
+      console.error('Error creating requirement:', error);
+      console.error('Requirement data:', { ...requirementData, id });
+      throw error;
+    }
   }
 
   async updateRequirement(id: string, updates: Partial<Requirement>): Promise<Requirement | undefined> {
@@ -742,6 +753,14 @@ export class DatabaseStorage implements IStorage {
 
   async getAllTargetMappings(): Promise<TargetMappings[]> {
     return await db.select().from(targetMappings).orderBy(desc(targetMappings.createdAt));
+  }
+
+  async updateTargetMapping(id: string, updates: Partial<InsertTargetMappings>): Promise<TargetMappings | undefined> {
+    const [updatedMapping] = await db.update(targetMappings)
+      .set(updates)
+      .where(eq(targetMappings.id, id))
+      .returning();
+    return updatedMapping;
   }
 
   async deleteTargetMapping(id: string): Promise<boolean> {

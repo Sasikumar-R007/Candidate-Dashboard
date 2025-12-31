@@ -2,12 +2,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { StandardDatePicker } from "@/components/ui/standard-date-picker";
+import { useQuery } from "@tanstack/react-query";
 
 interface AddClientCredentialsModalProps {
   isOpen: boolean;
@@ -18,29 +16,38 @@ interface AddClientCredentialsModalProps {
 
 export default function AddClientCredentialsModal({ isOpen, onClose, editData, onSubmit }: AddClientCredentialsModalProps) {
   const [formData, setFormData] = useState({
+    clientId: editData?.clientId || "",
     firstName: editData?.name?.split(' ')[0] || editData?.firstName || "",
     lastName: editData?.name?.split(' ').slice(1).join(' ') || editData?.lastName || "",
     phoneNumber: editData?.phoneNumber || "",
     email: editData?.email || "",
     password: editData?.password || "",
     joiningDate: editData?.joiningDate || "",
-    linkedinProfile: editData?.linkedinProfile || "",
   });
   const [joiningDate, setJoiningDate] = useState<Date | undefined>(
     editData?.joiningDate ? new Date(editData.joiningDate) : undefined
   );
 
+  // Fetch companies from Master Data (only non-login-only clients)
+  const { data: allClients = [] } = useQuery<any[]>({
+    queryKey: ['/api/admin/clients'],
+    enabled: isOpen,
+  });
+
+  // Filter to only show Master Data companies (isLoginOnly = false)
+  const masterDataCompanies = allClients.filter((client: any) => !client.isLoginOnly);
+
   // Update form data when editData changes
   useEffect(() => {
     if (editData) {
       setFormData({
+        clientId: editData?.clientId || "",
         firstName: editData?.name?.split(' ')[0] || editData?.firstName || "",
         lastName: editData?.name?.split(' ').slice(1).join(' ') || editData?.lastName || "",
         phoneNumber: editData?.phoneNumber || "",
         email: editData?.email || "",
         password: editData?.password || "",
         joiningDate: editData?.joiningDate || "",
-        linkedinProfile: editData?.linkedinProfile || "",
       });
       setJoiningDate(editData?.joiningDate ? new Date(editData.joiningDate) : undefined);
     }
@@ -57,6 +64,11 @@ export default function AddClientCredentialsModal({ isOpen, onClose, editData, o
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!formData.clientId) {
+      alert("Please select a company from Master Data");
+      return;
+    }
+    
     const submitData = {
       ...formData,
       id: editData?.id || `STCL${String(Date.now()).slice(-3)}`,
@@ -70,13 +82,13 @@ export default function AddClientCredentialsModal({ isOpen, onClose, editData, o
 
   const handleClose = () => {
     setFormData({
+      clientId: "",
       firstName: "",
       lastName: "",
       phoneNumber: "",
       email: "",
       password: "",
       joiningDate: "",
-      linkedinProfile: "",
     });
     setJoiningDate(undefined);
     onClose();
@@ -92,6 +104,28 @@ export default function AddClientCredentialsModal({ isOpen, onClose, editData, o
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="px-6 pb-6 space-y-3">
+          {/* Select Client Company - First Field */}
+          <Select
+            value={formData.clientId}
+            onValueChange={(value) => setFormData({...formData, clientId: value})}
+            required
+          >
+            <SelectTrigger className="w-full bg-gray-50 border-gray-200 text-sm text-gray-500" data-testid="select-client-company">
+              <SelectValue placeholder="Select Client (Company)" />
+            </SelectTrigger>
+            <SelectContent>
+              {masterDataCompanies.length === 0 ? (
+                <SelectItem value="" disabled>No companies found. Create a company in Master Data first.</SelectItem>
+              ) : (
+                masterDataCompanies.map((client: any) => (
+                  <SelectItem key={client.id} value={client.id}>
+                    {client.brandName || client.incorporatedName || client.clientCode} ({client.clientCode})
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+
           <div className="grid grid-cols-2 gap-4">
             <Input
               id="firstName"
@@ -147,38 +181,11 @@ export default function AddClientCredentialsModal({ isOpen, onClose, editData, o
             data-testid="input-client-password"
           />
 
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full justify-start text-left font-normal bg-gray-50 border-gray-200 text-sm",
-                  !joiningDate && "text-gray-500"
-                )}
-                data-testid="input-client-joining-date"
-              >
-                <CalendarIcon className="mr-2 h-4 w-4 text-gray-400" />
-                {joiningDate ? format(joiningDate, "dd-MM-yyyy") : <span>dd-mm-yyyy</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={joiningDate}
-                onSelect={setJoiningDate}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-
-          <Input
-            id="linkedinProfile"
-            type="url"
-            value={formData.linkedinProfile}
-            onChange={(e) => setFormData({...formData, linkedinProfile: e.target.value})}
-            placeholder="LinkedIn URL"
+          <StandardDatePicker
+            value={joiningDate}
+            onChange={setJoiningDate}
+            placeholder="dd-mm-yyyy"
             className="w-full bg-gray-50 border-gray-200 text-sm text-gray-500"
-            data-testid="input-client-linkedin-profile"
           />
 
           <div className="flex gap-3 pt-4">

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLocation } from "wouter";
-import { ArrowLeft, MapPin, Calendar, Users, DollarSign, Briefcase, Edit, Trash2, CheckCircle, AlertCircle, Loader2, Building } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Users, DollarSign, Briefcase, Edit, Trash2, CheckCircle, AlertCircle, Loader2, Building, XCircle } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -111,10 +111,15 @@ export default function RecruiterActiveJobs() {
     if (!dateString) return 'Not specified';
     const date = new Date(dateString);
     const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffTime = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     
-    if (diffDays === 0) return 'Today';
+    // Check if it's the same day
+    const isSameDay = date.getDate() === now.getDate() && 
+                      date.getMonth() === now.getMonth() && 
+                      date.getFullYear() === now.getFullYear();
+    
+    if (isSameDay || diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays} days ago`;
     if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
@@ -354,10 +359,6 @@ export default function RecruiterActiveJobs() {
                               {job.noOfPositions} Position{job.noOfPositions > 1 ? 's' : ''}
                             </span>
                           )}
-                          <span className="flex items-center gap-1">
-                            <Calendar size={14} />
-                            Posted {formatDate(job.postedDate)}
-                          </span>
                         </div>
                         {(job.market || job.field) && (
                           <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 mt-2 flex-wrap">
@@ -423,6 +424,10 @@ export default function RecruiterActiveJobs() {
                             <span className="font-medium">{job.applicationCount || 0}</span> applications
                           </span>
                         </div>
+                        <span className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                          <Calendar size={14} />
+                          Posted {formatDate(job.postedDate)}
+                        </span>
                       </div>
                       <div className="flex gap-2">
                         <Button 
@@ -470,7 +475,7 @@ export default function RecruiterActiveJobs() {
       </div>
 
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">
           <DialogHeader>
             <DialogTitle>Edit Job</DialogTitle>
             <DialogDescription>
@@ -486,6 +491,7 @@ export default function RecruiterActiveJobs() {
                     id="role"
                     value={editingJob.role || ''}
                     onChange={(e) => setEditingJob({ ...editingJob, role: e.target.value })}
+                    className="bg-gray-50 dark:bg-gray-700"
                     data-testid="input-edit-role"
                   />
                 </div>
@@ -495,6 +501,7 @@ export default function RecruiterActiveJobs() {
                     id="company"
                     value={editingJob.companyName || ''}
                     onChange={(e) => setEditingJob({ ...editingJob, companyName: e.target.value })}
+                    className="bg-gray-50 dark:bg-gray-700"
                     data-testid="input-edit-company"
                   />
                 </div>
@@ -506,6 +513,7 @@ export default function RecruiterActiveJobs() {
                     id="location"
                     value={editingJob.location || ''}
                     onChange={(e) => setEditingJob({ ...editingJob, location: e.target.value })}
+                    className="bg-gray-50 dark:bg-gray-700"
                     data-testid="input-edit-location"
                   />
                 </div>
@@ -515,6 +523,7 @@ export default function RecruiterActiveJobs() {
                     id="experience"
                     value={editingJob.experience || ''}
                     onChange={(e) => setEditingJob({ ...editingJob, experience: e.target.value })}
+                    className="bg-gray-50 dark:bg-gray-700"
                     data-testid="input-edit-experience"
                   />
                 </div>
@@ -526,6 +535,7 @@ export default function RecruiterActiveJobs() {
                     id="salary"
                     value={editingJob.salaryPackage || ''}
                     onChange={(e) => setEditingJob({ ...editingJob, salaryPackage: e.target.value })}
+                    className="bg-gray-50 dark:bg-gray-700"
                     data-testid="input-edit-salary"
                   />
                 </div>
@@ -535,7 +545,7 @@ export default function RecruiterActiveJobs() {
                     value={editingJob.workMode || 'On-site'} 
                     onValueChange={(value) => setEditingJob({ ...editingJob, workMode: value })}
                   >
-                    <SelectTrigger data-testid="select-edit-workmode">
+                    <SelectTrigger className="bg-gray-50 dark:bg-gray-700" data-testid="select-edit-workmode">
                       <SelectValue placeholder="Select work mode" />
                     </SelectTrigger>
                     <SelectContent>
@@ -553,6 +563,7 @@ export default function RecruiterActiveJobs() {
                     id="market"
                     value={editingJob.market || ''}
                     onChange={(e) => setEditingJob({ ...editingJob, market: e.target.value })}
+                    className="bg-gray-50 dark:bg-gray-700"
                     data-testid="input-edit-market"
                   />
                 </div>
@@ -562,6 +573,7 @@ export default function RecruiterActiveJobs() {
                     id="field"
                     value={editingJob.field || ''}
                     onChange={(e) => setEditingJob({ ...editingJob, field: e.target.value })}
+                    className="bg-gray-50 dark:bg-gray-700"
                     data-testid="input-edit-field"
                   />
                 </div>
@@ -575,6 +587,7 @@ export default function RecruiterActiveJobs() {
                     min="1"
                     value={editingJob.noOfPositions || 1}
                     onChange={(e) => setEditingJob({ ...editingJob, noOfPositions: parseInt(e.target.value) || 1 })}
+                    className="bg-gray-50 dark:bg-gray-700"
                     data-testid="input-edit-no-of-positions"
                   />
                 </div>
@@ -584,7 +597,7 @@ export default function RecruiterActiveJobs() {
                     value={(editingJob as any).employmentType || 'Full-time'} 
                     onValueChange={(value) => setEditingJob({ ...editingJob, employmentType: value } as any)}
                   >
-                    <SelectTrigger data-testid="select-edit-employment-type">
+                    <SelectTrigger className="bg-gray-50 dark:bg-gray-700" data-testid="select-edit-employment-type">
                       <SelectValue placeholder="Select employment type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -602,7 +615,7 @@ export default function RecruiterActiveJobs() {
                   value={editingJob.status || 'Active'} 
                   onValueChange={(value) => setEditingJob({ ...editingJob, status: value })}
                 >
-                  <SelectTrigger data-testid="select-edit-status">
+                  <SelectTrigger className="bg-gray-50 dark:bg-gray-700" data-testid="select-edit-status">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -619,6 +632,7 @@ export default function RecruiterActiveJobs() {
                   value={editingJob.aboutCompany || ''}
                   onChange={(e) => setEditingJob({ ...editingJob, aboutCompany: e.target.value })}
                   rows={3}
+                  className="bg-gray-50 dark:bg-gray-700"
                   data-testid="input-edit-about"
                 />
               </div>
@@ -629,6 +643,7 @@ export default function RecruiterActiveJobs() {
                   value={editingJob.roleDefinitions || ''}
                   onChange={(e) => setEditingJob({ ...editingJob, roleDefinitions: e.target.value })}
                   rows={3}
+                  className="bg-gray-50 dark:bg-gray-700"
                   data-testid="input-edit-role-desc"
                 />
               </div>

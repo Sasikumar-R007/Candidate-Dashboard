@@ -462,6 +462,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test endpoint to create a verified candidate (for testing without email)
+  app.post("/api/test/create-candidate", async (req, res) => {
+    try {
+      const { email = "testcandidate@example.com", password = "test123456", fullName = "Test Candidate" } = req.body;
+
+      // Check if candidate already exists
+      const existingCandidate = await storage.getCandidateByEmail(email);
+      if (existingCandidate) {
+        return res.json({
+          success: true,
+          message: "Candidate already exists",
+          email: email,
+          password: password,
+          candidateId: existingCandidate.candidateId,
+          isVerified: existingCandidate.isVerified
+        });
+      }
+
+      // Generate candidate ID and create candidate
+      const candidateId = await storage.generateNextCandidateId();
+      const newCandidate = await storage.createCandidate({
+        fullName,
+        email,
+        password,
+        candidateId,
+        isActive: true,
+        isVerified: false, // Will be set to true below
+        createdAt: new Date().toISOString()
+      });
+
+      // Update to verified status (bypassing OTP requirement)
+      const updatedCandidate = await storage.updateCandidate(newCandidate.id, { isVerified: true });
+      
+      if (!updatedCandidate) {
+        throw new Error("Failed to update candidate verification status");
+      }
+
+      res.json({
+        success: true,
+        message: "Test candidate created successfully and verified",
+        email: email,
+        password: password,
+        candidateId: updatedCandidate.candidateId,
+        fullName: fullName,
+        isVerified: true
+      });
+    } catch (error: any) {
+      console.error('Create test candidate error:', error);
+      res.status(500).json({ message: "Failed to create test candidate: " + error.message });
+    }
+  });
+
   // Candidate Authentication Routes
   app.post("/api/auth/candidate-register", async (req, res) => {
     try {
@@ -3295,10 +3347,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Requirements API endpoints
+  // Get client-submitted JDs (requirements with STR... Role ID format)
+  app.get("/api/admin/client-jds", requireAdminAuth, async (req, res) => {
+    try {
+      const allRequirements = await storage.getRequirements();
+      console.log(`Total requirements found: ${allRequirements.length}`);
+      // Filter requirements that have Role ID format (STR + year + number)
+      const clientJDs = allRequirements.filter((req: any) => {
+        const matches = req.id && /^STR\d{5}$/.test(req.id);
+        if (matches) {
+          console.log(`Found client JD: ${req.id} - ${req.position} - ${req.company}`);
+        }
+        return matches;
+      });
+      console.log(`Client JDs found: ${clientJDs.length}`);
+      
+      // Transform to JD table format
+      const jdData = await Promise.all(clientJDs.map(async (req: any) => {
+        // Find SPOC employee for this requirement
+        const spocName = req.spoc || 'N/A';
+        
+        // Get client code from company name
+        const allClients = await storage.getAllClients();
+        const clientRecord = allClients.find((c: any) => 
+          c.brandName === req.company && !c.isLoginOnly
+        );
+        const clientId = clientRecord?.clientCode || req.company;
+        
+        return {
+          id: req.id, // Role ID (STR format)
+          clientId: clientId, // Client code (e.g., STCL001)
+          spocName: spocName,
+          role: req.position,
+          sharedDate: req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+          }).replace(/\//g, '-') : 'N/A',
+          requirement: req // Full requirement object for JD preview
+        };
+      }));
+      
+      res.json(jdData);
+    } catch (error) {
+      console.error('Get client JDs error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.get("/api/admin/requirements", requireAdminAuth, async (req, res) => {
     try {
-      const requirements = await storage.getRequirements();
-      res.json(requirements);
+      const allRequirements = await storage.getRequirements();
+      // Exclude client-submitted JDs (those with STR format Role IDs)
+      // Client JDs should only appear in the "JD from Client" table
+      const adminRequirements = allRequirements.filter((req: any) => {
+        return !req.id || !/^STR\d{5}$/.test(req.id);
+      });
+      res.json(adminRequirements);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
     }
@@ -4213,42 +4318,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       const client = await storage.createClient(clientDataToInsert);
       
-      // Create employee profile for client login with auto-generated password if not provided
-      // Note: storage.createEmployee will hash the password, so pass raw password
-      const rawPassword = validatedData.password || randomBytes(12).toString('hex');
-      const employeeData = {
-        employeeId: clientCode,
-        name: validatedData.brandName,
-        email: validatedData.email,
-        password: rawPassword,
-        role: "client",
-        phone: validatedData.spoc || "",
-        department: "Client",
-        joiningDate: validatedData.startDate || new Date().toISOString().split('T')[0],
-        reportingTo: "Admin",
-        isActive: true,
-        createdAt: new Date().toISOString(),
-      };
+      // NOTE: Master Data "New Client" creates ONLY the company/client record
+      // Employee login profiles are created separately via User Management "Add Client"
+      // This ensures proper separation: Company (Master Data) vs SPOC Login (User Management)
       
-      const createdEmployee = await storage.createEmployee(employeeData);
-      
-      // Send welcome email to client
-      if (createdEmployee.email && rawPassword) {
-        const loginUrl = process.env.REPLIT_DEV_DOMAIN 
-          ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
-          : 'http://localhost:5000';
-        
-        await sendEmployeeWelcomeEmail({
-          name: createdEmployee.name,
-          email: createdEmployee.email,
-          employeeId: createdEmployee.employeeId,
-          role: createdEmployee.role,
-          password: rawPassword,
-          loginUrl
-        });
-      }
-      
-      res.status(201).json({ message: "Client profile created successfully", client });
+      res.status(201).json({ message: "Client company created successfully", client });
     } catch (error: any) {
       console.error('Create client error:', error);
       if (error.name === 'ZodError') {
@@ -4261,7 +4335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create client credentials (simplified - for User Management)
+  // Create client credentials (SPOC login profile - for User Management)
   app.post("/api/admin/clients/credentials", requireAdminAuth, async (req, res) => {
     try {
       const credentialsSchema = z.object({
@@ -4272,53 +4346,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: z.string().email(),
         password: z.string().min(6),
         joiningDate: z.string(),
-        linkedinProfile: z.string().optional(),
+        clientId: z.string().min(1), // Company ID from Master Data
       });
 
       const validatedData = credentialsSchema.parse(req.body);
       
-      // Generate client code
-      let clientCode: string;
-      try {
-        clientCode = await storage.generateNextClientCode();
-        console.log('Generated client code:', clientCode);
-      } catch (error: any) {
-        console.error('Error generating client code:', error);
-        return res.status(500).json({ 
-          message: "Failed to generate client code", 
-          error: error.message || String(error) 
-        });
-      }
-
-      // Create minimal client record with just the essential information
-      // Mark as login-only so it doesn't appear in Master Data tables
-      const minimalClientData = {
-        clientCode,
-        brandName: validatedData.name,
-        email: validatedData.email,
-        currentStatus: 'active',
-        isLoginOnly: true,
-        createdAt: new Date().toISOString(),
-      };
+      // Get the selected company from Master Data
+      const allClients = await storage.getAllClients();
+      const selectedCompany = allClients.find(c => c.id === validatedData.clientId);
       
-      let client;
-      try {
-        client = await storage.createClient(minimalClientData);
-        console.log('Client created successfully:', client.id);
-      } catch (error: any) {
-        console.error('Error creating client:', error);
-        console.error('Client data:', minimalClientData);
-        return res.status(500).json({ 
-          message: "Failed to create client record", 
-          error: error.message || String(error),
-          details: error.code || error.detail || 'Unknown database error'
+      if (!selectedCompany) {
+        return res.status(404).json({ 
+          message: "Selected company not found. Please select a valid company from Master Data." 
         });
       }
       
-      // Create employee profile for client login
+      // Generate employee ID for SPOC (e.g., STCL001SPOC01)
+      // Format: {clientCode}SPOC{number}
+      // IMPORTANT: This endpoint ONLY creates an employee record (SPOC login profile)
+      // It does NOT create any client record - client records are only created via Master Data "New Client"
+      const existingEmployees = await storage.getAllEmployees();
+      const spocEmployees = existingEmployees.filter(emp => 
+        emp.employeeId?.startsWith(selectedCompany.clientCode + 'SPOC')
+      );
+      const nextSpocNumber = String(spocEmployees.length + 1).padStart(2, '0');
+      const employeeId = `${selectedCompany.clientCode}SPOC${nextSpocNumber}`;
+      
+      // Create employee profile for SPOC login (linked to company)
       // SECURITY: Always set role to "client" on server-side to prevent privilege escalation
+      // NOTE: We do NOT create any client record here - only the employee login profile
       const employeeData = {
-        employeeId: clientCode,
+        employeeId: employeeId,
         name: validatedData.name,
         email: validatedData.email,
         password: validatedData.password,
@@ -4332,30 +4390,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       
       try {
-        await storage.createEmployee(employeeData);
-        console.log('Employee created successfully for client:', clientCode);
+        // Create ONLY the employee record - no client record should be created
+        const createdEmployee = await storage.createEmployee(employeeData);
+        console.log('SPOC employee created successfully:', employeeId, 'for company:', selectedCompany.brandName);
+        console.log('No client record created - SPOC login profile only');
+        
+        res.status(201).json({ 
+          message: "SPOC login profile created successfully", 
+          employee: createdEmployee,
+          company: {
+            id: selectedCompany.id,
+            brandName: selectedCompany.brandName,
+            clientCode: selectedCompany.clientCode
+          },
+          employeeId: employeeId
+        });
       } catch (error: any) {
-        console.error('Error creating employee:', error);
+        console.error('Error creating SPOC employee:', error);
         console.error('Employee data:', { ...employeeData, password: '[REDACTED]' });
-        // Try to clean up the client record if employee creation fails
-        try {
-          await storage.deleteClient(client.id);
-          console.log('Cleaned up client record after employee creation failure');
-        } catch (cleanupError) {
-          console.error('Failed to clean up client record:', cleanupError);
-        }
         return res.status(500).json({ 
-          message: "Failed to create employee profile", 
+          message: "Failed to create SPOC login profile", 
           error: error.message || String(error),
           details: error.code || error.detail || 'Unknown database error'
         });
       }
-      
-      res.status(201).json({ 
-        message: "Client credentials created successfully", 
-        client,
-        employeeId: clientCode
-      });
     } catch (error: any) {
       console.error('Create client credentials error:', error);
       console.error('Error stack:', error.stack);
@@ -4475,6 +4533,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get target mappings error:', error);
       res.status(500).json({ message: "Failed to get target mappings" });
+    }
+  });
+
+  // Update target mapping
+  app.put("/api/admin/target-mappings/:id", requireAdminAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { teamLeadId, teamMemberId, quarter, year, minimumTarget } = req.body;
+
+      if (!teamLeadId || !teamMemberId || !quarter || !year || minimumTarget === undefined) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const yearNum = parseInt(year);
+      const minimumTargetNum = parseInt(minimumTarget);
+
+      if (isNaN(yearNum) || yearNum < 2000 || yearNum > 2100) {
+        return res.status(400).json({ message: "Invalid year value" });
+      }
+
+      if (isNaN(minimumTargetNum) || minimumTargetNum < 0) {
+        return res.status(400).json({ message: "Invalid minimum target value" });
+      }
+
+      const teamLead = await storage.getEmployeeById(teamLeadId);
+      const teamMember = await storage.getEmployeeById(teamMemberId);
+
+      if (!teamLead || teamLead.role !== "team_leader") {
+        return res.status(400).json({ message: "Invalid team lead" });
+      }
+      if (!teamMember || (teamMember.role !== "recruiter" && teamMember.role !== "talent_advisor")) {
+        return res.status(400).json({ message: "Invalid team member" });
+      }
+      if (teamMember.reportingTo !== teamLead.employeeId) {
+        return res.status(400).json({ message: "Selected team member does not report to the selected team leader" });
+      }
+
+      const updatedMapping = await storage.updateTargetMapping(id, {
+        teamLeadId,
+        teamMemberId,
+        quarter,
+        year: yearNum,
+        minimumTarget: minimumTargetNum,
+      });
+
+      if (updatedMapping) {
+        res.status(200).json({ message: "Target mapping updated successfully", targetMapping: updatedMapping });
+      } else {
+        res.status(404).json({ message: "Target mapping not found" });
+      }
+    } catch (error: any) {
+      console.error('Update target mapping error:', error);
+      res.status(500).json({ message: "Failed to update target mapping" });
     }
   });
 
@@ -5975,7 +6086,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Update application status
-  app.patch("/api/recruiter/applications/:id/status", async (req, res) => {
+  app.patch("/api/recruiter/applications/:id/status", requireEmployeeAuth, async (req, res) => {
     try {
       const { id } = req.params;
       const { status } = req.body;
@@ -5985,24 +6096,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const existingApplication = await storage.getJobApplicationById(id);
-      const previousStatus = existingApplication?.status;
+      if (!existingApplication) {
+        return res.status(404).json({ message: "Application not found" });
+      }
       
+      const previousStatus = existingApplication.status;
+      
+      // Update the application status in the database
       const application = await storage.updateJobApplicationStatus(id, status);
       if (!application) {
         return res.status(404).json({ message: "Application not found" });
       }
       
+      console.log(`Application ${id} status updated from "${previousStatus}" to "${status}"`);
+      
+      // Log the pipeline change if status actually changed
       if (previousStatus && previousStatus !== status) {
+        const session = req.session as any;
         logCandidatePipelineChanged(
           storage,
-          'system',
-          'System',
-          'system',
+          session.employeeId || 'system',
+          session.employeeName || 'System',
+          session.role || 'system',
           application.candidateName || 'Candidate',
           previousStatus,
           status,
           application.id
-        );
+        ).catch(err => console.error('Failed to log pipeline change:', err));
       }
       
       res.json({ message: "Application status updated", application });
@@ -6763,6 +6883,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     ]);
   });
 
+  // Helper function to find company for SPOC employee
+  const findCompanyForEmployee = async (employee: any) => {
+    const clients = await storage.getAllClients();
+    
+    if (!employee || !employee.employeeId) {
+      console.log('Employee or employeeId is missing');
+      return undefined;
+    }
+    
+    // Check if employee is a SPOC (employeeId format: STCL001SPOC01 or legacy STCL001POC01)
+    if (employee.employeeId.includes('SPOC') || employee.employeeId.includes('POC')) {
+      // Extract company code (e.g., STCL001 from STCL001SPOC01 or STCL001POC01)
+      const companyCodeMatch = employee.employeeId.match(/^(.+?)(?:SPOC|POC)/);
+      if (companyCodeMatch) {
+        const companyCode = companyCodeMatch[1];
+        const company = clients.find(c => c.clientCode === companyCode && !c.isLoginOnly);
+        if (company) {
+          console.log(`Found company ${company.brandName} (${company.clientCode}) for SPOC ${employee.employeeId}`);
+          return company;
+        } else {
+          console.log(`No company found for SPOC ${employee.employeeId} with company code ${companyCode}`);
+          console.log(`Available client codes: ${clients.filter(c => !c.isLoginOnly).map(c => c.clientCode).join(', ')}`);
+        }
+      }
+    }
+    
+    // Legacy: Try to find by email match (for old records)
+    const legacyCompany = clients.find(c => c.email === employee.email && !c.isLoginOnly);
+    if (legacyCompany) {
+      console.log(`Found legacy company ${legacyCompany.brandName} for employee ${employee.employeeId} by email match`);
+      return legacyCompany;
+    }
+    
+    console.log(`No company found for employee ${employee.employeeId} (email: ${employee.email})`);
+    return undefined;
+  };
+
   // Client Dashboard Stats - Get authenticated client's dashboard statistics
   app.get("/api/client/dashboard-stats", requireClientAuth, async (req, res) => {
     try {
@@ -6771,9 +6928,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Client not found" });
       }
       
-      // Get client by email to find company name
-      const clients = await storage.getAllClients();
-      const client = clients.find(c => c.email === employee.email);
+      // Get client company
+      const client = await findCompanyForEmployee(employee);
       const companyName = client?.brandName || employee.name;
       
       const stats = await storage.getClientDashboardStats(companyName);
@@ -6784,7 +6940,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Client Requirements - Get requirements for client's company
+  // Client Requirements - Get requirements for client's company (only client-submitted JDs with STR format)
   app.get("/api/client/requirements", requireClientAuth, async (req, res) => {
     try {
       const employee = await storage.getEmployeeById(req.session.employeeId!);
@@ -6792,15 +6948,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Client not found" });
       }
       
-      const clients = await storage.getAllClients();
-      const client = clients.find(c => c.email === employee.email);
+      const client = await findCompanyForEmployee(employee);
       const companyName = client?.brandName || employee.name;
       
-      const requirements = await storage.getRequirementsByCompany(companyName);
+      const allRequirements = await storage.getRequirementsByCompany(companyName);
+      
+      // Filter only client-submitted JDs (those with STR format Role IDs)
+      const clientJDs = allRequirements.filter((req: any) => {
+        return req.id && /^STR\d{5}$/.test(req.id);
+      });
       
       // Transform requirements for client view
-      const rolesData = requirements.map(req => ({
-        roleId: req.id,
+      const rolesData = clientJDs.map(req => ({
+        roleId: req.id, // This is already in STR format
         role: req.position,
         team: req.teamLead || 'N/A',
         recruiter: req.talentAdvisor || 'N/A',
@@ -6829,8 +6989,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Client not found" });
       }
       
-      const clients = await storage.getAllClients();
-      const client = clients.find(c => c.email === employee.email);
+      const client = await findCompanyForEmployee(employee);
       const companyName = client?.brandName || employee.name;
       
       const applications = await storage.getJobApplicationsByCompany(companyName);
@@ -6909,8 +7068,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Client not found" });
       }
       
-      const clients = await storage.getAllClients();
-      const client = clients.find(c => c.email === employee.email);
+      const client = await findCompanyForEmployee(employee);
       const companyName = client?.brandName || employee.name;
       
       const closures = await storage.getRevenueMappingsByClientName(companyName);
@@ -6939,10 +7097,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Client not found" });
       }
       
-      const clients = await storage.getAllClients();
-      const client = clients.find(c => c.email === employee.email);
+      const client = await findCompanyForEmployee(employee);
       
-      // Check if client profile is linked (admin created a client record with matching email)
+      // Check if client profile is linked (admin created a client record in Master Data)
       const profileLinked = !!client;
       
       res.json({
@@ -6951,8 +7108,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: employee.email,
         phone: employee.phone,
         profileLinked,
-        // Basic company info
-        company: client?.brandName || employee.name,
+        // Basic company info - get from linked company
+        company: client?.brandName || employee.name || 'Company',
         // Extended client details (only if profile is linked)
         clientDetails: profileLinked ? {
           clientCode: client.clientCode,
@@ -6974,6 +7131,149 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get client profile error:', error);
       res.status(500).json({ message: "Failed to get profile" });
+    }
+  });
+
+  // Client Upload JD File
+  app.post("/api/client/upload-jd-file", requireClientAuth, upload.single('jdFile'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
+        : `http://${req.get('host')}`;
+      
+      const url = `${baseUrl}/uploads/${req.file.filename}`;
+      res.json({ url, filename: req.file.filename });
+    } catch (error) {
+      console.error('JD file upload error:', error);
+      res.status(500).json({ message: "File upload failed" });
+    }
+  });
+
+  // Client Submit JD - Create a requirement from client's job description
+  app.post("/api/client/submit-jd", requireClientAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      
+      const client = await findCompanyForEmployee(employee);
+      const companyName = client?.brandName || employee.name;
+      
+      const { 
+        jdText, 
+        jdFile, 
+        primarySkills, 
+        secondarySkills, 
+        knowledgeOnly, 
+        specialInstructions,
+        position
+      } = req.body;
+      
+      // Validate that at least JD text or file is provided
+      if (!jdText && !jdFile) {
+        return res.status(400).json({ message: "Job description (text or file) is required" });
+      }
+      
+      // Extract position from JD text if not provided
+      let extractedPosition = position;
+      if (!extractedPosition && jdText) {
+        // Try to extract position from JD text (look for common patterns)
+        const positionPatterns = [
+          /(?:position|role|job title|title)[\s:]+([A-Za-z\s&]+)/i,
+          /(?:looking for|seeking|hiring)[\s:]+([A-Za-z\s&]+)/i,
+          /^([A-Za-z\s&]+?)(?:\s+(?:developer|engineer|manager|analyst|specialist|lead|architect))/i
+        ];
+        for (const pattern of positionPatterns) {
+          const match = jdText.match(pattern);
+          if (match && match[1]) {
+            extractedPosition = match[1].trim();
+            break;
+          }
+        }
+      }
+      
+      // If still no position, use default
+      if (!extractedPosition) {
+        extractedPosition = 'Position from JD';
+      }
+      
+      // Generate Role ID in format STR25001 (STR + year + sequential number)
+      const currentYear = new Date().getFullYear().toString().slice(-2); // Last 2 digits of year
+      const allRequirements = await storage.getRequirements();
+      const yearRequirements = allRequirements.filter((req: any) => {
+        // Check if requirement ID matches STR + year + 3 digits pattern
+        return req.id && /^STR\d{5}$/.test(req.id) && req.id.startsWith(`STR${currentYear}`);
+      });
+      const nextNumber = String(yearRequirements.length + 1).padStart(3, '0');
+      const roleId = `STR${currentYear}${nextNumber}`;
+      
+      // Combine all skills
+      const allSkills = [
+        ...(primarySkills ? primarySkills.split(',').map((s: string) => s.trim()).filter(Boolean) : []),
+        ...(secondarySkills ? secondarySkills.split(',').map((s: string) => s.trim()).filter(Boolean) : []),
+        ...(knowledgeOnly ? knowledgeOnly.split(',').map((s: string) => s.trim()).filter(Boolean) : [])
+      ];
+      
+      // Store JD details in notes as JSON
+      const jdDetails = {
+        jdText: jdText || null,
+        jdFile: jdFile || null,
+        primarySkills: primarySkills || null,
+        secondarySkills: secondarySkills || null,
+        knowledgeOnly: knowledgeOnly || null,
+        allSkills: allSkills,
+        specialInstructions: specialInstructions || null,
+        submittedBy: employee.email,
+        submittedAt: new Date().toISOString()
+      };
+      
+      // Create requirement from JD with Role ID as the requirement ID
+      // Note: This creates a requirement that will be assigned to a team lead/talent advisor later
+      const requirement = await storage.createRequirement({
+        id: roleId, // Use Role ID as requirement ID (STR25001 format)
+        position: extractedPosition,
+        criticality: 'Medium', // Default, can be updated by admin
+        toughness: 'Medium', // Default, can be updated by admin
+        company: companyName,
+        spoc: client?.spoc || employee.name,
+        talentAdvisor: null, // Will be assigned by team lead
+        talentAdvisorId: null,
+        teamLead: null, // Will be assigned by admin
+        status: 'open',
+        isArchived: false,
+        createdAt: new Date().toISOString(),
+        // Store JD details in a way that can be retrieved later
+        // Since notes field doesn't exist in schema, we'll need to handle this differently
+        // For now, we'll create a separate entry or use a workaround
+      });
+      
+      // Note: If the requirements table had a notes field, we would store JSON.stringify(jdDetails) there
+      // For now, the requirement is created and JD details can be stored separately if needed
+      
+      res.json({ 
+        success: true, 
+        message: "Job description submitted successfully",
+        requirement 
+      });
+    } catch (error: any) {
+      console.error('Submit JD error:', error);
+      console.error('Error stack:', error.stack);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        detail: error.detail,
+        constraint: error.constraint
+      });
+      res.status(500).json({ 
+        message: "Failed to submit job description",
+        error: error.message || String(error),
+        details: error.detail || error.code || 'Unknown error'
+      });
     }
   });
 

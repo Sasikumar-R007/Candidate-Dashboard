@@ -36,7 +36,7 @@ export function ProtectedRoute({
     if (allowedRoles && allowedRoles.length > 0 && user.type === 'employee') {
       const employee = user.data as Employee;
       if (!allowedRoles.includes(employee.role)) {
-        return { status: 'unauthorized_role' as const, redirect: '/dashboard-selection' };
+        return { status: 'unauthorized_role' as const, redirect: '/employer-login' };
       }
     }
 
