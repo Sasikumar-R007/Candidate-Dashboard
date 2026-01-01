@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
+import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, HelpCircle, ExternalLink } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -255,9 +256,14 @@ export default function TeamLeaderDashboard() {
   });
 
   const { data: dailyMetrics } = useQuery<any>({
-    queryKey: ['/api/team-leader/daily-metrics', selectedDailyMetricsFilter],
+    queryKey: ['/api/team-leader/daily-metrics', format(selectedDate, 'yyyy-MM-dd'), selectedDailyMetricsFilter],
     queryFn: async () => {
-      const response = await fetch(`/api/team-leader/daily-metrics?memberId=${selectedDailyMetricsFilter}`);
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+      const createApiUrl = (path: string) => `${API_BASE_URL}${path}`;
+      const response = await fetch(createApiUrl(`/api/team-leader/daily-metrics?date=${dateStr}&memberId=${selectedDailyMetricsFilter}`), {
+        credentials: 'include'
+      });
       if (!response.ok) throw new Error('Failed to fetch daily metrics');
       return response.json();
     },
@@ -556,7 +562,7 @@ export default function TeamLeaderDashboard() {
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
           <AdminTopHeader 
-            companyName="Gumlat Marketing Private Limited" 
+            companyName="Scaling Theory" 
             onHelpClick={() => setIsHelpChatOpen(true)}
           />
           <div className="flex h-screen">
@@ -571,8 +577,7 @@ export default function TeamLeaderDashboard() {
                   <Dialog open={isTargetModalOpen} onOpenChange={setIsTargetModalOpen}>
                     <DialogTrigger asChild>
                       <Button 
-                        variant="outline"
-                        className="text-sm px-4 py-2 border-gray-300 hover:bg-gray-50"
+                        className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded font-medium"
                         data-testid="button-view-all-targets"
                       >
                         View All
@@ -693,23 +698,11 @@ export default function TeamLeaderDashboard() {
                       </SelectContent>
                     </Select>
                     
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="flex items-center space-x-1 h-8 px-3">
-                          <CalendarIcon className="h-4 w-4" />
-                          <span className="text-sm">{format(selectedDate, "dd-MMM-yyyy")}</span>
-                          <EditIcon className="h-4 w-4" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="end">
-                        <Calendar
-                          mode="single"
-                          selected={selectedDate}
-                          onSelect={(date) => date && setSelectedDate(date)}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <StandardDatePicker
+                      value={selectedDate}
+                      onChange={(date) => date && setSelectedDate(date)}
+                      placeholder="Select date"
+                    />
                   </div>
                 </CardHeader>
                 
@@ -887,8 +880,7 @@ export default function TeamLeaderDashboard() {
                   <CardHeader className="pb-3 pt-4 flex flex-row items-center justify-between gap-2">
                     <CardTitle className="text-lg font-semibold text-gray-900">CEO Commands</CardTitle>
                     <Button 
-                      variant="link" 
-                      className="text-sm text-blue-600 p-0"
+                      className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded font-medium no-underline"
                       onClick={() => setIsCeoCommentsModalOpen(true)}
                       data-testid="button-view-more-comments"
                     >
@@ -938,7 +930,7 @@ export default function TeamLeaderDashboard() {
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
           <AdminTopHeader 
-            companyName="Gumlat Marketing Private Limited" 
+            companyName="Scaling Theory" 
             onHelpClick={() => setIsHelpChatOpen(true)}
           />
           <div className="px-6 py-6 space-y-6 h-full">
@@ -982,16 +974,16 @@ export default function TeamLeaderDashboard() {
                               <td className="p-3 text-gray-900">{requirement.position}</td>
                               <td className="p-3">
                                 <span className={`text-xs font-semibold px-2 py-1 rounded inline-flex items-center ${
-                                  requirement.criticality === 'HIGH' ? 'bg-red-100 text-red-800' :
-                                  requirement.criticality === 'MEDIUM' ? 'bg-blue-100 text-blue-800' :
+                                  requirement.criticality.toUpperCase() === 'HIGH' ? 'bg-red-100 text-red-800' :
+                                  requirement.criticality.toUpperCase() === 'MEDIUM' ? 'bg-blue-100 text-blue-800' :
                                   'bg-gray-100 text-gray-800'
                                 }`}>
                                   <span className={`w-2 h-2 rounded-full mr-1 ${
-                                    requirement.criticality === 'HIGH' ? 'bg-red-500' :
-                                    requirement.criticality === 'MEDIUM' ? 'bg-blue-500' :
+                                    requirement.criticality.toUpperCase() === 'HIGH' ? 'bg-red-500' :
+                                    requirement.criticality.toUpperCase() === 'MEDIUM' ? 'bg-blue-500' :
                                     'bg-gray-500'
                                   }`}></span>
-                                  {requirement.criticality}
+                                  {requirement.criticality.toUpperCase()}-{requirement.toughness || 'Medium'}
                                 </span>
                               </td>
                               <td className="p-3 text-gray-900">{requirement.company}</td>
@@ -1024,8 +1016,9 @@ export default function TeamLeaderDashboard() {
                       Archives
                     </Button>
                     <Button 
-                      className="px-6 py-2 bg-cyan-400 hover:bg-cyan-500 text-black font-medium rounded"
+                      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded"
                       onClick={() => setIsViewMoreRequirementsModalOpen(true)}
+                      disabled={requirementsData.length <= 5}
                       data-testid="button-view-more-requirements"
                     >
                       View More
@@ -1129,7 +1122,7 @@ export default function TeamLeaderDashboard() {
                   <div className="space-y-2">
                     <div><strong>Position:</strong> {selectedRequirement.position}</div>
                     <div><strong>Company:</strong> {selectedRequirement.company}</div>
-                    <div><strong>Criticality:</strong> <span className="text-red-600">{selectedRequirement.criticality}</span></div>
+                    <div><strong>Criticality:</strong> <span className="text-red-600">{selectedRequirement.criticality.toUpperCase()}-{selectedRequirement.toughness || 'Medium'}</span></div>
                     <div><strong>SPOC:</strong> {selectedRequirement.spoc}</div>
                   </div>
                 </div>
@@ -1201,22 +1194,11 @@ export default function TeamLeaderDashboard() {
                     <option key={member.id} value={member.name}>{member.name}</option>
                   ))}
                 </select>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="btn-rounded input-styled">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {format(selectedDate, "dd-MMM-yyyy")}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={selectedDate}
-                      onSelect={(date) => date && setSelectedDate(date)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+                <StandardDatePicker
+                  value={selectedDate}
+                  onChange={(date) => date && setSelectedDate(date)}
+                  placeholder="Select date"
+                />
               </div>
             </div>
 
@@ -1346,70 +1328,6 @@ export default function TeamLeaderDashboard() {
                 )}
               </CardContent>
             </Card>
-
-            {/* Closure Reports Table */}
-            <Card className="mt-6">
-              <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Closure Reports</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                {isLoadingClosures ? (
-                  <div className="p-8 flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-blue-600"></div>
-                    <span className="ml-2 text-gray-500 dark:text-gray-400">Loading closure reports...</span>
-                  </div>
-                ) : closureData.length === 0 ? (
-                  <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-                    No closure reports available yet.
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto admin-scrollbar">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Candidate</th>
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Position</th>
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Client</th>
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Package</th>
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Closure Month</th>
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Revenue</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {closureData.slice(0, 5).map((closure: any, index: number) => (
-                          <tr 
-                            key={`closure-pipeline-${index}`} 
-                            className={`border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 ${index === closureData.slice(0, 5).length - 1 ? '' : ''}`}
-                            data-testid={`row-closure-${index}`}
-                          >
-                            <td className="p-3 text-gray-900 dark:text-white">{closure.name}</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">{closure.position}</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">{closure.company}</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">{closure.talentAdvisor}</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">{closure.package}</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">{closure.closureMonth}</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">{closure.revenue}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-                {closureData.length > 0 && (
-                  <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                    <div className="flex justify-end">
-                      <Button 
-                        onClick={() => setIsClosureDetailsModalOpen(true)}
-                        data-testid="button-see-more-closure"
-                      >
-                        See More
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </div>
         </div>
 
@@ -1525,7 +1443,7 @@ export default function TeamLeaderDashboard() {
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
           <AdminTopHeader 
-            companyName="Gumlat Marketing Private Limited" 
+            companyName="Scaling Theory" 
             onHelpClick={() => setIsHelpChatOpen(true)}
           />
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
@@ -1609,6 +1527,7 @@ export default function TeamLeaderDashboard() {
                 <CardTitle className="text-lg text-gray-900">List of Closures</CardTitle>
                 <Button 
                   size="sm" 
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
                   onClick={() => setIsViewClosuresModalOpen(true)}
                   data-testid="button-view-closures"
                 >
@@ -1665,7 +1584,7 @@ export default function TeamLeaderDashboard() {
           {/* Main Chat Area */}
           <div className="flex-1 flex flex-col">
             <AdminTopHeader 
-              companyName="Gumlat Marketing Private Limited" 
+              companyName="Scaling Theory" 
               onHelpClick={() => setIsHelpChatOpen(true)}
             />
             <div className="px-6 py-6 h-full flex flex-col">
@@ -1869,23 +1788,11 @@ export default function TeamLeaderDashboard() {
             <CardTitle>Daily Metrics</CardTitle>
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-500">Overall</span>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className="text-sm">
-                    <CalendarIcon className="h-4 w-4 mr-2" />
-                    <span>{format(selectedDate, "dd-MMM-yyyy")}</span>
-                    <EditIcon className="h-4 w-4 ml-2" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="end">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => date && setSelectedDate(date)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <StandardDatePicker
+                value={selectedDate}
+                onChange={(date) => date && setSelectedDate(date)}
+                placeholder="Select date"
+              />
             </div>
           </CardHeader>
           <CardContent>
@@ -1943,7 +1850,7 @@ export default function TeamLeaderDashboard() {
               </div>
             </div>
             <div className="mt-4 text-center">
-              <Button variant="outline" size="sm">View More</Button>
+              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">View More</Button>
             </div>
           </CardContent>
         </Card>
@@ -2127,23 +2034,11 @@ export default function TeamLeaderDashboard() {
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle data-testid="text-daily-metrics-title">Daily Metrics</CardTitle>
                 <div className="flex items-center gap-2">
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="text-sm text-gray-500 dark:text-gray-400 border-none p-2">
-                        <CalendarIcon className="h-4 w-4 mr-2" />
-                        <span data-testid="text-daily-metrics-date">{format(selectedDate, "dd-MMM-yyyy")}</span>
-                        <EditIcon className="h-4 w-4 ml-2" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="end">
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={(date) => date && setSelectedDate(date)}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <StandardDatePicker
+                    value={selectedDate}
+                    onChange={(date) => date && setSelectedDate(date)}
+                    placeholder="Select date"
+                  />
                 </div>
               </CardHeader>
               <CardContent>
@@ -2207,7 +2102,7 @@ export default function TeamLeaderDashboard() {
                         </Button>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm" className="w-full" data-testid="button-view-more">
+                    <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white" data-testid="button-view-more">
                       View More
                     </Button>
                   </div>
@@ -2342,13 +2237,13 @@ export default function TeamLeaderDashboard() {
                           <td className="py-4 px-4 text-gray-900 dark:text-white">{requirement.position}</td>
                           <td className="py-4 px-4">
                             <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
-                              requirement.criticality === 'HIGH' 
+                              requirement.criticality.toUpperCase() === 'HIGH' 
                                 ? 'bg-red-100 text-red-800' 
-                                : requirement.criticality === 'MEDIUM'
+                                : requirement.criticality.toUpperCase() === 'MEDIUM'
                                 ? 'bg-blue-100 text-blue-800'
                                 : 'bg-gray-100 text-gray-800'
                             }`}>
-                              {requirement.criticality}
+                              {requirement.criticality.toUpperCase()}-{requirement.toughness || 'Medium'}
                             </span>
                           </td>
                           <td className="py-4 px-4 text-gray-600 dark:text-gray-400">{requirement.company}</td>
@@ -2387,7 +2282,7 @@ export default function TeamLeaderDashboard() {
                   </table>
                 </div>
                 <div className="mt-4 flex justify-between">
-                  <Button variant="outline" className="rounded btn-rounded">
+                  <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded btn-rounded">
                     View More
                   </Button>
                   <Button variant="outline" className="rounded btn-rounded">
@@ -2676,77 +2571,6 @@ export default function TeamLeaderDashboard() {
                         <td className="p-3 w-32"></td>
                         <td className="p-3 w-32"></td>
                         <td className="p-3 w-32"></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Closure Reports */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Closure Reports</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="border-b border-gray-200 dark:border-gray-700">
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Candidate</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Positions</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Client</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Talent Advisor</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Fixed CTC</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Offered Date</th>
-                        <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300">Joined Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="p-3 text-gray-900 dark:text-gray-100">David Wilson</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">Frontend Developer</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">TechCorp</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">Kavitha</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">MJJ, 2025</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">12-06-2025</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">12-04-2025</td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="p-3 text-gray-900 dark:text-gray-100">Tom Anderson</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">UI/UX Designer</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">Designify</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">Rajesh</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">ASO, 2025</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">18-08-2025</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">05-05-2025</td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="p-3 text-gray-900 dark:text-gray-100">Robert Kim</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">Backend Developer</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">CodeLabs</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">Sowmiya</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">MJJ, 2025</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">28-06-2025</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">19-08-2025</td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="p-3 text-gray-900 dark:text-gray-100">Kevin Brown</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">QA Tester</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">AppLogic</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">Kalaiselvi</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">PMA, 2025</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">03-07-2025</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">03-09-2025</td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="p-3 text-gray-900 dark:text-gray-100">Mel Gibson</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">Mobile App Developer</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">Tesco</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">Malathi</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">NDA, 2025</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">18-07-2025</td>
-                        <td className="p-3 text-gray-900 dark:text-gray-100">10-10-2025</td>
                       </tr>
                     </tbody>
                   </table>
@@ -3091,16 +2915,16 @@ export default function TeamLeaderDashboard() {
                       <td className="p-3 text-gray-900 border border-gray-300">{requirement.position}</td>
                       <td className="p-3 border border-gray-300">
                         <span className={`text-xs font-semibold px-2 py-1 rounded inline-flex items-center ${
-                          requirement.criticality === 'HIGH' ? 'bg-red-100 text-red-800' :
-                          requirement.criticality === 'MEDIUM' ? 'bg-blue-100 text-blue-800' :
+                          requirement.criticality.toUpperCase() === 'HIGH' ? 'bg-red-100 text-red-800' :
+                          requirement.criticality.toUpperCase() === 'MEDIUM' ? 'bg-blue-100 text-blue-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
                           <span className={`w-2 h-2 rounded-full mr-1 ${
-                            requirement.criticality === 'HIGH' ? 'bg-red-500' :
-                            requirement.criticality === 'MEDIUM' ? 'bg-blue-500' :
+                            requirement.criticality.toUpperCase() === 'HIGH' ? 'bg-red-500' :
+                            requirement.criticality.toUpperCase() === 'MEDIUM' ? 'bg-blue-500' :
                             'bg-gray-500'
                           }`}></span>
-                          {requirement.criticality}
+                          {requirement.criticality.toUpperCase()}-{requirement.toughness || 'Medium'}
                         </span>
                       </td>
                       <td className="p-3 text-gray-900 border border-gray-300">{requirement.company}</td>
@@ -3181,28 +3005,25 @@ export default function TeamLeaderDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { name: "Emily Davis", position: "Frontend Developer", company: "TechCorp", closureMonth: "JFM, 2025", talentAdvisor: "Kavitha", package: "12,00,000", revenue: "89,892" },
-                    { name: "Michael Brown", position: "UI/UX Designer", company: "Designify", closureMonth: "AMJ, 2025", talentAdvisor: "Rajesh", package: "8,00,000", revenue: "59,928" },
-                    { name: "Sarah Wilson", position: "Backend Developer", company: "CodeLabs", closureMonth: "MJJ, 2025", talentAdvisor: "Sowmiya", package: "18,00,000", revenue: "1,34,946" },
-                    { name: "Kevin Brown", position: "QA Tester", company: "AppLogic", closureMonth: "PMA, 2025", talentAdvisor: "Kalaiselvi", package: "30,00,000", revenue: "2,24,910" },
-                    { name: "Lisa Wang", position: "Mobile Developer", company: "Tesco", closureMonth: "JAS, 2025", talentAdvisor: "Malathi", package: "15,00,000", revenue: "1,12,467" },
-                    { name: "David Kumar", position: "DevOps Engineer", company: "CloudTech", closureMonth: "OND, 2024", talentAdvisor: "Priya", package: "22,00,000", revenue: "1,64,916" },
-                    { name: "Anna Smith", position: "Data Scientist", company: "DataFlow", closureMonth: "JFM, 2025", talentAdvisor: "Arun", package: "25,00,000", revenue: "1,87,467" },
-                    { name: "Robert Lee", position: "Security Expert", company: "SecureNet", closureMonth: "AMJ, 2025", talentAdvisor: "Divya", package: "28,00,000", revenue: "2,09,916" },
-                    { name: "Maria Garcia", position: "Product Manager", company: "InnovateLab", closureMonth: "MJJ, 2025", talentAdvisor: "Venkat", package: "35,00,000", revenue: "2,62,467" },
-                    { name: "James Wilson", position: "Full Stack Dev", company: "WebCorp", closureMonth: "PMA, 2025", talentAdvisor: "Deepika", package: "19,00,000", revenue: "1,42,467" }
-                  ].map((closure, index) => (
-                    <tr key={closure.name} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-                      <td className="p-3 text-gray-900 border border-gray-300 font-medium">{closure.name}</td>
-                      <td className="p-3 text-gray-600 border border-gray-300">{closure.position}</td>
-                      <td className="p-3 text-gray-600 border border-gray-300">{closure.company}</td>
-                      <td className="p-3 text-gray-600 border border-gray-300">{closure.closureMonth}</td>
-                      <td className="p-3 text-gray-600 border border-gray-300">{closure.talentAdvisor}</td>
-                      <td className="p-3 text-gray-600 border border-gray-300">₹{closure.package}</td>
-                      <td className="p-3 text-gray-600 border border-gray-300">₹{closure.revenue}</td>
+                  {closureData.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-6 text-center text-gray-600 border border-gray-300">
+                        No closures data available
+                      </td>
                     </tr>
-                  ))}
+                  ) : (
+                    closureData.map((closure: any, index: number) => (
+                      <tr key={closure.id || index} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                        <td className="p-3 text-gray-900 border border-gray-300 font-medium">{closure.name || closure.candidate || '-'}</td>
+                        <td className="p-3 text-gray-600 border border-gray-300">{closure.position || '-'}</td>
+                        <td className="p-3 text-gray-600 border border-gray-300">{closure.company || closure.client || '-'}</td>
+                        <td className="p-3 text-gray-600 border border-gray-300">{closure.closureMonth || closure.quarter || '-'}</td>
+                        <td className="p-3 text-gray-600 border border-gray-300">{closure.talentAdvisor || '-'}</td>
+                        <td className="p-3 text-gray-600 border border-gray-300">{closure.package ? `₹${closure.package}` : closure.ctc ? `₹${closure.ctc}` : '-'}</td>
+                        <td className="p-3 text-gray-600 border border-gray-300">{closure.revenue ? `₹${closure.revenue}` : '-'}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

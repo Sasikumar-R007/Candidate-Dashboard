@@ -20,7 +20,7 @@ import SimpleClientHeader from '@/components/dashboard/simple-client-header';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { ChatDock } from '@/components/chat/chat-dock';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { queryClient, apiRequest } from '@/lib/queryClient';
+import { queryClient, apiRequest, apiFileUpload } from '@/lib/queryClient';
 
 interface ChatUser {
   id: number;
@@ -1406,16 +1406,7 @@ export default function ClientDashboard() {
                     const formData = new FormData();
                     formData.append('jdFile', uploadedFile);
                     
-                    const uploadResponse = await fetch('/api/client/upload-jd-file', {
-                      method: 'POST',
-                      body: formData,
-                      credentials: 'include'
-                    });
-                    
-                    if (!uploadResponse.ok) {
-                      throw new Error('Failed to upload file');
-                    }
-                    
+                    const uploadResponse = await apiFileUpload('/api/client/upload-jd-file', formData);
                     const uploadData = await uploadResponse.json();
                     jdFileUrl = uploadData.url;
                   }

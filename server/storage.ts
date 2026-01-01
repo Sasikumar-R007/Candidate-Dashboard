@@ -44,7 +44,9 @@ import {
   type ResumeSubmission,
   type InsertResumeSubmission,
   type DailyMetricsSnapshot,
-  type InsertDailyMetricsSnapshot
+  type InsertDailyMetricsSnapshot,
+  type InterviewTracker,
+  type InsertInterviewTracker
 } from "@shared/schema";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
@@ -279,6 +281,13 @@ export interface IStorage {
   calculateRecruiterDailyMetrics(recruiterId: string, date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }>;
   calculateTeamDailyMetrics(teamLeadId: string, date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }>;
   calculateOrgDailyMetrics(date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }>;
+  
+  // Interview Tracker methods
+  createInterview(interview: InsertInterviewTracker): Promise<InterviewTracker>;
+  getInterviewsByRecruiterName(recruiterName: string): Promise<InterviewTracker[]>;
+  getAllInterviews(): Promise<InterviewTracker[]>;
+  updateInterview(id: string, updates: Partial<InterviewTracker>): Promise<InterviewTracker | undefined>;
+  deleteInterview(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {

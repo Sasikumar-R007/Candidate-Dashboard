@@ -173,16 +173,12 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange }: TeamLe
         <div className="relative w-64 bg-slate-900 text-white h-screen flex flex-col shadow-xl ml-16">
           {/* Logo Section */}
           <div className="h-16 flex items-center px-4 border-b border-slate-700">
-            <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 via-blue-500 to-green-400 rounded-lg flex items-center justify-center mr-3">
-              <span className="text-white font-bold text-lg">X</span>
-            </div>
             <span className="text-lg font-semibold">ScalingX</span>
           </div>
 
           {/* Navigation Items */}
           <nav className="flex-1 py-4">
             {menuItems.map((item) => {
-              const IconComponent = item.icon;
               return (
                 <button
                   key={item.id}
@@ -194,7 +190,6 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange }: TeamLe
                   }`}
                   data-testid={`button-nav-expanded-${item.id}`}
                 >
-                  <IconComponent size={20} className="mr-3" />
                   <span>{item.label}</span>
                 </button>
               );

@@ -29,6 +29,23 @@ export async function apiRequest(
   return res;
 }
 
+// Helper function for file uploads (FormData)
+export async function apiFileUpload(
+  url: string,
+  formData: FormData,
+): Promise<Response> {
+  const fullUrl = createApiUrl(url);
+  const res = await fetch(fullUrl, {
+    method: 'POST',
+    body: formData,
+    credentials: "include",
+    // Don't set Content-Type header - let browser set it with boundary for multipart/form-data
+  });
+
+  await throwIfResNotOk(res);
+  return res;
+}
+
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
   on401: UnauthorizedBehavior;

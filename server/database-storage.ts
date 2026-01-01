@@ -51,6 +51,8 @@ import {
   type InsertResumeSubmission,
   type DailyMetricsSnapshot,
   type InsertDailyMetricsSnapshot,
+  type InterviewTracker,
+  type InsertInterviewTracker,
   users,
   profiles,
   jobPreferences,
@@ -76,7 +78,8 @@ import {
   requirementAssignments,
   resumeSubmissions,
   dailyMetricsSnapshots,
-  cashOutflows
+  cashOutflows,
+  interviewTracker
 } from "@shared/schema";
 import { getResumeTarget } from "@shared/constants";
 import { db } from "./db";
@@ -975,8 +978,26 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async createRevenueMapping(mapping: InsertRevenueMapping): Promise<RevenueMapping> {
-    const [revenueMapping] = await db.insert(revenueMappings).values(mapping).returning();
+  async createRevenueMapping(mapping: InsertRevenueMapping & { createdAt?: string }): Promise<RevenueMapping> {
+    // Ensure createdAt is set if not provided - this is required by the database
+    const createdAtValue = mapping.createdAt || new Date().toISOString();
+    
+    // Build the insert object explicitly to ensure createdAt is included
+    // We need to explicitly set createdAt because InsertRevenueMapping type omits it
+    const insertData = {
+      ...mapping,
+      createdAt: createdAtValue
+    };
+    
+    // Log for debugging
+    console.log('[createRevenueMapping] Inserting with createdAt:', createdAtValue);
+    console.log('[createRevenueMapping] Insert data has createdAt?', 'createdAt' in insertData);
+    console.log('[createRevenueMapping] createdAt value:', insertData.createdAt);
+    
+    // Insert with createdAt explicitly included
+    // Use type assertion to bypass TypeScript since InsertRevenueMapping omits createdAt
+    // but the database schema requires it
+    const [revenueMapping] = await db.insert(revenueMappings).values(insertData as any).returning();
     return revenueMapping;
   }
 
@@ -1113,6 +1134,13 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(jobApplications)
       .where(eq(jobApplications.requirementId, requirementId))
       .orderBy(desc(jobApplications.appliedDate));
+  }
+
+  async getJobApplicationById(id: string): Promise<JobApplication | undefined> {
+    const [application] = await db.select().from(jobApplications)
+      .where(eq(jobApplications.id, id))
+      .limit(1);
+    return application || undefined;
   }
 
   async createRecruiterJobApplication(application: InsertJobApplication & { profileId: string }): Promise<JobApplication> {
@@ -1567,5 +1595,43 @@ export class DatabaseStorage implements IStorage {
     const totalDefaulted = Math.max(0, totalRequired - totalDelivered);
     
     return { delivered: totalDelivered, defaulted: totalDefaulted, required: totalRequired, requirementCount: totalRequirements };
+  }
+
+  // Interview Tracker methods
+  async createInterview(interview: InsertInterviewTracker): Promise<InterviewTracker> {
+    const [created] = await db.insert(interviewTracker).values({
+      ...interview,
+      createdAt: interview.createdAt || new Date().toISOString(),
+    }).returning();
+    return created;
+  }
+
+  async getInterviewsByRecruiterName(recruiterName: string): Promise<InterviewTracker[]> {
+    return await db.select().from(interviewTracker)
+      .where(eq(interviewTracker.recruiterName, recruiterName))
+      .orderBy(desc(interviewTracker.interviewDate), desc(interviewTracker.interviewTime));
+  }
+
+  async getAllInterviews(): Promise<InterviewTracker[]> {
+    return await db.select().from(interviewTracker)
+      .orderBy(desc(interviewTracker.interviewDate), desc(interviewTracker.interviewTime));
+  }
+
+  async updateInterview(id: string, updates: Partial<InterviewTracker>): Promise<InterviewTracker | undefined> {
+    const updateData = {
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    const [updated] = await db.update(interviewTracker)
+      .set(updateData)
+      .where(eq(interviewTracker.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteInterview(id: string): Promise<boolean> {
+    const result = await db.delete(interviewTracker)
+      .where(eq(interviewTracker.id, id));
+    return result.rowCount !== undefined && result.rowCount > 0;
   }
 }

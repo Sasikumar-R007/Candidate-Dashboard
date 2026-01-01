@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import TeamLeaderMainSidebar from '@/components/dashboard/team-leader-main-sidebar';
 import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
 import AdminTopHeader from '@/components/dashboard/admin-top-header';
@@ -24,9 +24,11 @@ import { useLocation } from "wouter";
 import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { ChatDock } from '@/components/chat/chat-dock';
 import { HelpCircle } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function RecruiterDashboard2() {
   const [, navigate] = useLocation();
+  const { toast } = useToast();
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('team');
@@ -61,6 +63,12 @@ export default function RecruiterDashboard2() {
   const [applicantSearchQuery, setApplicantSearchQuery] = useState('');
   const [isCandidateProfileModalOpen, setIsCandidateProfileModalOpen] = useState(false);
   const [selectedPipelineCandidate, setSelectedPipelineCandidate] = useState<any>(null);
+  const [isClosureFormModalOpen, setIsClosureFormModalOpen] = useState(false);
+  const [selectedCandidateForClosure, setSelectedCandidateForClosure] = useState<any>(null);
+  const [closureFormData, setClosureFormData] = useState({
+    offeredOn: '',
+    joinedOn: ''
+  });
   
   // Interview tracker state with initial empty interviews array
   const [interviewTrackerData, setInterviewTrackerData] = useState({
@@ -199,6 +207,30 @@ export default function RecruiterDashboard2() {
     queryKey: ['/api/recruiter/applications']
   });
 
+  // Fetch interviews from backend - must be defined before useMemo/useEffect that use it
+  const { data: fetchedInterviews = [], error: interviewsError, refetch: refetchInterviews } = useQuery<Array<{
+    id: string;
+    candidateName: string;
+    position: string;
+    client: string;
+    interviewDate: string;
+    interviewTime: string;
+    interviewType: string;
+    interviewRound: string;
+    status: string;
+  }>>({
+    queryKey: ['/api/recruiter/interviews'],
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+
+  // Log errors for debugging
+  useEffect(() => {
+    if (interviewsError) {
+      console.error('Error fetching interviews:', interviewsError);
+    }
+  }, [interviewsError]);
+
   // Calculate application stats
   const applicationStats = useMemo(() => {
     const total = allApplications.length;
@@ -228,6 +260,87 @@ export default function RecruiterDashboard2() {
     }
   });
 
+  // Helper function to get current quarter
+  const getCurrentQuarter = () => {
+    const now = new Date();
+    const currentMonth = now.getMonth(); // 0-11
+    const currentYear = now.getFullYear();
+    const quarter = Math.floor(currentMonth / 3) + 1; // Q1, Q2, Q3, Q4
+    return `Q${quarter}-${currentYear}`;
+  };
+
+  // Mutation for creating closure
+  const createClosureMutation = useMutation({
+    mutationFn: async (closureData: {
+      applicationId: string;
+      candidateName: string;
+      client: string;
+      position: string;
+      offeredOn: string;
+      joinedOn: string;
+      quarter: string;
+    }) => {
+      const response = await apiRequest('POST', '/api/recruiter/closures', closureData);
+      return response;
+    },
+    onSuccess: () => {
+      // Remove from Applicant Overview by setting status to Closure (will be filtered out)
+      if (selectedCandidateForClosure) {
+        setApplicantStatusOverrides(prev => ({
+          ...prev,
+          [selectedCandidateForClosure.id]: 'Closure'
+        }));
+      }
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/applications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/closure-reports'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/pipeline'] });
+      
+      toast({
+        title: "Closure Created",
+        description: "The candidate has been successfully closed and added to Closure Details.",
+      });
+      
+      setIsClosureFormModalOpen(false);
+      setSelectedCandidateForClosure(null);
+      setClosureFormData({ offeredOn: '', joinedOn: '' });
+    },
+    onError: (error: any) => {
+      console.error('Failed to create closure:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create closure. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Handle closure form submission
+  const handleClosureSubmit = () => {
+    if (!selectedCandidateForClosure) return;
+    
+    if (!closureFormData.offeredOn || !closureFormData.joinedOn) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in both 'Offered On' and 'Joined On' dates.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const closureData = {
+      applicationId: selectedCandidateForClosure.id,
+      candidateName: selectedCandidateForClosure.candidateName,
+      client: selectedCandidateForClosure.company,
+      position: selectedCandidateForClosure.roleApplied,
+      offeredOn: closureFormData.offeredOn,
+      joinedOn: closureFormData.joinedOn,
+      quarter: getCurrentQuarter()
+    };
+
+    createClosureMutation.mutate(closureData);
+  };
+
   // Handle sending new chat messages
   const handleSendMessage = () => {
     if (newMessage.trim()) {
@@ -247,7 +360,7 @@ export default function RecruiterDashboard2() {
   const handlePipelineStageClick = (stage: string) => {
     // For demo purposes, show an alert with the action options
     // In a real application, this would open a modal with candidate list
-    const stageActions = {
+    const stageActions: Record<string, string> = {
       'CLOSURE': 'View candidates ready for closure. You can close selected candidates.',
       'OFFER_DROP': 'View candidates who dropped offers. You can mark them as rejected.',
       'OFFER_STAGE': 'View candidates in offer stage. You can send offer letters.',
@@ -268,7 +381,7 @@ export default function RecruiterDashboard2() {
   // Form validation and handling functions for Post Jobs and Upload Resume
   const validateForm = () => {
     const required = ['companyName', 'experience', 'salaryPackage', 'aboutCompany', 'roleDefinitions', 'keyResponsibility'];
-    return required.every(field => jobFormData[field].trim() !== '');
+    return required.every(field => (jobFormData as Record<string, any>)[field]?.trim() !== '');
   };
 
   const handlePostJob = () => {
@@ -311,32 +424,164 @@ export default function RecruiterDashboard2() {
     });
   };
 
+  // Sync fetched interviews to local state for compatibility
+  useEffect(() => {
+    if (fetchedInterviews && fetchedInterviews.length > 0) {
+      setInterviewTrackerData({ interviews: fetchedInterviews });
+    }
+  }, [fetchedInterviews]);
+
   // Derived values using useMemo to prevent state drift
   const getTodaysInterviews = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
-    return interviewTrackerData.interviews.filter(interview => interview.interviewDate === today);
-  }, [interviewTrackerData.interviews]);
+    // Handle both YYYY-MM-DD (from API) and dd-mm-yyyy formats
+    return (fetchedInterviews || []).filter((interview: any) => {
+      const interviewDate = interview.interviewDate;
+      if (interviewDate.includes('-')) {
+        // Check if it's YYYY-MM-DD format
+        if (interviewDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          return interviewDate === today;
+        }
+        // Handle dd-mm-yyyy format - convert to YYYY-MM-DD for comparison
+        const [day, month, year] = interviewDate.split('-');
+        const formattedDate = `${year}-${month}-${day}`;
+        return formattedDate === today;
+      }
+      return interviewDate === today;
+    });
+  }, [fetchedInterviews]);
 
   const getPendingInterviews = useMemo(() => {
-    return interviewTrackerData.interviews.filter(interview => 
+    return (fetchedInterviews || []).filter((interview: any) => 
       interview.status === 'scheduled' || interview.status === 'pending'
     );
-  }, [interviewTrackerData.interviews]);
+  }, [fetchedInterviews]);
+
+  // Helper function to generate Google Calendar URL
+  const generateGoogleCalendarUrl = (formData: {
+    candidateName: string;
+    position: string;
+    client: string;
+    interviewDate: string;
+    interviewTime: string;
+    interviewType: string;
+  }): string | null => {
+    try {
+      const { candidateName, position, client, interviewDate, interviewTime, interviewType } = formData;
+
+      // Convert date from dd-mm-yyyy or yyyy-mm-dd to YYYYMMDD
+      let year: string, month: string, day: string;
+      const dateParts = interviewDate.split(/[-\/]/);
+      
+      // Handle both dd-mm-yyyy and yyyy-mm-dd formats
+      if (dateParts.length === 3) {
+        if (dateParts[0].length === 4) {
+          // yyyy-mm-dd format (from HTML date input)
+          [year, month, day] = dateParts;
+        } else {
+          // dd-mm-yyyy format
+          [day, month, year] = dateParts;
+        }
+      } else {
+        return null; // Invalid date format
+      }
+
+      // Pad month and day with leading zeros if needed
+      month = month.padStart(2, '0');
+      day = day.padStart(2, '0');
+
+      // Parse time (HH:mm format)
+      const [hours, minutes] = interviewTime.split(':');
+      if (!hours || !minutes) {
+        return null; // Invalid time format
+      }
+
+      // Create start datetime in Google Calendar format (YYYYMMDDTHHMMSS)
+      const startDateTime = `${year}${month}${day}T${hours.padStart(2, '0')}${minutes.padStart(2, '0')}00`;
+
+      // Calculate end time (30 minutes later)
+      const startMinutes = parseInt(hours) * 60 + parseInt(minutes);
+      const endMinutes = startMinutes + 30;
+      const endHours = Math.floor(endMinutes / 60) % 24;
+      const endMins = endMinutes % 60;
+      const endDateTime = `${year}${month}${day}T${String(endHours).padStart(2, '0')}${String(endMins).padStart(2, '0')}00`;
+
+      // Build event details
+      const eventText = `Interview: ${candidateName} – ${position}`;
+      const eventDetails = `Candidate: ${candidateName}\nPosition: ${position}\nClient: ${client}\nInterview Type: ${interviewType}\nScheduled via StaffOS`;
+
+      // Determine location based on interview type
+      let location = '';
+      if (interviewType === 'Video Call') {
+        location = 'Google Meet';
+      } else if (interviewType === 'In Person') {
+        location = client;
+      } else if (interviewType === 'Phone Call') {
+        location = 'Phone Call';
+      }
+
+      // Construct Google Calendar URL
+      const baseUrl = 'https://calendar.google.com/calendar/render';
+      const params = new URLSearchParams({
+        action: 'TEMPLATE',
+        text: eventText,
+        dates: `${startDateTime}/${endDateTime}`,
+        details: eventDetails,
+        location: location
+      });
+
+      return `${baseUrl}?${params.toString()}`;
+    } catch (error) {
+      console.error('Error generating Google Calendar URL:', error);
+      return null;
+    }
+  };
+
+  // Create interview mutation
+  const createInterviewMutation = useMutation({
+    mutationFn: async (interviewData: {
+      candidateName: string;
+      position: string;
+      client: string;
+      interviewDate: string;
+      interviewTime: string;
+      interviewType: string;
+      interviewRound: string;
+      status: string;
+    }) => {
+      const response = await apiRequest('POST', '/api/recruiter/interviews', interviewData);
+      const json = await response.json();
+      return json;
+    },
+    onSuccess: async () => {
+      // Invalidate and refetch interviews after successful creation
+      await queryClient.invalidateQueries({ queryKey: ['/api/recruiter/interviews'] });
+      // Manually refetch to ensure immediate update
+      refetchInterviews();
+    },
+  });
 
   // Interview tracker functions
   const handleAddInterview = () => {
     if (interviewForm.candidateName && interviewForm.position && interviewForm.client && 
         interviewForm.interviewDate && interviewForm.interviewTime) {
-      const newInterview = {
-        id: Date.now().toString(),
-        ...interviewForm,
+      // Generate and open Google Calendar URL
+      const calendarUrl = generateGoogleCalendarUrl(interviewForm);
+      if (calendarUrl) {
+        window.open(calendarUrl, '_blank', 'noopener,noreferrer');
+      }
+
+      // Save interview to backend
+      createInterviewMutation.mutate({
+        candidateName: interviewForm.candidateName,
+        position: interviewForm.position,
+        client: interviewForm.client,
+        interviewDate: interviewForm.interviewDate,
+        interviewTime: interviewForm.interviewTime,
+        interviewType: interviewForm.interviewType,
+        interviewRound: interviewForm.interviewRound,
         status: 'scheduled'
-      };
-      
-      setInterviewTrackerData(prev => ({
-        ...prev,
-        interviews: [...prev.interviews, newInterview]
-      }));
+      });
       
       // Reset form
       setInterviewForm({
@@ -379,7 +624,7 @@ export default function RecruiterDashboard2() {
   const recruitingTeam = ['Priya', 'Amit', 'Sowmiya', 'Rajesh', 'Kavitha', 'Vinay'];
 
   // Status options for dropdowns
-  const statuses = ['In-Process', 'Shortlisted', 'L1', 'L2', 'L3', 'Final Round', 'HR Round', 'Selected', 'Screened Out'];
+  const statuses = ['In-Process', 'Shortlisted', 'L1', 'L2', 'L3', 'Final Round', 'HR Round', 'Selected', 'Closure', 'Screened Out'];
   const rejectionReasons = ['Skill mismatch', 'Lack of communication', 'Inadequate experience', 'Unprofessional behavior', 'Other'];
 
   // Transform API applications to applicant data format for the UI
@@ -411,6 +656,7 @@ export default function RecruiterDashboard2() {
         'L3': 'L3',
         'Final Round': 'Final Round',
         'HR Round': 'HR Round',
+        'Closure': 'Closure',
         'Selected': 'Selected',
         'Interview Scheduled': 'L1',
         'Applied': 'In-Process'
@@ -548,6 +794,11 @@ export default function RecruiterDashboard2() {
     if (newStatus === 'Screened Out') {
       setSelectedCandidate({ ...applicant, status: newStatus });
       setIsReasonModalOpen(true);
+    } else if (newStatus === 'Closure') {
+      // Open closure form modal
+      setSelectedCandidateForClosure(applicant);
+      setClosureFormData({ offeredOn: '', joinedOn: '' });
+      setIsClosureFormModalOpen(true);
     } else {
       // Update local override immediately for optimistic UI
       setApplicantStatusOverrides(prev => ({
@@ -577,7 +828,11 @@ export default function RecruiterDashboard2() {
   // Get effective status (with local overrides for optimistic updates)
   const getEffectiveApplicantData = () => {
     return applicantData
-      .filter(a => applicantStatusOverrides[a.id] !== 'Archived')
+      .filter(a => {
+        const effectiveStatus = applicantStatusOverrides[a.id] || a.currentStatus;
+        // Filter out Archived and Closure statuses - these should not appear in Applicant Overview
+        return effectiveStatus !== 'Archived' && effectiveStatus !== 'Closure';
+      })
       .map(a => ({
         ...a,
         currentStatus: applicantStatusOverrides[a.id] || a.currentStatus
@@ -653,8 +908,23 @@ export default function RecruiterDashboard2() {
   };
 
   const { data: dailyMetrics } = useQuery({
-    queryKey: ['/api/recruiter/daily-metrics'],
+    queryKey: ['/api/recruiter/daily-metrics', format(selectedDate, 'yyyy-MM-dd')],
+    queryFn: async () => {
+      const dateStr = format(selectedDate, 'yyyy-MM-dd');
+      const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+      const createApiUrl = (path: string) => `${API_BASE_URL}${path}`;
+      const response = await fetch(createApiUrl(`/api/recruiter/daily-metrics?date=${dateStr}`), {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch daily metrics');
+      return response.json();
+    }
   }) as { data: any };
+
+  // Extract delivered candidates from daily metrics
+  const deliveredCandidates = useMemo(() => {
+    return dailyMetrics?.deliveredCandidates || [];
+  }, [dailyMetrics]);
 
   const { data: meetings } = useQuery({
     queryKey: ['/api/recruiter/meetings'],
@@ -687,6 +957,7 @@ export default function RecruiterDashboard2() {
   const { data: performanceSummary } = useQuery<{
     tenure: number;
     totalClosures: number;
+    totalResumesDelivered: number;
     recentClosure: string | null;
     lastClosureMonths: number;
     lastClosureDays: number;
@@ -716,7 +987,7 @@ export default function RecruiterDashboard2() {
   }, [recruiterRequirements]);
 
   // Static priority distribution - fixed counts that never change
-  const priorityDistribution = {
+  const priorityDistribution: Record<string, Record<string, number>> = {
     HIGH: { Easy: 6, Medium: 4, Tough: 2 },
     MEDIUM: { Easy: 5, Medium: 3, Tough: 2 },
     LOW: { Easy: 4, Medium: 3, Tough: 2 },
@@ -755,7 +1026,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader userName={`${recruiterProfile?.name || 'Recruiter'} - Recruiter`} companyName="Scaling Theory" />
+          <AdminTopHeader companyName="Scaling Theory" />
           <div className="flex h-screen">
             {/* Main Content - Middle Section (Scrollable) */}
             <div className="px-6 py-6 space-y-6 flex-1 overflow-y-auto h-full">
@@ -895,8 +1166,7 @@ export default function RecruiterDashboard2() {
                 <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4 pt-6">
                   <CardTitle className="text-lg font-semibold text-gray-900">Target</CardTitle>
                   <Button 
-                    variant="link"
-                    className="text-sm text-blue-600 hover:text-blue-800 p-0"
+                    className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2"
                     onClick={() => setIsTargetModalOpen(true)}
                     data-testid="button-view-all-targets"
                   >
@@ -1024,7 +1294,11 @@ export default function RecruiterDashboard2() {
                           } font-bold text-lg`}>{dailyMetrics?.overallPerformance ?? 'G'}</span>
                         </div>
                         <div className="text-right">
-                          <Button size="sm" variant="link" className="text-blue-600 p-0" onClick={() => setIsPerformanceModalOpen(true)} data-testid="button-view-more-performance">
+                          <Button 
+                            className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2" 
+                            onClick={() => setIsPerformanceModalOpen(true)} 
+                            data-testid="button-view-more-performance"
+                          >
                             View More
                           </Button>
                         </div>
@@ -1222,7 +1496,8 @@ export default function RecruiterDashboard2() {
 
     // Function to get expected count based on criticality and toughness from Priority Distribution
     const getExpectedCount = (criticality: string, toughness: string): number => {
-      return priorityDistribution[criticality]?.[toughness] || 0;
+      const criticalityData = priorityDistribution[criticality as keyof typeof priorityDistribution];
+      return criticalityData?.[toughness as keyof typeof criticalityData] || 0;
     };
 
     // Function to format count display as "delivered/expected"
@@ -1252,7 +1527,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader userName={`${recruiterProfile?.name || 'Recruiter'} - Recruiter`} companyName="Scaling Theory" />
+          <AdminTopHeader companyName="Scaling Theory" />
           <div className="flex h-screen">
             {/* Main Content Area */}
             <div className="flex-1 px-6 py-6 overflow-y-auto">
@@ -1537,7 +1812,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader userName={`${recruiterProfile?.name || 'Recruiter'} - Recruiter`} companyName="Scaling Theory" />
+          <AdminTopHeader companyName="Scaling Theory" />
           <div className="flex h-screen">
             {/* Main Content Area */}
             <div className="flex-1 px-6 py-6 overflow-y-auto">
@@ -1704,47 +1979,6 @@ export default function RecruiterDashboard2() {
                 </div>
               </div>
 
-              {/* Closure Reports Table - Matching Admin Design */}
-              <Card className="mt-6">
-                <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                  <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Closure Reports</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Candidate</th>
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Position</th>
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Client</th>
-                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Revenue</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {closureReportData.slice(0, 5).map((item) => (
-                          <tr key={item.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                            <td className="p-3 text-gray-900 dark:text-white">{item.candidate}</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">{item.position}</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">{item.client}</td>
-                            <td className="p-3 text-gray-600 dark:text-gray-400">{item.revenue}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-                    <div className="flex justify-end">
-                      <Button 
-                        className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
-                        onClick={() => setIsViewAllClosuresModalOpen(true)}
-                        data-testid="button-see-more-closure-recruiter"
-                      >
-                        See More
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
 
               {/* Candidate Profile Modal */}
               {selectedPipelineCandidate && (
@@ -1945,7 +2179,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50 dark:bg-gray-950">
-          <AdminTopHeader userName={`${recruiterProfile?.name || 'Recruiter'} - Recruiter`} companyName="Scaling Theory" />
+          <AdminTopHeader companyName="Scaling Theory" />
           <div className="flex h-[calc(100vh-64px)]">
             {/* Main Content Area - Scrollable */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -2213,7 +2447,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader userName={`${recruiterProfile?.name || 'Recruiter'} - Recruiter`} companyName="Scaling Theory" />
+          <AdminTopHeader companyName="Scaling Theory" />
           <div className="flex flex-col h-full p-6">
             <h2 className="text-2xl font-bold mb-4">Team Chat</h2>
             <div className="flex-1 bg-white rounded-lg border border-gray-200 p-4 mb-4 overflow-y-auto">
@@ -2312,8 +2546,14 @@ export default function RecruiterDashboard2() {
       <DailyDeliveryModal
         open={isDeliveredModalOpen}
         onOpenChange={setIsDeliveredModalOpen}
-        title="Delivered Candidates"
-        rows={[]}
+        title={`Delivered Candidates - ${format(selectedDate, 'dd-MM-yyyy')}`}
+        rows={deliveredCandidates.map((candidate: any) => ({
+          candidate: candidate.candidate,
+          position: candidate.position,
+          client: candidate.client,
+          deliveredDate: candidate.deliveredDate,
+          status: candidate.status
+        }))}
         columns={[
           { key: 'candidate', label: 'Candidate' },
           { key: 'position', label: 'Position' },
@@ -2321,7 +2561,7 @@ export default function RecruiterDashboard2() {
           { key: 'deliveredDate', label: 'Delivered Date' },
           { key: 'status', label: 'Status' }
         ]}
-        emptyMessage="No delivered candidates today"
+        emptyMessage={`No delivered candidates on ${format(selectedDate, 'dd-MM-yyyy')}`}
         statusClassName={(status) => "px-2 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"}
         testIdPrefix="delivered"
       />
@@ -2353,16 +2593,32 @@ export default function RecruiterDashboard2() {
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center p-4 bg-green-50 rounded">
-                <div className="text-2xl font-bold text-green-600" data-testid="text-success-rate">0%</div>
+                <div className="text-2xl font-bold text-green-600" data-testid="text-success-rate">
+                  {(() => {
+                    const totalResumes = performanceSummary?.totalResumesDelivered || 0;
+                    const totalClosures = performanceSummary?.totalClosures || 0;
+                    if (totalResumes > 0) {
+                      return `${Math.round((totalClosures / totalResumes) * 100)}%`;
+                    }
+                    return '0%';
+                  })()}
+                </div>
                 <div className="text-sm text-gray-600">Success Rate</div>
+                <div className="text-xs text-gray-500 mt-1">(Closures / Resumes Delivered)</div>
               </div>
               <div className="text-center p-4 bg-blue-50 rounded">
-                <div className="text-2xl font-bold text-blue-600" data-testid="text-total-closures">0</div>
+                <div className="text-2xl font-bold text-blue-600" data-testid="text-total-closures">
+                  {performanceSummary?.totalClosures || 0}
+                </div>
                 <div className="text-sm text-gray-600">Total Closures</div>
+                <div className="text-xs text-gray-500 mt-1">All time closures</div>
               </div>
               <div className="text-center p-4 bg-purple-50 rounded">
-                <div className="text-2xl font-bold text-purple-600" data-testid="text-total-incentives">0</div>
+                <div className="text-2xl font-bold text-purple-600" data-testid="text-total-incentives">
+                  {formatIndianCurrency(performanceSummary?.totalIncentives || 0)}
+                </div>
                 <div className="text-sm text-gray-600">Total Incentives</div>
+                <div className="text-xs text-gray-500 mt-1">All time earned</div>
               </div>
             </div>
           </div>
@@ -2625,6 +2881,106 @@ export default function RecruiterDashboard2() {
             <div className="flex justify-end space-x-2">
               <Button variant="outline" onClick={() => setIsReasonModalOpen(false)}>Cancel</Button>
               <Button onClick={archiveCandidate} className="bg-red-600 hover:bg-red-700">Archive Candidate</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Closure Form Modal */}
+      <Dialog open={isClosureFormModalOpen} onOpenChange={setIsClosureFormModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-gray-100">Create Closure</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="candidateName">Candidate Name</Label>
+                <Input 
+                  id="candidateName" 
+                  value={selectedCandidateForClosure?.candidateName || ''} 
+                  disabled 
+                  className="bg-gray-100 dark:bg-gray-800"
+                />
+              </div>
+              <div>
+                <Label htmlFor="client">Client (Company)</Label>
+                <Input 
+                  id="client" 
+                  value={selectedCandidateForClosure?.company || ''} 
+                  disabled 
+                  className="bg-gray-100 dark:bg-gray-800"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="position">Position (Role)</Label>
+              <Input 
+                id="position" 
+                value={selectedCandidateForClosure?.roleApplied || ''} 
+                disabled 
+                className="bg-gray-100 dark:bg-gray-800"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="offeredOn">Offered On</Label>
+                <StandardDatePicker
+                  value={closureFormData.offeredOn ? new Date(closureFormData.offeredOn) : undefined}
+                  onChange={(date) => {
+                    if (date) {
+                      setClosureFormData(prev => ({
+                        ...prev,
+                        offeredOn: format(date, 'yyyy-MM-dd')
+                      }));
+                    }
+                  }}
+                  placeholder="Select date"
+                />
+              </div>
+              <div>
+                <Label htmlFor="joinedOn">Joined On</Label>
+                <StandardDatePicker
+                  value={closureFormData.joinedOn ? new Date(closureFormData.joinedOn) : undefined}
+                  onChange={(date) => {
+                    if (date) {
+                      setClosureFormData(prev => ({
+                        ...prev,
+                        joinedOn: format(date, 'yyyy-MM-dd')
+                      }));
+                    }
+                  }}
+                  placeholder="Select date"
+                />
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="quarter">Quarter</Label>
+              <Input 
+                id="quarter" 
+                value={getCurrentQuarter()} 
+                disabled 
+                className="bg-gray-100 dark:bg-gray-800"
+              />
+            </div>
+            <div className="flex justify-end space-x-2 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsClosureFormModalOpen(false);
+                  setSelectedCandidateForClosure(null);
+                  setClosureFormData({ offeredOn: '', joinedOn: '' });
+                }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleClosureSubmit}
+                disabled={createClosureMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                {createClosureMutation.isPending ? 'Submitting...' : 'Submit Closure'}
+              </Button>
             </div>
           </div>
         </DialogContent>

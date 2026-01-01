@@ -1188,10 +1188,14 @@ export default function AdminDashboard() {
   const [messageContent, setMessageContent] = useState('');
   const [meetingFor, setMeetingFor] = useState('');
   const [meetingWith, setMeetingWith] = useState('');
+  const [selectedClientId, setSelectedClientId] = useState('');
   const [meetingType, setMeetingType] = useState('');
   const [meetingDate, setMeetingDate] = useState<Date | undefined>();
   const [meetingTime, setMeetingTime] = useState('');
   const [meetingTitle, setMeetingTitle] = useState('');
+  const [meetingDescription, setMeetingDescription] = useState('');
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [memberSuggestions, setMemberSuggestions] = useState<Employee[]>([]);
   const [showAlert, setShowAlert] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [isEditingMeeting, setIsEditingMeeting] = useState(false);
@@ -1233,6 +1237,8 @@ export default function AdminDashboard() {
   const [meetingMembers, setMeetingMembers] = useState<string[]>([]);
   const [showAddMembers, setShowAddMembers] = useState(false);
   const [memberSearchTerm, setMemberSearchTerm] = useState('');
+  const [isMeetingsMenuModalOpen, setIsMeetingsMenuModalOpen] = useState(false);
+  const [editingCalendarEventId, setEditingCalendarEventId] = useState<string | null>(null);
   
   // Search term states for modals and tables
   const [targetSearch, setTargetSearch] = useState('');
@@ -1352,73 +1358,6 @@ export default function AdminDashboard() {
   const [selectedJD, setSelectedJD] = useState<any>(null);
   const [isJDPreviewModalOpen, setIsJDPreviewModalOpen] = useState(false);
 
-  // Client JDs Table Section Component - Defined at top level for proper scope access
-  const ClientJDsTableSection = () => {
-    return (
-      <div className="mb-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
-        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">JD from Client</h3>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              refetchClientJDs();
-            }}
-            className="text-xs"
-            disabled={isLoadingClientJDs}
-          >
-            {isLoadingClientJDs ? 'Loading...' : 'Refresh'}
-          </Button>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-700">
-                <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Client ID</th>
-                <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">SPOC Name</th>
-                <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Role</th>
-                <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Shared Date</th>
-                <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoadingClientJDs ? (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading JDs...</td>
-                </tr>
-              ) : clientJDs.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">No client-submitted JDs found.</td>
-                </tr>
-              ) : (
-                (clientJDs as any[]).map((jd: any) => (
-                  <tr key={jd.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="py-3 px-3 text-gray-900 dark:text-white text-sm">{jd.clientId}</td>
-                    <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{jd.spocName}</td>
-                    <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{jd.role}</td>
-                    <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{jd.sharedDate}</td>
-                    <td className="py-3 px-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedJD(jd.requirement);
-                          setIsJDPreviewModalOpen(true);
-                        }}
-                        className="text-xs"
-                      >
-                        View JD
-                      </Button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  };
 
   // Fetch employees from database
   const { data: employees = [], isLoading: isLoadingEmployees, refetch: refetchEmployees } = useQuery<Employee[]>({
@@ -2189,6 +2128,42 @@ export default function AdminDashboard() {
     });
   }, [tlMeetings, ceoMeetings]);
 
+  // Get only the nearest 3 meetings for dashboard display
+  const nearestMeetings = useMemo(() => {
+    const now = new Date();
+    const upcoming = pendingMeetings.filter((m: any) => {
+      try {
+        const meetingDateTime = new Date(`${m.meetingDate} ${m.meetingTime}`);
+        return meetingDateTime >= now;
+      } catch {
+        return true;
+      }
+    });
+    return upcoming.slice(0, 3);
+  }, [pendingMeetings]);
+
+  // Get all meetings from past 7 days (newest to oldest)
+  const meetingsLast7Days = useMemo(() => {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const allMeetings = [...tlMeetings, ...ceoMeetings].filter((m: any) => {
+      try {
+        const meetingDateTime = new Date(`${m.meetingDate} ${m.meetingTime}`);
+        return meetingDateTime >= sevenDaysAgo;
+      } catch {
+        return false;
+      }
+    });
+    
+    return allMeetings.sort((a: any, b: any) => {
+      const dateA = new Date(`${a.meetingDate} ${a.meetingTime}`);
+      const dateB = new Date(`${b.meetingDate} ${b.meetingTime}`);
+      return dateB.getTime() - dateA.getTime(); // Newest first
+    });
+  }, [tlMeetings, ceoMeetings]);
+
   // Toggle meeting expansion
   const toggleMeetingExpansion = (meetingId: string) => {
     setExpandedMeetings(prev => {
@@ -2208,15 +2183,23 @@ export default function AdminDashboard() {
     const meetingForPerson = employees.find((e: Employee) => e.id === meeting.personId);
     if (meetingForPerson) {
       setMeetingFor(meetingForPerson.id);
+    } else if (meeting.meetingCategory === 'tl') {
+      // For TL meetings, try to find by person name
+      const person = employees.find((e: Employee) => e.name === meeting.person);
+      if (person) {
+        setMeetingFor(person.id);
+      }
     }
-    setMeetingWith(meeting.personId || '');
+    setMeetingWith(meeting.personId || (meeting.person && meeting.person.includes('CEO') ? 'admin' : ''));
     setMeetingTitle(meeting.meetingType || '');
     setMeetingType(meeting.meetingType);
     setMeetingDate(new Date(meeting.meetingDate));
     setMeetingTime(meeting.meetingTime);
+    setMeetingDescription(meeting.agenda || '');
     setMeetingMembers(meeting.members && Array.isArray(meeting.members) ? meeting.members : []);
     setShowAddMembers(meeting.members && Array.isArray(meeting.members) && meeting.members.length > 0);
     setEditingMeetingId(meeting.id);
+    setEditingCalendarEventId(meeting.calendarEventId || null);
     setIsCreateMeetingModalOpen(true);
   };
 
@@ -2252,14 +2235,129 @@ export default function AdminDashboard() {
     setMessageContent('');
     setMeetingFor('');
     setMeetingWith('');
+    setSelectedClientId('');
     setMeetingType('');
     setMeetingDate(undefined);
     setMeetingTime('');
     setMeetingTitle('');
+    setMeetingDescription('');
     setMeetingMembers([]);
     setShowAddMembers(false);
     setMemberSearchTerm('');
+    setMemberSuggestions([]);
     setEditingMeetingId(null);
+    setEditingCalendarEventId(null);
+    setShowPreviewModal(false);
+  };
+
+  // Handle final meeting creation with Google Calendar
+  const handleScheduleMeeting = () => {
+    if (!meetingTitle || !meetingFor || !meetingWith || !meetingDate || !meetingTime) {
+      return;
+    }
+
+    // Validate client selection if meetingWith is client
+    if (meetingWith === 'client' && !selectedClientId) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a client",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Determine person name and category based on meetingWith (Admin or Client)
+    let personName = '';
+    let personId = '';
+    let meetingCategory: 'tl' | 'ceo_ta' = 'ceo_ta';
+
+    if (meetingWith === 'admin') {
+      const admin = employees.find((e: Employee) => e.role === 'admin');
+      if (admin) {
+        personName = admin.name;
+        personId = admin.id;
+        meetingCategory = 'ceo_ta';
+      }
+    } else if (meetingWith === 'client') {
+      const selectedClient = (clients as any[]).find((c: any) => c.id === selectedClientId);
+      if (selectedClient) {
+        personName = `${selectedClient.spoc || 'N/A'} - ${selectedClient.brandName || selectedClient.incorporatedName || 'Unknown Company'}`;
+        personId = selectedClientId;
+        meetingCategory = 'ceo_ta';
+      }
+    }
+
+    // Get attendee names from meetingFor (who needs to attend)
+    const attendeeNames: string[] = [];
+    if (meetingFor === 'all_tl') {
+      attendeeNames.push('All Team Leaders');
+    } else if (meetingFor === 'all_ta') {
+      attendeeNames.push('All Talent Advisors');
+    } else if (meetingFor.startsWith('team_')) {
+      const tlId = meetingFor.replace('team_', '');
+      const tl = employees.find((e: Employee) => e.id === tlId);
+      if (tl) {
+        attendeeNames.push(`${tl.name}'s Team`);
+      }
+    } else {
+      const attendee = employees.find((e: Employee) => e.id === meetingFor);
+      if (attendee) {
+        attendeeNames.push(attendee.name);
+      }
+    }
+
+    // Add additional members
+    const additionalMemberNames = meetingMembers
+      .map(id => employees.find((e: Employee) => e.id === id)?.name)
+      .filter(Boolean) as string[];
+
+    const allParticipantNames = [...attendeeNames, ...additionalMemberNames];
+
+    // Only generate and open Google Calendar URL for new meetings, not edits
+    // For edits, the calendar event needs to be manually updated (Google Calendar URL template doesn't support updating existing events)
+    if (!editingMeetingId) {
+      const calendarUrl = generateMeetingCalendarUrl({
+        title: meetingTitle,
+        date: meetingDate,
+        time: meetingTime,
+        regarding: meetingDescription || 'General Discussion',
+        participants: allParticipantNames,
+      });
+      
+      if (calendarUrl) {
+        window.open(calendarUrl, '_blank', 'noopener,noreferrer');
+      }
+    } else {
+      // For edits, show a message that the calendar event needs to be updated manually
+      toast({
+        title: "Meeting Updated",
+        description: "Meeting details updated. Please update the calendar event manually if needed.",
+        className: "bg-blue-50 border-blue-200 text-blue-800",
+      });
+    }
+
+    // Prepare meeting data for backend
+    const meetingData = {
+      meetingType: meetingTitle,
+      meetingDate: format(meetingDate, 'yyyy-MM-dd'),
+      meetingTime,
+      person: personName,
+      personId,
+      agenda: meetingDescription || 'General Discussion',
+      status: 'pending' as const,
+      meetingCategory,
+      members: meetingMembers,
+    };
+    
+    if (editingMeetingId) {
+      updateMeetingMutation.mutate({ id: editingMeetingId, data: meetingData });
+      setEditingMeetingId(null);
+      setEditingCalendarEventId(null);
+    } else {
+      createMeetingMutation.mutate(meetingData);
+    }
+    
+    setShowPreviewModal(false);
   };
 
   const showSuccessAlert = (message: string) => {
@@ -2293,42 +2391,75 @@ export default function AdminDashboard() {
     setIsCreateMessageModalOpen(false);
   };
 
+  // Helper function to generate Google Calendar URL for meetings
+  const generateMeetingCalendarUrl = (meetingData: {
+    title: string;
+    date: Date;
+    time: string;
+    regarding: string;
+    participants: string[];
+  }): string | null => {
+    try {
+      const { title, date, time, regarding, participants } = meetingData;
+
+      // Convert date to YYYYMMDD format
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const dateStr = `${year}${month}${day}`;
+
+      // Parse time (HH:mm format)
+      const [hours, minutes] = time.split(':');
+      if (!hours || !minutes) {
+        return null;
+      }
+
+      // Create start datetime in Google Calendar format (YYYYMMDDTHHMMSS)
+      const startDateTime = `${dateStr}T${hours.padStart(2, '0')}${minutes.padStart(2, '0')}00`;
+
+      // Calculate end time (60 minutes later by default)
+      const startMinutes = parseInt(hours) * 60 + parseInt(minutes);
+      const endMinutes = startMinutes + 60;
+      const endHours = Math.floor(endMinutes / 60) % 24;
+      const endMins = endMinutes % 60;
+      const endDateTime = `${dateStr}T${String(endHours).padStart(2, '0')}${String(endMins).padStart(2, '0')}00`;
+
+      // Build event details
+      const eventText = title;
+      let eventDetails = `Meeting Regarding: ${regarding}\n\n`;
+      if (participants.length > 0) {
+        eventDetails += `Participants:\n${participants.join('\n')}\n\n`;
+      }
+      eventDetails += 'Scheduled via StaffOS';
+
+      // Construct Google Calendar URL
+      const baseUrl = 'https://calendar.google.com/calendar/render';
+      const params = new URLSearchParams({
+        action: 'TEMPLATE',
+        text: eventText,
+        dates: `${startDateTime}/${endDateTime}`,
+        details: eventDetails,
+      });
+
+      return `${baseUrl}?${params.toString()}`;
+    } catch (error) {
+      console.error('Error generating Google Calendar URL:', error);
+      return null;
+    }
+  };
+
   const handleSetMeeting = () => {
-    if (!meetingFor || !meetingWith || !meetingDate || !meetingTime) {
+    if (!meetingTitle || !meetingFor || !meetingWith || !meetingDate || !meetingTime) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
       return;
     }
     
-    const meetingForPerson = employees.find((e: Employee) => e.id === meetingFor);
-    const meetingWithPerson = employees.find((e: Employee) => e.id === meetingWith);
-    
-    if (!meetingForPerson || !meetingWithPerson) {
-      return;
-    }
-    
-    const personName = meetingWithPerson.name;
-    // Determine category based on the person's role
-    const meetingCategory = meetingForPerson.role === 'team_leader' ? 'tl' : 'ceo_ta';
-    
-    const meetingData = {
-      meetingType: meetingTitle || meetingType || 'Team Performance',
-      meetingDate: format(meetingDate, 'yyyy-MM-dd'),
-      meetingTime,
-      person: personName,
-      personId: meetingWith,
-      agenda: "Meeting agenda",
-      status: 'pending' as const,
-      meetingCategory,
-      members: meetingMembers,
-    };
-    
-    if (editingMeetingId) {
-      updateMeetingMutation.mutate({ id: editingMeetingId, data: meetingData });
-    } else {
-      createMeetingMutation.mutate(meetingData);
-    }
-    
-    resetForm();
-    setIsCreateMeetingModalOpen(false);
+    // Show preview modal instead of directly creating
+    setShowPreviewModal(true);
   };
 
   // Requirements handlers
@@ -3377,6 +3508,7 @@ export default function AdminDashboard() {
                   size="sm"
                   className="h-8 w-8 p-0 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
                   data-testid="button-meeting-options"
+                  onClick={() => setIsMeetingsMenuModalOpen(true)}
                 >
                   <MoreVertical className="h-4 w-4 text-gray-700 dark:text-gray-300" />
                 </Button>
@@ -3385,12 +3517,12 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent className="px-4 pb-4">
             <div className="space-y-3 max-h-[500px] overflow-y-auto">
-              {pendingMeetings.length === 0 ? (
+              {nearestMeetings.length === 0 ? (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                   No pending meetings
                 </div>
               ) : (
-                pendingMeetings.map((meeting: any) => {
+                nearestMeetings.map((meeting: any) => {
                   const isExpanded = expandedMeetings.has(meeting.id);
                   const meetingTime = meeting.meetingTime || '8:30 am';
                   const meetingDate = meeting.meetingDate ? new Date(meeting.meetingDate) : new Date();
@@ -3407,7 +3539,7 @@ export default function AdminDashboard() {
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
                             <div className="font-semibold text-gray-900 dark:text-white">
-                              Meeting for {meeting.person || 'Unknown'}
+                              {meeting.meetingType || meeting.agenda || 'Meeting'}
                             </div>
                           </div>
                           <button
@@ -3426,7 +3558,7 @@ export default function AdminDashboard() {
                           {/* Title and Status on same row */}
                           <div className="flex items-center justify-between">
                             <div className="font-semibold text-gray-900 dark:text-white">
-                              Meeting for {meeting.person || 'Unknown'}
+                              {meeting.meetingType || meeting.agenda || 'Meeting'}
                             </div>
                             <div className="flex items-center gap-2">
                               {(() => {
@@ -3495,84 +3627,91 @@ export default function AdminDashboard() {
                             </div>
                           </div>
                           
-                          {/* Time */}
-                          <div className="text-sm text-gray-600 dark:text-gray-400">
-                            {formattedTime}
+                          {/* Date */}
+                          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                            <span className="font-medium">Date:</span>
+                            <span>{format(new Date(meeting.meetingDate), 'dd-MMM-yyyy')}</span>
                           </div>
+                          
+                          {/* Time */}
+                          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                            <span className="font-medium">Time:</span>
+                            <span>{formattedTime}</span>
+                          </div>
+                          
+                          {/* Meeting With */}
+                          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                            <span className="font-medium">Meeting With:</span>
+                            <span>{meeting.person || 'N/A'}</span>
+                          </div>
+                          
+                          {/* Description if available */}
+                          {meeting.agenda && meeting.agenda !== 'General Discussion' && (
+                            <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+                              <span className="font-medium">Description:</span>
+                              <span className="flex-1">{meeting.agenda}</span>
+                            </div>
+                          )}
                           
                           {/* Participants */}
                           <div className="flex items-center gap-2">
-                            {(() => {
-                              // Get actual participants
-                              const participants: string[] = [];
-                              if (meeting.personId) {
-                                participants.push(meeting.personId);
-                              }
-                              if (meeting.members && Array.isArray(meeting.members)) {
-                                participants.push(...meeting.members);
-                              }
-                              // Remove duplicates
-                              const uniqueParticipants = Array.from(new Set(participants));
-                              const participantCount = uniqueParticipants.length;
-                              
-                              // Get participant names
-                              const participantNames = uniqueParticipants
-                                .map(id => employees.find((e: Employee) => e.id === id))
-                                .filter(Boolean)
-                                .slice(0, 3);
-                              
-                              const remainingCount = Math.max(0, participantCount - 3);
-                              
-                              return (
-                                <div className="flex -space-x-2">
-                                  {participantNames.map((emp: Employee | undefined, idx: number) => {
-                                    if (!emp) return null;
-                                    const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500'];
-                                    return (
-                                      <div
-                                        key={emp.id}
-                                        className={`w-8 h-8 rounded-full ${colors[idx % colors.length]} border-2 border-white dark:border-gray-800 flex items-center justify-center text-white text-xs font-medium`}
-                                        title={emp.name}
-                                      >
-                                        {emp.name.charAt(0).toUpperCase()}
+                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Members:</span>
+                            <div className="flex -space-x-2">
+                              {(() => {
+                                // Get actual participants
+                                const participants: string[] = [];
+                                if (meeting.personId) {
+                                  participants.push(meeting.personId);
+                                }
+                                if (meeting.members && Array.isArray(meeting.members)) {
+                                  participants.push(...meeting.members);
+                                }
+                                // Remove duplicates
+                                const uniqueParticipants = Array.from(new Set(participants));
+                                const participantCount = uniqueParticipants.length;
+                                
+                                // Get participant names
+                                const participantNames = uniqueParticipants
+                                  .map(id => employees.find((e: Employee) => e.id === id))
+                                  .filter(Boolean)
+                                  .slice(0, 5);
+                                
+                                const remainingCount = Math.max(0, participantCount - 5);
+                                
+                                if (participantCount === 0) {
+                                  return <span className="text-xs text-gray-500">No members added</span>;
+                                }
+                                
+                                return (
+                                  <>
+                                    {participantNames.map((emp: Employee | undefined, idx: number) => {
+                                      if (!emp) return null;
+                                      const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-yellow-500', 'bg-pink-500'];
+                                      return (
+                                        <div
+                                          key={emp.id}
+                                          className={`w-8 h-8 rounded-full ${colors[idx % colors.length]} border-2 border-white dark:border-gray-800 flex items-center justify-center text-white text-xs font-medium`}
+                                          title={emp.name}
+                                        >
+                                          {emp.name.charAt(0).toUpperCase()}
+                                        </div>
+                                      );
+                                    })}
+                                    {remainingCount > 0 && (
+                                      <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 border-2 border-white dark:border-gray-800 flex items-center justify-center text-xs font-medium text-gray-700 dark:text-gray-300">
+                                        +{remainingCount}
                                       </div>
-                                    );
-                                  })}
-                                  {remainingCount > 0 && (
-                                    <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900 border-2 border-white dark:border-gray-800 flex items-center justify-center text-xs font-medium text-green-700 dark:text-green-300">
-                                      +{remainingCount}
-                                    </div>
-                                  )}
-                                  {participantCount === 0 && (
-                                    <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 border-2 border-white dark:border-gray-800"></div>
-                                  )}
-                                </div>
-                              );
-                            })()}
+                                    )}
+                                  </>
+                                );
+                              })()}
+                            </div>
                           </div>
-                          
-                          {/* Action button - shorter width */}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-auto bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/30 px-4"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // Handle action
-                            }}
-                          >
-                            {meeting.meetingType || 'Team Performance'}
-                          </Button>
                         </div>
                       )}
                     </div>
                   );
                 })
-              )}
-              {pendingMeetings.length > 3 && (
-                <div className="text-center pt-2">
-                  <ChevronDown className="h-4 w-4 text-gray-400 mx-auto" />
-                </div>
               )}
             </div>
           </CardContent>
@@ -3697,7 +3836,68 @@ export default function AdminDashboard() {
             </div>
             
             {/* Client JDs Table */}
-            <ClientJDsTableSection />
+            <div className="mb-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">JD from Client</h3>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    refetchClientJDs();
+                  }}
+                  className="text-xs"
+                  disabled={isLoadingClientJDs}
+                >
+                  {isLoadingClientJDs ? 'Loading...' : 'Refresh'}
+                </Button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                      <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Client ID</th>
+                      <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">SPOC Name</th>
+                      <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Role</th>
+                      <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Shared Date</th>
+                      <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isLoadingClientJDs ? (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading JDs...</td>
+                      </tr>
+                    ) : !clientJDs || clientJDs.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">No client-submitted JDs found.</td>
+                      </tr>
+                    ) : (
+                      (clientJDs as any[]).map((jd: any) => (
+                        <tr key={jd.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                          <td className="py-3 px-3 text-gray-900 dark:text-white text-sm">{jd.clientId || 'N/A'}</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{jd.spocName || 'N/A'}</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{jd.role || 'N/A'}</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{jd.sharedDate || 'N/A'}</td>
+                          <td className="py-3 px-3">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedJD(jd.requirement);
+                                setIsJDPreviewModalOpen(true);
+                              }}
+                              className="text-xs"
+                            >
+                              View JD
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
             
             <div className="flex gap-6 h-full">
               {/* Middle Section - Requirements Table */}
@@ -7529,6 +7729,143 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
+      {/* Meetings Menu Modal - Last 7 Days */}
+      <Dialog open={isMeetingsMenuModalOpen} onOpenChange={setIsMeetingsMenuModalOpen}>
+        <DialogContent className="max-w-4xl mx-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold text-center text-gray-900 dark:text-white">
+              Meetings - Last 7 Days
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto p-4">
+            {meetingsLast7Days.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                No meetings found in the last 7 days
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {meetingsLast7Days.map((meeting: any) => {
+                  const meetingDateTime = new Date(`${meeting.meetingDate} ${meeting.meetingTime}`);
+                  const isExpanded = expandedMeetings.has(meeting.id);
+                  
+                  return (
+                    <div
+                      key={meeting.id}
+                      className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="font-semibold text-gray-900 dark:text-white">
+                            {meeting.meetingType || meeting.agenda || 'Meeting'}
+                          </div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            {format(meetingDateTime, 'dd-MMM-yyyy')} at {meeting.meetingTime}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleRescheduleMeeting(meeting)}
+                            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                            title="Edit meeting"
+                          >
+                            <EditIcon className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                          </button>
+                          <button
+                            onClick={() => toggleMeetingExpansion(meeting.id)}
+                            className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                          >
+                            {isExpanded ? (
+                              <ChevronUp className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                            ) : (
+                              <ChevronDown className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                      {isExpanded && (
+                        <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
+                          <div className="text-sm text-gray-600 dark:text-gray-400">
+                            <span className="font-medium">Meeting With:</span> {meeting.person || 'N/A'}
+                          </div>
+                          {meeting.agenda && meeting.agenda !== 'General Discussion' && (
+                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                              <span className="font-medium">Description:</span> {meeting.agenda}
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 text-sm">
+                            <span className="font-medium text-gray-700 dark:text-gray-300">Members:</span>
+                            <div className="flex -space-x-2">
+                              {(() => {
+                                const participants: string[] = [];
+                                if (meeting.personId) participants.push(meeting.personId);
+                                if (meeting.members && Array.isArray(meeting.members)) {
+                                  participants.push(...meeting.members);
+                                }
+                                const uniqueParticipants = Array.from(new Set(participants));
+                                const participantNames = uniqueParticipants
+                                  .map(id => employees.find((e: Employee) => e.id === id))
+                                  .filter(Boolean)
+                                  .slice(0, 5);
+                                const remainingCount = Math.max(0, uniqueParticipants.length - 5);
+                                
+                                if (uniqueParticipants.length === 0) {
+                                  return <span className="text-xs text-gray-500">No members</span>;
+                                }
+                                
+                                return (
+                                  <>
+                                    {participantNames.map((emp: Employee | undefined, idx: number) => {
+                                      if (!emp) return null;
+                                      const colors = ['bg-blue-500', 'bg-green-500', 'bg-purple-500', 'bg-yellow-500', 'bg-pink-500'];
+                                      return (
+                                        <div
+                                          key={emp.id}
+                                          className={`w-8 h-8 rounded-full ${colors[idx % colors.length]} border-2 border-white dark:border-gray-800 flex items-center justify-center text-white text-xs font-medium`}
+                                          title={emp.name}
+                                        >
+                                          {emp.name.charAt(0).toUpperCase()}
+                                        </div>
+                                      );
+                                    })}
+                                    {remainingCount > 0 && (
+                                      <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 border-2 border-white dark:border-gray-800 flex items-center justify-center text-xs font-medium text-gray-700 dark:text-gray-300">
+                                        +{remainingCount}
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              })()}
+                            </div>
+                          </div>
+                          <div className="text-sm">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              meeting.status === 'completed' || meetingDateTime < new Date()
+                                ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                                : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300'
+                            }`}>
+                              {meeting.status === 'completed' || meetingDateTime < new Date() ? 'Completed' : 'Scheduled'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <div className="mt-4 flex justify-end p-4 border-t border-gray-200 dark:border-gray-700">
+            <Button 
+              onClick={() => setIsMeetingsMenuModalOpen(false)}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded"
+              data-testid="button-close-meetings-menu-modal"
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Create Meeting Modal */}
       <Dialog open={isCreateMeetingModalOpen} onOpenChange={(open) => { setIsCreateMeetingModalOpen(open); if (!open) resetForm(); }}>
         <DialogContent className="max-w-lg mx-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 h-[90vh] max-h-[700px] flex flex-col">
@@ -7538,101 +7875,163 @@ export default function AdminDashboard() {
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Meeting Title with Floating Label */}
-            <div className="relative">
-              <Input
-                value={meetingTitle}
-                onChange={(e) => setMeetingTitle(e.target.value)}
-                className={`w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded pr-10 transition-all ${
-                  meetingTitle ? 'pt-6 pb-2' : 'py-3'
-                }`}
-                data-testid="input-meeting-title"
-              />
-              <label
-                className={`absolute left-3 transition-all pointer-events-none ${
-                  meetingTitle
-                    ? 'top-1.5 text-xs text-gray-500 dark:text-gray-400 font-medium'
-                    : 'top-1/2 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400'
-                }`}
-              >
+            {/* Meeting Title with Label on Left */}
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap min-w-[120px]">
                 Meeting Title
               </label>
-              <EditIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <div className="relative flex-1">
+                <Input
+                  value={meetingTitle}
+                  onChange={(e) => setMeetingTitle(e.target.value)}
+                  className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded pr-10 py-2"
+                  data-testid="input-meeting-title"
+                />
+                <EditIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+              </div>
             </div>
 
-            {/* Meeting For with Floating Label */}
-            <div className="relative">
-              <Select 
-                value={meetingFor} 
-                onValueChange={(value) => {
-                  setMeetingFor(value);
-                  if (!meetingWith) {
-                    setMeetingWith(value);
-                  }
-                }} 
-                data-testid="select-meeting-for" 
-                required
-              >
-                <SelectTrigger className={`w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded pr-10 ${
-                  meetingFor ? 'pt-6 pb-2' : 'py-3'
-                }`}>
-                  <SelectValue placeholder="" />
-                </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                  {employees
-                    .filter((e: Employee) => e.role === 'team_leader' || e.role === 'recruiter' || e.role === 'admin')
-                    .map((employee: Employee) => (
-                      <SelectItem key={employee.id} value={employee.id} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
-                        {employee.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              <label
-                className={`absolute left-3 transition-all pointer-events-none ${
-                  meetingFor
-                    ? 'top-1.5 text-xs text-gray-500 dark:text-gray-400 font-medium'
-                    : 'top-1/2 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400'
-                }`}
-              >
+            {/* Meeting For - Attendees (who need to attend) */}
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap min-w-[120px]">
                 Meeting For
               </label>
-              <EditIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
+              <div className="relative flex-1">
+                <Select 
+                  value={meetingFor} 
+                  onValueChange={(value) => {
+                    setMeetingFor(value);
+                  }} 
+                  data-testid="select-meeting-for" 
+                  required
+                >
+                  <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded pr-10 py-2">
+                    <SelectValue placeholder="Select attendees" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                    <SelectItem value="all_tl" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold">
+                      All Team Leaders
+                    </SelectItem>
+                    <SelectItem value="all_ta" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700 font-semibold">
+                      All Talent Advisors
+                    </SelectItem>
+                    {employees
+                      .filter((e: Employee) => e.role === 'team_leader')
+                      .map((tl: Employee) => (
+                        <SelectItem key={`team_${tl.id}`} value={`team_${tl.id}`} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                          {tl.name}'s Team
+                        </SelectItem>
+                      ))}
+                    {employees
+                      .filter((e: Employee) => e.role === 'team_leader')
+                      .map((employee: Employee) => (
+                        <SelectItem key={employee.id} value={employee.id} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                          {employee.name} (TL)
+                        </SelectItem>
+                      ))}
+                    {employees
+                      .filter((e: Employee) => e.role === 'recruiter')
+                      .map((employee: Employee) => (
+                        <SelectItem key={employee.id} value={employee.id} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                          {employee.name} (TA)
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <EditIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
+              </div>
             </div>
 
-            {/* Meeting With with Floating Label */}
-            <div className="relative">
-              <Select 
-                value={meetingWith} 
-                onValueChange={setMeetingWith} 
-                data-testid="select-meeting-with" 
-                required
-              >
-                <SelectTrigger className={`w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded pr-10 ${
-                  meetingWith ? 'pt-6 pb-2' : 'py-3'
-                }`}>
-                  <SelectValue placeholder="" />
-                </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                  {employees
-                    .filter((e: Employee) => e.role === 'team_leader' || e.role === 'recruiter' || e.role === 'admin')
-                    .map((employee: Employee) => (
-                      <SelectItem key={employee.id} value={employee.id} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
-                        {employee.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              <label
-                className={`absolute left-3 transition-all pointer-events-none ${
-                  meetingWith
-                    ? 'top-1.5 text-xs text-gray-500 dark:text-gray-400 font-medium'
-                    : 'top-1/2 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400'
-                }`}
-              >
-                Meeting with
+            {/* Meeting With - Admin or Client */}
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap min-w-[120px]">
+                Meeting With
               </label>
-              <EditIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
+              <div className="relative flex-1">
+                <Select 
+                  value={meetingWith} 
+                  onValueChange={(value) => {
+                    setMeetingWith(value);
+                    if (value !== 'client') {
+                      setSelectedClientId('');
+                    }
+                  }} 
+                  data-testid="select-meeting-with" 
+                  required
+                >
+                  <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded pr-10 py-2">
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                    {(() => {
+                      const admin = employees.find((e: Employee) => e.role === 'admin');
+                      return admin ? (
+                        <SelectItem key="admin" value="admin" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                          {admin.name} (CEO)
+                        </SelectItem>
+                      ) : null;
+                    })()}
+                    <SelectItem value="client" className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                      Client
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <EditIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Client Selection - Show when Client is selected */}
+            {meetingWith === 'client' && (
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap min-w-[120px]">
+                  Select Client
+                </label>
+                <div className="relative flex-1">
+                  <Select 
+                    value={selectedClientId} 
+                    onValueChange={setSelectedClientId} 
+                    data-testid="select-client" 
+                    required
+                  >
+                    <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded pr-10 py-2">
+                      <SelectValue placeholder="Select client" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+                      {isLoadingClients ? (
+                        <SelectItem value="loading" disabled>Loading clients...</SelectItem>
+                      ) : (
+                        (clients as any[]).map((client: any) => (
+                          <SelectItem 
+                            key={client.id} 
+                            value={client.id} 
+                            className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
+                          >
+                            {client.spoc || 'N/A'} - {client.brandName || client.incorporatedName || 'Unknown Company'}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <EditIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+            )}
+
+            {/* Meeting Description - Optional */}
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap min-w-[120px]">
+                Meeting Description <span className="text-gray-400">(Optional)</span>
+              </label>
+              <div className="relative flex-1">
+                <Input
+                  value={meetingDescription}
+                  onChange={(e) => setMeetingDescription(e.target.value)}
+                  className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded pr-10 py-2"
+                  data-testid="input-meeting-description"
+                  placeholder="Enter meeting description"
+                />
+                <EditIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+              </div>
             </div>
             
             {/* Add Members Checkbox */}
@@ -7651,16 +8050,76 @@ export default function AdminDashboard() {
             {/* Add Members Section */}
             {showAddMembers && (
               <div className="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-3">
-                {/* Search Bar */}
+                {/* Search Bar with Autocomplete */}
                 <div className="relative">
                   <Input
                     value={memberSearchTerm}
-                    onChange={(e) => setMemberSearchTerm(e.target.value)}
-                    placeholder="Search here"
+                    onChange={(e) => {
+                      const search = e.target.value;
+                      setMemberSearchTerm(search);
+                      // Filter and show suggestions
+                      if (search.trim()) {
+                        const filtered = employees.filter((e: Employee) =>
+                          e.name.toLowerCase().includes(search.toLowerCase())
+                        ).slice(0, 5); // Show top 5 suggestions
+                        setMemberSuggestions(filtered);
+                      } else {
+                        setMemberSuggestions([]);
+                      }
+                    }}
+                    onFocus={() => {
+                      if (memberSearchTerm.trim()) {
+                        const filtered = employees.filter((e: Employee) =>
+                          e.name.toLowerCase().includes(memberSearchTerm.toLowerCase())
+                        ).slice(0, 5);
+                        setMemberSuggestions(filtered);
+                      }
+                    }}
+                    onBlur={() => {
+                      // Delay hiding suggestions to allow click
+                      setTimeout(() => setMemberSuggestions([]), 200);
+                    }}
+                    placeholder="Type to search members..."
                     className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded pl-10"
                     data-testid="input-member-search"
                   />
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                  
+                  {/* Autocomplete Suggestions Dropdown */}
+                  {memberSuggestions.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg max-h-48 overflow-y-auto">
+                      {memberSuggestions.map((employee: Employee) => {
+                        const isSelected = meetingMembers.includes(employee.id);
+                        return (
+                          <div
+                            key={employee.id}
+                            className={`flex items-center justify-between p-2 cursor-pointer transition-colors ${
+                              isSelected
+                                ? 'bg-blue-100 dark:bg-blue-900/30'
+                                : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                            }`}
+                            onMouseDown={(e) => {
+                              e.preventDefault(); // Prevent input blur
+                              if (isSelected) {
+                                setMeetingMembers(meetingMembers.filter(id => id !== employee.id));
+                              } else {
+                                setMeetingMembers([...meetingMembers, employee.id]);
+                              }
+                              setMemberSearchTerm('');
+                              setMemberSuggestions([]);
+                            }}
+                          >
+                            <span className="text-sm text-gray-900 dark:text-white">
+                              {employee.name} ({employee.role === 'team_leader' ? 'TL' : employee.role === 'recruiter' ? 'TA' : 'Admin'})
+                            </span>
+                            {isSelected && (
+                              <CheckCircle2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* Quick Add Buttons */}
@@ -7768,43 +8227,36 @@ export default function AdminDashboard() {
               </div>
             )}
             
-            {/* Date with Floating Label */}
-            <div className="relative">
-              <StandardDatePicker
-                value={meetingDate}
-                onChange={setMeetingDate}
-                placeholder="Date"
-                className="w-full"
-              />
-              {meetingDate && (
-                <label className="absolute left-10 top-1.5 text-xs text-gray-500 dark:text-gray-400 font-medium pointer-events-none">
-                  Date
-                </label>
-              )}
+            {/* Date with Label on Left */}
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap min-w-[120px]">
+                Date
+              </label>
+              <div className="flex-1">
+                <StandardDatePicker
+                  value={meetingDate}
+                  onChange={setMeetingDate}
+                  placeholder="Select date"
+                  className="w-full"
+                />
+              </div>
             </div>
             
-            {/* Time with Floating Label */}
-            <div className="relative">
-              <Input
-                type="time"
-                value={meetingTime}
-                onChange={(e) => setMeetingTime(e.target.value)}
-                className={`w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded pl-10 ${
-                  meetingTime ? 'pt-6 pb-2' : 'py-3'
-                }`}
-                data-testid="input-meeting-time"
-                required
-              />
-              <label
-                className={`absolute left-10 transition-all pointer-events-none ${
-                  meetingTime
-                    ? 'top-1.5 text-xs text-gray-500 dark:text-gray-400 font-medium'
-                    : 'top-1/2 -translate-y-1/2 text-sm text-gray-500 dark:text-gray-400'
-                }`}
-              >
+            {/* Time with Label on Left */}
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap min-w-[120px]">
                 Time
               </label>
-              <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <div className="relative flex-1">
+                <Input
+                  type="time"
+                  value={meetingTime}
+                  onChange={(e) => setMeetingTime(e.target.value)}
+                  className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded py-2"
+                  data-testid="input-meeting-time"
+                  required
+                />
+              </div>
             </div>
           </div>
           
@@ -7812,13 +8264,116 @@ export default function AdminDashboard() {
           <div className="flex justify-center p-4 border-t border-gray-200 dark:border-gray-700">
             <Button 
               onClick={handleSetMeeting}
-              disabled={!meetingFor || !meetingWith || !meetingDate || !meetingTime}
+              disabled={!meetingTitle || !meetingFor || !meetingWith || !meetingDate || !meetingTime || (meetingWith === 'client' && !selectedClientId)}
               className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-8 py-2 rounded text-base font-medium w-full"
               data-testid="button-set-meeting"
             >
               Set Meeting
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Meeting Preview Modal */}
+      <Dialog open={showPreviewModal} onOpenChange={setShowPreviewModal}>
+        <DialogContent className="max-w-2xl mx-auto bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold text-center text-gray-900 dark:text-white">
+              Meeting Preview
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-6 space-y-4">
+            {/* Preview Content */}
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Title:</label>
+                <p className="text-gray-900 dark:text-white mt-1">{meetingTitle}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Meeting For:</label>
+                <p className="text-gray-900 dark:text-white mt-1">
+                  {meetingFor === 'all_tl' ? 'All Team Leaders' :
+                   meetingFor === 'all_ta' ? 'All Talent Advisors' :
+                   meetingFor.startsWith('team_') ? 
+                     (() => {
+                       const tlId = meetingFor.replace('team_', '');
+                       const tl = employees.find((e: Employee) => e.id === tlId);
+                       return tl ? `${tl.name}'s Team` : meetingFor;
+                     })() :
+                   (() => {
+                     const person = employees.find((e: Employee) => e.id === meetingFor);
+                     return person ? person.name : meetingFor;
+                   })()}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Meeting With:</label>
+                <p className="text-gray-900 dark:text-white mt-1">
+                  {meetingWith === 'all_tl' ? 'All Team Leaders' :
+                   meetingWith === 'all_ta' ? 'All Talent Advisors' :
+                   meetingWith.startsWith('team_') ? 
+                     (() => {
+                       const tlId = meetingWith.replace('team_', '');
+                       const tl = employees.find((e: Employee) => e.id === tlId);
+                       return tl ? `${tl.name}'s Team` : meetingWith;
+                     })() :
+                   (() => {
+                     const person = employees.find((e: Employee) => e.id === meetingWith);
+                     return person ? person.name : meetingWith;
+                   })()}
+                </p>
+              </div>
+              {meetingDescription && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Description:</label>
+                  <p className="text-gray-900 dark:text-white mt-1">{meetingDescription}</p>
+                </div>
+              )}
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Date:</label>
+                <p className="text-gray-900 dark:text-white mt-1">
+                  {meetingDate ? format(meetingDate, 'dd-MM-yyyy') : ''}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Time:</label>
+                <p className="text-gray-900 dark:text-white mt-1">{meetingTime}</p>
+              </div>
+              {meetingMembers.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Additional Members:</label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {meetingMembers.map((memberId) => {
+                      const member = employees.find((e: Employee) => e.id === memberId);
+                      return member ? (
+                        <span
+                          key={memberId}
+                          className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 px-2 py-1 rounded text-sm"
+                        >
+                          {member.name}
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <Button 
+              variant="outline"
+              onClick={() => setShowPreviewModal(false)}
+              className="flex-1"
+            >
+              Edit
+            </Button>
+            <Button 
+              onClick={handleScheduleMeeting}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Schedule
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

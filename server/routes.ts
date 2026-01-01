@@ -13,7 +13,7 @@ import multer from "multer";
 import path from "path";
 import "./types"; // Import session types
 import { db } from "./db";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and } from "drizzle-orm";
 import { logRequirementAdded, logCandidateSubmitted, logClosureMade, logCandidatePipelineChanged } from "./activity-logger";
 import { parseResumeFile, parseBulkResumes } from "./resume-parser";
 import { sendEmployeeWelcomeEmail, sendCandidateWelcomeEmail, sendOTPEmail } from "./email-service";
@@ -118,20 +118,24 @@ const resumeUpload = multer({
     fileSize: 10 * 1024 * 1024, // 10MB limit for resumes
   },
   fileFilter: (req, file, cb) => {
-    const allowedExtensions = /\.(pdf|doc|docx)$/i;
+    // Allow PDF, Word documents, and images (for scanned/photographed resumes)
+    const allowedExtensions = /\.(pdf|doc|docx|jpg|jpeg|png)$/i;
     const extname = allowedExtensions.test(file.originalname.toLowerCase());
     
     const allowedMimeTypes = [
       'application/pdf',
       'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg',
+      'image/jpg',
+      'image/png'
     ];
     const mimetype = allowedMimeTypes.includes(file.mimetype);
     
     if (extname && mimetype) {
       return cb(null, true);
     } else {
-      cb(new Error('Only PDF and Word documents are allowed!'));
+      cb(new Error('Only PDF, Word documents, and images (JPG, PNG) are allowed!'));
     }
   }
 });
@@ -1751,6 +1755,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied. Team Leader role required." });
       }
 
+      // Get date parameter for filtering
+      const dateParam = req.query.date as string | undefined;
+      const today = dateParam || new Date().toISOString().split('T')[0];
+
       // Import getResumeTarget for calculations
       const { getResumeTarget } = await import("@shared/constants");
 
@@ -1785,23 +1793,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Filter requirements by date - only count requirements created on or before the selected date
+      const filteredRequirements = requirements.filter(req => {
+        const createdDate = new Date(req.createdAt).toISOString().split('T')[0];
+        return createdDate <= today;
+      });
+
       // Get all resume submissions by team recruiters
-      const { resumeSubmissions } = await import("@shared/schema");
+      const { resumeSubmissions, jobApplications } = await import("@shared/schema");
       const recruiterIds = filteredRecruiters.map(r => r.id);
-      const allSubmissions = await db.select().from(resumeSubmissions);
-      const teamSubmissions = allSubmissions.filter(s => recruiterIds.includes(s.recruiterId));
+      const allSubmissionsRaw = await db.select().from(resumeSubmissions);
+      const teamSubmissionsRaw = allSubmissionsRaw.filter(s => recruiterIds.includes(s.recruiterId));
       
-      // Calculate metrics for all requirements
+      // Filter submissions cumulatively (up to selected date) for metrics calculation
+      const teamSubmissions = teamSubmissionsRaw.filter(sub => {
+        if (!sub.submittedAt) return false;
+        const subDate = new Date(sub.submittedAt).toISOString().split('T')[0];
+        return subDate <= today;
+      });
+
+      // Get submissions for the specific date (for delivered items modal)
+      const submissionsForDate = teamSubmissionsRaw.filter(sub => {
+        if (!sub.submittedAt) return false;
+        const subDate = new Date(sub.submittedAt).toISOString().split('T')[0];
+        return subDate === today;
+      });
+
+      // Get tagged applications (recruiter_tagged) for team recruiters
+      const allTaggedApplicationsRaw = await db.select().from(jobApplications)
+        .where(eq(jobApplications.source, 'recruiter_tagged'));
+      
+      // Filter tagged applications by recruiter IDs (through requirement assignments)
+      const taggedApplicationsRaw = allTaggedApplicationsRaw.filter(app => {
+        if (!app.requirementId) return false;
+        // Check if this requirement belongs to any of the filtered recruiters
+        return filteredRequirements.some(req => req.id === app.requirementId);
+      });
+      
+      // Filter tagged applications by recruiter and date (cumulative up to selected date)
+      const requirementIds = filteredRequirements.map(r => r.id);
+      const taggedApplications = taggedApplicationsRaw.filter(app => {
+        if (!app.appliedDate || !app.requirementId) return false;
+        const appDate = new Date(app.appliedDate).toISOString().split('T')[0];
+        return appDate <= today && requirementIds.includes(app.requirementId);
+      });
+
+      // Get tagged applications for the specific date
+      const taggedForDate = taggedApplicationsRaw.filter(app => {
+        if (!app.appliedDate || !app.requirementId) return false;
+        const appDate = new Date(app.appliedDate).toISOString().split('T')[0];
+        return appDate === today && requirementIds.includes(app.requirementId);
+      });
+      
+      // Calculate metrics for filtered requirements (created on or before selected date)
       let totalResumesRequired = 0;
       let totalResumesDelivered = 0;
       let completedRequirements = 0;
       
-      for (const req of requirements) {
+      for (const req of filteredRequirements) {
         const target = getResumeTarget(req.criticality, req.toughness);
         totalResumesRequired += target;
         
-        // Count resumes submitted for this requirement
-        const deliveredForReq = teamSubmissions.filter(s => s.requirementId === req.id).length;
+        // Count resumes submitted for this requirement (cumulative up to selected date)
+        const deliveredFromSubmissions = teamSubmissions.filter(s => s.requirementId === req.id).length;
+        
+        // Count candidates tagged to this requirement (cumulative up to selected date)
+        const deliveredFromTagged = taggedApplications.filter(app => app.requirementId === req.id).length;
+        
+        const deliveredForReq = deliveredFromSubmissions + deliveredFromTagged;
         totalResumesDelivered += deliveredForReq;
         
         // Check if this requirement is fully delivered
@@ -1812,10 +1871,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const performanceData = await Promise.all(teamRecruiters.map(async (rec) => {
         const recReqs = await storage.getRequirementsByTalentAdvisorId(rec.id);
-        return { member: rec.name, requirements: recReqs.length };
+        // Filter requirements by date for performance data
+        const filteredRecReqs = recReqs.filter(req => {
+          const createdDate = new Date(req.createdAt).toISOString().split('T')[0];
+          return createdDate <= today;
+        });
+        return { member: rec.name, requirements: filteredRecReqs.length };
       }));
 
-      const totalRequirements = requirements.length;
+      const totalRequirements = filteredRequirements.length;
       
       // Calculate averages
       const avgResumesPerRequirement = totalRequirements > 0 
@@ -1825,9 +1889,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? (totalRequirements / filteredRecruiters.length).toFixed(2) 
         : "0.00";
 
+      // Build delivered items for the selected date
+      const deliveredItems: Array<{
+        requirement: string;
+        candidate: string;
+        client: string;
+        deliveredDate: string;
+        status: string;
+      }> = [];
+
+      for (const sub of submissionsForDate) {
+        const req = filteredRequirements.find(r => r.id === sub.requirementId);
+        if (req) {
+          deliveredItems.push({
+            requirement: req.position,
+            candidate: sub.candidateName || 'Unknown',
+            client: req.company,
+            deliveredDate: new Date(sub.submittedAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-'),
+            status: sub.status || 'Submitted'
+          });
+        }
+      }
+
+      for (const app of taggedForDate) {
+        const req = filteredRequirements.find(r => r.id === app.requirementId);
+        if (req) {
+          deliveredItems.push({
+            requirement: app.jobTitle || req.position,
+            candidate: app.candidateName || 'Unknown',
+            client: app.company || req.company,
+            deliveredDate: new Date(app.appliedDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-'),
+            status: app.status || 'Tagged'
+          });
+        }
+      }
+
+      // Build defaulted items (requirements that should have been delivered by the selected date but weren't)
+      const defaultedItems: Array<{
+        requirement: string;
+        candidate: string;
+        client: string;
+        expectedDate: string;
+        status: string;
+      }> = [];
+
+      for (const req of filteredRequirements) {
+        const target = getResumeTarget(req.criticality, req.toughness);
+        const deliveredFromSubmissions = teamSubmissions.filter(s => s.requirementId === req.id).length;
+        const deliveredFromTagged = taggedApplications.filter(app => app.requirementId === req.id).length;
+        const deliveredForReq = deliveredFromSubmissions + deliveredFromTagged;
+        
+        if (deliveredForReq < target) {
+          defaultedItems.push({
+            requirement: req.position,
+            candidate: 'Pending',
+            client: req.company,
+            expectedDate: today,
+            status: `${deliveredForReq}/${target}`
+          });
+        }
+      }
+
       const dailyMetrics = {
         id: `daily-tl-${employee.id}`,
-        date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
+        date: new Date(today).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
         totalRequirements,
         completedRequirements,
         avgResumesPerRequirement,
@@ -1835,8 +1960,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalResumes: totalResumesDelivered,
         totalResumesDelivered,
         totalResumesRequired,
-        dailyDeliveryDelivered: totalResumesDelivered,
-        dailyDeliveryDefaulted: Math.max(0, totalResumesRequired - totalResumesDelivered),
+        dailyDeliveryDelivered: submissionsForDate.length + taggedForDate.length,
+        dailyDeliveryDefaulted: defaultedItems.length,
         overallPerformance: (() => {
           if (totalResumesRequired === 0) return "G";
           const performanceRatio = totalResumesDelivered / totalResumesRequired;
@@ -1844,8 +1969,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (performanceRatio >= 0.5) return "A"; // Average: 50-99%
           return "B"; // Bad: less than 50%
         })(),
-        deliveredItems: [],
-        defaultedItems: [],
+        deliveredItems,
+        defaultedItems,
         performanceData,
         teamMembers: teamRecruiters.map(r => ({ id: r.id, name: r.name }))
       };
@@ -2857,6 +2982,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Interview Tracker API routes
+  // Get interviews for the logged-in recruiter
+  app.get("/api/recruiter/interviews", requireEmployeeAuth, async (req, res) => {
+    try {
+      console.log('GET /api/recruiter/interviews - Request received');
+      const session = req.session as any;
+      
+      if (!session || !session.employeeId) {
+        console.log('GET /api/recruiter/interviews - No session found');
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const employee = await storage.getEmployeeById(session.employeeId);
+      
+      if (!employee) {
+        console.log('GET /api/recruiter/interviews - Employee not found:', session.employeeId);
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      if (employee.role !== 'recruiter') {
+        console.log('GET /api/recruiter/interviews - Not a recruiter:', employee.role);
+        return res.status(403).json({ message: "Access denied. Recruiter role required." });
+      }
+
+      console.log('GET /api/recruiter/interviews - Fetching interviews for:', employee.name);
+      const interviews = await storage.getInterviewsByRecruiterName(employee.name);
+      console.log('GET /api/recruiter/interviews - Found interviews:', interviews.length);
+      
+      // Transform to match frontend expected format
+      const transformedInterviews = interviews.map(interview => ({
+        id: interview.id,
+        candidateName: interview.candidateName,
+        position: interview.position,
+        client: interview.client,
+        interviewDate: interview.interviewDate,
+        interviewTime: interview.interviewTime,
+        interviewType: interview.interviewType,
+        interviewRound: interview.interviewRound,
+        status: interview.status
+      }));
+
+      res.json(transformedInterviews);
+    } catch (error) {
+      console.error('Get recruiter interviews error:', error);
+      res.status(500).json({ message: "Failed to fetch interviews", error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+
+  // Create a new interview for the logged-in recruiter
+  app.post("/api/recruiter/interviews", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      if (employee.role !== 'recruiter') {
+        return res.status(403).json({ message: "Access denied. Recruiter role required." });
+      }
+
+      const { candidateName, position, client, interviewDate, interviewTime, interviewType, interviewRound, status } = req.body;
+
+      if (!candidateName || !position || !client || !interviewDate || !interviewTime || !interviewType) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+
+      const interview = await storage.createInterview({
+        candidateName,
+        position,
+        client,
+        interviewDate,
+        interviewTime,
+        interviewType,
+        interviewRound: interviewRound || 'L1',
+        status: status || 'scheduled',
+        recruiterName: employee.name,
+        createdAt: new Date().toISOString()
+      });
+
+      res.status(201).json({
+        id: interview.id,
+        candidateName: interview.candidateName,
+        position: interview.position,
+        client: interview.client,
+        interviewDate: interview.interviewDate,
+        interviewTime: interview.interviewTime,
+        interviewType: interview.interviewType,
+        interviewRound: interview.interviewRound,
+        status: interview.status
+      });
+    } catch (error) {
+      console.error('Create recruiter interview error:', error);
+      res.status(500).json({ message: "Failed to create interview" });
+    }
+  });
+
   // Recruiter file upload endpoints
   // Recruiter data endpoints - same as team leader
   // Legacy endpoint - returns 0 defaults for backward compatibility
@@ -2909,24 +3132,113 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get requirements assigned to this recruiter directly from requirements table
       const requirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
-      const totalRequirements = requirements.length;
       
       // Calculate total required resumes and track per-requirement delivery
       let totalResumesRequired = 0;
       let totalResumesDelivered = 0;
       let completedRequirements = 0;
       
+      // Get requirements created on or before the selected date (for this recruiter)
+      const filteredRequirements = requirements.filter(req => {
+        const createdDate = new Date(req.createdAt).toISOString().split('T')[0];
+        return createdDate <= today;
+      });
+      
       // Get all resume submissions by this recruiter for their requirements
-      const { resumeSubmissions } = await import("@shared/schema");
-      const allSubmissions = await db.select().from(resumeSubmissions)
+      const { resumeSubmissions, jobApplications } = await import("@shared/schema");
+      const allSubmissionsRaw = await db.select().from(resumeSubmissions)
         .where(eq(resumeSubmissions.recruiterId, employee.id));
       
-      for (const req of requirements) {
+      // Get all resume submissions by this recruiter (up to selected date - cumulative)
+      const allSubmissions = allSubmissionsRaw.filter(sub => {
+        if (!sub.submittedAt) return false;
+        const subDate = new Date(sub.submittedAt).toISOString().split('T')[0];
+        return subDate <= today;
+      });
+      
+      // Get all job applications tagged by this recruiter (up to selected date - cumulative)
+      // These are candidates tagged to requirements (source: 'recruiter_tagged')
+      const taggedApplicationsRaw = await db.select().from(jobApplications)
+        .where(eq(jobApplications.source, 'recruiter_tagged'));
+      
+      // Filter applications up to the selected date (cumulative)
+      const taggedApplications = taggedApplicationsRaw.filter(app => {
+        if (!app.appliedDate) return false;
+        const appDate = new Date(app.appliedDate).toISOString().split('T')[0];
+        return appDate <= today;
+      });
+      
+      // Get requirement IDs assigned to this recruiter (filtered by date)
+      const recruiterRequirementIds = filteredRequirements.map(r => r.id);
+      
+      // Filter tagged applications to only those for this recruiter's requirements
+      const recruiterTaggedApps = taggedApplications.filter(app => 
+        app.requirementId && recruiterRequirementIds.includes(app.requirementId)
+      );
+      
+      // Get delivered candidates for the specific date (for modal display)
+      const deliveredCandidatesForDate: Array<{
+        candidate: string;
+        position: string;
+        client: string;
+        deliveredDate: string;
+        status: string;
+      }> = [];
+      
+      // Get submissions for the specific date
+      const submissionsForDate = allSubmissionsRaw.filter(sub => {
+        if (!sub.submittedAt) return false;
+        const subDate = new Date(sub.submittedAt).toISOString().split('T')[0];
+        return subDate === today;
+      });
+      
+      // Get tagged applications for the specific date
+      const taggedForDate = taggedApplicationsRaw.filter(app => {
+        if (!app.appliedDate) return false;
+        const appDate = new Date(app.appliedDate).toISOString().split('T')[0];
+        return appDate === today && app.requirementId && recruiterRequirementIds.includes(app.requirementId);
+      });
+      
+      // Build delivered candidates list for the selected date
+      for (const sub of submissionsForDate) {
+        const req = filteredRequirements.find(r => r.id === sub.requirementId);
+        if (req) {
+          deliveredCandidatesForDate.push({
+            candidate: sub.candidateName || 'Unknown',
+            position: req.position,
+            client: req.company,
+            deliveredDate: new Date(sub.submittedAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-'),
+            status: sub.status || 'Submitted'
+          });
+        }
+      }
+      
+      for (const app of taggedForDate) {
+        const req = filteredRequirements.find(r => r.id === app.requirementId);
+        if (req) {
+          deliveredCandidatesForDate.push({
+            candidate: app.candidateName || 'Unknown',
+            position: app.jobTitle,
+            client: app.company,
+            deliveredDate: new Date(app.appliedDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-'),
+            status: app.status || 'Tagged'
+          });
+        }
+      }
+      
+      // Calculate metrics for requirements that existed on or before the selected date
+      for (const req of filteredRequirements) {
         const target = getResumeTarget(req.criticality, req.toughness);
         totalResumesRequired += target;
         
-        // Count resumes submitted for this requirement
-        const deliveredForReq = allSubmissions.filter(s => s.requirementId === req.id).length;
+        // Count resumes submitted for this requirement (cumulative up to selected date)
+        const deliveredFromSubmissions = allSubmissions.filter(s => s.requirementId === req.id).length;
+        
+        // Count candidates tagged to this requirement (cumulative up to selected date)
+        const deliveredFromTagged = recruiterTaggedApps.filter(app => app.requirementId === req.id).length;
+        
+        // Total delivered = resume submissions + tagged candidates (cumulative)
+        const deliveredForReq = deliveredFromSubmissions + deliveredFromTagged;
         totalResumesDelivered += deliveredForReq;
         
         // Check if this requirement is fully delivered
@@ -2934,6 +3246,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           completedRequirements++;
         }
       }
+      
+      // Update totalRequirements to use filtered requirements
+      const totalRequirements = filteredRequirements.length;
+      
+      // Calculate daily delivery count (for the specific date, not cumulative)
+      const dailyDeliveryCount = submissionsForDate.length + taggedForDate.length;
       
       const dailyMetrics = {
         id: `daily-rec-${employee.id}`,
@@ -2943,8 +3261,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalResumes: totalResumesDelivered,
         totalResumesDelivered,
         totalResumesRequired,
-        dailyDeliveryDelivered: totalResumesDelivered,
-        dailyDeliveryDefaulted: Math.max(0, totalResumesRequired - totalResumesDelivered),
+        dailyDeliveryDelivered: dailyDeliveryCount, // Count for the specific date
+        dailyDeliveryDefaulted: Math.max(0, totalResumesRequired - totalResumesDelivered), // Cumulative defaulted
         overallPerformance: (() => {
           if (totalResumesRequired === 0) return "G";
           const performanceRatio = totalResumesDelivered / totalResumesRequired;
@@ -2955,7 +3273,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         delivered: totalResumesDelivered,
         defaulted: Math.max(0, totalResumesRequired - totalResumesDelivered),
         required: totalResumesRequired,
-        requirementCount: totalRequirements
+        requirementCount: totalRequirements,
+        deliveredCandidates: deliveredCandidatesForDate // Add delivered candidates list for modal
       };
       res.json(dailyMetrics);
     } catch (error) {
@@ -3026,6 +3345,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get recruiter daily metrics history error:', error);
       res.status(500).json({ message: "Failed to fetch daily metrics history" });
+    }
+  });
+
+  // Get delivered candidates for a specific date
+  app.get("/api/recruiter/delivered-candidates", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      const dateParam = req.query.date as string | undefined;
+      const today = dateParam || new Date().toISOString().split('T')[0];
+      
+      const { resumeSubmissions, jobApplications, requirements } = await import("@shared/schema");
+      
+      // Get resume submissions for this date
+      const submissionsRaw = await db.select().from(resumeSubmissions)
+        .where(eq(resumeSubmissions.recruiterId, employee.id));
+      
+      const submissions = submissionsRaw.filter(sub => {
+        if (!sub.submittedAt) return false;
+        const subDate = new Date(sub.submittedAt).toISOString().split('T')[0];
+        return subDate === today;
+      });
+      
+      // Get tagged applications for this date
+      const taggedAppsRaw = await db.select().from(jobApplications)
+        .where(eq(jobApplications.source, 'recruiter_tagged'));
+      
+      const taggedApps = taggedAppsRaw.filter(app => {
+        if (!app.appliedDate) return false;
+        const appDate = new Date(app.appliedDate).toISOString().split('T')[0];
+        return appDate === today;
+      });
+      
+      // Get recruiter's requirements
+      const recruiterRequirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
+      const recruiterRequirementIds = recruiterRequirements.map(r => r.id);
+      
+      // Filter tagged apps to recruiter's requirements
+      const recruiterTaggedApps = taggedApps.filter(app => 
+        app.requirementId && recruiterRequirementIds.includes(app.requirementId)
+      );
+      
+      // Get all requirements for company/position lookup
+      const allRequirements = await db.select().from(requirements);
+      
+      // Combine and format delivered candidates
+      const deliveredCandidates = [];
+      
+      // Add resume submissions
+      for (const sub of submissions) {
+        const requirement = allRequirements.find(r => r.id === sub.requirementId);
+        deliveredCandidates.push({
+          id: sub.id,
+          candidate: sub.candidateName || 'N/A',
+          position: requirement?.position || 'N/A',
+          client: requirement?.company || 'N/A',
+          deliveredDate: new Date(sub.submittedAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-'),
+          status: sub.status || 'Delivered',
+          type: 'Resume Submission'
+        });
+      }
+      
+      // Add tagged candidates
+      for (const app of recruiterTaggedApps) {
+        const requirement = allRequirements.find(r => r.id === app.requirementId);
+        deliveredCandidates.push({
+          id: app.id,
+          candidate: app.candidateName || 'N/A',
+          position: app.jobTitle || requirement?.position || 'N/A',
+          client: app.company || requirement?.company || 'N/A',
+          deliveredDate: new Date(app.appliedDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-'),
+          status: app.status || 'Tagged',
+          type: 'Tagged Candidate'
+        });
+      }
+      
+      res.json(deliveredCandidates);
+    } catch (error) {
+      console.error('Get delivered candidates error:', error);
+      res.status(500).json({ message: "Failed to fetch delivered candidates" });
     }
   });
 
@@ -3228,7 +3631,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Fetch revenue mappings where this recruiter is the talent advisor
-      const revenueMappings = await storage.getRevenueMappingsByRecruiterId(session.employeeId);
+      const revenueMappings = await storage.getRevenueMappingsByTalentAdvisorId(session.employeeId);
       
       // Transform to closure report format for frontend with full data
       const closureReports = revenueMappings.map((mapping) => ({
@@ -6129,6 +6532,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Update application status error:", error);
       res.status(500).json({ message: "Failed to update application status" });
+    }
+  });
+
+  // Create closure (creates a revenue mapping with basic info, revenue/incentive can be updated by admin later)
+  app.post("/api/recruiter/closures", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee || employee.role !== 'recruiter') {
+        return res.status(403).json({ message: "Access denied. Recruiter role required." });
+      }
+
+      const { applicationId, candidateName, client, position, offeredOn, joinedOn, quarter } = req.body;
+
+      if (!applicationId || !candidateName || !client || !position || !offeredOn || !joinedOn || !quarter) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+
+      // Get the application to find requirement and client info
+      // Use getAllJobApplications and filter by ID (safer than getJobApplicationById)
+      const allApplications = await storage.getAllJobApplications();
+      const application = allApplications.find(app => app.id === applicationId);
+      if (!application) {
+        return res.status(404).json({ message: "Application not found" });
+      }
+
+      // Get requirement to find team lead (get all requirements and filter by ID)
+      let teamLeadId = '';
+      let teamLeadName = '';
+      if (application.requirementId) {
+        const allRequirements = await storage.getRequirements();
+        const requirement = allRequirements.find(r => r.id === application.requirementId);
+        if (requirement && requirement.teamLeadId) {
+          const teamLead = await storage.getEmployeeById(requirement.teamLeadId);
+          if (teamLead) {
+            teamLeadId = teamLead.id;
+            teamLeadName = teamLead.name;
+          }
+        }
+      }
+
+      // If no team lead from requirement, try to find from employee's reportingTo
+      if (!teamLeadId && employee.reportingTo) {
+        const reportingManager = await storage.getEmployeeByEmployeeId(employee.reportingTo);
+        if (reportingManager && reportingManager.role === 'team_leader') {
+          teamLeadId = reportingManager.id;
+          teamLeadName = reportingManager.name;
+        }
+      }
+
+      // Fallback: if still no team lead, use employee as team lead
+      if (!teamLeadId) {
+        teamLeadId = employee.id;
+        teamLeadName = employee.name;
+      }
+
+      // Get client ID from company name
+      const allClients = await storage.getAllClients();
+      const clientRecord = allClients.find(c => c.brandName === client || c.companyName === client);
+      const clientId = clientRecord?.id || '';
+
+      if (!clientId) {
+        return res.status(400).json({ message: "Client not found. Please ensure the client exists in the system." });
+      }
+
+      // Parse quarter (format: Q1-2024)
+      const quarterMatch = quarter.match(/Q(\d)-(\d{4})/);
+      if (!quarterMatch) {
+        return res.status(400).json({ message: "Invalid quarter format. Expected format: Q1-2024" });
+      }
+      const quarterNum = parseInt(quarterMatch[1]);
+      const year = parseInt(quarterMatch[2]);
+      
+      // Map quarter number to quarter text (JFM, AMJ, JAS, OND)
+      const quarterMap: Record<number, string> = {
+        1: 'JFM',
+        2: 'AMJ',
+        3: 'JAS',
+        4: 'OND'
+      };
+      const quarterText = quarterMap[quarterNum] || 'JFM';
+
+      // Create revenue mapping with default values (admin can update revenue/incentive later)
+      // Use insertRevenueMappingSchema to validate the data (this will strip createdAt)
+      const revenueMappingData = insertRevenueMappingSchema.parse({
+        talentAdvisorId: employee.id,
+        talentAdvisorName: employee.name,
+        teamLeadId: teamLeadId,
+        teamLeadName: teamLeadName,
+        candidateName: candidateName,
+        year: year,
+        quarter: quarterText,
+        position: position,
+        clientId: clientId,
+        clientName: client,
+        clientType: 'Direct', // Default to Direct, admin can update
+        partnerName: null,
+        offeredDate: offeredOn,
+        closureDate: joinedOn,
+        percentage: 0, // Default, admin will update
+        revenue: 0, // Default, admin will update
+        incentivePlan: 'TA', // Default to TA (Talent Advisor)
+        incentive: 0, // Default, admin will update
+        source: 'Direct', // Default, admin can update
+        invoiceDate: null,
+        invoiceNumber: null,
+        receivedPayment: null,
+        paymentDetails: null,
+        paymentStatus: null,
+        incentivePaidMonth: null,
+      });
+
+      // Add createdAt since it's required by the database but omitted from the schema
+      // Pass it explicitly to createRevenueMapping
+      const revenueMapping = await storage.createRevenueMapping({
+        ...revenueMappingData,
+        createdAt: new Date().toISOString()
+      } as InsertRevenueMapping & { createdAt: string });
+
+      // Update application status to 'Closure'
+      await storage.updateJobApplicationStatus(applicationId, 'Closure');
+
+      res.status(201).json({ 
+        message: "Closure created successfully", 
+        revenueMapping,
+        note: "Revenue and incentive values are set to 0. Admin can update these values in Revenue Mapping."
+      });
+    } catch (error: any) {
+      console.error("Create closure error:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({
+          message: "Invalid closure data",
+          errors: error.errors
+        });
+      }
+      res.status(500).json({ message: "Failed to create closure", error: error.message });
     }
   });
 
