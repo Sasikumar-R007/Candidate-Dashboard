@@ -504,7 +504,7 @@ function ImpactMetricsEditor() {
   const [editValue, setEditValue] = useState<string>("");
 
   // Fetch impact metrics
-  const { data: metrics, isLoading } = useQuery<any[]>({
+  const { data: metrics, isLoading } = useQuery({
     queryKey: ['/api/admin/impact-metrics'],
   });
 
@@ -548,8 +548,7 @@ function ImpactMetricsEditor() {
     }
 
     // If no metrics exist, create one first
-    const metricsArray = (metrics as any[]) || [];
-    if (!metricsArray || metricsArray.length === 0) {
+    if (!metrics || metrics.length === 0) {
       const defaultMetrics = {
         speedToHire: 0,
         revenueImpactOfDelay: 0,
@@ -566,7 +565,7 @@ function ImpactMetricsEditor() {
       return;
     }
 
-    updateMutation.mutate({ id: metricsArray[0].id, field, value });
+    updateMutation.mutate({ id: metrics[0].id, field, value });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, field: string) => {
@@ -581,8 +580,7 @@ function ImpactMetricsEditor() {
     return <div className="text-center py-8 text-gray-500">Loading metrics...</div>;
   }
 
-  const metricsArray = (metrics as any[]) || [];
-  const currentMetrics = metricsArray?.[0] || {
+  const currentMetrics = metrics?.[0] || {
     speedToHire: 0,
     revenueImpactOfDelay: 0,
     clientNps: 0,
@@ -730,7 +728,7 @@ function ClientSettingsSection() {
   const [avgDaysValue, setAvgDaysValue] = useState<string>("");
 
   // Fetch impact metrics
-  const { data: metrics, isLoading } = useQuery<any[]>({
+  const { data: metrics, isLoading } = useQuery({
     queryKey: ['/api/admin/impact-metrics'],
   });
 
@@ -791,8 +789,7 @@ function ClientSettingsSection() {
     }
 
     // If no metrics exist, create one first
-    const metricsArray = (metrics as any[]) || [];
-    if (!metricsArray || metricsArray.length === 0) {
+    if (!metrics || metrics.length === 0) {
       const defaultMetrics = {
         speedToHire: 15,
         revenueImpactOfDelay: 75000,
@@ -809,8 +806,8 @@ function ClientSettingsSection() {
     }
 
     // Otherwise, update existing metrics
-    if (metricsArray[0]) {
-      updateMutation.mutate({ id: metricsArray[0].id, value });
+    if (metrics[0]) {
+      updateMutation.mutate({ id: metrics[0].id, value });
     }
   };
 
@@ -1199,7 +1196,9 @@ export default function AdminDashboard() {
   // Delete revenue mapping mutation
   const deleteRevenueMappingMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest("DELETE", `/api/admin/revenue-mappings/${id}`);
+      return await apiRequest(`/api/admin/revenue-mappings/${id}`, {
+        method: "DELETE",
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/revenue-mappings"] });
@@ -1391,7 +1390,7 @@ export default function AdminDashboard() {
   });
 
   // Client JDs API query
-  const { data: clientJDs = [], isLoading: isLoadingClientJDs, refetch: refetchClientJDs } = useQuery<any[]>({
+  const { data: clientJDs = [], isLoading: isLoadingClientJDs, refetch: refetchClientJDs } = useQuery({
     queryKey: ['/api/admin/client-jds'],
     refetchOnMount: true,
     refetchOnWindowFocus: true
@@ -1525,8 +1524,7 @@ export default function AdminDashboard() {
 
   // Filter clients for Master Data - exclude login-only clients (those belong in User Management)
   const masterDataClients = useMemo(() => {
-    const clientsArray = (clients as any[]) || [];
-    return clientsArray.filter((client: any) => !client.isLoginOnly);
+    return clients.filter((client: any) => !client.isLoginOnly);
   }, [clients]);
 
   const filteredClients = useMemo(() => {
@@ -1567,10 +1565,9 @@ export default function AdminDashboard() {
   }, [candidates, resumeDatabaseSearch]);
 
   const filteredRequirements = useMemo(() => {
-    const requirementsArray = (requirements as any[]) || [];
-    if (!requirementsSearch.trim()) return requirementsArray;
+    if (!requirementsSearch.trim()) return requirements;
     const search = requirementsSearch.toLowerCase();
-    return requirementsArray.filter((req: any) => 
+    return requirements.filter((req: any) => 
       req.position?.toLowerCase().includes(search) ||
       req.criticality?.toLowerCase().includes(search) ||
       req.company?.toLowerCase().includes(search) ||
@@ -2576,8 +2573,7 @@ export default function AdminDashboard() {
   };
 
   const handleRequirementsViewMore = () => {
-    const requirementsArray = (requirements as any[]) || [];
-    if (requirementsArray.length > 10) {
+    if (requirements.length > 10) {
       setIsAllRequirementsModalOpen(true);
     }
   };
@@ -3146,11 +3142,8 @@ export default function AdminDashboard() {
   };
 
   const handleDateChange = (value: string) => {
-    if (value === 'custom') {
-      setTeamsCustomDate(new Date());
-    } else {
-      setTeamsCustomDate(undefined);
-    }
+    setMeetingDate(value);
+    setIsCustomDate(value === 'custom');
   };
 
   // Create cash outflow mutation
@@ -3220,10 +3213,9 @@ export default function AdminDashboard() {
     }
 
     const metrics = impactMetricsQuery.data;
-    const metricsArray = (metrics as any[]) || [];
     
     // If no metrics exist, create one first
-    if (!metricsArray || metricsArray.length === 0) {
+    if (!metrics || metrics.length === 0) {
       const defaultMetrics = {
         speedToHire: 15,
         revenueImpactOfDelay: 75000,
@@ -3249,9 +3241,9 @@ export default function AdminDashboard() {
     }
 
     // Otherwise, update existing metrics
-    if (metricsArray && metricsArray[0]) {
+    if (metrics[0]) {
       try {
-        const response = await apiRequest('PUT', `/api/admin/impact-metrics/${metricsArray[0].id}`, { feedbackTurnAroundAvgDays: value });
+        const response = await apiRequest('PUT', `/api/admin/impact-metrics/${metrics[0].id}`, { feedbackTurnAroundAvgDays: value });
         await response.json();
         impactMetricsQuery.refetch();
         toast({ title: "Success", description: "Feedback Turn Around Avg Days updated successfully" });
@@ -3978,7 +3970,7 @@ export default function AdminDashboard() {
                       <tr>
                         <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading JDs...</td>
                       </tr>
-                    ) : !clientJDs || (clientJDs as any[]).length === 0 ? (
+                    ) : !clientJDs || clientJDs.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">No client-submitted JDs found.</td>
                       </tr>
@@ -4099,7 +4091,7 @@ export default function AdminDashboard() {
                     <Button 
                       className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
                       onClick={handleRequirementsViewMore}
-                      disabled={(requirements as any[])?.length <= 10}
+                      disabled={requirements.length <= 10}
                     >
                       View More
                     </Button>
@@ -5444,7 +5436,7 @@ export default function AdminDashboard() {
                       <RotateCcw className="h-4 w-4" />
                     )}
                   </Button>
-                  {Array.isArray(clientJDs) && (clientJDs as any[]).length > 5 && (
+                  {clientJDs && (clientJDs as any[]).length > 5 && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -5476,7 +5468,7 @@ export default function AdminDashboard() {
                       <tr>
                         <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading JDs...</td>
                       </tr>
-                    ) : !clientJDs || (clientJDs as any[]).length === 0 ? (
+                    ) : !clientJDs || clientJDs.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">No client-submitted JDs found.</td>
                       </tr>
@@ -5652,7 +5644,7 @@ export default function AdminDashboard() {
                     <Button 
                       className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
                       onClick={handleRequirementsViewMore}
-                      disabled={(requirements as any[])?.length <= 10}
+                      disabled={requirements.length <= 10}
                     >
                       View More
                     </Button>
@@ -7162,7 +7154,7 @@ export default function AdminDashboard() {
                               <SelectValue placeholder="Client" />
                             </SelectTrigger>
                             <SelectContent>
-                              {((clients as any[]) || []).map((client: any) => (
+                              {clients.map((client: any) => (
                                 <SelectItem key={client.id} value={client.id}>
                                   {client.brandName || client.incorporatedName || 'Unknown'}
                                 </SelectItem>
@@ -9343,7 +9335,7 @@ export default function AdminDashboard() {
       <Dialog open={isAllRequirementsModalOpen} onOpenChange={setIsAllRequirementsModalOpen}>
         <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden">
           <DialogHeader>
-            <DialogTitle>All Requirements ({(requirements as any[])?.length || 0})</DialogTitle>
+            <DialogTitle>All Requirements ({requirements.length})</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[60vh]">
             <div className="overflow-x-auto">
@@ -9360,7 +9352,7 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {((requirements as any[]) || []).map((requirement: any) => (
+                  {requirements.map((requirement: Requirement) => (
                     <tr key={requirement.id} className="border-b border-gray-100 dark:border-gray-800">
                       <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{requirement.position}</td>
                       <td className="py-3 px-3">
