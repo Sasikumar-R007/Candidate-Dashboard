@@ -41,19 +41,27 @@ export default function SimpleClientHeader({
     },
     onSuccess: () => {
       logout();
+      // Clear any stored session data
+      localStorage.clear();
+      sessionStorage.clear();
       toast({
         title: "Logged out successfully",
         description: "You have been signed out.",
       });
-      navigate('/employer-login');
+      // Navigate to home page and prevent back navigation
+      window.location.href = '/employer-login';
     },
     onError: () => {
       logout();
+      // Clear any stored session data
+      localStorage.clear();
+      sessionStorage.clear();
       toast({
         title: "Logged out",
         description: "You have been signed out (session cleared locally).",
       });
-      navigate('/employer-login');
+      // Navigate to home page and prevent back navigation
+      window.location.href = '/employer-login';
     }
   });
 

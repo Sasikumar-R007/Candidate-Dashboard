@@ -34,23 +34,33 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
       return await res.json();
     },
     onSuccess: () => {
-      // Use auth context logout
+      // Use auth context logout to clear session
       logout();
+      // Clear any stored session data
+      localStorage.clear();
+      sessionStorage.clear();
       
       toast({
         title: "Logged out successfully",
         description: "You have been signed out.",
       });
       
-      // Navigate to home page
-      navigate('/');
+      // Navigate to home page and prevent back navigation
+      window.location.href = '/';
     },
     onError: (error: any) => {
+      // Even on error, clear session locally
+      logout();
+      localStorage.clear();
+      sessionStorage.clear();
+      
       toast({
-        title: "Logout failed",
-        description: error.message || "Failed to logout. Please try again.",
-        variant: "destructive"
+        title: "Logged out",
+        description: "You have been signed out (session cleared locally).",
       });
+      
+      // Navigate to home page and prevent back navigation
+      window.location.href = '/';
     }
   });
 
@@ -66,10 +76,12 @@ export default function Sidebar({ activeTab, onTabChange }: SidebarProps) {
   return (
     <div className="w-16 bg-slate-900 text-white flex-shrink-0 h-screen overflow-hidden fixed left-0 top-0 z-50 flex flex-col">
       {/* Logo Section */}
-      <div className="h-16 flex items-center justify-center border-b border-slate-700">
-        <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 via-blue-500 to-green-400 rounded-lg flex items-center justify-center">
-          <span className="text-white font-bold text-lg">X</span>
-        </div>
+      <div className="h-16 flex items-center justify-center border-b border-slate-700 gap-2">
+        <img 
+          src={staffosLogo} 
+          alt="StaffOS Logo" 
+          className="w-10 h-10 object-cover rounded-full"
+        />
       </div>
 
       {/* Navigation Items */}

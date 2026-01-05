@@ -20,10 +20,13 @@ export function ProtectedRoute({
   const [, setLocation] = useLocation();
 
   const authState = useMemo(() => {
+    // CRITICAL: Block ALL access until auth is fully verified
+    // This prevents race conditions where page loads before auth check completes
     if (isLoading || !isVerified) {
       return { status: 'loading' as const };
     }
 
+    // After verification is complete, check authentication
     if (!user) {
       return { status: 'unauthenticated' as const, redirect: redirectTo };
     }
@@ -44,11 +47,14 @@ export function ProtectedRoute({
   }, [user, isLoading, isVerified, allowedRoles, redirectTo, userType]);
 
   useEffect(() => {
+    // Immediately redirect if not authorized (no delay)
     if (authState.status !== 'loading' && authState.status !== 'authorized' && 'redirect' in authState) {
       setLocation(authState.redirect);
     }
   }, [authState, setLocation]);
 
+  // NEVER render children until fully authorized
+  // This is the security barrier
   if (authState.status === 'loading') {
     return (
       <div className="flex items-center justify-center min-h-screen" data-testid="loading-auth">
@@ -61,6 +67,7 @@ export function ProtectedRoute({
   }
 
   if (authState.status !== 'authorized') {
+    // Show redirecting screen while redirect happens
     return (
       <div className="flex items-center justify-center min-h-screen" data-testid="redirecting">
         <div className="flex flex-col items-center gap-4">
@@ -71,5 +78,6 @@ export function ProtectedRoute({
     );
   }
 
+  // Only render children when status is explicitly 'authorized'
   return <>{children}</>;
 }

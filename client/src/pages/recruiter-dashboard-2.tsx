@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, ExternalLink, Phone, Star, Copy, FileText } from "lucide-react";
+import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, ExternalLink, Phone, Star, Copy, FileText, Eye } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
@@ -25,11 +25,20 @@ import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, ResponsiveContainer
 import { ChatDock } from '@/components/chat/chat-dock';
 import { HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useEmployeeAuth } from '@/contexts/auth-context';
 
 export default function RecruiterDashboard2() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const [sidebarTab, setSidebarTab] = useState('dashboard');
+  
+  // Restore sidebarTab from sessionStorage for proper back navigation
+  const initialSidebarTab = () => {
+    const saved = sessionStorage.getItem('recruiterDashboardSidebarTab');
+    sessionStorage.removeItem('recruiterDashboardSidebarTab');
+    return saved ? saved : 'dashboard';
+  };
+  
+  const [sidebarTab, setSidebarTab] = useState(initialSidebarTab());
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('team');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -37,6 +46,8 @@ export default function RecruiterDashboard2() {
   const [isClosureDetailsModalOpen, setIsClosureDetailsModalOpen] = useState(false);
   const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
   const [selectedRequirement, setSelectedRequirement] = useState<any>(null);
+  const [selectedJD, setSelectedJD] = useState<any>(null);
+  const [isJDDetailsModalOpen, setIsJDDetailsModalOpen] = useState(false);
   const [assignments, setAssignments] = useState<{[key: string]: string}>({'mobile-app-dev': 'Arun'});
   const [isReallocating, setIsReallocating] = useState(false);
   const [selectedAssignee, setSelectedAssignee] = useState<string>('');
@@ -887,6 +898,9 @@ export default function RecruiterDashboard2() {
   const { data: recruiterProfile } = useQuery({
     queryKey: ['/api/recruiter/profile'],
   }) as { data: any };
+  const employee = useEmployeeAuth();
+  const userName = recruiterProfile?.name || employee?.name || "Recruiter User";
+  const userRole = employee?.role || 'recruiter';
 
   const { data: teamMembers } = useQuery({
     queryKey: ['/api/recruiter/team-members'],
@@ -1026,7 +1040,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader companyName="Scaling Theory" />
+          <AdminTopHeader companyName="StaffOS" />
           <div className="flex h-screen">
             {/* Main Content - Middle Section (Scrollable) */}
             <div className="px-6 py-6 space-y-6 flex-1 overflow-y-auto h-full">
@@ -1527,7 +1541,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader companyName="Scaling Theory" />
+          <AdminTopHeader companyName="StaffOS" />
           <div className="flex h-screen">
             {/* Main Content Area */}
             <div className="flex-1 px-6 py-6 overflow-y-auto">
@@ -1599,6 +1613,24 @@ export default function RecruiterDashboard2() {
                               <td className="py-3 px-4 text-gray-900">{req.company}</td>
                               <td className="py-3 px-4 text-gray-900">{req.spoc}</td>
                               <td className="py-3 px-4">
+                                {req.jdText ? (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedJD(req);
+                                      setIsJDDetailsModalOpen(true);
+                                    }}
+                                    className="p-1 h-8 w-8"
+                                    title="View JD"
+                                  >
+                                    <Eye className="h-4 w-4 text-blue-600 hover:text-blue-800" />
+                                  </Button>
+                                ) : (
+                                  <span className="text-gray-400 text-xs">-</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-4">
                                 <span className={`font-medium ${isCountComplete(req) ? 'text-green-600' : 'text-red-600'}`} data-testid={`text-count-${index}`}>
                                   {getCountDisplay(req)}
                                 </span>
@@ -1614,15 +1646,21 @@ export default function RecruiterDashboard2() {
                   <div className="flex justify-center gap-4 p-4 border-t border-gray-100">
                     <Button 
                       variant="outline" 
-                      className="bg-red-500 hover:bg-red-600 text-white hover:text-white border-red-500 hover:border-red-600 rounded px-6"
-                      data-testid="button-req-archives"
+                      className="bg-red-500 hover:bg-red-600 text-white hover:text-white border-red-500 hover:border-red-600 rounded px-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => {
+                        sessionStorage.setItem('recruiterDashboardSidebarTab', sidebarTab);
+                        navigate('/archives');
+                      }}
+                      disabled={false}
+                      data-testid="button-archives"
                     >
-                      Req-Archives
+                      Archives
                     </Button>
                     <Button 
                       variant="outline" 
                       className="bg-blue-500 hover:bg-blue-600 text-white hover:text-white border-blue-500 hover:border-blue-600 rounded px-6"
                       onClick={() => setIsAllRequirementsModalOpen(true)}
+                      disabled={requirementsTableData.length <= 5}
                       data-testid="button-view-more"
                     >
                       View More
@@ -1812,7 +1850,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader companyName="Scaling Theory" />
+          <AdminTopHeader companyName="StaffOS" />
           <div className="flex h-screen">
             {/* Main Content Area */}
             <div className="flex-1 px-6 py-6 overflow-y-auto">
@@ -2179,7 +2217,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50 dark:bg-gray-950">
-          <AdminTopHeader companyName="Scaling Theory" />
+          <AdminTopHeader companyName="StaffOS" />
           <div className="flex h-[calc(100vh-64px)]">
             {/* Main Content Area - Scrollable */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -2447,7 +2485,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader companyName="Scaling Theory" />
+          <AdminTopHeader companyName="StaffOS" />
           <div className="flex flex-col h-full p-6">
             <h2 className="text-2xl font-bold mb-4">Team Chat</h2>
             <div className="flex-1 bg-white rounded-lg border border-gray-200 p-4 mb-4 overflow-y-auto">
@@ -2822,10 +2860,7 @@ export default function RecruiterDashboard2() {
               </table>
             )}
           </div>
-          <div className="flex justify-between mt-4">
-            <Button variant="outline" onClick={() => window.location.href = '/master-database'} data-testid="button-view-all-pending">
-              View All Cases
-            </Button>
+          <div className="flex justify-end mt-4">
             <Button onClick={() => setIsPendingCasesModalOpen(false)} data-testid="button-close-pending-cases">
               Close
             </Button>
@@ -3196,11 +3231,72 @@ export default function RecruiterDashboard2() {
         <HelpCircle size={24} />
       </button>
 
+      {/* JD Details Modal */}
+      {isJDDetailsModalOpen && selectedJD && (
+        <Dialog open={isJDDetailsModalOpen} onOpenChange={setIsJDDetailsModalOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-semibold text-gray-900">Requirement Details</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-6 mt-4">
+              {/* Requirement Details */}
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Requirement Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Position</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{selectedJD.position}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Company</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{selectedJD.company}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">SPOC</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{selectedJD.spoc}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Criticality</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{selectedJD.criticality}-{selectedJD.toughness || 'Medium'}</p>
+                  </div>
+                  {selectedJD.talentAdvisor && (
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Talent Advisor</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{selectedJD.talentAdvisor}</p>
+                    </div>
+                  )}
+                  {selectedJD.teamLead && (
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Team Lead</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{selectedJD.teamLead}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* JD Text Content */}
+              {selectedJD.jdText && (
+                <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Job Description</h3>
+                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                    <pre className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-sans max-h-96 overflow-y-auto">
+                      {selectedJD.jdText}
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
       {/* Chat Support Modal */}
       <ChatDock 
         open={isChatOpen} 
         onClose={() => setIsChatOpen(false)} 
-        userName="Support Team"
+        userName={userName}
+        userRole={userRole}
       />
     </div>
   );

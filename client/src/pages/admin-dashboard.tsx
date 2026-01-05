@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { type Employee, type TargetMappings } from '@shared/schema';
 import AdminSidebar from '@/components/dashboard/admin-sidebar';
 import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
@@ -32,13 +32,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
-import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users, ExternalLink, HelpCircle, MoreVertical, Download, Edit2, ChevronDown, ChevronUp, Plus, CheckCircle2, Trash2 } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users, ExternalLink, HelpCircle, MoreVertical, Download, Edit2, ChevronDown, ChevronUp, Plus, CheckCircle2, Trash2, RotateCcw, Eye } from "lucide-react";
 import { format } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ComposedChart, BarChart, Bar, Cell, AreaChart, Area } from 'recharts';
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useEmployeeAuth } from "@/contexts/auth-context";
 import GaugeComponent from 'react-gauge-component';
 import PerformanceGauge from '@/components/dashboard/performance-gauge';
 import { ChatDock } from '@/components/chat/chat-dock';
@@ -52,6 +54,8 @@ interface Requirement {
   spoc: string;
   talentAdvisor: string;
   teamLead: string;
+  jdFile?: string;
+  jdText?: string;
 }
 
 // Requirements data for pagination
@@ -500,7 +504,7 @@ function ImpactMetricsEditor() {
   const [editValue, setEditValue] = useState<string>("");
 
   // Fetch impact metrics
-  const { data: metrics, isLoading } = useQuery({
+  const { data: metrics, isLoading } = useQuery<any[]>({
     queryKey: ['/api/admin/impact-metrics'],
   });
 
@@ -544,7 +548,8 @@ function ImpactMetricsEditor() {
     }
 
     // If no metrics exist, create one first
-    if (!metrics || metrics.length === 0) {
+    const metricsArray = (metrics as any[]) || [];
+    if (!metricsArray || metricsArray.length === 0) {
       const defaultMetrics = {
         speedToHire: 0,
         revenueImpactOfDelay: 0,
@@ -561,7 +566,7 @@ function ImpactMetricsEditor() {
       return;
     }
 
-    updateMutation.mutate({ id: metrics[0].id, field, value });
+    updateMutation.mutate({ id: metricsArray[0].id, field, value });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, field: string) => {
@@ -576,7 +581,8 @@ function ImpactMetricsEditor() {
     return <div className="text-center py-8 text-gray-500">Loading metrics...</div>;
   }
 
-  const currentMetrics = metrics?.[0] || {
+  const metricsArray = (metrics as any[]) || [];
+  const currentMetrics = metricsArray?.[0] || {
     speedToHire: 0,
     revenueImpactOfDelay: 0,
     clientNps: 0,
@@ -785,7 +791,8 @@ function ClientSettingsSection() {
     }
 
     // If no metrics exist, create one first
-    if (!metrics || metrics.length === 0) {
+    const metricsArray = (metrics as any[]) || [];
+    if (!metricsArray || metricsArray.length === 0) {
       const defaultMetrics = {
         speedToHire: 15,
         revenueImpactOfDelay: 75000,
@@ -802,8 +809,8 @@ function ClientSettingsSection() {
     }
 
     // Otherwise, update existing metrics
-    if (metrics[0]) {
-      updateMutation.mutate({ id: metrics[0].id, value });
+    if (metricsArray[0]) {
+      updateMutation.mutate({ id: metricsArray[0].id, value });
     }
   };
 
@@ -946,6 +953,48 @@ function ClientSettingsSection() {
 
 export default function AdminDashboard() {
   const queryClient = useQueryClient();
+  const employee = useEmployeeAuth();
+  const [profileData, setProfileData] = useState<any>(null);
+  
+  // Load profile data for chat
+  useEffect(() => {
+    const loadProfileData = async () => {
+      if (!employee?.role) return;
+      
+      try {
+        let endpoint = '';
+        switch (employee.role) {
+          case 'recruiter':
+            endpoint = '/api/recruiter/profile';
+            break;
+          case 'team_leader':
+            endpoint = '/api/team-leader/profile';
+            break;
+          case 'admin':
+            endpoint = '/api/admin/profile';
+            break;
+          case 'client':
+            endpoint = '/api/client/profile';
+            break;
+        }
+        
+        if (endpoint) {
+          const response = await fetch(endpoint);
+          if (response.ok) {
+            const data = await response.json();
+            setProfileData(data);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load profile data:', error);
+      }
+    };
+    
+    loadProfileData();
+  }, [employee?.role]);
+  
+  const userName = profileData?.name || employee?.name || "Admin User";
+  const userRole = employee?.role || 'admin';
   
   // Restore sidebarTab from sessionStorage for proper back navigation
   const initialSidebarTab = () => {
@@ -1150,9 +1199,7 @@ export default function AdminDashboard() {
   // Delete revenue mapping mutation
   const deleteRevenueMappingMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest(`/api/admin/revenue-mappings/${id}`, {
-        method: "DELETE",
-      });
+      return await apiRequest("DELETE", `/api/admin/revenue-mappings/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/revenue-mappings"] });
@@ -1251,6 +1298,8 @@ export default function AdminDashboard() {
   const [teamPerformanceSearch, setTeamPerformanceSearch] = useState('');
   const [closureListSearch, setClosureListSearch] = useState('');
   const [requirementsSearch, setRequirementsSearch] = useState('');
+  const [userManagementTab, setUserManagementTab] = useState<'all' | 'clients' | 'team_leaders' | 'talent_advisors'>('all');
+  const [userManagementSearch, setUserManagementSearch] = useState('');
   
   // Password confirmation dialog state for user deletion
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
@@ -1342,27 +1391,33 @@ export default function AdminDashboard() {
   });
 
   // Client JDs API query
-  const { data: clientJDs = [], isLoading: isLoadingClientJDs, refetch: refetchClientJDs } = useQuery({
+  const { data: clientJDs = [], isLoading: isLoadingClientJDs, refetch: refetchClientJDs } = useQuery<any[]>({
     queryKey: ['/api/admin/client-jds'],
     refetchOnMount: true,
     refetchOnWindowFocus: true
   });
   
-  // Debug: Log client JDs data
-  useEffect(() => {
-    console.log('Client JDs data:', clientJDs);
-    console.log('Client JDs count:', clientJDs.length);
-  }, [clientJDs]);
 
   // State for JD preview modal
   const [selectedJD, setSelectedJD] = useState<any>(null);
   const [isJDPreviewModalOpen, setIsJDPreviewModalOpen] = useState(false);
+  const [jdToAdd, setJdToAdd] = useState<any>(null);
+  const [isAddToRequirementAlertOpen, setIsAddToRequirementAlertOpen] = useState(false);
+  const [initialRequirementData, setInitialRequirementData] = useState<any>(null);
+  const [isViewMoreJDModalOpen, setIsViewMoreJDModalOpen] = useState(false);
 
 
   // Fetch employees from database
   const { data: employees = [], isLoading: isLoadingEmployees, refetch: refetchEmployees } = useQuery<Employee[]>({
     queryKey: ['/api/admin/employees']
   });
+
+  // Fetch active sessions to determine login status
+  const { data: activeSessionsData } = useQuery<{ activeEmployeeIds: string[] }>({
+    queryKey: ['/api/admin/active-sessions'],
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+  const activeEmployeeIds = new Set(activeSessionsData?.activeEmployeeIds || []);
 
   // Filter employees for HR-related tables (Employees Master)
   // Only include employee_record role, exclude TL/TA (they belong in User Management), admin, and clients
@@ -1375,6 +1430,50 @@ export default function AdminDashboard() {
       emp.role !== 'recruiter'
     );
   }, [employees]);
+
+  // Filter employees for User Management based on selected tab and search
+  const userManagementEmployees = useMemo(() => {
+    let filtered = employees.filter((emp: any) => 
+      emp.role === 'team_leader' || 
+      emp.role === 'recruiter' || 
+      emp.role === 'client'
+    );
+
+    // Filter by selected tab
+    if (userManagementTab === 'team_leaders') {
+      filtered = filtered.filter((emp: any) => emp.role === 'team_leader');
+    } else if (userManagementTab === 'talent_advisors') {
+      filtered = filtered.filter((emp: any) => emp.role === 'recruiter');
+    } else if (userManagementTab === 'clients') {
+      filtered = filtered.filter((emp: any) => emp.role === 'client');
+    }
+    // 'all' shows everything
+
+    // Apply search filter
+    if (userManagementSearch.trim()) {
+      const search = userManagementSearch.toLowerCase();
+      filtered = filtered.filter((emp: any) => 
+        emp.employeeId?.toLowerCase().includes(search) ||
+        emp.name?.toLowerCase().includes(search) ||
+        emp.email?.toLowerCase().includes(search) ||
+        emp.role?.toLowerCase().includes(search)
+      );
+    }
+
+    return filtered;
+  }, [employees, userManagementTab, userManagementSearch]);
+
+  // Calculate online count (users who logged in within last 15 minutes)
+  const onlineCount = useMemo(() => {
+    const now = new Date();
+    const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
+    
+    return userManagementEmployees.filter((emp: any) => {
+      if (!emp.lastLoginAt) return false;
+      const lastLogin = new Date(emp.lastLoginAt);
+      return lastLogin >= fifteenMinutesAgo;
+    }).length;
+  }, [userManagementEmployees]);
 
   // Fetch candidates from database
   const { data: candidates = [], isLoading: isLoadingCandidates } = useQuery<any[]>({
@@ -1426,7 +1525,8 @@ export default function AdminDashboard() {
 
   // Filter clients for Master Data - exclude login-only clients (those belong in User Management)
   const masterDataClients = useMemo(() => {
-    return clients.filter((client: any) => !client.isLoginOnly);
+    const clientsArray = (clients as any[]) || [];
+    return clientsArray.filter((client: any) => !client.isLoginOnly);
   }, [clients]);
 
   const filteredClients = useMemo(() => {
@@ -1467,9 +1567,10 @@ export default function AdminDashboard() {
   }, [candidates, resumeDatabaseSearch]);
 
   const filteredRequirements = useMemo(() => {
-    if (!requirementsSearch.trim()) return requirements;
+    const requirementsArray = (requirements as any[]) || [];
+    if (!requirementsSearch.trim()) return requirementsArray;
     const search = requirementsSearch.toLowerCase();
-    return requirements.filter((req: any) => 
+    return requirementsArray.filter((req: any) => 
       req.position?.toLowerCase().includes(search) ||
       req.criticality?.toLowerCase().includes(search) ||
       req.company?.toLowerCase().includes(search) ||
@@ -2475,7 +2576,8 @@ export default function AdminDashboard() {
   };
 
   const handleRequirementsViewMore = () => {
-    if (requirements.length > 10) {
+    const requirementsArray = (requirements as any[]) || [];
+    if (requirementsArray.length > 10) {
       setIsAllRequirementsModalOpen(true);
     }
   };
@@ -2520,10 +2622,15 @@ export default function AdminDashboard() {
 
   const handleEditUser = (user: any) => {
     setEditingUser(user);
-    if (user.role === 'Team Leader') {
+    // Map database roles to display roles for modal selection
+    const role = user.role || '';
+    if (role === 'Team Leader' || role === 'team_leader') {
       setIsAddTeamLeaderModalNewOpen(true);
-    } else if (user.role === 'Recruiter') {
+    } else if (role === 'Recruiter' || role === 'recruiter' || role === 'Talent Advisor') {
+      // Use AddRecruiterModal for editing Talent Advisors (original working version)
       setIsAddRecruiterModalOpen(true);
+    } else if (role === 'Client' || role === 'client') {
+      setIsAddClientCredentialsModalOpen(true);
     }
   };
 
@@ -3022,8 +3129,8 @@ export default function AdminDashboard() {
     }
   };
 
-  const displayedRequirements = requirements.slice(0, Math.min(requirementsVisible, 10));
-  const isShowingAllRequirements = requirementsVisible >= requirements.length;
+  const displayedRequirements = filteredRequirements.slice(0, Math.min(requirementsVisible, 10));
+  const isShowingAllRequirements = requirementsVisible >= filteredRequirements.length;
 
   const getCriticalityColor = (criticality: string) => {
     switch (criticality) {
@@ -3039,8 +3146,11 @@ export default function AdminDashboard() {
   };
 
   const handleDateChange = (value: string) => {
-    setMeetingDate(value);
-    setIsCustomDate(value === 'custom');
+    if (value === 'custom') {
+      setTeamsCustomDate(new Date());
+    } else {
+      setTeamsCustomDate(undefined);
+    }
   };
 
   // Create cash outflow mutation
@@ -3110,9 +3220,10 @@ export default function AdminDashboard() {
     }
 
     const metrics = impactMetricsQuery.data;
+    const metricsArray = (metrics as any[]) || [];
     
     // If no metrics exist, create one first
-    if (!metrics || metrics.length === 0) {
+    if (!metricsArray || metricsArray.length === 0) {
       const defaultMetrics = {
         speedToHire: 15,
         revenueImpactOfDelay: 75000,
@@ -3138,9 +3249,9 @@ export default function AdminDashboard() {
     }
 
     // Otherwise, update existing metrics
-    if (metrics[0]) {
+    if (metricsArray && metricsArray[0]) {
       try {
-        const response = await apiRequest('PUT', `/api/admin/impact-metrics/${metrics[0].id}`, { feedbackTurnAroundAvgDays: value });
+        const response = await apiRequest('PUT', `/api/admin/impact-metrics/${metricsArray[0].id}`, { feedbackTurnAroundAvgDays: value });
         await response.json();
         impactMetricsQuery.refetch();
         toast({ title: "Success", description: "Feedback Turn Around Avg Days updated successfully" });
@@ -3867,7 +3978,7 @@ export default function AdminDashboard() {
                       <tr>
                         <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading JDs...</td>
                       </tr>
-                    ) : !clientJDs || clientJDs.length === 0 ? (
+                    ) : !clientJDs || (clientJDs as any[]).length === 0 ? (
                       <tr>
                         <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-gray-400">No client-submitted JDs found.</td>
                       </tr>
@@ -3988,7 +4099,7 @@ export default function AdminDashboard() {
                     <Button 
                       className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
                       onClick={handleRequirementsViewMore}
-                      disabled={requirements.length <= 10}
+                      disabled={(requirements as any[])?.length <= 10}
                     >
                       View More
                     </Button>
@@ -4414,21 +4525,21 @@ export default function AdminDashboard() {
                   <Card className="text-center p-4">
                     <CardContent className="p-0">
                       <div className="text-sm text-red-600 dark:text-red-400 mb-2 font-semibold">TOTAL RESUMES</div>
-                      <div className="text-3xl font-bold text-red-600 dark:text-red-400">50,000</div>
+                      <div className="text-3xl font-bold text-red-600 dark:text-red-400">{masterTotals.resumes.toLocaleString('en-IN')}</div>
                     </CardContent>
                   </Card>
                   
                   <Card className="text-center p-4">
                     <CardContent className="p-0">
                       <div className="text-sm text-blue-600 dark:text-blue-400 mb-2 font-semibold">DIRECT UPLOADS</div>
-                      <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">5,000</div>
+                      <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{masterTotals.directUploads.toLocaleString('en-IN')}</div>
                     </CardContent>
                   </Card>
                   
                   <Card className="text-center p-4">
                     <CardContent className="p-0">
-                      <div className="text-sm text-blue-600 dark:text-blue-400 mb-2 font-semibold">RECRUITER UPLOAD</div>
-                      <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">50,000</div>
+                      <div className="text-sm text-blue-600 dark:text-blue-400 mb-2 font-semibold">RECRUITER UPLOADS</div>
+                      <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{masterTotals.recruiterUploads.toLocaleString('en-IN')}</div>
                     </CardContent>
                   </Card>
                 </div>
@@ -5048,31 +5159,140 @@ export default function AdminDashboard() {
           </div>
         );
       case 'user-management':
+        const formatLastLogin = (lastLoginAt: string | null | undefined) => {
+          if (!lastLoginAt) return 'N/A';
+          try {
+            const date = new Date(lastLoginAt);
+            const now = new Date();
+            const diffMs = now.getTime() - date.getTime();
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 7) return `${diffDays}d ago`;
+            
+            return date.toLocaleDateString('en-GB', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            });
+          } catch {
+            return 'N/A';
+          }
+        };
+
+        const getRoleDisplayName = (role: string) => {
+          if (role === 'team_leader') return 'Team Leader';
+          if (role === 'recruiter') return 'Talent Advisor';
+          if (role === 'client') return 'Client';
+          return role;
+        };
+
         return (
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
             {/* User Management Header */}
-            <div className="flex gap-4 mb-6">
-              <Button 
-                className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={() => setIsAddTalentAdvisorModalOpen(true)}
-                data-testid="button-add-recruiter"
+            <div className="flex items-center justify-between mb-6 gap-4">
+              {/* Search Bar */}
+              <div className="flex-1 max-w-2xl relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                <Input
+                  type="text"
+                  placeholder="Search user..."
+                  value={userManagementSearch}
+                  onChange={(e) => setUserManagementSearch(e.target.value)}
+                  className="pl-10 bg-white dark:bg-gray-800"
+                />
+              </div>
+              
+              {/* Add User Button with Dropdown Menu */}
+              <div className="flex-shrink-0">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      size="icon"
+                      className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white w-9 h-9"
+                      data-testid="button-add-user"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem
+                      onClick={() => setIsAddClientCredentialsModalOpen(true)}
+                      className="cursor-pointer"
+                      data-testid="button-add-client-user-expanded"
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Add Client User
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setIsAddTeamLeaderModalNewOpen(true)}
+                      className="cursor-pointer"
+                      data-testid="button-add-team-leader-expanded"
+                    >
+                      <Users className="h-4 w-4 mr-2" />
+                      Add Team Leader
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setIsAddTalentAdvisorModalOpen(true)}
+                      className="cursor-pointer"
+                      data-testid="button-add-talent-advisor-expanded"
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Add Talent Advisor
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+
+            {/* Tabs Navigation */}
+            <div className="flex space-x-1 border-b border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setUserManagementTab('all')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  userManagementTab === 'all'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
               >
-                + Add Recruiter
-              </Button>
-              <Button 
-                className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={() => setIsAddTeamLeaderModalOpen(true)}
-                data-testid="button-add-team-leader"
+                All
+              </button>
+              <button
+                onClick={() => setUserManagementTab('clients')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  userManagementTab === 'clients'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
               >
-                + Add Team Leader
-              </Button>
-              <Button 
-                className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={() => setIsAddClientCredentialsModalOpen(true)}
-                data-testid="button-add-client"
+                Clients
+              </button>
+              <button
+                onClick={() => setUserManagementTab('team_leaders')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  userManagementTab === 'team_leaders'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
               >
-                + Add Client
-              </Button>
+                Team Leaders
+              </button>
+              <button
+                onClick={() => setUserManagementTab('talent_advisors')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  userManagementTab === 'talent_advisors'
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
+              >
+                Talent Advisors
+              </button>
             </div>
 
             {/* User Management Table */}
@@ -5092,76 +5312,66 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTA001</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Sundhar Raj</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">raj@gmail.com</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Team Leader</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Active</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">N/A</td>
-                        <td className="py-3 px-3">
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Edit</Button>
-                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">Delete</Button>
-                          </div>
-                        </td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTA002</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">kavitha</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">kavi@gmail.com</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Team Leader</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Active</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">N/A</td>
-                        <td className="py-3 px-3">
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Edit</Button>
-                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">Delete</Button>
-                          </div>
-                        </td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTA003</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Vignesh</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">vignesh@gmail.com</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Team Leader</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Active</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">N/A</td>
-                        <td className="py-3 px-3">
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Edit</Button>
-                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">Delete</Button>
-                          </div>
-                        </td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTA004</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Saran</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">saran@gmail.com</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Team Leader</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Active</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">N/A</td>
-                        <td className="py-3 px-3">
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Edit</Button>
-                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">Delete</Button>
-                          </div>
-                        </td>
-                      </tr>
-                      <tr className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-3 px-3 text-gray-900 dark:text-white">STTL005</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Helen</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">helen@gmail.com</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Team Leader</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">Active</td>
-                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400">N/A</td>
-                        <td className="py-3 px-3">
-                          <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">Edit</Button>
-                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">Delete</Button>
-                          </div>
-                        </td>
-                      </tr>
+                      {isLoadingEmployees ? (
+                        <tr>
+                          <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading...</td>
+                        </tr>
+                      ) : userManagementEmployees.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">No users found.</td>
+                        </tr>
+                      ) : (
+                        userManagementEmployees.map((emp: any) => (
+                          <tr key={emp.id} className="border-b border-gray-100 dark:border-gray-800">
+                            <td className="py-3 px-3 text-gray-900 dark:text-white">{emp.employeeId || 'N/A'}</td>
+                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{emp.name || 'N/A'}</td>
+                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{emp.email || 'N/A'}</td>
+                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{getRoleDisplayName(emp.role || 'N/A')}</td>
+                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">
+                              {(() => {
+                                const isLoggedIn = activeEmployeeIds.has(emp.id);
+                                return (
+                                  <span className={`px-2 py-1 rounded text-xs ${
+                                    isLoggedIn 
+                                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
+                                      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                                  }`}>
+                                    {isLoggedIn ? 'Active' : 'In-Active'}
+                                  </span>
+                                );
+                              })()}
+                            </td>
+                            <td className="py-3 px-3 text-gray-600 dark:text-gray-400">{formatLastLogin(emp.lastLoginAt)}</td>
+                            <td className="py-3 px-3">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => {
+                                    handleEditUser(emp);
+                                  }}>
+                                    <Edit2 className="mr-2 h-4 w-4" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={() => {
+                                      setUserToDelete({ id: emp.id, name: emp.name });
+                                      setIsPasswordDialogOpen(true);
+                                    }}
+                                    className="text-red-600 dark:text-red-400"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -5176,8 +5386,7 @@ export default function AdminDashboard() {
                   <div className="space-y-4">
                     <div>
                       <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Online</div>
-                      <div className="text-4xl font-bold text-gray-900 dark:text-white">3</div>
-                      <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white text-sm mt-2">View</Button>
+                      <div className="text-4xl font-bold text-gray-900 dark:text-white">{onlineCount}</div>
                     </div>
                   </div>
                 </CardContent>
@@ -5188,8 +5397,7 @@ export default function AdminDashboard() {
                   <div className="space-y-4">
                     <div>
                       <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Offline</div>
-                      <div className="text-4xl font-bold text-gray-900 dark:text-white">1</div>
-                      <Button className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white text-sm mt-2">View</Button>
+                      <div className="text-4xl font-bold text-gray-900 dark:text-white">{userManagementEmployees.length - onlineCount}</div>
                     </div>
                   </div>
                 </CardContent>
@@ -5215,23 +5423,132 @@ export default function AdminDashboard() {
       case 'requirements':
         return (
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
-            {/* Header with Requirements title */}
+            {/* Client JDs Table */}
+            <div className="mb-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">JD from Client</h3>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      refetchClientJDs();
+                    }}
+                    className="text-xs p-2"
+                    disabled={isLoadingClientJDs}
+                    title="Refresh"
+                  >
+                    {isLoadingClientJDs ? (
+                      <span className="animate-spin">⟳</span>
+                    ) : (
+                      <RotateCcw className="h-4 w-4" />
+                    )}
+                  </Button>
+                  {Array.isArray(clientJDs) && (clientJDs as any[]).length > 5 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIsViewMoreJDModalOpen(true);
+                      }}
+                      className="text-xs"
+                    >
+                      View More
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                      <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Client ID</th>
+                      <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Client</th>
+                      <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">SPOC Name</th>
+                      <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Role</th>
+                      <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Shared Date</th>
+                      <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">JD</th>
+                      <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isLoadingClientJDs ? (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">Loading JDs...</td>
+                      </tr>
+                    ) : !clientJDs || (clientJDs as any[]).length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">No client-submitted JDs found.</td>
+                      </tr>
+                    ) : (
+                      (clientJDs as any[]).slice(0, 5).map((jd: any) => (
+                        <tr key={jd.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                          <td className="py-3 px-3 text-gray-900 dark:text-white text-sm">{jd.clientId || 'N/A'}</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{jd.company || 'N/A'}</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{jd.spocName || 'N/A'}</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{jd.role || 'N/A'}</td>
+                          <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{jd.sharedDate || 'N/A'}</td>
+                          <td className="py-3 px-3">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedJD({...jd.requirement, clientId: jd.clientId, spocName: jd.spocName});
+                                setIsJDPreviewModalOpen(true);
+                              }}
+                              className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300"
+                            >
+                              View JD
+                            </Button>
+                          </td>
+                          <td className="py-3 px-3">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setJdToAdd(jd);
+                                setIsAddToRequirementAlertOpen(true);
+                              }}
+                              className="text-xs p-2"
+                              title="Add to Requirement"
+                            >
+                              <Send className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
             
             <div className="flex gap-6 h-full">
               {/* Middle Section - Requirements Table */}
               <div className="flex-1 overflow-y-auto admin-scrollbar">
                 
                 <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
-                  {/* Table Header with Add Button */}
-                  <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                  {/* Table Header with Search and Add Button */}
+                  <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 gap-4">
                     <h3 className="text-lg font-medium text-gray-900 dark:text-white">Requirements</h3>
-                    <Button 
-                      className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded text-sm"
-                      onClick={() => setIsAddRequirementModalOpen(true)}
-                      data-testid="button-add-requirements"
-                    >
-                      + Add Requirements
-                    </Button>
+                    <div className="flex items-center gap-4">
+                      <SearchBar
+                        value={requirementsSearch}
+                        onChange={setRequirementsSearch}
+                        placeholder="Search requirements..."
+                        testId="input-search-requirements"
+                      />
+                      <Button 
+                        className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded text-sm whitespace-nowrap"
+                        onClick={() => {
+                          setInitialRequirementData(null);
+                          setIsAddRequirementModalOpen(true);
+                        }}
+                        data-testid="button-add-requirements"
+                      >
+                        + Add Requirements
+                      </Button>
+                    </div>
                   </div>
                   <div className="overflow-x-auto admin-scrollbar">
                     <table className="w-full border-collapse">
@@ -5243,6 +5560,7 @@ export default function AdminDashboard() {
                           <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">SPOC</th>
                           <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
                           <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Team Lead</th>
+                          <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">JD</th>
                           <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Actions</th>
                         </tr>
                       </thead>
@@ -5269,6 +5587,24 @@ export default function AdminDashboard() {
                                 <span className="text-cyan-500 dark:text-cyan-400">{requirement.teamLead}</span>
                               ) : (
                                 requirement.teamLead
+                              )}
+                            </td>
+                            <td className="py-2 px-2">
+                              {requirement.jdFile ? (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedJD(requirement);
+                                    setIsJDPreviewModalOpen(true);
+                                  }}
+                                  className="p-1 h-8 w-8"
+                                  title="View JD"
+                                >
+                                  <Eye className="h-4 w-4 text-blue-600 hover:text-blue-800" />
+                                </Button>
+                              ) : (
+                                <span className="text-gray-400 text-xs">-</span>
                               )}
                             </td>
                             <td className="py-2 px-2">
@@ -5316,7 +5652,7 @@ export default function AdminDashboard() {
                     <Button 
                       className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
                       onClick={handleRequirementsViewMore}
-                      disabled={requirements.length <= 10}
+                      disabled={(requirements as any[])?.length <= 10}
                     >
                       View More
                     </Button>
@@ -6304,35 +6640,59 @@ export default function AdminDashboard() {
           </div>
         );
       case 'user-management':
-        // Map employees from database to user table format (TL, TA, and Client login profiles)
-        // Exclude admin accounts (STAFFOS* IDs) from the list
-        const userData = employees
-          .filter(emp => (emp.role === 'recruiter' || emp.role === 'team_leader' || emp.role === 'client') && !emp.employeeId?.startsWith('STAFFOS'))
-          .map(emp => ({
-            id: emp.employeeId,
-            dbId: emp.id,
-            name: emp.name,
-            email: emp.email,
-            role: emp.role === 'team_leader' ? 'Team Leader' : emp.role === 'client' ? 'Client' : 'Recruiter',
-            status: emp.isActive ? 'Active' : 'Inactive',
-            lastLogin: "N/A",
-            phoneNumber: emp.phone || '',
-            joiningDate: emp.joiningDate || '',
-            password: emp.password,
-            reportingTo: emp.reportingTo || ''
-          }));
+        const formatLastLoginForSidebar = (lastLoginAt: string | null | undefined) => {
+          if (!lastLoginAt) return 'N/A';
+          try {
+            const date = new Date(lastLoginAt);
+            const now = new Date();
+            const diffMs = now.getTime() - date.getTime();
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
 
-        // Filter users based on search term
-        const filteredUsers = userData.filter(user =>
-          user.id.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-          user.name.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-          user.email.toLowerCase().includes(userSearchTerm.toLowerCase()) ||
-          user.role.toLowerCase().includes(userSearchTerm.toLowerCase())
-        );
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 7) return `${diffDays}d ago`;
+            
+            return date.toLocaleDateString('en-GB', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
+            });
+          } catch {
+            return 'N/A';
+          }
+        };
 
-        // Calculate online/offline counts
-        const activeCount = userData.filter(user => user.status === 'Active').length;
-        const offlineCount = userData.filter(user => user.status !== 'Active').length;
+        const getRoleDisplayNameForSidebar = (role: string) => {
+          if (role === 'team_leader') return 'Team Leader';
+          if (role === 'recruiter') return 'Talent Advisor';
+          if (role === 'client') return 'Client';
+          return role;
+        };
+
+        // Use the same filtering logic as renderTabContent
+        const filteredUsers = userManagementEmployees.map((emp: any) => ({
+          id: emp.employeeId,
+          dbId: emp.id,
+          name: emp.name,
+          email: emp.email,
+          role: getRoleDisplayNameForSidebar(emp.role || 'N/A'),
+          status: emp.isActive ? 'Active' : 'Inactive',
+          lastLogin: formatLastLoginForSidebar(emp.lastLoginAt),
+          phoneNumber: emp.phone || '',
+          joiningDate: emp.joiningDate || '',
+          password: emp.password,
+          reportingTo: emp.reportingTo || '',
+          isActive: emp.isActive
+        }));
+
+        // Calculate online/offline counts based on last login
+        const activeCount = onlineCount;
+        const offlineCount = userManagementEmployees.length - onlineCount;
 
         return (
           <div className="flex h-full">
@@ -6346,40 +6706,92 @@ export default function AdminDashboard() {
                   <Input
                     type="text"
                     placeholder="Search user..."
-                    value={userSearchTerm}
-                    onChange={(e) => setUserSearchTerm(e.target.value)}
+                    value={userManagementSearch}
+                    onChange={(e) => setUserManagementSearch(e.target.value)}
                     className="w-full bg-gray-50 border-gray-200 text-sm pl-10"
                     data-testid="input-search-user"
                   />
                 </div>
                 
-                {/* Action Buttons */}
-                <div className="flex gap-3">
-                  <Button 
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm flex items-center gap-2"
-                    onClick={() => setIsAddClientCredentialsModalOpen(true)}
-                    data-testid="button-add-client"
-                  >
-                    <UserPlus className="h-4 w-4" />
-                    Add Client
-                  </Button>
-                  <Button 
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm flex items-center gap-2"
-                    onClick={() => setIsAddTeamLeaderModalNewOpen(true)}
-                    data-testid="button-add-team-leader"
-                  >
-                    <Users className="h-4 w-4" />
-                    Add Team Leader
-                  </Button>
-                  <Button 
-                    className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded text-sm flex items-center gap-2"
-                    onClick={() => setIsAddRecruiterModalOpen(true)}
-                    data-testid="button-add-recruiter"
-                  >
-                    <UserPlus className="h-4 w-4" />
-                    Add Recruiter
-                  </Button>
-                </div>
+                {/* Add User Button */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm flex items-center gap-2 w-full justify-start"
+                      data-testid="button-add-user-sidebar"
+                    >
+                      <UserPlus className="h-4 w-4" />
+                      Add User
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-48">
+                    <DropdownMenuItem
+                      onClick={() => setIsAddClientCredentialsModalOpen(true)}
+                      className="cursor-pointer"
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Add Client User
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setIsAddTeamLeaderModalNewOpen(true)}
+                      className="cursor-pointer"
+                    >
+                      <Users className="h-4 w-4 mr-2" />
+                      Add Team Leader
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setIsAddTalentAdvisorModalOpen(true)}
+                      className="cursor-pointer"
+                    >
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Add Talent Advisor
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {/* Tabs Navigation */}
+              <div className="flex space-x-1 border-b border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => setUserManagementTab('all')}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                    userManagementTab === 'all'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setUserManagementTab('clients')}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                    userManagementTab === 'clients'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+                >
+                  Clients
+                </button>
+                <button
+                  onClick={() => setUserManagementTab('team_leaders')}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                    userManagementTab === 'team_leaders'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+                >
+                  Team Leaders
+                </button>
+                <button
+                  onClick={() => setUserManagementTab('talent_advisors')}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                    userManagementTab === 'talent_advisors'
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+                >
+                  Talent Advisors
+                </button>
               </div>
 
               {/* User Management Table */}
@@ -6427,22 +6839,31 @@ export default function AdminDashboard() {
                             </td>
                             <td className="py-3 px-4 text-gray-600 dark:text-gray-400 text-sm">{user.lastLogin}</td>
                             <td className="py-3 px-4">
-                              <div className="flex gap-3 text-sm">
-                                <button 
-                                  className="text-blue-600 hover:text-blue-700 font-medium"
-                                  onClick={() => handleEditUser(user)}
-                                  data-testid={`button-edit-${user.id}`}
-                                >
-                                  Edit
-                                </button>
-                                <button 
-                                  className="text-red-600 hover:text-red-700 font-medium"
-                                  onClick={() => handleDeleteUser(user.dbId, user.name)}
-                                  data-testid={`button-delete-${user.id}`}
-                                >
-                                  Delete
-                                </button>
-                              </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" className="h-8 w-8 p-0">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => {
+                                    handleEditUser(user);
+                                  }}>
+                                    <Edit2 className="mr-2 h-4 w-4" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={() => {
+                                      setUserToDelete({ id: user.dbId, name: user.name });
+                                      setIsPasswordDialogOpen(true);
+                                    }}
+                                    className="text-red-600 dark:text-red-400"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </td>
                           </tr>
                         ))
@@ -6741,7 +7162,7 @@ export default function AdminDashboard() {
                               <SelectValue placeholder="Client" />
                             </SelectTrigger>
                             <SelectContent>
-                              {clients.map((client: any) => (
+                              {((clients as any[]) || []).map((client: any) => (
                                 <SelectItem key={client.id} value={client.id}>
                                   {client.brandName || client.incorporatedName || 'Unknown'}
                                 </SelectItem>
@@ -8453,8 +8874,62 @@ export default function AdminDashboard() {
       {/* Add Requirement Modal */}
       <AddRequirementModal
         isOpen={isAddRequirementModalOpen}
-        onClose={() => setIsAddRequirementModalOpen(false)}
+        onClose={() => {
+          setIsAddRequirementModalOpen(false);
+          setInitialRequirementData(null);
+          setJdToAdd(null);
+        }}
+        initialData={initialRequirementData}
+        jdIdToDelete={jdToAdd?.id || null}
+        onSuccess={() => {
+          // Refresh client JDs list after successful conversion
+          queryClient.invalidateQueries({ queryKey: ['/api/admin/client-jds'] });
+          setJdToAdd(null);
+        }}
       />
+
+      {/* Add to Requirement Alert Dialog */}
+      <AlertDialog open={isAddToRequirementAlertOpen} onOpenChange={setIsAddToRequirementAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Add to Requirement</AlertDialogTitle>
+            <AlertDialogDescription>
+              Do you want to add this JD as a new requirement? The requirement form will be pre-filled with available information from the JD.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {jdToAdd?.requirement?.jdFile && (
+            <div className="py-2">
+              <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                JD file will be shared to the requirement
+              </p>
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (jdToAdd && jdToAdd.requirement) {
+                  const req = jdToAdd.requirement;
+                  setInitialRequirementData({
+                    position: req.position || jdToAdd.role || '',
+                    company: req.company || '',
+                    spoc: req.spoc || jdToAdd.spocName || '',
+                    jdFile: req.jdFile || null,
+                    jdText: req.jdText || null,
+                  });
+                  setIsAddToRequirementAlertOpen(false);
+                  setIsAddRequirementModalOpen(true);
+                }
+              }}
+            >
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Target Mapping Modal */}
       <TargetMappingModal
@@ -8512,7 +8987,7 @@ export default function AdminDashboard() {
       <AddRecruiterModal
         isOpen={isAddRecruiterModalOpen}
         onClose={() => { setIsAddRecruiterModalOpen(false); setEditingUser(null); }}
-        editData={editingUser && editingUser.role === 'Recruiter' ? editingUser : null}
+        editData={editingUser && (editingUser.role === 'Recruiter' || editingUser.role === 'recruiter' || editingUser.role === 'Talent Advisor') ? editingUser : null}
         onSubmit={editingUser ? handleUpdateUser : handleAddUser}
       />
 
@@ -8772,15 +9247,19 @@ export default function AdminDashboard() {
       <AddTeamLeaderModalNew
         isOpen={isAddTeamLeaderModalNewOpen}
         onClose={() => { setIsAddTeamLeaderModalNewOpen(false); setEditingUser(null); }}
-        editData={editingUser && editingUser.role === 'Team Leader' ? editingUser : null}
+        editData={editingUser && (editingUser.role === 'Team Leader' || editingUser.role === 'team_leader') ? editingUser : null}
         onSubmit={editingUser ? handleUpdateUser : handleAddUser}
       />
 
       {/* Add Client Credentials Modal */}
       <AddClientCredentialsModal
         isOpen={isAddClientCredentialsModalOpen}
-        onClose={() => setIsAddClientCredentialsModalOpen(false)}
-        onSubmit={handleAddClientCredentials}
+        onClose={() => {
+          setIsAddClientCredentialsModalOpen(false);
+          setEditingUser(null);
+        }}
+        editData={editingUser && (editingUser.role === 'Client' || editingUser.role === 'client') ? editingUser : null}
+        onSubmit={editingUser ? handleUpdateUser : handleAddClientCredentials}
       />
 
       {/* Reassign Requirement Modal */}
@@ -8864,7 +9343,7 @@ export default function AdminDashboard() {
       <Dialog open={isAllRequirementsModalOpen} onOpenChange={setIsAllRequirementsModalOpen}>
         <DialogContent className="max-w-6xl max-h-[80vh] overflow-hidden">
           <DialogHeader>
-            <DialogTitle>All Requirements ({requirements.length})</DialogTitle>
+            <DialogTitle>All Requirements ({(requirements as any[])?.length || 0})</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[60vh]">
             <div className="overflow-x-auto">
@@ -8881,7 +9360,7 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {requirements.map((requirement: Requirement) => (
+                  {((requirements as any[]) || []).map((requirement: any) => (
                     <tr key={requirement.id} className="border-b border-gray-100 dark:border-gray-800">
                       <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{requirement.position}</td>
                       <td className="py-3 px-3">
@@ -10628,72 +11107,212 @@ export default function AdminDashboard() {
       <ChatDock 
         open={isChatOpen} 
         onClose={() => setIsChatOpen(false)} 
-        userName="Support Team"
+        userName={userName}
+        userRole={userRole}
       />
 
       {/* JD Preview Modal */}
       <Dialog open={isJDPreviewModalOpen} onOpenChange={setIsJDPreviewModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Job Description Preview</DialogTitle>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden p-0">
+          <DialogHeader className="px-6 pt-4 pb-3 border-b">
+            <DialogTitle className="text-xl font-semibold">Job Description Details</DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto max-h-[calc(90vh-8rem)]">
+          <div className="overflow-y-auto max-h-[calc(90vh-10rem)] px-6 py-4">
             {selectedJD && (
-              <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
-                {/* Company Header */}
-                <div className="flex items-center gap-4 pb-4 border-b border-gray-200">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-2xl shadow-md">
-                    {selectedJD.company?.charAt(0).toUpperCase() || 'C'}
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-gray-900">
-                      {selectedJD.company || 'Company Name'}
-                    </h3>
-                    <p className="text-sm text-gray-500">Job Description</p>
+              <div className="space-y-4">
+                {/* Header Card */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center gap-3">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-2xl shadow-lg">
+                      {selectedJD.company?.charAt(0).toUpperCase() || 'C'}
+                    </div>
+                    <div className="flex-1">
+                      <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                        {selectedJD.company || 'Company Name'}
+                      </h2>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Job Description Document</p>
+                    </div>
                   </div>
                 </div>
 
-                {/* Job Description Content */}
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Position</h4>
-                    <div className="text-sm text-gray-600 bg-gray-50 p-4 rounded border border-gray-200">
-                      {selectedJD.position || 'N/A'}
-                    </div>
+                {/* Details Grid - Compact */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded border border-gray-200 dark:border-gray-700">
+                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">CLIENT ID:</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedJD.clientId || 'N/A'}</span>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Role ID</h4>
-                    <div className="text-sm text-gray-600 bg-gray-50 p-4 rounded border border-gray-200">
-                      {selectedJD.id || 'N/A'}
-                    </div>
+                  
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded border border-gray-200 dark:border-gray-700">
+                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">ROLE ID:</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedJD.id || 'N/A'}</span>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2">SPOC</h4>
-                    <div className="text-sm text-gray-600 bg-gray-50 p-4 rounded border border-gray-200">
-                      {selectedJD.spoc || 'N/A'}
-                    </div>
+                  
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded border border-gray-200 dark:border-gray-700">
+                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">POSITION:</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedJD.position || 'N/A'}</span>
                   </div>
-                  <div>
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Status</h4>
-                    <div className="text-sm text-gray-600 bg-gray-50 p-4 rounded border border-gray-200">
-                      {selectedJD.status || 'N/A'}
-                    </div>
+                  
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded border border-gray-200 dark:border-gray-700">
+                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">SPOC NAME:</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedJD.spocName || selectedJD.spoc || 'N/A'}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded border border-gray-200 dark:border-gray-700">
+                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">COMPANY:</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedJD.company || 'N/A'}</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded border border-gray-200 dark:border-gray-700">
+                    <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">STATUS:</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedJD.status || 'N/A'}</span>
                   </div>
                 </div>
+
+                {/* JD Document Section */}
+                {(selectedJD.jdFile || selectedJD.jdText) && (
+                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Job Description Document</h3>
+                    
+                    {/* PDF/DOC Preview */}
+                    {selectedJD.jdFile && (
+                      <div className="mb-4">
+                        {selectedJD.jdFile.toLowerCase().endsWith('.pdf') ? (
+                          <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                            <iframe
+                              src={selectedJD.jdFile}
+                              className="w-full h-[600px]"
+                              title="JD PDF Preview"
+                            />
+                          </div>
+                        ) : (
+                          <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">Document File</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">{selectedJD.jdFile.split('/').pop()}</p>
+                              </div>
+                              <a
+                                href={selectedJD.jdFile}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                                Open Document
+                              </a>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* JD Text Content */}
+                    {selectedJD.jdText && (
+                      <div>
+                        <label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">JD Text Content</label>
+                        <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                          <pre className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-sans max-h-96 overflow-y-auto">
+                            {selectedJD.jdText}
+                          </pre>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
-          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 mt-4">
+          <div className="flex justify-end space-x-3 px-6 py-4 border-t bg-gray-50 dark:bg-gray-800/50">
             <Button 
-              variant="outline" 
               onClick={() => setIsJDPreviewModalOpen(false)}
-              className="rounded"
+              className="px-6 bg-blue-600 hover:bg-blue-700 text-white"
             >
               Close
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* View More JD Modal */}
+      <Dialog open={isViewMoreJDModalOpen} onOpenChange={setIsViewMoreJDModalOpen}>
+        <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden p-0">
+          <DialogHeader className="px-6 pt-4 pb-3 border-b">
+            <DialogTitle className="text-xl font-semibold">All Job Descriptions from Clients</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[calc(90vh-10rem)] px-6 py-4">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Client ID</th>
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Client</th>
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">SPOC Name</th>
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Role</th>
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Shared Date</th>
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">JD</th>
+                    <th className="text-left p-3 font-medium text-gray-700 dark:text-gray-300 text-sm">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {!clientJDs || (clientJDs as any[]).length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">No client-submitted JDs found.</td>
+                    </tr>
+                  ) : (
+                    (clientJDs as any[]).map((jd: any) => (
+                      <tr key={jd.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <td className="py-3 px-3 text-gray-900 dark:text-white text-sm">{jd.clientId || 'N/A'}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{jd.company || 'N/A'}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{jd.spocName || 'N/A'}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{jd.role || 'N/A'}</td>
+                        <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{jd.sharedDate || 'N/A'}</td>
+                        <td className="py-3 px-3">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedJD({...jd.requirement, clientId: jd.clientId, spocName: jd.spocName});
+                              setIsViewMoreJDModalOpen(false);
+                              setIsJDPreviewModalOpen(true);
+                            }}
+                            className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300"
+                          >
+                            View JD
+                          </Button>
+                        </td>
+                        <td className="py-3 px-3">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setJdToAdd(jd);
+                              setIsViewMoreJDModalOpen(false);
+                              setIsAddToRequirementAlertOpen(true);
+                            }}
+                            className="text-xs p-2"
+                            title="Add to Requirement"
+                          >
+                            <Send className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div className="flex justify-end space-x-3 px-6 py-4 border-t bg-gray-50 dark:bg-gray-800/50">
+            <Button 
+              onClick={() => setIsViewMoreJDModalOpen(false)}
+              className="px-6 bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

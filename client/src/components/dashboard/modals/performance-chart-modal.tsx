@@ -57,11 +57,44 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
   // Fetch performance graph data from backend
   const { data: performanceData = [], isLoading: isLoadingPerformance } = useQuery<PerformanceDataItem[]>({
     queryKey: ['/api/admin/performance-graph', selectedTeam, dateFrom?.toISOString(), dateTo?.toISOString(), period],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedTeam && selectedTeam !== 'all') {
+        params.append('teamId', selectedTeam);
+      }
+      if (dateFrom) {
+        params.append('dateFrom', dateFrom.toISOString());
+      }
+      if (dateTo) {
+        params.append('dateTo', dateTo.toISOString());
+      }
+      if (period) {
+        params.append('period', period);
+      }
+      const url = `/api/admin/performance-graph${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return await response.json();
+    },
   });
 
   // Fetch default rate data for selected member
   const { data: defaultRateData, isLoading: isLoadingDefaultRate } = useQuery<DefaultRateData>({
     queryKey: ['/api/admin/default-rate', selectedDefaultRateMember, defaultRateDateFrom?.toISOString(), defaultRateDateTo?.toISOString()],
+    queryFn: async () => {
+      if (!selectedDefaultRateMember) return null;
+      const params = new URLSearchParams();
+      if (defaultRateDateFrom) {
+        params.append('dateFrom', defaultRateDateFrom.toISOString());
+      }
+      if (defaultRateDateTo) {
+        params.append('dateTo', defaultRateDateTo.toISOString());
+      }
+      const url = `/api/admin/default-rate/${encodeURIComponent(selectedDefaultRateMember)}${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return await response.json();
+    },
     enabled: !!selectedDefaultRateMember,
   });
 

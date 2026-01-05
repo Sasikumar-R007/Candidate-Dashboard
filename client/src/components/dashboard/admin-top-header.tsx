@@ -61,10 +61,11 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
   const { data: activities = [], isLoading: activitiesLoading } = useQuery<UserActivity[]>({
     queryKey: ['/api/user-activities', userRole],
     queryFn: async () => {
-      const response = await fetch(`/api/user-activities/${userRole}?limit=5`);
+      const response = await apiRequest('GET', `/api/user-activities/${userRole}?limit=5`, {});
       if (!response.ok) throw new Error('Failed to fetch activities');
       return response.json();
     },
+    enabled: showUserDropdown, // Only fetch when dropdown is open
     refetchInterval: 30000,
   });
   
@@ -103,6 +104,21 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
     
     loadProfileData();
   }, [employee?.role]);
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (showUserDropdown && !target.closest('.user-dropdown-container')) {
+        setShowUserDropdown(false);
+      }
+    };
+
+    if (showUserDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showUserDropdown]);
   
   const userName = profileData?.name || employee?.name || "Admin User";
   const userEmail = profileData?.email || employee?.email || "";
@@ -132,19 +148,27 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
     },
     onSuccess: () => {
       logout();
+      // Clear any stored session data
+      localStorage.clear();
+      sessionStorage.clear();
       toast({
         title: "Logged out successfully",
         description: "You have been signed out.",
       });
-      navigate('/');
+      // Navigate to home page and prevent back navigation
+      window.location.href = '/';
     },
     onError: (error: any) => {
       logout();
+      // Clear any stored session data
+      localStorage.clear();
+      sessionStorage.clear();
       toast({
         title: "Logged out",
         description: "You have been signed out (session cleared locally).",
       });
-      navigate('/');
+      // Navigate to home page and prevent back navigation
+      window.location.href = '/';
     }
   });
 
@@ -181,10 +205,9 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
           <span className="text-sm">Help</span>
         </button>
 
-        <div className="relative">
+        <div className="relative user-dropdown-container">
           <button
             onClick={() => setShowUserDropdown(!showUserDropdown)}
-            onBlur={() => setTimeout(() => setShowUserDropdown(false), 150)}
             className="flex items-center gap-3 px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
             data-testid="button-user-dropdown"
           >
@@ -202,7 +225,10 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
           </button>
 
           {showUserDropdown && (
-            <div className="absolute right-0 top-full mt-2 w-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-4 z-50">
+            <div 
+              className="absolute right-0 top-full mt-2 w-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-4 z-50"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="px-4 pb-3 border-b border-gray-200 dark:border-gray-600">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white text-lg font-medium">

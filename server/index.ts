@@ -71,14 +71,17 @@ app.use(session({
     tableName: 'session',
     createTableIfMissing: true,
   }),
+  name: 'staffos.sid', // Unique session cookie name for this app
   secret: process.env.SESSION_SECRET || 'staffos-secret-key-change-in-production',
-  resave: false,
-  saveUninitialized: false,
+  resave: false, // Don't resave unchanged sessions
+  saveUninitialized: false, // Don't save empty sessions
+  rolling: false, // Don't reset expiration on activity (better for multi-user)
   cookie: {
     secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
+    httpOnly: true, // Prevent XSS attacks
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // CSRF protection
+    path: '/' // Ensure cookie is available for all routes
   }
 }));
 

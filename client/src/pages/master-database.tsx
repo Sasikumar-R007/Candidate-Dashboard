@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -21,8 +21,406 @@ const createApiUrl = (path: string) => {
 };
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import EmployeeDetailsModal from "@/components/dashboard/modals/employee-details-modal";
+import { StandardDatePicker } from "@/components/ui/standard-date-picker";
+import { format } from "date-fns";
 
 type ProfileType = 'resume' | 'employee' | 'client';
+
+// Edit Client Modal Component
+function EditClientModal({ open, onOpenChange, client }: { open: boolean; onOpenChange: (open: boolean) => void; client: ClientData }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  const [formData, setFormData] = useState({
+    brandName: client?.brandName || '',
+    incorporatedName: client?.incorporatedName || '',
+    gstin: client?.gstin || '',
+    address: (client as any)?.address || '',
+    location: client?.location || '',
+    spoc: client?.spoc || '',
+    email: client?.email || '',
+    website: client?.website || '',
+    linkedin: client?.linkedin || '',
+    agreement: (client as any)?.agreement || '',
+    percentage: client?.percentage || '',
+    category: client?.category || '',
+    paymentTerms: client?.paymentTerms || '',
+    source: client?.source || '',
+    startDate: client?.startDate || '',
+    currentStatus: (client as any)?.currentStatus || 'active',
+  });
+
+  useEffect(() => {
+    if (client) {
+      setFormData({
+        brandName: client.brandName || '',
+        incorporatedName: client.incorporatedName || '',
+        gstin: client.gstin || '',
+        address: (client as any).address || '',
+        location: client.location || '',
+        spoc: client.spoc || '',
+        email: client.email || '',
+        website: client.website || '',
+        linkedin: client.linkedin || '',
+        agreement: (client as any).agreement || '',
+        percentage: client.percentage || '',
+        category: client.category || '',
+        paymentTerms: client.paymentTerms || '',
+        source: client.source || '',
+        startDate: client.startDate || '',
+        currentStatus: (client as any).currentStatus || 'active',
+      });
+    }
+  }, [client]);
+
+  const updateClientMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      const response = await apiRequest('PUT', `/api/admin/clients/${client.id}`, {
+        brandName: data.brandName,
+        incorporatedName: data.incorporatedName,
+        gstin: data.gstin,
+        address: data.address,
+        location: data.location,
+        spoc: data.spoc,
+        email: data.email,
+        website: data.website,
+        linkedin: data.linkedin,
+        agreement: data.agreement,
+        percentage: data.percentage,
+        category: data.category,
+        paymentTerms: data.paymentTerms,
+        source: data.source,
+        startDate: data.startDate,
+        currentStatus: data.currentStatus,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
+      toast({
+        title: "Record Updated",
+        description: "Client details have been updated successfully",
+      });
+      onOpenChange(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update client",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSave = () => {
+    if (!formData.brandName || !formData.email) {
+      toast({
+        title: "Validation Error",
+        description: "Brand Name and Email are required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateClientMutation.mutate(formData);
+  };
+
+  if (!client || !client.id) {
+    return null;
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold">Edit Client Details</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Brand Name *</Label>
+              <Input className="bg-gray-50" value={formData.brandName} onChange={(e) => setFormData({...formData, brandName: e.target.value})} placeholder="Brand Name" />
+            </div>
+            <div className="space-y-2">
+              <Label>Incorporated Name</Label>
+              <Input className="bg-gray-50" value={formData.incorporatedName} onChange={(e) => setFormData({...formData, incorporatedName: e.target.value})} placeholder="Incorporated Name" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>GSTIN</Label>
+              <Input className="bg-gray-50" value={formData.gstin} onChange={(e) => setFormData({...formData, gstin: e.target.value})} placeholder="GSTIN" />
+            </div>
+            <div className="space-y-2">
+              <Label>Address</Label>
+              <Input className="bg-gray-50" value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} placeholder="Address" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Location</Label>
+              <Input className="bg-gray-50" value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} placeholder="Location" />
+            </div>
+            <div className="space-y-2">
+              <Label>SPOC</Label>
+              <Input className="bg-gray-50" value={formData.spoc} onChange={(e) => setFormData({...formData, spoc: e.target.value})} placeholder="SPOC" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Email *</Label>
+              <Input className="bg-gray-50" type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} placeholder="Email" />
+            </div>
+            <div className="space-y-2">
+              <Label>Website</Label>
+              <Input className="bg-gray-50" value={formData.website} onChange={(e) => setFormData({...formData, website: e.target.value})} placeholder="Website" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>LinkedIn</Label>
+              <Input className="bg-gray-50" value={formData.linkedin} onChange={(e) => setFormData({...formData, linkedin: e.target.value})} placeholder="LinkedIn" />
+            </div>
+            <div className="space-y-2">
+              <Label>Agreement</Label>
+              <Select value={formData.agreement} onValueChange={(value) => setFormData({...formData, agreement: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Agreement" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Signup Pending">Signup Pending</SelectItem>
+                  <SelectItem value="Signup Completed">Signup Completed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Percentage</Label>
+              <Input className="bg-gray-50" type="number" min="0" max="100" value={formData.percentage} onChange={(e) => setFormData({...formData, percentage: e.target.value})} placeholder="Percentage" />
+            </div>
+            <div className="space-y-2">
+              <Label>Category</Label>
+              <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Product">Product</SelectItem>
+                  <SelectItem value="Services">Services</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Payment Terms</Label>
+              <Input className="bg-gray-50" value={formData.paymentTerms} onChange={(e) => setFormData({...formData, paymentTerms: e.target.value})} placeholder="Payment Terms" />
+            </div>
+            <div className="space-y-2">
+              <Label>Source</Label>
+              <Select value={formData.source} onValueChange={(value) => setFormData({...formData, source: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Source" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Outbound Lead (Sales)">Outbound Lead (Sales)</SelectItem>
+                  <SelectItem value="Client Referral">Client Referral</SelectItem>
+                  <SelectItem value="VC Referral">VC Referral</SelectItem>
+                  <SelectItem value="Inbound Lead">Inbound Lead</SelectItem>
+                  <SelectItem value="Other Referral">Other Referral</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Start Date</Label>
+              <StandardDatePicker 
+                value={formData.startDate ? (() => {
+                  try {
+                    const date = new Date(formData.startDate);
+                    return isNaN(date.getTime()) ? undefined : date;
+                  } catch {
+                    return undefined;
+                  }
+                })() : undefined} 
+                onChange={(date) => setFormData({...formData, startDate: date ? date.toISOString().split('T')[0] : ''})} 
+                placeholder="Start Date" 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Current Status</Label>
+              <Select value={formData.currentStatus} onValueChange={(value) => setFormData({...formData, currentStatus: value})}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="frozen">Frozen</SelectItem>
+                  <SelectItem value="churned">Churned</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleSave} disabled={updateClientMutation.isPending}>
+            {updateClientMutation.isPending ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Edit Resume Modal Component
+function EditResumeModal({ open, onOpenChange, resume }: { open: boolean; onOpenChange: (open: boolean) => void; resume: ResumeData }) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  
+  const [formData, setFormData] = useState({
+    name: resume?.name || '',
+    email: resume?.email || '',
+    phone: resume?.phone || '',
+    position: resume?.position || '',
+    experience: resume?.experience || '',
+    skills: resume?.skills || '',
+    location: resume?.location || '',
+    status: resume?.status || 'New',
+  });
+
+  useEffect(() => {
+    if (resume) {
+      setFormData({
+        name: resume.name || '',
+        email: resume.email || '',
+        phone: resume.phone || '',
+        position: resume.position || '',
+        experience: resume.experience || '',
+        skills: resume.skills || '',
+        location: resume.location || '',
+        status: resume.status || 'New',
+      });
+    }
+  }, [resume]);
+
+  const updateResumeMutation = useMutation({
+    mutationFn: async (data: typeof formData) => {
+      const response = await apiRequest('PUT', `/api/admin/candidates/${resume.id}`, {
+        fullName: data.name,
+        email: data.email,
+        phone: data.phone,
+        position: data.position,
+        experience: data.experience,
+        skills: data.skills,
+        location: data.location,
+        pipelineStatus: data.status,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/candidates'] });
+      toast({
+        title: "Record Updated",
+        description: "Resume details have been updated successfully",
+      });
+      onOpenChange(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update resume",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSave = () => {
+    if (!formData.name || !formData.email) {
+      toast({
+        title: "Validation Error",
+        description: "Name and Email are required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateResumeMutation.mutate(formData);
+  };
+
+  if (!resume || !resume.id) {
+    return null;
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-2xl font-bold">Edit Resume Details</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Name *</Label>
+              <Input className="bg-gray-50" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Full Name" />
+            </div>
+            <div className="space-y-2">
+              <Label>Email *</Label>
+              <Input className="bg-gray-50" type="email" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} placeholder="Email" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Phone</Label>
+              <Input className="bg-gray-50" value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} placeholder="Phone" />
+            </div>
+            <div className="space-y-2">
+              <Label>Position</Label>
+              <Input className="bg-gray-50" value={formData.position} onChange={(e) => setFormData({...formData, position: e.target.value})} placeholder="Position" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Experience</Label>
+              <Input className="bg-gray-50" value={formData.experience} onChange={(e) => setFormData({...formData, experience: e.target.value})} placeholder="Experience" />
+            </div>
+            <div className="space-y-2">
+              <Label>Location</Label>
+              <Input className="bg-gray-50" value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} placeholder="Location" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Skills</Label>
+            <Input className="bg-gray-50" value={formData.skills} onChange={(e) => setFormData({...formData, skills: e.target.value})} placeholder="Skills (comma separated)" />
+          </div>
+          <div className="space-y-2">
+            <Label>Status</Label>
+            <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value as ResumeStatus})}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="New">New</SelectItem>
+                <SelectItem value="Inbound">Inbound</SelectItem>
+                <SelectItem value="Existed">Existed</SelectItem>
+                <SelectItem value="Archived">Archived</SelectItem>
+                <SelectItem value="Looking for Jobs">Looking for Jobs</SelectItem>
+                <SelectItem value="In working">In working</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleSave} disabled={updateResumeMutation.isPending}>
+            {updateResumeMutation.isPending ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 type ResumeStatus = 'Inbound' | 'Existed' | 'Archived' | 'Looking for Jobs' | 'In working' | 'New' | 'Active';
 type EmployeeStatus = 'Active' | 'On Leave' | 'Inactive' | 'Resigned';
@@ -55,6 +453,33 @@ interface EmployeeData {
   email?: string;
   phone?: string;
   department?: string;
+  employeeId?: string;
+  address?: string;
+  designation?: string;
+  joiningDate?: string;
+  employmentStatus?: string;
+  esic?: string;
+  epfo?: string;
+  esicNo?: string;
+  epfoNo?: string;
+  fatherName?: string;
+  motherName?: string;
+  fatherNumber?: string;
+  motherNumber?: string;
+  offeredCtc?: string;
+  currentStatus?: string;
+  incrementCount?: string;
+  appraisedQuarter?: string;
+  appraisedAmount?: string;
+  appraisedYear?: string;
+  yearlyCTC?: string;
+  currentMonthlyCTC?: string;
+  nameAsPerBank?: string;
+  accountNumber?: string;
+  ifscCode?: string;
+  bankName?: string;
+  branch?: string;
+  city?: string;
 }
 
 interface ClientData {
@@ -69,6 +494,19 @@ interface ClientData {
   email?: string;
   website?: string;
   location?: string;
+  clientCode?: string;
+  brandName?: string;
+  incorporatedName?: string;
+  gstin?: string;
+  address?: string;
+  spoc?: string;
+  linkedin?: string;
+  agreement?: string;
+  percentage?: string;
+  category?: string;
+  paymentTerms?: string;
+  startDate?: string;
+  currentStatus?: string;
 }
 
 export default function MasterDatabase() {
@@ -93,6 +531,8 @@ export default function MasterDatabase() {
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{id: string, name: string, profileType: ProfileType} | null>(null);
   const [passwordInput, setPasswordInput] = useState("");
+  const [itemToEdit, setItemToEdit] = useState<ResumeData | EmployeeData | ClientData | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [passwordAttempts, setPasswordAttempts] = useState(0);
   const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
   
@@ -199,6 +639,33 @@ export default function MasterDatabase() {
         email: employee.email,
         phone: employee.phone,
         department: employee.department,
+        employeeId: employee.employeeId,
+        address: employee.address,
+        designation: employee.designation,
+        joiningDate: employee.joiningDate,
+        employmentStatus: employee.employmentStatus,
+        esic: employee.esic,
+        epfo: employee.epfo,
+        esicNo: employee.esicNo,
+        epfoNo: employee.epfoNo,
+        fatherName: employee.fatherName,
+        motherName: employee.motherName,
+        fatherNumber: employee.fatherNumber,
+        motherNumber: employee.motherNumber,
+        offeredCtc: employee.offeredCtc,
+        currentStatus: employee.currentStatus,
+        incrementCount: employee.incrementCount,
+        appraisedQuarter: employee.appraisedQuarter,
+        appraisedAmount: employee.appraisedAmount,
+        appraisedYear: employee.appraisedYear,
+        yearlyCTC: employee.yearlyCTC,
+        currentMonthlyCTC: employee.currentMonthlyCTC,
+        nameAsPerBank: employee.nameAsPerBank,
+        accountNumber: employee.accountNumber,
+        ifscCode: employee.ifscCode,
+        bankName: employee.bankName,
+        branch: employee.branch,
+        city: employee.city,
       }));
   }, [employeesRaw]);
 
@@ -220,6 +687,19 @@ export default function MasterDatabase() {
         email: client.email,
         website: client.website,
         location: client.location,
+        clientCode: client.clientCode,
+        brandName: client.brandName,
+        incorporatedName: client.incorporatedName,
+        gstin: client.gstin,
+        address: client.address,
+        spoc: client.spoc,
+        linkedin: client.linkedin,
+        agreement: client.agreement,
+        percentage: client.percentage,
+        category: client.category,
+        paymentTerms: client.paymentTerms,
+        startDate: client.startDate,
+        currentStatus: client.currentStatus,
       }));
   }, [clientsRaw]);
 
@@ -912,6 +1392,9 @@ export default function MasterDatabase() {
               <table className="w-full">
                 <thead>
                   <tr className="bg-blue-200 dark:bg-blue-900 sticky top-0">
+                    <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">
+                      {profileType === 'resume' ? 'Resume ID' : profileType === 'employee' ? 'Employee ID' : 'Client ID'}
+                    </th>
                     <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Name</th>
                     {profileType === 'resume' && (
                       <>
@@ -923,17 +1406,54 @@ export default function MasterDatabase() {
                     )}
                     {profileType === 'employee' && (
                       <>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Position</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Department</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Address</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Designation</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Email</th>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Status</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Phone</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Date of Joining</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Employment Status</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">ESIC</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">EPFO</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">ESIC No</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">EPFO No</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Father's Name</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Mother's Name</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Father's Number</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Mother's Number</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Offered CTC</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Current Status</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Increment Count</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Appraised Quarter</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Appraised Amount</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Appraised Year</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Yearly CTC</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Current Monthly CTC</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Department</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Name as per Bank</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Account Number</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">IFSC Code</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Bank Name</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Branch</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">City</th>
                       </>
                     )}
                     {profileType === 'client' && (
                       <>
-                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Category</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Brand Name</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Incorporated Name</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">GSTIN</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Address</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Location</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">SPOC</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Email</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Website</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">LinkedIn</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Agreement</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Percentage</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Category</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Payment Terms</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Source</th>
+                        <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Start Date</th>
                         <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Status</th>
                       </>
                     )}
@@ -944,7 +1464,7 @@ export default function MasterDatabase() {
                 <tbody>
                   {isLoading ? (
                     <tr>
-                      <td colSpan={profileType === 'resume' ? (isResumeDrawerOpen ? 6 : 8) : 8} className="py-12 text-center">
+                      <td colSpan={profileType === 'resume' ? (isResumeDrawerOpen ? 7 : 9) : profileType === 'employee' ? 33 : profileType === 'client' ? 18 : 9} className="py-12 text-center">
                         <div className="flex flex-col items-center justify-center gap-2">
                           <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
                           <span className="text-gray-500 dark:text-gray-400">Loading {getProfileTypeLabel().toLowerCase()}s...</span>
@@ -953,7 +1473,7 @@ export default function MasterDatabase() {
                     </tr>
                   ) : filteredData.length === 0 ? (
                     <tr>
-                      <td colSpan={profileType === 'resume' ? (isResumeDrawerOpen ? 6 : 8) : 8} className="py-12 text-center">
+                      <td colSpan={profileType === 'resume' ? (isResumeDrawerOpen ? 7 : 9) : profileType === 'employee' ? 33 : profileType === 'client' ? 18 : 9} className="py-12 text-center">
                         <div className="flex flex-col items-center justify-center gap-2">
                           <span className="text-gray-500 dark:text-gray-400">
                             {searchQuery || statusFilter !== 'all' 
@@ -978,6 +1498,11 @@ export default function MasterDatabase() {
                         } ${profileType === 'resume' ? 'cursor-pointer hover-elevate' : ''}`}
                         data-testid={`row-${profileType}-${item.id}`}
                       >
+                        <td className="py-3 px-4 text-gray-900 dark:text-gray-100 font-medium" data-testid={`text-id-${item.id}`}>
+                          {profileType === 'resume' ? (item as ResumeData).id?.substring(0, 8) || '-' : 
+                           profileType === 'employee' ? ((item as EmployeeData).employeeId || '-') : 
+                           ((item as ClientData).clientCode || '-')}
+                        </td>
                         <td className="py-3 px-4 text-gray-900 dark:text-gray-100" data-testid={`text-name-${item.id}`}>
                           {item.name}
                         </td>
@@ -997,27 +1522,142 @@ export default function MasterDatabase() {
                         )}
                         {profileType === 'employee' && (
                           <>
-                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.position}</td>
                             <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
-                              {'department' in item ? (item as any).department : item.skills}
+                              {'address' in item ? (item as any).address || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'designation' in item ? (item as any).designation || '-' : '-'}
                             </td>
                             <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
                               {'email' in item ? (item as any).email : '-'}
                             </td>
-                            <td className="py-3 px-4">
-                              <Badge className={`${getStatusBadgeColor(item.status)} rounded-full px-3 py-1`}>
-                                {item.status}
-                              </Badge>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'phone' in item ? (item as any).phone || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'joiningDate' in item ? ((item as any).joiningDate ? formatDate((item as any).joiningDate) : '-') : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'employmentStatus' in item ? (item as any).employmentStatus || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'esic' in item ? (item as any).esic || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'epfo' in item ? (item as any).epfo || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'esicNo' in item ? (item as any).esicNo || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'epfoNo' in item ? (item as any).epfoNo || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'fatherName' in item ? (item as any).fatherName || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'motherName' in item ? (item as any).motherName || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'fatherNumber' in item ? (item as any).fatherNumber || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'motherNumber' in item ? (item as any).motherNumber || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'offeredCtc' in item ? (item as any).offeredCtc || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'currentStatus' in item ? (item as any).currentStatus || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'incrementCount' in item ? (item as any).incrementCount || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'appraisedQuarter' in item ? (item as any).appraisedQuarter || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'appraisedAmount' in item ? (item as any).appraisedAmount || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'appraisedYear' in item ? (item as any).appraisedYear || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'yearlyCTC' in item ? (item as any).yearlyCTC || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'currentMonthlyCTC' in item ? (item as any).currentMonthlyCTC || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'department' in item ? (item as any).department || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'nameAsPerBank' in item ? (item as any).nameAsPerBank || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'accountNumber' in item ? (item as any).accountNumber || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'ifscCode' in item ? (item as any).ifscCode || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'bankName' in item ? (item as any).bankName || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'branch' in item ? (item as any).branch || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'city' in item ? (item as any).city || '-' : '-'}
                             </td>
                           </>
                         )}
                         {profileType === 'client' && (
                           <>
-                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.position}</td>
                             <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
-                              {'location' in item ? (item as any).location : '-'}
+                              {'brandName' in item ? (item as any).brandName || '-' : '-'}
                             </td>
-                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">{item.skills}</td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'incorporatedName' in item ? (item as any).incorporatedName || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'gstin' in item ? (item as any).gstin || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'address' in item ? (item as any).address || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'location' in item ? (item as any).location || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'spoc' in item ? (item as any).spoc || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'email' in item ? (item as any).email || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'website' in item ? (item as any).website || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'linkedin' in item ? (item as any).linkedin || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'agreement' in item ? (item as any).agreement || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'percentage' in item ? (item as any).percentage ? `${(item as any).percentage}%` : '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'category' in item ? (item as any).category || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'paymentTerms' in item ? (item as any).paymentTerms || '-' : '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {item.source || '-'}
+                            </td>
+                            <td className="py-3 px-4 text-gray-900 dark:text-gray-100">
+                              {'startDate' in item ? ((item as any).startDate ? formatDate((item as any).startDate) : '-') : '-'}
+                            </td>
                             <td className="py-3 px-4">
                               <Badge className={`${getStatusBadgeColor(item.status)} rounded-full px-3 py-1`}>
                                 {item.status}
@@ -1039,6 +1679,17 @@ export default function MasterDatabase() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              <DropdownMenuItem 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setItemToEdit(item);
+                                  setIsEditModalOpen(true);
+                                }}
+                                className="text-blue-600 dark:text-blue-400"
+                                data-testid={`menu-edit-${item.id}`}
+                              >
+                                Edit
+                              </DropdownMenuItem>
                               <DropdownMenuItem 
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -1116,13 +1767,23 @@ export default function MasterDatabase() {
                   {selectedResume && 'resumeFile' in selectedResume && selectedResume.resumeFile ? (
                     <>
                       {(() => {
-                        const resumeUrl = selectedResume.resumeFile;
+                        let resumeUrl = selectedResume.resumeFile;
+                        // Fix file path - ensure it's a proper URL
+                        if (resumeUrl && !resumeUrl.startsWith('http') && !resumeUrl.startsWith('/')) {
+                          // If it's a relative path without leading slash, add it
+                          resumeUrl = '/' + resumeUrl;
+                        } else if (resumeUrl && resumeUrl.startsWith('uploads/')) {
+                          // If it starts with uploads/, ensure it has leading slash
+                          resumeUrl = '/' + resumeUrl;
+                        }
+                        
                         const lowerUrl = resumeUrl.toLowerCase();
                         // Check file extension from URL (handle URLs with query params)
                         const urlWithoutQuery = lowerUrl.split('?')[0];
                         const isPdf = urlWithoutQuery.endsWith('.pdf');
                         const isDocx = urlWithoutQuery.endsWith('.docx');
                         const isDoc = urlWithoutQuery.endsWith('.doc') && !isDocx;
+                        const isImage = urlWithoutQuery.endsWith('.jpg') || urlWithoutQuery.endsWith('.jpeg') || urlWithoutQuery.endsWith('.png');
                         
                         if (isPdf) {
                           return (
@@ -1132,6 +1793,23 @@ export default function MasterDatabase() {
                               className="w-full h-full border-0"
                               title="Resume Preview"
                               data-testid="resume-iframe"
+                              onError={(e) => {
+                                console.error('Resume iframe error:', e);
+                                // Fallback to download
+                              }}
+                            />
+                          );
+                        } else if (isImage) {
+                          // Display images directly
+                          return (
+                            <img
+                              src={resumeUrl}
+                              alt="Resume"
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                console.error('Resume image error:', e);
+                                e.currentTarget.style.display = 'none';
+                              }}
                             />
                           );
                         } else if (isDocx || isDoc) {
@@ -1761,6 +2439,83 @@ export default function MasterDatabase() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Modal for Employee */}
+      {itemToEdit && profileType === 'employee' && (
+        <EmployeeDetailsModal
+          open={isEditModalOpen}
+          onOpenChange={(open) => {
+            setIsEditModalOpen(open);
+            if (!open) {
+              setItemToEdit(null);
+              queryClient.invalidateQueries({ queryKey: ['/api/admin/employees'] });
+            }
+          }}
+          employee={{
+            id: itemToEdit.id,
+            name: itemToEdit.name,
+            email: (itemToEdit as EmployeeData).email || '',
+            phone: (itemToEdit as EmployeeData).phone || '',
+            address: (itemToEdit as EmployeeData).address || '',
+            designation: (itemToEdit as EmployeeData).designation || '',
+            joiningDate: (itemToEdit as EmployeeData).joiningDate || '',
+            employmentStatus: (itemToEdit as EmployeeData).employmentStatus || '',
+            esic: (itemToEdit as EmployeeData).esic || '',
+            epfo: (itemToEdit as EmployeeData).epfo || '',
+            esicNo: (itemToEdit as EmployeeData).esicNo || '',
+            epfoNo: (itemToEdit as EmployeeData).epfoNo || '',
+            fathersName: (itemToEdit as EmployeeData).fatherName || '',
+            motherName: (itemToEdit as EmployeeData).motherName || '',
+            fatherNumber: (itemToEdit as EmployeeData).fatherNumber || '',
+            motherNumber: (itemToEdit as EmployeeData).motherNumber || '',
+            offeredCtc: (itemToEdit as EmployeeData).offeredCtc || '',
+            currentStatus: (itemToEdit as EmployeeData).currentStatus || '',
+            incrementCount: (itemToEdit as EmployeeData).incrementCount || '',
+            appraisedQuarter: (itemToEdit as EmployeeData).appraisedQuarter || '',
+            appraisedAmount: (itemToEdit as EmployeeData).appraisedAmount || '',
+            appraisedYear: (itemToEdit as EmployeeData).appraisedYear || '',
+            yearlyCTC: (itemToEdit as EmployeeData).yearlyCTC || '',
+            currentMonthlyCTC: (itemToEdit as EmployeeData).currentMonthlyCTC || '',
+            department: (itemToEdit as EmployeeData).department || '',
+            nameAsPerBank: (itemToEdit as EmployeeData).nameAsPerBank || '',
+            accountNumber: (itemToEdit as EmployeeData).accountNumber || '',
+            ifscCode: (itemToEdit as EmployeeData).ifscCode || '',
+            bankName: (itemToEdit as EmployeeData).bankName || '',
+            branch: (itemToEdit as EmployeeData).branch || '',
+            city: (itemToEdit as EmployeeData).city || ''
+          }}
+        />
+      )}
+
+      {/* Edit Modal for Client */}
+      {itemToEdit && profileType === 'client' && (
+        <EditClientModal
+          open={isEditModalOpen}
+          onOpenChange={(open) => {
+            setIsEditModalOpen(open);
+            if (!open) {
+              setItemToEdit(null);
+              queryClient.invalidateQueries({ queryKey: ['/api/admin/clients'] });
+            }
+          }}
+          client={itemToEdit as ClientData}
+        />
+      )}
+
+      {/* Edit Modal for Resume */}
+      {itemToEdit && profileType === 'resume' && (
+        <EditResumeModal
+          open={isEditModalOpen}
+          onOpenChange={(open) => {
+            setIsEditModalOpen(open);
+            if (!open) {
+              setItemToEdit(null);
+              queryClient.invalidateQueries({ queryKey: ['/api/admin/candidates'] });
+            }
+          }}
+          resume={itemToEdit as ResumeData}
+        />
+      )}
     </div>
   );
 }

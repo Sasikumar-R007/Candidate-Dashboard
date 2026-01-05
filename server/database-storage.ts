@@ -274,6 +274,11 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(archivedRequirements).orderBy(desc(archivedRequirements.archivedAt));
   }
 
+  async deleteRequirement(id: string): Promise<boolean> {
+    const result = await db.delete(requirements).where(eq(requirements.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
   // Employee methods
   async getEmployeeById(id: string): Promise<Employee | undefined> {
     const [employee] = await db.select().from(employees).where(eq(employees.id, id));

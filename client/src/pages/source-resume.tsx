@@ -36,6 +36,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/contexts/auth-context";
+import type { Employee } from "@shared/schema";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -248,7 +250,61 @@ const allSkills = [
   "SQL",
   "PostgreSQL",
   "MySQL",
+  "Flutter",
+  "Dart",
+  "Swift",
+  "Kotlin",
+  "Go",
+  "Ruby",
+  "PHP",
+  "C++",
+  "C#",
+  ".NET",
+  "Spring",
+  "Django",
+  "Flask",
+  "Laravel",
+  "TensorFlow",
+  "PyTorch",
+  "Machine Learning",
+  "Data Science",
 ];
+
+// Utility function to highlight search terms in text
+const highlightText = (text: string, searchTerms: string[]): React.ReactNode => {
+  if (!searchTerms || searchTerms.length === 0 || !text) {
+    return text;
+  }
+
+  // Create a regex pattern that matches any of the search terms (case-insensitive)
+  const escapedTerms = searchTerms.map(term => term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const pattern = new RegExp(`(${escapedTerms.join('|')})`, 'gi');
+  
+  const parts = text.split(pattern);
+  
+  return parts.map((part, index) => {
+    const isMatch = searchTerms.some(term => 
+      part.toLowerCase() === term.toLowerCase()
+    );
+    
+    if (isMatch) {
+      return (
+        <span key={index} className="bg-yellow-200 font-semibold">
+          {part}
+        </span>
+      );
+    }
+    return part;
+  });
+};
+
+// Extract search terms from query string
+const extractSearchTerms = (query: string): string[] => {
+  if (!query || !query.trim()) return [];
+  
+  // Split by spaces and filter out empty strings
+  return query.trim().split(/\s+/).filter(term => term.length > 0);
+};
 
 interface FilterState {
   keywords: string[];
@@ -708,6 +764,64 @@ const sampleCandidates: CandidateDisplay[] = [
 ];
 
 const SourceResume = () => {
+  // CRITICAL SECURITY: Defense-in-depth authentication check
+  // This ensures the page is NEVER accessible without proper authentication
+  const { user, isLoading: authLoading, isVerified } = useAuth();
+  const [, setLocation] = useLocation();
+  
+  // Block ALL rendering until authentication is verified
+  useEffect(() => {
+    if (authLoading || !isVerified) {
+      // Still loading, wait
+      return;
+    }
+    
+    // Authentication check failed - redirect immediately
+    if (!user) {
+      setLocation('/employer-login');
+      return;
+    }
+    
+    // Check user type
+    if (user.type !== 'employee') {
+      setLocation('/employer-login');
+      return;
+    }
+    
+    // Check allowed roles
+    const employee = user.data as Employee;
+    const allowedRoles = ["recruiter", "talent_advisor", "teamLead", "team_leader", "admin"];
+    if (!allowedRoles.includes(employee.role)) {
+      setLocation('/employer-login');
+      return;
+    }
+  }, [user, authLoading, isVerified, setLocation]);
+  
+  // Show loading while auth is being verified
+  if (authLoading || !isVerified || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-muted-foreground">Verifying access...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Double-check role after verification
+  const employee = user.data as Employee;
+  const allowedRoles = ["recruiter", "talent_advisor", "teamLead", "team_leader", "admin"];
+  if (!allowedRoles.includes(employee.role)) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex flex-col items-center gap-4">
+          <p className="text-muted-foreground">Access denied. Redirecting...</p>
+        </div>
+      </div>
+    );
+  }
+  
   const [view, setView] = useState<'search' | 'results'>('search');
   const [filters, setFilters] = useState<FilterState>(initialFilters);
   const [keywordInput, setKeywordInput] = useState("");
@@ -717,6 +831,7 @@ const SourceResume = () => {
   const [resultsSearchQuery, setResultsSearchQuery] = useState("");
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const [showSavedProfiles, setShowSavedProfiles] = useState(false);
+  const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
   
   // State for showing/hiding input fields
   const [showExcludeKeywords, setShowExcludeKeywords] = useState(false);
@@ -730,7 +845,6 @@ const SourceResume = () => {
   const [excludeCompanyInput, setExcludeCompanyInput] = useState("");
   const [addDegreeInput, setAddDegreeInput] = useState("");
   
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
 
   // Load recent searches from localStorage
@@ -956,7 +1070,7 @@ const SourceResume = () => {
         if (!hasAllSkills) return false;
       }
 
-      // Search query filter with Boolean support
+      // Search query filter - Multiple words use OR logic by default
       if (resultsSearchQuery.trim()) {
         if (filters.booleanMode) {
           // Boolean search: parse AND/OR logic
@@ -984,12 +1098,15 @@ const SourceResume = () => {
             if (!searchText.includes(query)) return false;
           }
         } else {
-          const query = resultsSearchQuery.toLowerCase();
-          const matches = 
-            candidate.name.toLowerCase().includes(query) ||
-            candidate.title.toLowerCase().includes(query) ||
-            candidate.currentCompany.toLowerCase().includes(query) ||
-            candidate.skills.some(skill => skill.toLowerCase().includes(query));
+          // Default behavior: Split multiple words and use OR logic (show candidates with ANY of the words)
+          const searchTerms = extractSearchTerms(resultsSearchQuery);
+          const searchText = `${candidate.name} ${candidate.title} ${candidate.currentCompany} ${candidate.skills.join(' ')}`.toLowerCase();
+          
+          // At least one term must match
+          const matches = searchTerms.some(term => 
+            searchText.includes(term.toLowerCase())
+          );
+          
           if (!matches) return false;
         }
       }
@@ -1090,6 +1207,68 @@ const SourceResume = () => {
   const displayCandidates = showSavedProfiles 
     ? filteredCandidates.filter(c => savedCandidates.has(c.id))
     : filteredCandidates;
+
+  // Generate AI suggestions based on candidates data
+  const searchSuggestions = useMemo(() => {
+    if (!resultsSearchQuery.trim() || resultsSearchQuery.trim().length < 1) {
+      return [];
+    }
+
+    const query = resultsSearchQuery.toLowerCase().trim();
+    const suggestions: string[] = [];
+    
+    // Get unique skills from all candidates
+    const allUniqueSkills = new Set<string>();
+    candidates.forEach(c => {
+      c.skills.forEach(skill => allUniqueSkills.add(skill));
+    });
+    
+    // Get unique companies
+    const allUniqueCompanies = new Set<string>();
+    candidates.forEach(c => {
+      if (c.currentCompany && c.currentCompany !== 'Not Available') {
+        allUniqueCompanies.add(c.currentCompany);
+      }
+    });
+    
+    // Get unique roles/titles
+    const allUniqueRoles = new Set<string>();
+    candidates.forEach(c => {
+      if (c.title && c.title !== 'Not Available') {
+        allUniqueRoles.add(c.title);
+      }
+    });
+    
+    // Filter and add matching skills
+    allUniqueSkills.forEach(skill => {
+      if (skill.toLowerCase().includes(query) && !suggestions.includes(skill)) {
+        suggestions.push(skill);
+      }
+    });
+    
+    // Filter and add matching companies
+    allUniqueCompanies.forEach(company => {
+      if (company.toLowerCase().includes(query) && !suggestions.includes(company)) {
+        suggestions.push(company);
+      }
+    });
+    
+    // Filter and add matching roles
+    allUniqueRoles.forEach(role => {
+      if (role.toLowerCase().includes(query) && !suggestions.includes(role)) {
+        suggestions.push(role);
+      }
+    });
+    
+    // Also add from predefined allSkills list
+    allSkills.forEach(skill => {
+      if (skill.toLowerCase().includes(query) && !suggestions.includes(skill)) {
+        suggestions.push(skill);
+      }
+    });
+    
+    return suggestions.slice(0, 8); // Limit to 8 suggestions
+  }, [resultsSearchQuery, candidates]);
   
   const candidatesPerPage = 10;
   const totalPages = Math.ceil(displayCandidates.length / candidatesPerPage);
@@ -1549,10 +1728,39 @@ const SourceResume = () => {
                 <input
                   type="text"
                   value={resultsSearchQuery}
-                  onChange={(e) => setResultsSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setResultsSearchQuery(e.target.value);
+                    setShowSearchSuggestions(true);
+                  }}
+                  onFocus={() => setShowSearchSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 200)}
                   className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                   placeholder="Enter the skills, company, designation..."
                 />
+                {/* AI Suggestions Dropdown */}
+                {showSearchSuggestions && searchSuggestions.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    <div className="p-2">
+                      <div className="text-xs text-gray-500 px-2 py-1 flex items-center gap-1">
+                        <Lightbulb className="w-3 h-3" />
+                        <span>Suggestions</span>
+                      </div>
+                      {searchSuggestions.map((suggestion, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            setResultsSearchQuery(suggestion);
+                            setShowSearchSuggestions(false);
+                          }}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-purple-50 rounded flex items-center gap-2"
+                        >
+                          <Search className="w-3 h-3 text-gray-400" />
+                          <span>{suggestion}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => {
@@ -1660,7 +1868,9 @@ const SourceResume = () => {
                         <div className="flex items-start justify-between mb-3 relative">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-1">
-                              <h3 className="text-xl font-bold text-gray-900">{candidate.name}</h3>
+                              <h3 className="text-xl font-bold text-gray-900">
+                                {highlightText(candidate.name, extractSearchTerms(resultsSearchQuery))}
+                              </h3>
                               {candidate.isFromDatabase && (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800" title="From Master Database">
                                   <Database className="w-3 h-3" />
@@ -1670,8 +1880,20 @@ const SourceResume = () => {
                             </div>
                             <p className="text-blue-600 font-medium">
                               {candidate.title && candidate.title !== 'Not Available'
-                                ? `${candidate.title}${candidate.currentCompany && candidate.currentCompany !== 'Not Available' ? ` in ${candidate.currentCompany}` : ''}`
-                                : (candidate.currentCompany && candidate.currentCompany !== 'Not Available' ? candidate.currentCompany : 'Not Available')
+                                ? (
+                                    <>
+                                      {highlightText(candidate.title, extractSearchTerms(resultsSearchQuery))}
+                                      {candidate.currentCompany && candidate.currentCompany !== 'Not Available' && (
+                                        <>
+                                          {' in '}
+                                          {highlightText(candidate.currentCompany, extractSearchTerms(resultsSearchQuery))}
+                                        </>
+                                      )}
+                                    </>
+                                  )
+                                : (candidate.currentCompany && candidate.currentCompany !== 'Not Available' 
+                                    ? highlightText(candidate.currentCompany, extractSearchTerms(resultsSearchQuery))
+                                    : 'Not Available')
                               }
                             </p>
                             <p className="text-sm text-gray-600 mt-1">{candidate.email}</p>
@@ -1732,14 +1954,24 @@ const SourceResume = () => {
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-2 mb-3">
-                          {candidate.skills.slice(0, 5).map((skill, idx) => (
-                            <span
-                              key={idx}
-                              className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium"
-                            >
-                              {skill}
-                            </span>
-                          ))}
+                          {candidate.skills.slice(0, 5).map((skill, idx) => {
+                            const searchTerms = extractSearchTerms(resultsSearchQuery);
+                            const isHighlighted = searchTerms.some(term => 
+                              skill.toLowerCase().includes(term.toLowerCase())
+                            );
+                            return (
+                              <span
+                                key={idx}
+                                className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                  isHighlighted 
+                                    ? "bg-yellow-200 text-yellow-900 font-semibold" 
+                                    : "bg-blue-100 text-blue-800"
+                                }`}
+                              >
+                                {highlightText(skill, searchTerms)}
+                              </span>
+                            );
+                          })}
                         </div>
                         <p className="text-sm text-gray-600 line-clamp-2">{candidate.summary}</p>
                       </div>

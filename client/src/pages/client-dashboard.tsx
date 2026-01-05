@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -13,7 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { StandardDatePicker } from "@/components/ui/standard-date-picker";
-import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, MessageSquare, Minus, Users, Play, Trophy, ArrowLeft, Send, Calendar as CalendarIcon, MoreVertical, HelpCircle, Download } from "lucide-react";
+import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, MessageSquare, Minus, Users, Play, Trophy, ArrowLeft, Send, Calendar as CalendarIcon, MoreVertical, HelpCircle, Download, ExternalLink, Eye, Trash2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import SimpleClientHeader from '@/components/dashboard/simple-client-header';
@@ -21,6 +23,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { ChatDock } from '@/components/chat/chat-dock';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { queryClient, apiRequest, apiFileUpload } from '@/lib/queryClient';
+import { useEmployeeAuth } from '@/contexts/auth-context';
 
 interface ChatUser {
   id: number;
@@ -36,6 +39,7 @@ export default function ClientDashboard() {
   const [sidebarTab, setSidebarTab] = useState('dashboard');
   const [isRolesModalOpen, setIsRolesModalOpen] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [jdFilePreviewUrl, setJdFilePreviewUrl] = useState<string | null>(null);
   const [jdText, setJdText] = useState('');
   const [isJdModalOpen, setIsJdModalOpen] = useState(false);
   const [tempJdText, setTempJdText] = useState('');
@@ -64,6 +68,11 @@ export default function ClientDashboard() {
     quality: true,
     impact: true
   });
+  const [selectedRoleForView, setSelectedRoleForView] = useState<any>(null);
+  const [selectedRoleForEdit, setSelectedRoleForEdit] = useState<any>(null);
+  const [isViewRoleModalOpen, setIsViewRoleModalOpen] = useState(false);
+  const [isEditRoleModalOpen, setIsEditRoleModalOpen] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState<string | null>(null);
 
   // Fetch metrics data from API - hooks must be at top level
   const { data: speedMetricsData } = useQuery({
@@ -158,8 +167,10 @@ export default function ClientDashboard() {
   // Fetch client profile from API
   const { data: clientProfile, isLoading: isLoadingProfile } = useQuery({
     queryKey: ['/api/client/profile'],
-    initialData: { name: '', email: '', company: 'Loading...', phone: '', profileLinked: true, clientDetails: null }
   });
+  const employee = useEmployeeAuth();
+  const userName = clientProfile?.name || employee?.name || "Client User";
+  const userRole = employee?.role || 'client';
 
   // Mutation for rejecting a candidate
   const rejectCandidateMutation = useMutation({
@@ -217,6 +228,30 @@ export default function ClientDashboard() {
     }
   });
 
+  // Mutation for deleting a requirement/role
+  const deleteRoleMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest('DELETE', `/api/client/requirements/${id}`);
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/client/requirements'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/client/dashboard-stats'] });
+      toast({
+        title: "Role Deleted",
+        description: "The role has been deleted successfully.",
+      });
+      setRoleToDelete(null);
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete role. Please try again.",
+        variant: "destructive"
+      });
+    }
+  });
+
   // Group pipeline data by stage for the column view
   const pipelineStages = ['L1', 'L2', 'L3', 'Final Round', 'HR Round', 'Offer Stage', 'Closure'];
   const groupedPipeline = pipelineStages.reduce((acc, stage) => {
@@ -256,8 +291,8 @@ export default function ClientDashboard() {
 
   const firstImpactMetrics = impactMetrics[0] || impactMetrics;
 
-  // Only show top 2 roles in dashboard
-  const rolesData = (allRolesData as any[]).slice(0, 2);
+  // Show all roles in dashboard (user requested to show all, not just 2)
+  const rolesData = (allRolesData as any[]) || [];
 
   // Recent chats data - static for now
   const recentChats: ChatUser[] = [];
@@ -295,7 +330,7 @@ export default function ClientDashboard() {
           <div className="h-full overflow-y-auto">
             {/* Simple Client Header */}
             <SimpleClientHeader 
-              companyName={(clientProfile as any)?.company || 'Loading...'}
+              companyName={(clientProfile as any)?.company || (isLoadingProfile ? 'Loading...' : 'Company')}
               clientName={(clientProfile as any)?.name || undefined}
               clientEmail={(clientProfile as any)?.email || undefined}
               onHelpClick={() => setIsHelpChatOpen(true)}
@@ -378,25 +413,71 @@ export default function ClientDashboard() {
                         <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                         <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Profiles Shared</th>
                         <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Last Active</th>
+                        <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {rolesData.map((role, index) => (
-                        <tr key={index} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{role.roleId}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.role}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.team}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.recruiter}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.sharedOn}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <Badge variant="secondary" className={`text-xs ${getStatusColor(role.status)}`}>
-                              {role.status}
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">{role.profilesShared}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.lastActive}</td>
+                      {isLoadingRoles ? (
+                        <tr>
+                          <td colSpan={9} className="px-6 py-8 text-center text-gray-500">Loading roles...</td>
                         </tr>
-                      ))}
+                      ) : rolesData.length === 0 ? (
+                        <tr>
+                          <td colSpan={9} className="px-6 py-8 text-center text-gray-500">No roles found. Upload a JD to get started.</td>
+                        </tr>
+                      ) : (
+                        rolesData.map((role, index) => (
+                          <tr key={role.roleId || index} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{role.roleId}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.role}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.team}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.recruiter}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.sharedOn}</td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <Badge variant="secondary" className={`text-xs ${getStatusColor(role.status)}`}>
+                                {role.status}
+                              </Badge>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">{role.profilesShared}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.lastActive}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => {
+                                    // Find the full role data from allRolesData
+                                    const fullRole = (allRolesData as any[]).find(r => r.roleId === role.roleId);
+                                    setSelectedRoleForView(fullRole || role);
+                                    setIsViewRoleModalOpen(true);
+                                  }}>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => {
+                                    const fullRole = (allRolesData as any[]).find(r => r.roleId === role.roleId);
+                                    setSelectedRoleForEdit(fullRole || role);
+                                    setIsEditRoleModalOpen(true);
+                                  }}>
+                                    <Edit3 className="mr-2 h-4 w-4" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={() => setRoleToDelete(role.roleId)}
+                                    className="text-red-600 focus:text-red-600"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -419,6 +500,9 @@ export default function ClientDashboard() {
                           const file = e.target.files?.[0];
                           if (file) {
                             setUploadedFile(file);
+                            // Create preview URL for the file
+                            const fileUrl = URL.createObjectURL(file);
+                            setJdFilePreviewUrl(fileUrl);
                           }
                         }}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
@@ -437,6 +521,10 @@ export default function ClientDashboard() {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setUploadedFile(null);
+                                if (jdFilePreviewUrl) {
+                                  URL.revokeObjectURL(jdFilePreviewUrl);
+                                }
+                                setJdFilePreviewUrl(null);
                               }}
                               className="text-xs text-red-500 hover:underline mt-1"
                             >
@@ -564,7 +652,7 @@ export default function ClientDashboard() {
           <div className="flex flex-col h-full">
             {/* Simple Client Header */}
             <SimpleClientHeader 
-              companyName={(clientProfile as any)?.company || 'Loading...'}
+              companyName={(clientProfile as any)?.company || (isLoadingProfile ? 'Loading...' : 'Company')}
               clientName={(clientProfile as any)?.name || undefined}
               clientEmail={(clientProfile as any)?.email || undefined}
               onHelpClick={() => setIsHelpChatOpen(true)}
@@ -1250,25 +1338,64 @@ export default function ClientDashboard() {
                   <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Profiles Shared</th>
                   <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Last Active</th>
+                  <th className="text-left px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {allRolesData.map((role, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{role.roleId}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.role}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.team}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.recruiter}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.sharedOn}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge variant="secondary" className={`text-xs ${getStatusColor(role.status)}`}>
-                        {role.status}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">{role.profilesShared}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.lastActive}</td>
+                {allRolesData.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="px-6 py-8 text-center text-gray-500">No roles found.</td>
                   </tr>
-                ))}
+                ) : (
+                  allRolesData.map((role, index) => (
+                    <tr key={role.roleId || index} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{role.roleId}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.role}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.team}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.recruiter}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.sharedOn}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <Badge variant="secondary" className={`text-xs ${getStatusColor(role.status)}`}>
+                          {role.status}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">{role.profilesShared}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{role.lastActive}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedRoleForView(role);
+                              setIsViewRoleModalOpen(true);
+                            }}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedRoleForEdit(role);
+                              setIsEditRoleModalOpen(true);
+                            }}>
+                              <Edit3 className="mr-2 h-4 w-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => setRoleToDelete(role.roleId)}
+                              className="text-red-600 focus:text-red-600"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -1342,12 +1469,63 @@ export default function ClientDashboard() {
 
               {/* Job Description Content */}
               <div className="space-y-4">
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Job Description</h4>
-                  <div className="text-sm text-gray-600 whitespace-pre-wrap bg-gray-50 p-4 rounded border border-gray-200 min-h-[100px]">
-                    {jdText || (uploadedFile ? `File: ${uploadedFile.name}` : 'No job description provided')}
+                {/* JD File Preview */}
+                {uploadedFile && jdFilePreviewUrl && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">JD Document</h4>
+                    <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
+                      {uploadedFile.type === 'application/pdf' || uploadedFile.name.toLowerCase().endsWith('.pdf') ? (
+                        <div className="border border-gray-300 rounded-lg overflow-hidden">
+                          <iframe
+                            src={jdFilePreviewUrl}
+                            className="w-full h-[500px]"
+                            title="JD PDF Preview"
+                          />
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium text-gray-900 mb-1">Document File</p>
+                              <p className="text-sm text-gray-600">{uploadedFile.name}</p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {(uploadedFile.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
+                            </div>
+                            <a
+                              href={jdFilePreviewUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                              Open Document
+                            </a>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
+                
+                {/* JD Text Content */}
+                {jdText && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">JD Text Content</h4>
+                    <div className="text-sm text-gray-600 whitespace-pre-wrap bg-gray-50 p-4 rounded border border-gray-200 min-h-[100px] max-h-[400px] overflow-y-auto">
+                      {jdText}
+                    </div>
+                  </div>
+                )}
+                
+                {!uploadedFile && !jdText && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Job Description</h4>
+                    <div className="text-sm text-gray-500 bg-gray-50 p-4 rounded border border-gray-200 min-h-[100px] flex items-center justify-center">
+                      No job description provided. Please upload a file or enter text.
+                    </div>
+                  </div>
+                )}
 
                 {/* Skills Section */}
                 {(primarySkills || secondarySkills || knowledgeOnly) && (
@@ -1399,6 +1577,16 @@ export default function ClientDashboard() {
             <Button 
               onClick={async () => {
                 try {
+                  // Validate that either file or text is provided
+                  if (!uploadedFile && !jdText.trim()) {
+                    toast({
+                      title: "Validation Error",
+                      description: "Please provide either a JD file or JD text (at least one is required).",
+                      variant: "destructive"
+                    });
+                    return;
+                  }
+                  
                   let jdFileUrl = null;
                   
                   // Upload file if present
@@ -1431,6 +1619,10 @@ export default function ClientDashboard() {
                     // Reset form
                     setJdText('');
                     setUploadedFile(null);
+                    if (jdFilePreviewUrl) {
+                      URL.revokeObjectURL(jdFilePreviewUrl);
+                    }
+                    setJdFilePreviewUrl(null);
                     setPrimarySkills('');
                     setSecondarySkills('');
                     setKnowledgeOnly('');
@@ -1453,6 +1645,114 @@ export default function ClientDashboard() {
             >
               Submit
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={roleToDelete !== null} onOpenChange={(open) => !open && setRoleToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Role</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this role? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setRoleToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (roleToDelete) {
+                  deleteRoleMutation.mutate(roleToDelete);
+                }
+              }}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* View Role Modal */}
+      <Dialog open={isViewRoleModalOpen} onOpenChange={setIsViewRoleModalOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>View Role Details</DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto max-h-[calc(90vh-8rem)]">
+            {selectedRoleForView && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">Role ID</label>
+                    <p className="text-sm text-gray-900">{selectedRoleForView.roleId}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">Role</label>
+                    <p className="text-sm text-gray-900">{selectedRoleForView.role}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">Team</label>
+                    <p className="text-sm text-gray-900">{selectedRoleForView.team || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">Recruiter</label>
+                    <p className="text-sm text-gray-900">{selectedRoleForView.recruiter || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">Status</label>
+                    <Badge variant="secondary" className={`text-xs ${getStatusColor(selectedRoleForView.status)}`}>
+                      {selectedRoleForView.status}
+                    </Badge>
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">Shared On</label>
+                    <p className="text-sm text-gray-900">{selectedRoleForView.sharedOn}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">Profiles Shared</label>
+                    <p className="text-sm text-gray-900">{selectedRoleForView.profilesShared || 0}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-gray-700">Last Active</label>
+                    <p className="text-sm text-gray-900">{selectedRoleForView.lastActive}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 mt-4">
+            <Button variant="outline" onClick={() => setIsViewRoleModalOpen(false)}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Role Modal - Placeholder for future implementation */}
+      <Dialog open={isEditRoleModalOpen} onOpenChange={setIsEditRoleModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Edit Role</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-500">
+              Edit functionality will be implemented. For now, you can delete and recreate the role with updated details.
+            </p>
+            {selectedRoleForEdit && (
+              <div className="space-y-2">
+                <div>
+                  <label className="text-sm font-semibold text-gray-700">Role ID</label>
+                  <p className="text-sm text-gray-900">{selectedRoleForEdit.roleId}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-700">Role</label>
+                  <p className="text-sm text-gray-900">{selectedRoleForEdit.role}</p>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 mt-4">
+            <Button variant="outline" onClick={() => setIsEditRoleModalOpen(false)}>Close</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -1735,7 +2035,8 @@ export default function ClientDashboard() {
       <ChatDock 
         open={isHelpChatOpen} 
         onClose={() => setIsHelpChatOpen(false)} 
-        userName="Support Team"
+        userName={userName}
+        userRole={userRole}
       />
     </div>
   );

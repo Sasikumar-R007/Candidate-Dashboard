@@ -16,7 +16,8 @@ import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, HelpCircle, ExternalLink } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, HelpCircle, ExternalLink, Eye } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
@@ -99,7 +100,14 @@ export default function TeamLeaderDashboard() {
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   
   // ALL useState hooks MUST be here at the top, before any conditionals
-  const [sidebarTab, setSidebarTab] = useState('dashboard');
+  // Restore sidebarTab from sessionStorage for proper back navigation
+  const initialSidebarTab = () => {
+    const saved = sessionStorage.getItem('tlDashboardSidebarTab');
+    sessionStorage.removeItem('tlDashboardSidebarTab');
+    return saved ? saved : 'dashboard';
+  };
+  
+  const [sidebarTab, setSidebarTab] = useState(initialSidebarTab());
   const [activeTab, setActiveTab] = useState('team');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
@@ -109,6 +117,9 @@ export default function TeamLeaderDashboard() {
   const [assignments, setAssignments] = useState<{[key: string]: string}>({'mobile-app-dev': 'Arun'});
   const [isReallocating, setIsReallocating] = useState(false);
   const [selectedAssignee, setSelectedAssignee] = useState<string>('');
+  const [jdText, setJdText] = useState<string>('');
+  const [selectedJD, setSelectedJD] = useState<Requirement | null>(null);
+  const [isJDPreviewModalOpen, setIsJDPreviewModalOpen] = useState(false);
   const [isAddRequirementModalOpen, setIsAddRequirementModalOpen] = useState(false);
   const [isViewMoreRequirementsModalOpen, setIsViewMoreRequirementsModalOpen] = useState(false);
   const [isViewClosuresModalOpen, setIsViewClosuresModalOpen] = useState(false);
@@ -242,6 +253,8 @@ export default function TeamLeaderDashboard() {
   const { data: teamLeaderProfile } = useQuery({
     queryKey: ['/api/team-leader/profile'],
   });
+  const userName = teamLeaderProfile?.name || employee?.name || "Team Leader User";
+  const userRole = employee?.role || 'team_leader';
 
   const { data: teamMembers = [] } = useQuery<any[]>({
     queryKey: ['/api/team-leader/team-members'],
@@ -353,12 +366,16 @@ export default function TeamLeaderDashboard() {
 
   // Mutation to assign talent advisor to requirement
   const assignTalentAdvisorMutation = useMutation({
-    mutationFn: async ({ id, talentAdvisor }: { id: string; talentAdvisor: string }) => {
-      const res = await apiRequest('POST', `/api/team-leader/requirements/${id}/assign-ta`, { talentAdvisor });
+    mutationFn: async ({ id, talentAdvisor, jdText }: { id: string; talentAdvisor: string; jdText?: string }) => {
+      const res = await apiRequest('POST', `/api/team-leader/requirements/${id}/assign-ta`, { talentAdvisor, jdText });
       return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/team-leader/requirements'] });
+      setIsAssignmentModalOpen(false);
+      setSelectedRequirement(null);
+      setSelectedAssignee('');
+      setJdText('');
       toast({
         title: "Success",
         description: "Talent Advisor assigned successfully!",
@@ -395,7 +412,8 @@ export default function TeamLeaderDashboard() {
     if (selectedRequirement && selectedAssignee) {
       assignTalentAdvisorMutation.mutate({
         id: selectedRequirement.id,
-        talentAdvisor: selectedAssignee
+        talentAdvisor: selectedAssignee,
+        jdText: jdText.trim() || undefined
       });
     }
   };
@@ -567,7 +585,7 @@ export default function TeamLeaderDashboard() {
           />
           <div className="flex h-screen">
             {/* Main Content - Middle Section (Scrollable) */}
-            <div className="px-3 py-2 space-y-2 flex-1 overflow-y-auto h-full">
+            <div className="px-6 py-6 space-y-6 flex-1 overflow-y-auto h-full">
               <TeamLeaderTeamBoxes />
 
               {/* Target Section */}
@@ -930,7 +948,7 @@ export default function TeamLeaderDashboard() {
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
           <AdminTopHeader 
-            companyName="Scaling Theory" 
+            companyName="StaffOS" 
             onHelpClick={() => setIsHelpChatOpen(true)}
           />
           <div className="px-6 py-6 space-y-6 h-full">
@@ -952,19 +970,20 @@ export default function TeamLeaderDashboard() {
                           <th className="text-left p-3 font-semibold text-gray-700">Company</th>
                           <th className="text-left p-3 font-semibold text-gray-700">SPOC</th>
                           <th className="text-left p-3 font-semibold text-gray-700">Talent Advisor</th>
+                          <th className="text-left p-3 font-semibold text-gray-700">JD</th>
                           <th className="text-left p-3 font-semibold text-gray-700">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
                         {isLoadingRequirements ? (
                           <tr>
-                            <td colSpan={6} className="p-6 text-center text-gray-600">
+                            <td colSpan={7} className="p-6 text-center text-gray-600">
                               Loading requirements...
                             </td>
                           </tr>
                         ) : requirementsData.length === 0 ? (
                           <tr>
-                            <td colSpan={6} className="p-6 text-center text-gray-600">
+                            <td colSpan={7} className="p-6 text-center text-gray-600">
                               No requirements assigned to you yet.
                             </td>
                           </tr>
@@ -990,6 +1009,24 @@ export default function TeamLeaderDashboard() {
                               <td className="p-3 text-gray-900">{requirement.spoc}</td>
                               <td className="p-3 text-gray-900">{requirement.talentAdvisor || 'not-assigned'}</td>
                               <td className="p-3">
+                                {requirement.jdFile ? (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedJD(requirement);
+                                      setIsJDPreviewModalOpen(true);
+                                    }}
+                                    className="p-1 h-8 w-8"
+                                    title="View JD"
+                                  >
+                                    <Eye className="h-4 w-4 text-blue-600 hover:text-blue-800" />
+                                  </Button>
+                                ) : (
+                                  <span className="text-gray-400 text-xs">-</span>
+                                )}
+                              </td>
+                              <td className="p-3">
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 
@@ -1009,8 +1046,12 @@ export default function TeamLeaderDashboard() {
                   
                   <div className="flex justify-end gap-4 p-4 border-t border-gray-200">
                     <Button 
-                      className="px-6 py-2 bg-red-400 hover:bg-red-500 text-white font-medium rounded"
-                      onClick={() => navigate('/archives')}
+                      className="px-6 py-2 bg-red-400 hover:bg-red-500 text-white font-medium rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={() => {
+                        sessionStorage.setItem('tlDashboardSidebarTab', sidebarTab);
+                        navigate('/archives');
+                      }}
+                      disabled={false}
                       data-testid="button-archives"
                     >
                       Archives
@@ -1143,6 +1184,20 @@ export default function TeamLeaderDashboard() {
                   </Select>
                 </div>
                 
+                <div>
+                  <Label htmlFor="jd-text" className="text-sm font-medium text-gray-700">
+                    JD Text (Optional):
+                  </Label>
+                  <Textarea
+                    id="jd-text"
+                    value={jdText}
+                    onChange={(e) => setJdText(e.target.value)}
+                    placeholder="Enter JD text to share with Talent Advisor..."
+                    className="mt-2 min-h-[100px]"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Note: JD file will not be shared to Talent Advisor, only text.</p>
+                </div>
+                
                 <div className="flex justify-end gap-3 pt-4">
                   <Button
                     type="button"
@@ -1151,6 +1206,7 @@ export default function TeamLeaderDashboard() {
                       setIsAssignmentModalOpen(false);
                       setSelectedRequirement(null);
                       setSelectedAssignee('');
+                      setJdText('');
                     }}
                     className="px-6 py-2 rounded"
                     data-testid="button-cancel-assignment"
@@ -1166,6 +1222,78 @@ export default function TeamLeaderDashboard() {
                     {assignTalentAdvisorMutation.isPending ? 'Assigning...' : 'Confirm Assignment'}
                   </Button>
                 </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* JD Preview Modal */}
+        {isJDPreviewModalOpen && selectedJD && (
+          <Dialog open={isJDPreviewModalOpen} onOpenChange={setIsJDPreviewModalOpen}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-semibold text-gray-900">JD Preview</DialogTitle>
+              </DialogHeader>
+              
+              <div className="space-y-6 mt-4">
+                {/* Requirement Details */}
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Requirement Details</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Position</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{selectedJD.position}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Company</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{selectedJD.company}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">SPOC</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{selectedJD.spoc}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">Criticality</p>
+                      <p className="font-medium text-gray-900 dark:text-white">{selectedJD.criticality}-{selectedJD.toughness || 'Medium'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* JD Document Section */}
+                {selectedJD.jdFile && (
+                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Job Description Document</h3>
+                    
+                    {/* PDF/DOC Preview */}
+                    {selectedJD.jdFile.toLowerCase().endsWith('.pdf') ? (
+                      <div className="border border-gray-300 dark:border-gray-600 rounded-lg overflow-hidden">
+                        <iframe
+                          src={selectedJD.jdFile}
+                          className="w-full h-[600px]"
+                          title="JD PDF Preview"
+                        />
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">Document File</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{selectedJD.jdFile.split('/').pop()}</p>
+                          </div>
+                          <a
+                            href={selectedJD.jdFile}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            Open Document
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </DialogContent>
           </Dialog>
@@ -1443,7 +1571,7 @@ export default function TeamLeaderDashboard() {
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
           <AdminTopHeader 
-            companyName="Scaling Theory" 
+            companyName="StaffOS" 
             onHelpClick={() => setIsHelpChatOpen(true)}
           />
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto">
@@ -1584,7 +1712,7 @@ export default function TeamLeaderDashboard() {
           {/* Main Chat Area */}
           <div className="flex-1 flex flex-col">
             <AdminTopHeader 
-              companyName="Scaling Theory" 
+              companyName="StaffOS" 
               onHelpClick={() => setIsHelpChatOpen(true)}
             />
             <div className="px-6 py-6 h-full flex flex-col">
@@ -3208,7 +3336,8 @@ export default function TeamLeaderDashboard() {
       <ChatDock 
         open={isHelpChatOpen} 
         onClose={() => setIsHelpChatOpen(false)} 
-        userName="Support Team"
+        userName={userName}
+        userRole={userRole}
       />
     </div>
   );

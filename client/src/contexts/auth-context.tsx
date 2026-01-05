@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from 'react';
 import type { Employee, Candidate } from '@shared/schema';
 
 export type UserType = 'employee' | 'candidate';
@@ -29,66 +29,105 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
 const createApiUrl = (path: string) => `${API_BASE_URL}${path}`;
 
+// Use sessionStorage instead of localStorage for per-tab isolation
+// This prevents one user's login from affecting another user's tab
+const AUTH_STORAGE_KEY = 'auth_user';
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isVerified, setIsVerified] = useState(false);
+  
+  // Prevent race conditions by tracking in-flight requests
+  const verifyingRef = useRef<Promise<boolean> | null>(null);
+  const initializedRef = useRef(false);
 
   const verifySession = useCallback(async (): Promise<boolean> => {
-    try {
-      const response = await fetch(createApiUrl('/api/auth/verify-session'), {
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        setUser(null);
-        setIsVerified(true);
-        localStorage.removeItem('auth_user');
-        return false;
-      }
-      
-      const data = await response.json();
-      
-      if (data.authenticated && data.user) {
-        const authUser: AuthUser = {
-          type: data.userType as UserType,
-          data: data.user
-        };
-        setUser(authUser);
-        setIsVerified(true);
-        localStorage.setItem('auth_user', JSON.stringify(authUser));
-        return true;
-      } else {
-        setUser(null);
-        setIsVerified(true);
-        localStorage.removeItem('auth_user');
-        return false;
-      }
-    } catch (error) {
-      console.error('Session verification failed:', error);
-      setUser(null);
-      setIsVerified(true);
-      localStorage.removeItem('auth_user');
-      return false;
+    // Deduplicate concurrent verifySession calls
+    if (verifyingRef.current) {
+      return verifyingRef.current;
     }
+
+    const verifyPromise = (async (): Promise<boolean> => {
+      try {
+        const response = await fetch(createApiUrl('/api/auth/verify-session'), {
+          credentials: 'include'
+        });
+        
+        if (!response.ok) {
+          setUser(null);
+          setIsVerified(true);
+          sessionStorage.removeItem(AUTH_STORAGE_KEY);
+          return false;
+        }
+        
+        const data = await response.json();
+        
+        if (data.authenticated && data.user) {
+          const authUser: AuthUser = {
+            type: data.userType as UserType,
+            data: data.user
+          };
+          setUser(authUser);
+          setIsVerified(true);
+          // Use sessionStorage for per-tab isolation
+          sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(authUser));
+          return true;
+        } else {
+          setUser(null);
+          setIsVerified(true);
+          sessionStorage.removeItem(AUTH_STORAGE_KEY);
+          return false;
+        }
+      } catch (error) {
+        console.error('Session verification failed:', error);
+        setUser(null);
+        setIsVerified(true);
+        sessionStorage.removeItem(AUTH_STORAGE_KEY);
+        return false;
+      } finally {
+        verifyingRef.current = null;
+      }
+    })();
+
+    verifyingRef.current = verifyPromise;
+    return verifyPromise;
   }, []);
 
   useEffect(() => {
+    // Only initialize once to prevent infinite loops
+    if (initializedRef.current) {
+      return;
+    }
+
     const initializeAuth = async () => {
+      initializedRef.current = true;
       setIsLoading(true);
       setIsVerified(false);
+      // CRITICAL: Don't restore from sessionStorage until verified
+      // This prevents showing stale/wrong user data
+      setUser(null);
       
-      await verifySession();
+      // Always verify with backend FIRST (source of truth)
+      // This ensures:
+      // 1. Session cookies are properly validated
+      // 2. No stale data is shown
+      // 3. Multi-user scenarios work correctly
+      const isValid = await verifySession();
+      
+      // Only after backend verification, sessionStorage can be used as cache
+      // But verifySession already handles sessionStorage, so we're good
       
       setIsLoading(false);
     };
 
     initializeAuth();
-  }, [verifySession]);
+  }, []); // Remove verifySession from dependencies to prevent loops
 
   useEffect(() => {
     if (user && isVerified) {
-      localStorage.setItem('auth_user', JSON.stringify(user));
+      // Use sessionStorage for per-tab isolation
+      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
     }
   }, [user, isVerified]);
 
@@ -101,10 +140,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       console.error('Logout request failed:', error);
     } finally {
+      // Clear all auth state immediately
       setUser(null);
       setIsVerified(false);
-      localStorage.clear();
-      sessionStorage.clear();
+      // Clear all auth-related storage
+      sessionStorage.removeItem(AUTH_STORAGE_KEY);
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      sessionStorage.removeItem('employee');
+      // Reset initialization flag so auth re-initializes if user navigates back
+      initializedRef.current = false;
     }
   }, []);
 

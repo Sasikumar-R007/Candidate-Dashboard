@@ -6,7 +6,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth, useEmployeeAuth } from "@/contexts/auth-context";
 import { SignOutDialog } from "@/components/ui/sign-out-dialog";
-// import scalingXLogo from "@/assets/images/scaling-x-logo.png";
+import staffosLogo from "@/assets/staffos logo 2.png";
 
 interface AdminSidebarProps {
   activeTab: string;
@@ -40,21 +40,31 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
       return await res.json();
     },
     onSuccess: () => {
-      // Use auth context logout
+      // Use auth context logout to clear session
       logout();
+      // Clear any stored session data
+      localStorage.clear();
+      sessionStorage.clear();
       
       toast({
         title: "Logged out successfully",
         description: "You have been signed out.",
       });
-      navigate('/');
+      // Navigate to home page and prevent back navigation
+      window.location.href = '/';
     },
     onError: (error: any) => {
+      // Even on error, clear session locally
+      logout();
+      localStorage.clear();
+      sessionStorage.clear();
+      
       toast({
-        title: "Logout failed",
-        description: error.message || "Failed to logout. Please try again.",
-        variant: "destructive"
+        title: "Logged out",
+        description: "You have been signed out (session cleared locally).",
       });
+      // Navigate to home page and prevent back navigation
+      window.location.href = '/';
     }
   });
 
@@ -80,9 +90,11 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
       <div className="w-16 bg-slate-900 text-white flex-shrink-0 h-screen overflow-hidden fixed left-0 top-0 z-50 flex flex-col">
         {/* Logo Section */}
         <div className="h-16 flex items-center justify-center border-b border-slate-700">
-          <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 via-blue-500 to-green-400 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-lg">X</span>
-          </div>
+          <img 
+            src={staffosLogo} 
+            alt="StaffOS Logo" 
+            className="w-10 h-10 object-cover rounded-full"
+          />
         </div>
 
       {/* Navigation Items */}
@@ -159,11 +171,13 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
         {/* Expanded Menu */}
         <div className="relative w-64 bg-slate-900 text-white h-screen flex flex-col shadow-xl ml-16">
           {/* Logo Section */}
-          <div className="h-16 flex items-center px-4 border-b border-slate-700">
-            <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 via-blue-500 to-green-400 rounded-lg flex items-center justify-center mr-3">
-              <span className="text-white font-bold text-lg">X</span>
-            </div>
-            <span className="text-lg font-semibold">ScalingX</span>
+          <div className="h-16 flex items-center px-4 border-b border-slate-700 gap-2">
+            <img 
+              src={staffosLogo} 
+              alt="StaffOS Logo" 
+              className="w-10 h-10 object-cover rounded-full"
+            />
+            <span className="text-lg font-semibold">StaffOS</span>
           </div>
 
           {/* Navigation Items */}

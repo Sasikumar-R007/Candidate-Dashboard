@@ -201,6 +201,8 @@ export const requirements = pgTable("requirements", {
   completedAt: text("completed_at"),
   isArchived: boolean("is_archived").default(false),
   createdAt: text("created_at").notNull(),
+  jdFile: text("jd_file"), // JD file URL for client-submitted JDs
+  jdText: text("jd_text"), // JD text content for client-submitted JDs
 });
 
 export const archivedRequirements = pgTable("archived_requirements", {
@@ -277,6 +279,7 @@ export const employees = pgTable("employees", {
   reportingTo: text("reporting_to"),
   isActive: boolean("is_active").default(true),
   createdAt: text("created_at").notNull(),
+  lastLoginAt: text("last_login_at"), // Last login timestamp
   
   // Profile media (for dashboard display)
   profilePicture: text("profile_picture"),

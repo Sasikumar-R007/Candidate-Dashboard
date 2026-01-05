@@ -196,11 +196,7 @@ export default function RecruiterApplicants() {
         <div className="flex items-center gap-4 mb-4">
           <Button
             onClick={() => {
-              if (window.history.length > 1) {
-                window.history.back();
-              } else {
-                setLocation('/recruiter-active-jobs');
-              }
+              setLocation('/recruiter-login-2');
             }}
             variant="outline"
             size="sm"
@@ -311,7 +307,9 @@ export default function RecruiterApplicants() {
             </div>
             <h2 className="text-xl font-semibold text-gray-900 mb-2">No Applicants Found</h2>
             <p className="text-gray-500 text-center max-w-md">
-              {selectedJobId || statusFilter !== 'all' || dateFrom || dateTo
+              {selectedJobId
+                ? "There are no applications for this job yet. When candidates apply to this job from the Job Board, they will appear here."
+                : statusFilter !== 'all' || dateFrom || dateTo
                 ? "No applicants match your current filters. Try adjusting your search criteria."
                 : "No applicants have applied yet. When candidates apply to your job postings, they will appear here."}
             </p>

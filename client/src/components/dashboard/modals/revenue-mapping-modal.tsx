@@ -48,7 +48,7 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
 
   // Fetch clients for Client dropdown
   const { data: clients } = useQuery<any[]>({
-    queryKey: ['/api/clients'],
+    queryKey: ['/api/admin/clients'],
   });
 
   // Filter TAs and TLs from employees

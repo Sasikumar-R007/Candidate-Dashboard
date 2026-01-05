@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/auth-context";
+import { SignOutDialog } from "@/components/ui/sign-out-dialog";
+import staffosLogo from "@/assets/staffos logo 2.png";
 
 interface TeamLeaderMainSidebarProps {
   activeTab: string;
@@ -14,8 +17,10 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange }: TeamLe
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { logout } = useAuth();
 
   const menuItems = [
     { id: 'dashboard', label: 'Team', icon: Users },
@@ -32,6 +37,8 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange }: TeamLe
       return await res.json();
     },
     onSuccess: () => {
+      // Use auth context logout to clear session
+      logout();
       // Clear any stored session data
       localStorage.clear();
       sessionStorage.clear();
@@ -41,20 +48,32 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange }: TeamLe
         description: "You have been signed out.",
       });
       
-      // Navigate to home page
-      navigate('/');
+      // Navigate to home page and prevent back navigation
+      window.location.href = '/';
     },
     onError: (error: any) => {
+      // Even on error, clear session locally
+      logout();
+      localStorage.clear();
+      sessionStorage.clear();
+      
       toast({
-        title: "Logout failed",
-        description: error.message || "Failed to logout. Please try again.",
-        variant: "destructive"
+        title: "Logged out",
+        description: "You have been signed out (session cleared locally).",
       });
+      
+      // Navigate to home page and prevent back navigation
+      window.location.href = '/';
     }
   });
 
   const handleLogout = () => {
+    setShowSignOutDialog(true);
+  };
+
+  const confirmLogout = () => {
     logoutMutation.mutate();
+    setShowSignOutDialog(false);
   };
 
   const handleTabClick = (tabId: string) => {
@@ -77,8 +96,12 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange }: TeamLe
       <div className="w-16 bg-slate-900 text-white flex-shrink-0 h-screen overflow-hidden fixed left-0 top-0 z-50 flex flex-col">
         {/* Logo Section */}
         <div className="h-16 flex items-center justify-center border-b border-slate-700">
-          <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 via-blue-500 to-green-400 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-lg">X</span>
+          <div className="flex items-center gap-2">
+            <img 
+              src={staffosLogo} 
+              alt="StaffOS Logo" 
+              className="w-10 h-10 object-cover rounded-full"
+            />
           </div>
         </div>
 
@@ -172,8 +195,13 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange }: TeamLe
         {/* Expanded Menu */}
         <div className="relative w-64 bg-slate-900 text-white h-screen flex flex-col shadow-xl ml-16">
           {/* Logo Section */}
-          <div className="h-16 flex items-center px-4 border-b border-slate-700">
-            <span className="text-lg font-semibold">ScalingX</span>
+          <div className="h-16 flex items-center px-4 border-b border-slate-700 gap-2">
+            <img 
+              src={staffosLogo} 
+              alt="StaffOS Logo" 
+              className="w-10 h-10 object-cover rounded-full"
+            />
+            <span className="text-lg font-semibold">StaffOS</span>
           </div>
 
           {/* Navigation Items */}
@@ -196,112 +224,29 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange }: TeamLe
             })}
           </nav>
 
-          {/* User Profile Section with Dropdown */}
-          <div className="border-t border-slate-700 p-4 relative">
+          {/* Sign Out Section */}
+          <div className="border-t border-slate-700">
             <button
-              onClick={() => setShowUserDropdown(!showUserDropdown)}
-              onBlur={() => setTimeout(() => setShowUserDropdown(false), 150)}
-              className="flex items-center justify-between w-full mb-3 hover:bg-slate-800 p-2 rounded transition-colors"
+              onClick={handleLogout}
+              disabled={logoutMutation.isPending}
+              className="w-full flex items-center justify-center py-3 px-4 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-50"
+              data-testid="button-sign-out"
             >
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-cyan-400 rounded-full flex items-center justify-center mr-3">
-                  <User size={16} className="text-slate-900" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-white">Team Leader</p>
-                  <p className="text-xs text-slate-400">Admin Panel</p>
-                </div>
-              </div>
-              <ChevronDown 
-                size={16} 
-                className={`text-slate-400 transition-transform ${showUserDropdown ? 'rotate-180' : ''}`}
-              />
+              <LogOut size={16} className="mr-2" />
+              {logoutMutation.isPending ? 'Signing out...' : 'Sign Out'}
             </button>
-
-            {/* User Dropdown Menu with Notifications */}
-            {showUserDropdown && (
-              <div className="absolute bottom-full left-0 mb-2 w-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-4 z-50">
-                {/* Notifications Header */}
-                <div className="px-4 pb-3 border-b border-gray-200 dark:border-gray-600">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                    <Bell size={18} />
-                    Notifications
-                  </h3>
-                </div>
-                
-                {/* Notifications List */}
-                <div className="max-h-96 overflow-y-auto">
-                  {/* Team Assignment Notification */}
-                  <div className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700">
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-full">
-                        <Users size={16} className="text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">New team member assigned</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Kavitha has been added to your team</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">2 hours ago</p>
-                      </div>
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    </div>
-                  </div>
-
-                  {/* Requirement Update */}
-                  <div className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-b border-gray-100 dark:border-gray-700">
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 bg-green-100 dark:bg-green-900 rounded-full">
-                        <Briefcase size={16} className="text-green-600 dark:text-green-400" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Requirement status updated</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Backend Developer requirement marked as high priority</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">4 hours ago</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Performance Alert */}
-                  <div className="px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <div className="flex items-start gap-3">
-                      <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-full">
-                        <Trophy size={16} className="text-purple-600 dark:text-purple-400" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Performance target achieved</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Your team reached this month's hiring goal</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">1 day ago</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Menu Items */}
-                <div className="py-2 border-t border-gray-200 dark:border-gray-600 mt-2">
-                  <button 
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
-                  >
-                    <Settings size={16} />
-                    <span>Settings</span>
-                  </button>
-                  
-                  <hr className="my-2 border-gray-200 dark:border-gray-600" />
-                  
-                  <button 
-                    onClick={handleLogout}
-                    disabled={logoutMutation.isPending}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-150 disabled:opacity-50"
-                    data-testid="button-team-leader-logout"
-                  >
-                    <LogOut size={16} />
-                    <span>{logoutMutation.isPending ? 'Signing out...' : 'Sign out'}</span>
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
-    )}
+      )}
+    
+    <SignOutDialog
+      open={showSignOutDialog}
+      onOpenChange={setShowSignOutDialog}
+      onConfirm={confirmLogout}
+      userName={undefined}
+      isLoading={logoutMutation.isPending}
+    />
     </>
   );
 }

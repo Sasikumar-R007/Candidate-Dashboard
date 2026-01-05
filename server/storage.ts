@@ -89,6 +89,7 @@ export interface IStorage {
   updateRequirement(id: string, updates: Partial<Requirement>): Promise<Requirement | undefined>;
   archiveRequirement(id: string): Promise<ArchivedRequirement | undefined>;
   getArchivedRequirements(): Promise<ArchivedRequirement[]>;
+  deleteRequirement(id: string): Promise<boolean>;
   
   // Employee methods
   getEmployeeById(id: string): Promise<Employee | undefined>;
@@ -1038,6 +1039,10 @@ export class MemStorage implements IStorage {
 
   async getArchivedRequirements(): Promise<ArchivedRequirement[]> {
     return Array.from(this.archivedRequirements.values());
+  }
+
+  async deleteRequirement(id: string): Promise<boolean> {
+    return this.requirements.delete(id);
   }
 
   // Employee methods implementation

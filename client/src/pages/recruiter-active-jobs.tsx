@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useLocation } from "wouter";
-import { ArrowLeft, MapPin, Calendar, Users, DollarSign, Briefcase, Edit, Trash2, CheckCircle, AlertCircle, Loader2, Building, XCircle } from "lucide-react";
+import { ArrowLeft, MapPin, Calendar, Users, DollarSign, Briefcase, Edit, Trash2, CheckCircle, AlertCircle, Loader2, Building, XCircle, X, Plus, Image } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -21,6 +21,11 @@ export default function RecruiterActiveJobs() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null);
+  const [primarySkills, setPrimarySkills] = useState<string[]>(['']);
+  const [secondarySkills, setSecondarySkills] = useState<string[]>(['']);
+  const [knowledgeOnly, setKnowledgeOnly] = useState<string[]>(['']);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const jobsPerPage = 6;
 
@@ -136,8 +141,100 @@ export default function RecruiterActiveJobs() {
     }
   };
 
+  // Skills management functions
+  const addPrimarySkill = () => {
+    if (primarySkills.length < 5) {
+      setPrimarySkills([...primarySkills, '']);
+    }
+  };
+
+  const removePrimarySkill = (index: number) => {
+    if (primarySkills.length > 1) {
+      setPrimarySkills(primarySkills.filter((_, i) => i !== index));
+    }
+  };
+
+  const updatePrimarySkill = (index: number, value: string) => {
+    const newSkills = [...primarySkills];
+    newSkills[index] = value;
+    setPrimarySkills(newSkills);
+  };
+
+  const addSecondarySkill = () => {
+    if (secondarySkills.length < 5) {
+      setSecondarySkills([...secondarySkills, '']);
+    }
+  };
+
+  const removeSecondarySkill = (index: number) => {
+    if (secondarySkills.length > 1) {
+      setSecondarySkills(secondarySkills.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateSecondarySkill = (index: number, value: string) => {
+    const newSkills = [...secondarySkills];
+    newSkills[index] = value;
+    setSecondarySkills(newSkills);
+  };
+
+  const addKnowledgeSkill = () => {
+    if (knowledgeOnly.length < 5) {
+      setKnowledgeOnly([...knowledgeOnly, '']);
+    }
+  };
+
+  const removeKnowledgeSkill = (index: number) => {
+    if (knowledgeOnly.length > 1) {
+      setKnowledgeOnly(knowledgeOnly.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateKnowledgeSkill = (index: number, value: string) => {
+    const newSkills = [...knowledgeOnly];
+    newSkills[index] = value;
+    setKnowledgeOnly(newSkills);
+  };
+
+  // Logo management functions
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 500 * 1024) {
+        toast({
+          title: 'File too large',
+          description: 'Please upload an image smaller than 500KB',
+          variant: 'destructive',
+        });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setLogoPreview(result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeLogo = () => {
+    setLogoPreview(null);
+    if (logoFileInputRef.current) {
+      logoFileInputRef.current.value = '';
+    }
+  };
+
   const handleEdit = (job: RecruiterJob) => {
     setEditingJob(job);
+    // Initialize skills arrays
+    const primary = parseSkills(job.primarySkills || null);
+    const secondary = parseSkills(job.secondarySkills || null);
+    const knowledge = parseSkills(job.knowledgeOnly || null);
+    setPrimarySkills(primary.length > 0 ? primary : ['']);
+    setSecondarySkills(secondary.length > 0 ? secondary : ['']);
+    setKnowledgeOnly(knowledge.length > 0 ? knowledge : ['']);
+    // Initialize logo preview
+    setLogoPreview(job.companyLogo || null);
     setShowEditModal(true);
   };
 
@@ -149,6 +246,12 @@ export default function RecruiterActiveJobs() {
 
   const handleSaveEdit = () => {
     if (!editingJob) return;
+    
+    // Filter out empty skills
+    const filteredPrimary = primarySkills.filter(s => s.trim() !== '');
+    const filteredSecondary = secondarySkills.filter(s => s.trim() !== '');
+    const filteredKnowledge = knowledgeOnly.filter(s => s.trim() !== '');
+    
     updateJobMutation.mutate({
       id: editingJob.id,
       updates: {
@@ -160,6 +263,11 @@ export default function RecruiterActiveJobs() {
         workMode: editingJob.workMode,
         aboutCompany: editingJob.aboutCompany,
         roleDefinitions: editingJob.roleDefinitions,
+        keyResponsibility: editingJob.keyResponsibility,
+        primarySkills: filteredPrimary.length > 0 ? JSON.stringify(filteredPrimary) : null,
+        secondarySkills: filteredSecondary.length > 0 ? JSON.stringify(filteredSecondary) : null,
+        knowledgeOnly: filteredKnowledge.length > 0 ? JSON.stringify(filteredKnowledge) : null,
+        companyLogo: logoPreview || editingJob.companyLogo,
         status: editingJob.status,
         market: editingJob.market,
         field: editingJob.field,
@@ -433,7 +541,10 @@ export default function RecruiterActiveJobs() {
                         <Button 
                           size="sm" 
                           className="bg-blue-600 hover:bg-blue-700 text-white"
-                          onClick={() => setLocation(`/recruiter-applicants?jobId=${job.id}`)}
+                          onClick={() => {
+                            sessionStorage.setItem('recruiterDashboardSidebarTab', 'dashboard');
+                            setLocation(`/recruiter-applicants?jobId=${job.id}`);
+                          }}
                           data-testid={`button-view-applications-${job.id}`}
                         >
                           View Applications
@@ -646,6 +757,190 @@ export default function RecruiterActiveJobs() {
                   className="bg-gray-50 dark:bg-gray-700"
                   data-testid="input-edit-role-desc"
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="keyResponsibility">Key Responsibility</Label>
+                <Textarea
+                  id="keyResponsibility"
+                  value={editingJob.keyResponsibility || ''}
+                  onChange={(e) => setEditingJob({ ...editingJob, keyResponsibility: e.target.value })}
+                  rows={3}
+                  className="bg-gray-50 dark:bg-gray-700"
+                  data-testid="input-edit-key-responsibility"
+                />
+              </div>
+
+              {/* Skills Section */}
+              <div className="space-y-4">
+                <Label className="text-sm font-medium">Skills</Label>
+                
+                {/* Primary Skills */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-gray-600">Primary Skills</Label>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {primarySkills.map((skill, index) => (
+                      <div key={`primary-${index}`} className="flex items-center gap-1">
+                        <Input
+                          value={skill}
+                          onChange={(e) => updatePrimarySkill(index, e.target.value)}
+                          className="w-28 bg-gray-50 dark:bg-gray-700 text-sm"
+                          placeholder="Skill"
+                          data-testid={`input-edit-primary-skill-${index}`}
+                        />
+                        {primarySkills.length > 1 && (
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => removePrimarySkill(index)}
+                            className="text-gray-400 h-8 w-8"
+                            data-testid={`button-remove-primary-skill-${index}`}
+                          >
+                            <X size={14} />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    {primarySkills.length < 5 && (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        onClick={addPrimarySkill}
+                        className="text-blue-500 border-blue-200 h-8 w-8"
+                        data-testid="button-add-primary-skill"
+                      >
+                        <Plus size={14} />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Secondary Skills */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-gray-600">Secondary Skills</Label>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {secondarySkills.map((skill, index) => (
+                      <div key={`secondary-${index}`} className="flex items-center gap-1">
+                        <Input
+                          value={skill}
+                          onChange={(e) => updateSecondarySkill(index, e.target.value)}
+                          className="w-28 bg-gray-50 dark:bg-gray-700 text-sm"
+                          placeholder="Skill"
+                          data-testid={`input-edit-secondary-skill-${index}`}
+                        />
+                        {secondarySkills.length > 1 && (
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => removeSecondarySkill(index)}
+                            className="text-gray-400 h-8 w-8"
+                            data-testid={`button-remove-secondary-skill-${index}`}
+                          >
+                            <X size={14} />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    {secondarySkills.length < 5 && (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        onClick={addSecondarySkill}
+                        className="text-blue-500 border-blue-200 h-8 w-8"
+                        data-testid="button-add-secondary-skill"
+                      >
+                        <Plus size={14} />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Knowledge Only */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-gray-600">Knowledge Only</Label>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {knowledgeOnly.map((skill, index) => (
+                      <div key={`knowledge-${index}`} className="flex items-center gap-1">
+                        <Input
+                          value={skill}
+                          onChange={(e) => updateKnowledgeSkill(index, e.target.value)}
+                          className="w-28 bg-gray-50 dark:bg-gray-700 text-sm"
+                          placeholder="Skill"
+                          data-testid={`input-edit-knowledge-skill-${index}`}
+                        />
+                        {knowledgeOnly.length > 1 && (
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => removeKnowledgeSkill(index)}
+                            className="text-gray-400 h-8 w-8"
+                            data-testid={`button-remove-knowledge-skill-${index}`}
+                          >
+                            <X size={14} />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    {knowledgeOnly.length < 5 && (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        onClick={addKnowledgeSkill}
+                        className="text-blue-500 border-blue-200 h-8 w-8"
+                        data-testid="button-add-knowledge-skill"
+                      >
+                        <Plus size={14} />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Company Logo */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Image size={16} className="text-blue-500" />
+                  Company Logo <span className="text-gray-400 text-xs font-normal">(Optional - Max 500KB)</span>
+                </Label>
+                {logoPreview ? (
+                  <div className="flex items-center gap-4">
+                    <div className="relative w-20 h-20 border rounded-md overflow-hidden bg-gray-50 dark:bg-gray-700">
+                      <img src={logoPreview} alt="Logo preview" className="w-full h-full object-contain" />
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={removeLogo}
+                      className="text-red-500 border-red-200"
+                      data-testid="button-remove-logo"
+                    >
+                      <X size={14} className="mr-1" /> Remove
+                    </Button>
+                  </div>
+                ) : (
+                  <div 
+                    className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-md p-4 text-center cursor-pointer hover:border-blue-300 transition-colors"
+                    onClick={() => logoFileInputRef.current?.click()}
+                    data-testid="dropzone-logo"
+                  >
+                    <input
+                      ref={logoFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                      data-testid="input-logo-upload"
+                    />
+                    <Image size={24} className="mx-auto text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Click to upload logo</p>
+                  </div>
+                )}
               </div>
             </div>
           )}

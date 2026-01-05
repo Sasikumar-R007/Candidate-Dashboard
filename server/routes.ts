@@ -236,9 +236,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     })(req, res, () => {
       const candidate = req.user as any;
       if (candidate && candidate.candidateId) {
-        req.session.candidateId = candidate.candidateId;
-        req.session.userType = 'candidate';
-        res.redirect("/candidate");
+        // Regenerate session to prevent session fixation attacks and ensure isolation
+        req.session.regenerate((err) => {
+          if (err) {
+            console.error('Session regeneration error:', err);
+            return res.redirect("/candidate-login?error=session_error");
+          }
+          
+          // Set session after regeneration to ensure proper isolation
+          req.session.candidateId = candidate.candidateId;
+          req.session.userType = 'candidate';
+          
+          // Save session before redirecting
+          req.session.save((saveErr) => {
+            if (saveErr) {
+              console.error('Session save error:', saveErr);
+              return res.redirect("/candidate-login?error=session_error");
+            }
+            res.redirect("/candidate");
+          });
+        });
       } else {
         res.redirect("/candidate-login?error=authentication_failed");
       }
@@ -302,7 +319,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Logout error:', err);
         return res.status(500).json({ message: "Logout failed" });
       }
-      res.clearCookie('connect.sid');
+      // Clear both cookie names (legacy and current)
+      res.clearCookie('connect.sid', { path: '/' });
+      res.clearCookie('staffos.sid', { path: '/' });
       res.json({ success: true, message: "Logged out successfully" });
     });
   });
@@ -345,6 +364,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Account is inactive" });
       }
       
+      // Update last login timestamp
+      const lastLoginAt = new Date().toISOString();
+      await storage.updateEmployee(employee.id, { lastLoginAt });
+      
       // Regenerate session to prevent session fixation attacks
       req.session.regenerate((err) => {
         if (err) {
@@ -378,7 +401,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const { password: _, ...employeeData } = employee;
           res.json({
             success: true,
-            employee: employeeData,
+            employee: { ...employeeData, lastLoginAt },
             message: "Login successful"
           });
         });
@@ -702,16 +725,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Reset login attempts on successful login
       await storage.resetLoginAttempts(email);
 
-      // Store candidate ID (human-readable) in session for downstream lookups
-      req.session.candidateId = candidate.candidateId;
-      req.session.userType = 'candidate';
-
-      // Return candidate data (excluding password) for frontend routing
-      const { password: _, ...candidateData } = candidate;
-      res.json({
-        success: true,
-        candidate: candidateData,
-        message: "Login successful"
+      // Regenerate session to prevent session fixation attacks and ensure isolation
+      req.session.regenerate((err) => {
+        if (err) {
+          console.error('Session regeneration error:', err);
+          return res.status(500).json({ 
+            message: "Internal server error",
+            error: process.env.NODE_ENV === 'development' ? (err instanceof Error ? err.message : String(err)) : undefined
+          });
+        }
+        
+        // Set session after regeneration to ensure proper isolation
+        req.session.candidateId = candidate.candidateId;
+        req.session.userType = 'candidate';
+        
+        // Save session before responding
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error('Session save error:', saveErr);
+            return res.status(500).json({ 
+              message: "Internal server error",
+              error: process.env.NODE_ENV === 'development' ? (saveErr instanceof Error ? saveErr.message : String(saveErr)) : undefined
+            });
+          }
+          
+          // Return candidate data (excluding password) for frontend routing
+          const { password: _, ...candidateData } = candidate;
+          res.json({
+            success: true,
+            candidate: candidateData,
+            message: "Login successful"
+          });
+        });
       });
     } catch (error) {
       console.error('Candidate login error:', error);
@@ -787,15 +832,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Reset login attempts
         await storage.resetLoginAttempts(email);
 
-        // Store candidate ID (human-readable) in session for downstream lookups
-        req.session.candidateId = candidate.candidateId;
-        req.session.userType = 'candidate';
-
-        const { password: _, ...candidateData } = candidate;
-        res.json({
-          success: true,
-          candidate: { ...candidateData, isVerified: true },
-          message: "Verification successful"
+        // Regenerate session to prevent session fixation attacks and ensure isolation
+        req.session.regenerate((err) => {
+          if (err) {
+            console.error('Session regeneration error:', err);
+            return res.status(500).json({ 
+              message: "Internal server error",
+              error: process.env.NODE_ENV === 'development' ? (err instanceof Error ? err.message : String(err)) : undefined
+            });
+          }
+          
+          // Set session after regeneration to ensure proper isolation
+          req.session.candidateId = candidate.candidateId;
+          req.session.userType = 'candidate';
+          
+          // Save session before responding
+          req.session.save((saveErr) => {
+            if (saveErr) {
+              console.error('Session save error:', saveErr);
+              return res.status(500).json({ 
+                message: "Internal server error",
+                error: process.env.NODE_ENV === 'development' ? (saveErr instanceof Error ? saveErr.message : String(saveErr)) : undefined
+              });
+            }
+            
+            const { password: _, ...candidateData } = candidate;
+            res.json({
+              success: true,
+              candidate: { ...candidateData, isVerified: true },
+              message: "Verification successful"
+            });
+          });
         });
       } else {
         res.status(400).json({ message: "Invalid or expired OTP" });
@@ -975,9 +1042,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Logout endpoints
   app.post("/api/auth/candidate-logout", async (req, res) => {
     try {
-      res.json({
-        success: true,
-        message: "Logged out successfully"
+      req.session.destroy((err) => {
+        if (err) {
+          console.error('Session destruction error:', err);
+          return res.status(500).json({ message: "Logout failed" });
+        }
+        // Clear both cookie names (legacy and current)
+        res.clearCookie('connect.sid', { path: '/' });
+        res.clearCookie('staffos.sid', { path: '/' });
+        res.json({
+          success: true,
+          message: "Logged out successfully"
+        });
       });
     } catch (error) {
       console.error('Candidate logout error:', error);
@@ -992,6 +1068,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error('Session destruction error:', err);
           return res.status(500).json({ message: "Logout failed" });
         }
+        // Clear both cookie names (legacy and current)
+        res.clearCookie('connect.sid', { path: '/' });
+        res.clearCookie('staffos.sid', { path: '/' });
         res.json({
           success: true,
           message: "Logged out successfully"
@@ -2273,7 +2352,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/team-leader/requirements/:id/assign-ta", requireEmployeeAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      const { talentAdvisor } = req.body;
+      const { talentAdvisor, jdText } = req.body;
 
       if (!talentAdvisor) {
         return res.status(400).json({ message: "Talent Advisor is required" });
@@ -2331,11 +2410,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Could not find recruiter ID for assignment" });
       }
 
-      // Update the requirement with both talentAdvisor name and talentAdvisorId
-      const updated = await storage.updateRequirement(id, { 
+      // Prepare update object - include jdText if provided
+      const updateData: any = {
         talentAdvisor,
         talentAdvisorId: recruiter.id
-      });
+      };
+      
+      // If jdText is provided, include it in the update (JD file is NOT shared to TA)
+      if (jdText !== undefined && jdText !== null) {
+        updateData.jdText = jdText;
+      }
+
+      // Update the requirement with both talentAdvisor name, talentAdvisorId, and optionally jdText
+      const updated = await storage.updateRequirement(id, updateData);
       if (!updated) {
         return res.status(404).json({ message: "Requirement not found" });
       }
@@ -2814,6 +2901,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Upload error:', error);
       res.status(500).json({ message: "Upload failed", error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // Admin Upload JD File (similar to client JD upload, allows PDF, DOC, DOCX)
+  app.post("/api/admin/upload/jd-file", requireAdminAuth, chatUpload.single('jdFile'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+      
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
+        : `http://${req.get('host')}`;
+      
+      const url = `${baseUrl}/uploads/chat/${req.file.filename}`;
+      res.json({ url, filename: req.file.filename });
+    } catch (error) {
+      console.error('JD file upload error:', error);
+      res.status(500).json({ message: "File upload failed" });
     }
   });
 
@@ -3630,8 +3736,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
 
-      // Fetch revenue mappings where this recruiter is the talent advisor
-      const revenueMappings = await storage.getRevenueMappingsByTalentAdvisorId(session.employeeId);
+      // Fetch revenue mappings where this recruiter is the talent advisor (use employee.id which is the UUID)
+      const revenueMappings = await storage.getRevenueMappingsByTalentAdvisorId(employee.id);
       
       // Transform to closure report format for frontend with full data
       const closureReports = revenueMappings.map((mapping) => ({
@@ -3663,7 +3769,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
 
-      const quarterlyData = await storage.getRecruiterQuarterlyPerformance(session.employeeId);
+      const quarterlyData = await storage.getRecruiterQuarterlyPerformance(employee.id);
       res.json(quarterlyData);
     } catch (error) {
       console.error('Get recruiter quarterly performance error:', error);
@@ -3680,7 +3786,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
 
-      const summary = await storage.getRecruiterPerformanceSummary(session.employeeId);
+      const summary = await storage.getRecruiterPerformanceSummary(employee.id);
       res.json(summary);
     } catch (error) {
       console.error('Get recruiter performance summary error:', error);
@@ -3780,6 +3886,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return {
           id: req.id, // Role ID (STR format)
           clientId: clientId, // Client code (e.g., STCL001)
+          company: clientRecord?.brandName || req.company || 'N/A', // Company name (brandName)
           spocName: spocName,
           role: req.position,
           sharedDate: req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-GB', {
@@ -3787,7 +3894,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             month: '2-digit',
             year: 'numeric'
           }).replace(/\//g, '-') : 'N/A',
-          requirement: req // Full requirement object for JD preview
+          requirement: {
+            ...req,
+            jdFile: req.jdFile || null,
+            jdText: req.jdText || null
+          } // Full requirement object for JD preview with JD details
         };
       }));
       
@@ -3880,6 +3991,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Share JD file to existing requirement
+  app.post("/api/admin/requirements/:id/share-jd", requireAdminAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { jdFile } = req.body;
+
+      if (!jdFile) {
+        return res.status(400).json({ message: "JD file is required" });
+      }
+
+      // Get the requirement
+      const requirements = await storage.getRequirements();
+      const requirement = requirements.find(r => r.id === id);
+      
+      if (!requirement) {
+        return res.status(404).json({ message: "Requirement not found" });
+      }
+
+      // Update the requirement with JD file
+      const updated = await storage.updateRequirement(id, { jdFile });
+      if (!updated) {
+        return res.status(404).json({ message: "Requirement not found" });
+      }
+
+      // Get admin employee for notification
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      const actorName = employee?.name || 'Admin';
+
+      // Create notification for JD sharing (using existing logRequirementAdded for consistency)
+      await logRequirementAdded(
+        storage,
+        session.employeeId || 'admin',
+        actorName,
+        'admin',
+        requirement.position,
+        requirement.company,
+        id
+      );
+
+      res.json(updated);
+    } catch (error) {
+      console.error('Share JD error:', error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.post("/api/admin/requirements/:id/archive", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
@@ -3888,6 +4046,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Requirement not found" });
       }
       res.json(archivedRequirement);
+    } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/admin/requirements/:id", requireAdminAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deleted = await storage.deleteRequirement(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Requirement not found" });
+      }
+      res.json({ success: true, message: "Requirement deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
     }
@@ -4192,14 +4363,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allCandidates = await db.select().from(candidates);
       
       // Calculate totals
-      const headCount = allEmployees.filter(emp => emp.isActive === true).length;
       const resumes = allCandidates.length;
+      
+      // Direct Uploads: Candidates uploaded via bulk import (addedBy is null/empty or "Admin"/"admin")
+      const directUploads = allCandidates.filter(c => 
+        !c.addedBy || c.addedBy.trim() === '' || 
+        c.addedBy.toLowerCase() === 'admin' || 
+        c.addedBy.toLowerCase() === 'bulk upload'
+      ).length;
+      
+      // Recruiter Uploads: Candidates uploaded by recruiters (addedBy has a recruiter name)
+      const recruiterUploads = allCandidates.filter(c => 
+        c.addedBy && 
+        c.addedBy.trim() !== '' && 
+        c.addedBy.toLowerCase() !== 'admin' && 
+        c.addedBy.toLowerCase() !== 'bulk upload'
+      ).length;
+      
+      // Head Count: Candidates who registered directly (have password/googleId but no addedBy)
+      const headCount = allCandidates.filter(c => 
+        (c.password || c.googleId) && (!c.addedBy || c.addedBy.trim() === '')
+      ).length;
+      
+      // RESUMES count should be the sum of DIRECT UPLOADS + RECRUITER UPLOADS + HEAD COUNT
+      const totalResumes = directUploads + recruiterUploads + headCount;
       
       // For now, return 0 for financial data (would come from finance/expense tables)
       res.json({
-        directUploads: 0,
-        recruiterUploads: resumes, // Using candidate count as recruiter uploads
-        resumes: resumes,
+        directUploads: directUploads,
+        recruiterUploads: recruiterUploads,
+        resumes: totalResumes, // Sum of directUploads + recruiterUploads + headCount
         headCount: headCount,
         salaryPaid: 0,
         otherExpenses: 0,
@@ -4625,6 +4818,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Delete support error:', error);
       res.status(500).json({ message: "Failed to delete support account" });
+    }
+  });
+
+  // Get active user sessions (for Status column in User Management)
+  app.get("/api/admin/active-sessions", requireAdminAuth, async (req, res) => {
+    try {
+      const { pool } = await import('./db');
+      
+      // Query the session table to get active sessions
+      const result = await pool.query(`
+        SELECT sess 
+        FROM session 
+        WHERE expire > NOW()
+      `);
+      
+      const activeEmployeeIds = new Set<string>();
+      
+      // Parse session data to extract employeeId
+      for (const row of result.rows) {
+        try {
+          const sessData = typeof row.sess === 'string' ? JSON.parse(row.sess) : row.sess;
+          if (sessData?.employeeId) {
+            // Get employee by ID to use the correct ID format
+            const employee = await storage.getEmployeeById(sessData.employeeId);
+            if (employee) {
+              activeEmployeeIds.add(employee.id);
+            }
+          }
+        } catch (error) {
+          // Skip invalid session data
+          console.error('Error parsing session data:', error);
+        }
+      }
+      
+      res.json({ activeEmployeeIds: Array.from(activeEmployeeIds) });
+    } catch (error) {
+      console.error('Get active sessions error:', error);
+      res.status(500).json({ message: "Failed to get active sessions" });
     }
   });
 
@@ -6344,14 +6575,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/recruiter/applications", requireEmployeeAuth, async (req, res) => {
     try {
       const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      
       const { jobId, dateFrom, dateTo, status } = req.query;
       
-      // Get this recruiter's jobs
-      const jobs = await storage.getRecruiterJobsByRecruiterId(session.employeeId);
+      // Get this recruiter's jobs (using employee.id for consistency)
+      const jobs = await storage.getRecruiterJobsByRecruiterId(employee.id);
       const jobIds = jobs.map(j => j.id);
       
-      // Get this recruiter's assigned requirements
-      const requirements = await storage.getRequirementsByTalentAdvisorId(session.employeeId);
+      // Get this recruiter's assigned requirements (using employee.id for consistency)
+      const requirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
       const requirementIds = requirements.map(r => r.id);
       
       // Get all applications and filter to those for recruiter's jobs OR tagged requirements
@@ -6749,6 +6985,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Delete candidate by ID
+  // Update candidate (admin)
+  app.put("/api/admin/candidates/:id", requireAdminAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const candidate = await storage.getCandidateById(id);
+      
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+
+      // Validate update data
+      const updateSchema = z.object({
+        fullName: z.string().optional(),
+        email: z.string().email().optional(),
+        phone: z.string().optional(),
+        position: z.string().optional(),
+        designation: z.string().optional(),
+        currentRole: z.string().optional(),
+        experience: z.string().optional(),
+        skills: z.string().optional(),
+        location: z.string().optional(),
+        pipelineStatus: z.string().optional(),
+        company: z.string().optional(),
+        education: z.string().optional(),
+        resumeFile: z.string().optional(),
+        resumeText: z.string().optional(),
+      });
+
+      const validatedData = updateSchema.parse(req.body);
+      
+      // Update candidate
+      const updatedCandidate = await storage.updateCandidate(id, validatedData);
+      
+      if (!updatedCandidate) {
+        return res.status(404).json({ message: "Failed to update candidate" });
+      }
+      
+      res.json({ message: "Candidate updated successfully", candidate: updatedCandidate });
+    } catch (error: any) {
+      console.error('Update candidate error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid candidate data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update candidate" });
+    }
+  });
+
   app.delete("/api/admin/candidates/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
@@ -7490,12 +7773,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const client = await findCompanyForEmployee(employee);
       const companyName = client?.brandName || employee.name;
       
+      console.log('Fetching requirements for client:', companyName, 'Employee ID:', employee.employeeId);
+      
       const allRequirements = await storage.getRequirementsByCompany(companyName);
+      console.log('All requirements for company:', allRequirements.length);
       
       // Filter only client-submitted JDs (those with STR format Role IDs)
       const clientJDs = allRequirements.filter((req: any) => {
-        return req.id && /^STR\d{5}$/.test(req.id);
+        const isSTR = req.id && /^STR\d{5}$/.test(req.id);
+        if (isSTR) {
+          console.log('Found STR requirement:', req.id, req.position, req.company);
+        }
+        return isSTR;
       });
+      
+      console.log('Client JDs found:', clientJDs.length);
       
       // Transform requirements for client view
       const rolesData = clientJDs.map(req => ({
@@ -7692,6 +7984,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Client Delete Requirement - Allow client to delete their own requirements (STR format)
+  app.delete("/api/client/requirements/:id", requireClientAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      
+      // Verify the requirement belongs to this client (STR format and matching company)
+      const client = await findCompanyForEmployee(employee);
+      const companyName = client?.brandName || employee.name;
+      
+      // Only allow deletion of STR format requirements (client-submitted JDs)
+      if (!id.match(/^STR\d{5}$/)) {
+        return res.status(403).json({ message: "You can only delete client-submitted job descriptions" });
+      }
+      
+      // Get all requirements for the company to verify ownership
+      const companyRequirements = await storage.getRequirementsByCompany(companyName);
+      const requirement = companyRequirements.find((r: any) => r.id === id);
+      
+      if (!requirement) {
+        return res.status(404).json({ message: "Requirement not found or you don't have permission to delete it" });
+      }
+      
+      const deleted = await storage.deleteRequirement(id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Requirement not found" });
+      }
+      
+      res.json({ success: true, message: "Requirement deleted successfully" });
+    } catch (error) {
+      console.error('Delete client requirement error:', error);
+      res.status(500).json({ message: "Failed to delete requirement" });
+    }
+  });
+
   // Client Submit JD - Create a requirement from client's job description
   app.post("/api/client/submit-jd", requireClientAuth, async (req, res) => {
     try {
@@ -7773,6 +8103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Create requirement from JD with Role ID as the requirement ID
       // Note: This creates a requirement that will be assigned to a team lead/talent advisor later
+      console.log('Creating requirement with company:', companyName, 'SPOC:', client?.spoc || employee.name);
       const requirement = await storage.createRequirement({
         id: roleId, // Use Role ID as requirement ID (STR25001 format)
         position: extractedPosition,
@@ -7786,13 +8117,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'open',
         isArchived: false,
         createdAt: new Date().toISOString(),
-        // Store JD details in a way that can be retrieved later
-        // Since notes field doesn't exist in schema, we'll need to handle this differently
-        // For now, we'll create a separate entry or use a workaround
+        jdFile: jdFile || null, // Store JD file URL
+        jdText: jdText || null, // Store JD text content
       });
       
-      // Note: If the requirements table had a notes field, we would store JSON.stringify(jdDetails) there
-      // For now, the requirement is created and JD details can be stored separately if needed
+      console.log('Requirement created successfully:', requirement.id, requirement.company);
       
       res.json({ 
         success: true, 
@@ -8058,6 +8387,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching my conversation:', error);
       res.status(500).json({ error: "Failed to fetch conversation" });
+    }
+  });
+
+  // Support query submission to Google Sheets (for StaffOS Support Chat)
+  app.post("/api/support/query", async (req, res) => {
+    try {
+      const { userName, userRole, message } = req.body;
+
+      // Validate required fields
+      if (!userName || !userRole || !message || !message.trim()) {
+        return res.status(400).json({ 
+          error: "userName, userRole, and message are required" 
+        });
+      }
+
+      // Google Apps Script Web App URL
+      const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzE52-G4H3wriRavetPeAmmHh_unePqnks16XrrQ7UYoK9oycjMQ4KW5A9XmVc7lJc/exec';
+
+      // Map userRole to display format
+      const roleDisplayMap: { [key: string]: string } = {
+        'admin': 'Admin',
+        'recruiter': 'Rec',
+        'team_leader': 'TL',
+        'client': 'Client',
+        'candidate': 'Candidate'
+      };
+      const displayRole = roleDisplayMap[userRole] || userRole;
+
+      // Prepare payload for Google Apps Script
+      const payload = {
+        userName: userName,
+        userRole: displayRole,
+        message: message.trim()
+      };
+
+      // POST to Google Apps Script Web App
+      const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+        redirect: 'follow' // Follow redirects (Google Apps Script may redirect)
+      });
+
+      if (!response.ok) {
+        console.error('Google Apps Script response error:', response.status, response.statusText);
+        return res.status(500).json({ 
+          error: "Failed to submit query. Please try again later." 
+        });
+      }
+
+      res.json({ 
+        success: true,
+        message: "Your query has been noted. Our production team will reach out to you."
+      });
+    } catch (error) {
+      console.error('Error submitting support query:', error);
+      res.status(500).json({ 
+        error: "Failed to submit query. Please try again later." 
+      });
     }
   });
 
