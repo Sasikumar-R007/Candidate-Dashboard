@@ -281,14 +281,39 @@ export class DatabaseStorage implements IStorage {
 
   // Employee methods
   async getEmployeeById(id: string): Promise<Employee | undefined> {
-    const [employee] = await db.select().from(employees).where(eq(employees.id, id));
-    return employee || undefined;
+    try {
+      // Use raw SQL to exclude last_login_at column (which may not exist in production)
+      const result = await db.execute(sql`
+        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
+               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
+               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
+               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
+               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
+               branch, city, reporting_to, is_active, created_at, profile_picture
+        FROM employees 
+        WHERE id = ${id}
+      `);
+      return result.rows[0] as Employee | undefined;
+    } catch (error) {
+      console.error('Database error in getEmployeeById:', error);
+      throw error;
+    }
   }
 
   async getEmployeeByEmail(email: string): Promise<Employee | undefined> {
     try {
-      const [employee] = await db.select().from(employees).where(eq(employees.email, email));
-      return employee || undefined;
+      // Use raw SQL to exclude last_login_at column (which may not exist in production)
+      const result = await db.execute(sql`
+        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
+               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
+               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
+               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
+               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
+               branch, city, reporting_to, is_active, created_at, profile_picture
+        FROM employees 
+        WHERE email = ${email}
+      `);
+      return result.rows[0] as Employee | undefined;
     } catch (error) {
       console.error('Database error in getEmployeeByEmail:', error);
       throw error;
@@ -296,8 +321,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getEmployeeByEmployeeId(employeeId: string): Promise<Employee | undefined> {
-    const [employee] = await db.select().from(employees).where(eq(employees.employeeId, employeeId));
-    return employee || undefined;
+    try {
+      // Use raw SQL to exclude last_login_at column (which may not exist in production)
+      const result = await db.execute(sql`
+        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
+               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
+               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
+               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
+               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
+               branch, city, reporting_to, is_active, created_at, profile_picture
+        FROM employees 
+        WHERE employee_id = ${employeeId}
+      `);
+      return result.rows[0] as Employee | undefined;
+    } catch (error) {
+      console.error('Database error in getEmployeeByEmployeeId:', error);
+      throw error;
+    }
   }
 
   async createEmployee(insertEmployee: InsertEmployee): Promise<Employee> {
@@ -322,7 +362,19 @@ export class DatabaseStorage implements IStorage {
 
   async getAllEmployees(): Promise<Employee[]> {
     try {
-      return await db.select().from(employees).where(eq(employees.isActive, true)).orderBy(desc(employees.createdAt));
+      // Use raw SQL to exclude last_login_at column (which may not exist in production)
+      const result = await db.execute(sql`
+        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
+               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
+               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
+               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
+               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
+               branch, city, reporting_to, is_active, created_at, profile_picture
+        FROM employees 
+        WHERE is_active = true
+        ORDER BY created_at DESC
+      `);
+      return result.rows as Employee[];
     } catch (error) {
       console.error('Database error in getAllEmployees:', error);
       throw error;
@@ -357,11 +409,14 @@ export class DatabaseStorage implements IStorage {
       prefix = 'STCL';
     }
 
-    // Get all employees with this prefix
-    const allEmployees = await db.select().from(employees);
+    // Get all employees with this prefix (excluding last_login_at)
+    const result = await db.execute(sql`
+      SELECT employee_id FROM employees
+    `);
+    const allEmployees = result.rows as { employee_id: string }[];
     const maxNumber = allEmployees
-      .filter(e => e.employeeId.startsWith(prefix))
-      .map(e => parseInt(e.employeeId.replace(prefix, '')))
+      .filter(e => e.employee_id.startsWith(prefix))
+      .map(e => parseInt(e.employee_id.replace(prefix, '')))
       .filter(n => !isNaN(n))
       .reduce((max, current) => Math.max(max, current), 0);
     
@@ -1255,8 +1310,18 @@ export class DatabaseStorage implements IStorage {
     const mappings = await db.select().from(revenueMappings)
       .where(eq(revenueMappings.talentAdvisorId, recruiterId));
     
-    // Get employee for name-based fallback
-    const [employee] = await db.select().from(employees).where(eq(employees.id, recruiterId));
+    // Get employee for name-based fallback (excluding last_login_at)
+    const employeeResult = await db.execute(sql`
+      SELECT id, employee_id, name, email, password, role, address, designation, phone, 
+             department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
+             father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
+             increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
+             current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
+             branch, city, reporting_to, is_active, created_at, profile_picture
+      FROM employees 
+      WHERE id = ${recruiterId}
+    `);
+    const employee = employeeResult.rows[0] as Employee | undefined;
     
     // Get all job applications linked to this recruiter's requirements (deliveries)
     // Try ID-based linkage first via talentAdvisorId, then fallback to name-based
@@ -1353,13 +1418,23 @@ export class DatabaseStorage implements IStorage {
     totalRevenue: number;
     totalIncentives: number;
   }> {
-    // Get employee info for tenure calculation and name-based fallback
-    const [employee] = await db.select().from(employees).where(eq(employees.id, recruiterId));
+    // Get employee info for tenure calculation and name-based fallback (excluding last_login_at)
+    const employeeResult = await db.execute(sql`
+      SELECT id, employee_id, name, email, password, role, address, designation, phone, 
+             department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
+             father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
+             increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
+             current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
+             branch, city, reporting_to, is_active, created_at, profile_picture
+      FROM employees 
+      WHERE id = ${recruiterId}
+    `);
+    const employee = employeeResult.rows[0] as Employee | undefined;
     
     // Calculate tenure in quarters
     let tenure = 0;
-    if (employee?.joiningDate) {
-      const joinDate = new Date(employee.joiningDate);
+    if (employee?.joining_date) {
+      const joinDate = new Date(employee.joining_date);
       const now = new Date();
       const monthsDiff = (now.getFullYear() - joinDate.getFullYear()) * 12 + (now.getMonth() - joinDate.getMonth());
       tenure = Math.floor(monthsDiff / 3);
@@ -1563,8 +1638,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async calculateTeamDailyMetrics(teamLeadId: string, date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }> {
-    const teamMembers = await db.select().from(employees)
-      .where(sql`${employees.reportingTo} = ${teamLeadId} OR ${employees.id} = ${teamLeadId}`);
+    // Use raw SQL to exclude last_login_at column (which may not exist in production)
+    const teamMembersResult = await db.execute(sql`
+      SELECT id, employee_id, name, email, password, role, address, designation, phone, 
+             department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
+             father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
+             increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
+             current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
+             branch, city, reporting_to, is_active, created_at, profile_picture
+      FROM employees 
+      WHERE reporting_to = ${teamLeadId} OR id = ${teamLeadId}
+    `);
+    const teamMembers = teamMembersResult.rows as Employee[];
     
     let totalDelivered = 0;
     let totalRequired = 0;
@@ -1583,8 +1668,18 @@ export class DatabaseStorage implements IStorage {
   }
 
   async calculateOrgDailyMetrics(date: string): Promise<{ delivered: number; defaulted: number; required: number; requirementCount: number }> {
-    const recruiters = await db.select().from(employees)
-      .where(sql`${employees.role} IN ('recruiter', 'team_leader')`);
+    // Use raw SQL to exclude last_login_at column (which may not exist in production)
+    const recruitersResult = await db.execute(sql`
+      SELECT id, employee_id, name, email, password, role, address, designation, phone, 
+             department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
+             father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
+             increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
+             current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
+             branch, city, reporting_to, is_active, created_at, profile_picture
+      FROM employees 
+      WHERE role IN ('recruiter', 'team_leader')
+    `);
+    const recruiters = recruitersResult.rows as Employee[];
     
     let totalDelivered = 0;
     let totalRequired = 0;

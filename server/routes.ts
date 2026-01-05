@@ -4227,10 +4227,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all recruiters for admin selection (when assigning commands/meetings)
   app.get("/api/admin/recruiters", requireAdminAuth, async (req, res) => {
     try {
-      const allRecruiters = await db.select().from(employees)
-        .where(eq(employees.role, 'recruiter'))
-        .orderBy(employees.name);
-      res.json(allRecruiters);
+      // Use raw SQL to exclude last_login_at column (which may not exist in production)
+      const result = await db.execute(sql`
+        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
+               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
+               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
+               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
+               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
+               branch, city, reporting_to, is_active, created_at, profile_picture
+        FROM employees 
+        WHERE role = 'recruiter'
+        ORDER BY name
+      `);
+      res.json(result.rows);
     } catch (error) {
       console.error('Get recruiters error:', error);
       res.status(500).json({ message: "Failed to get recruiters" });
@@ -4296,9 +4305,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : "0.00";
       
       // Get count of active recruiters for requirements per recruiter calculation
-      const allEmployees = await db.select().from(employees);
+      // Use raw SQL to exclude last_login_at column (which may not exist in production)
+      const employeesResult = await db.execute(sql`
+        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
+               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
+               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
+               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
+               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
+               branch, city, reporting_to, is_active, created_at, profile_picture
+        FROM employees
+      `);
+      const allEmployees = employeesResult.rows as any[];
       const activeRecruiters = allEmployees.filter(emp => 
-        (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.isActive === true
+        (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.is_active === true
       );
       const recruiterCount = activeRecruiters.length;
       const requirementsPerRecruiter = recruiterCount > 0
@@ -4359,7 +4378,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { requirements, employees, candidates, clients } = await import("@shared/schema");
       
       // Get counts from database
-      const allEmployees = await db.select().from(employees);
+      // Use raw SQL to exclude last_login_at column (which may not exist in production)
+      const employeesResult = await db.execute(sql`
+        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
+               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
+               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
+               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
+               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
+               branch, city, reporting_to, is_active, created_at, profile_picture
+        FROM employees
+      `);
+      const allEmployees = employeesResult.rows as any[];
       const allCandidates = await db.select().from(candidates);
       
       // Calculate totals
@@ -5745,8 +5774,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { dateFrom, dateTo } = req.query;
       const { employees, requirements } = await import("@shared/schema");
       
-      // Get the member
-      const allEmployees = await db.select().from(employees);
+      // Get the member (excluding last_login_at)
+      const employeesResult = await db.execute(sql`
+        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
+               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
+               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
+               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
+               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
+               branch, city, reporting_to, is_active, created_at, profile_picture
+        FROM employees
+      `);
+      const allEmployees = employeesResult.rows as any[];
       const member = allEmployees.find(emp => emp.id === memberId || emp.name === memberId);
       
       if (!member) {
@@ -5811,10 +5849,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { employees, targetMappings, revenueMappings } = await import("@shared/schema");
       
-      // Get all active recruiters/team members
-      const allEmployees = await db.select().from(employees);
+      // Get all active recruiters/team members (excluding last_login_at)
+      const employeesResult = await db.execute(sql`
+        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
+               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
+               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
+               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
+               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
+               branch, city, reporting_to, is_active, created_at, profile_picture
+        FROM employees
+      `);
+      const allEmployees = employeesResult.rows as any[];
       const teamMembers = allEmployees.filter(emp => 
-        (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.isActive === true
+        (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.is_active === true
       );
       
       // Get all target mappings
@@ -5946,11 +5993,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { teamId, dateFrom, dateTo, period = 'monthly' } = req.query;
       const { employees, revenueMappings } = await import("@shared/schema");
       
-      // Get all active employees
-      const allEmployees = await db.select().from(employees);
-      const teamLeaders = allEmployees.filter(emp => emp.role === 'team_leader' && emp.isActive === true);
+      // Get all active employees (excluding last_login_at)
+      const employeesResult = await db.execute(sql`
+        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
+               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
+               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
+               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
+               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
+               branch, city, reporting_to, is_active, created_at, profile_picture
+        FROM employees
+      `);
+      const allEmployees = employeesResult.rows as any[];
+      const teamLeaders = allEmployees.filter(emp => emp.role === 'team_leader' && emp.is_active === true);
       const recruiters = allEmployees.filter(emp => 
-        (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.isActive === true
+        (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.is_active === true
       );
       
       // Get all revenue mappings
@@ -6095,10 +6151,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { team } = req.query; // 'all', 'arun', 'anusha', or team lead ID
       const { employees, revenueMappings, targetMappings } = await import("@shared/schema");
       
-      // Get all team leaders and members
-      const allEmployees = await db.select().from(employees);
-      const teamLeaders = allEmployees.filter(emp => emp.role === 'team_leader' && emp.isActive === true);
-      const recruiters = allEmployees.filter(emp => emp.role === 'recruiter' && emp.isActive === true);
+      // Get all team leaders and members (excluding last_login_at)
+      const employeesResult = await db.execute(sql`
+        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
+               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
+               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
+               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
+               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
+               branch, city, reporting_to, is_active, created_at, profile_picture
+        FROM employees
+      `);
+      const allEmployees = employeesResult.rows as any[];
+      const teamLeaders = allEmployees.filter(emp => emp.role === 'team_leader' && emp.is_active === true);
+      const recruiters = allEmployees.filter(emp => emp.role === 'recruiter' && emp.is_active === true);
       
       // Get revenue mappings for closures/revenue data
       const allRevenueMappings = await db.select().from(revenueMappings);
@@ -6224,9 +6289,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { employees } = await import("@shared/schema");
       
-      const allEmployees = await db.select().from(employees);
+      // Get all employees (excluding last_login_at)
+      const employeesResult = await db.execute(sql`
+        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
+               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
+               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
+               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
+               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
+               branch, city, reporting_to, is_active, created_at, profile_picture
+        FROM employees
+      `);
+      const allEmployees = employeesResult.rows as any[];
       const teamMembers = allEmployees
-        .filter(emp => (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.isActive === true)
+        .filter(emp => (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.is_active === true)
         .map(emp => ({
           id: emp.id,
           name: emp.name,
