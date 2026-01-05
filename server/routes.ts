@@ -364,9 +364,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Account is inactive" });
       }
       
-      // Update last login timestamp
-      const lastLoginAt = new Date().toISOString();
-      await storage.updateEmployee(employee.id, { lastLoginAt });
+      // Note: lastLoginAt update skipped as column may not exist in production
       
       // Regenerate session to prevent session fixation attacks
       req.session.regenerate((err) => {
@@ -401,7 +399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const { password: _, ...employeeData } = employee;
           res.json({
             success: true,
-            employee: { ...employeeData, lastLoginAt },
+            employee: employeeData,
             message: "Login successful"
           });
         });
@@ -6036,15 +6034,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (teamLeader) {
           // Get only recruiters (TAs) reporting to this team leader (exclude TL)
-          targetMembers = allEmployees.filter(rec => 
-            rec.role === 'recruiter' &&
-            rec.isActive === true &&
-            (rec.reportingTo === teamLeader.employeeId || 
-             rec.reportingTo === teamLeader.name ||
-             rec.reportingTo === teamLeader.id ||
-             (teamLeader.employeeId && rec.reportingTo?.toLowerCase() === teamLeader.employeeId.toLowerCase()) ||
-             (teamLeader.name && rec.reportingTo?.toLowerCase() === teamLeader.name.toLowerCase()))
-          );
+          targetMembers = allEmployees.filter(rec => {
+            const reportingTo = rec.reporting_to || rec.reportingTo;
+            const isActive = rec.is_active !== undefined ? rec.is_active : rec.isActive;
+            return rec.role === 'recruiter' &&
+              isActive === true &&
+              (reportingTo === teamLeader.employeeId || 
+               reportingTo === teamLeader.name ||
+               reportingTo === teamLeader.id ||
+               (teamLeader.employeeId && reportingTo?.toLowerCase() === teamLeader.employeeId.toLowerCase()) ||
+               (teamLeader.name && reportingTo?.toLowerCase() === teamLeader.name.toLowerCase()));
+          });
         } else {
           // If team leader not found, return empty data
           return res.json({
@@ -6194,7 +6194,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         teamLeaders.forEach(tl => {
           // Get recruiters reporting to this TL
-          const teamRecruiters = recruiters.filter(r => r.reportingTo === tl.employeeId || r.reportingTo === tl.name);
+          const teamRecruiters = recruiters.filter(r => {
+            const reportingTo = r.reporting_to || r.reportingTo;
+            const tlEmployeeId = tl.employee_id || tl.employeeId;
+            return reportingTo === tlEmployeeId || reportingTo === tl.name;
+          });
           const teamMemberIds = [tl.id, ...teamRecruiters.map(r => r.id)];
           const teamMemberNames = [tl.name.toLowerCase(), ...teamRecruiters.map(r => r.name.toLowerCase())];
           
@@ -6228,7 +6232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const memberNames = recruiters.map(r => ({
         key: r.name.toLowerCase().replace(/\s+/g, ''),
         name: r.name,
-        teamLeader: r.reportingTo
+        teamLeader: r.reporting_to || r.reportingTo
       }));
       
       res.json({

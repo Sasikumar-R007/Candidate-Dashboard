@@ -87,6 +87,39 @@ import { eq, and, desc, sql, count, inArray } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import type { IStorage } from "./storage";
 
+// Helper function to convert snake_case employee object to camelCase
+function normalizeEmployee(emp: any): Employee {
+  if (!emp) return emp;
+  return {
+    ...emp,
+    employeeId: emp.employee_id || emp.employeeId,
+    joiningDate: emp.joining_date || emp.joiningDate,
+    employmentStatus: emp.employment_status || emp.employmentStatus,
+    esicNo: emp.esic_no || emp.esicNo,
+    epfoNo: emp.epfo_no || emp.epfoNo,
+    fatherName: emp.father_name || emp.fatherName,
+    motherName: emp.mother_name || emp.motherName,
+    fatherNumber: emp.father_number || emp.fatherNumber,
+    motherNumber: emp.mother_number || emp.motherNumber,
+    offeredCtc: emp.offered_ctc || emp.offeredCtc,
+    currentStatus: emp.current_status || emp.currentStatus,
+    incrementCount: emp.increment_count || emp.incrementCount,
+    appraisedQuarter: emp.appraised_quarter || emp.appraisedQuarter,
+    appraisedAmount: emp.appraised_amount || emp.appraisedAmount,
+    appraisedYear: emp.appraised_year || emp.appraisedYear,
+    yearlyCtc: emp.yearly_ctc || emp.yearlyCtc,
+    currentMonthlyCtc: emp.current_monthly_ctc || emp.currentMonthlyCtc,
+    nameAsPerBank: emp.name_as_per_bank || emp.nameAsPerBank,
+    accountNumber: emp.account_number || emp.accountNumber,
+    ifscCode: emp.ifsc_code || emp.ifscCode,
+    bankName: emp.bank_name || emp.bankName,
+    reportingTo: emp.reporting_to || emp.reportingTo,
+    isActive: emp.is_active !== undefined ? emp.is_active : emp.isActive,
+    createdAt: emp.created_at || emp.createdAt,
+    profilePicture: emp.profile_picture || emp.profilePicture,
+  } as Employee;
+}
+
 export class DatabaseStorage implements IStorage {
   private otpStorage: Map<string, { otp: string; expiry: Date; email: string }> = new Map();
 
@@ -293,7 +326,7 @@ export class DatabaseStorage implements IStorage {
         FROM employees 
         WHERE id = ${id}
       `);
-      return result.rows[0] as Employee | undefined;
+      return result.rows[0] ? normalizeEmployee(result.rows[0]) : undefined;
     } catch (error) {
       console.error('Database error in getEmployeeById:', error);
       throw error;
@@ -313,7 +346,7 @@ export class DatabaseStorage implements IStorage {
         FROM employees 
         WHERE email = ${email}
       `);
-      return result.rows[0] as Employee | undefined;
+      return result.rows[0] ? normalizeEmployee(result.rows[0]) : undefined;
     } catch (error) {
       console.error('Database error in getEmployeeByEmail:', error);
       throw error;
@@ -333,7 +366,7 @@ export class DatabaseStorage implements IStorage {
         FROM employees 
         WHERE employee_id = ${employeeId}
       `);
-      return result.rows[0] as Employee | undefined;
+      return result.rows[0] ? normalizeEmployee(result.rows[0]) : undefined;
     } catch (error) {
       console.error('Database error in getEmployeeByEmployeeId:', error);
       throw error;
@@ -374,7 +407,7 @@ export class DatabaseStorage implements IStorage {
         WHERE is_active = true
         ORDER BY created_at DESC
       `);
-      return result.rows as Employee[];
+      return result.rows.map(normalizeEmployee);
     } catch (error) {
       console.error('Database error in getAllEmployees:', error);
       throw error;
@@ -1321,7 +1354,7 @@ export class DatabaseStorage implements IStorage {
       FROM employees 
       WHERE id = ${recruiterId}
     `);
-    const employee = employeeResult.rows[0] as Employee | undefined;
+    const employee = employeeResult.rows[0] ? normalizeEmployee(employeeResult.rows[0]) : undefined;
     
     // Get all job applications linked to this recruiter's requirements (deliveries)
     // Try ID-based linkage first via talentAdvisorId, then fallback to name-based
@@ -1429,7 +1462,7 @@ export class DatabaseStorage implements IStorage {
       FROM employees 
       WHERE id = ${recruiterId}
     `);
-    const employee = employeeResult.rows[0] as Employee | undefined;
+    const employee = employeeResult.rows[0] ? normalizeEmployee(employeeResult.rows[0]) : undefined;
     
     // Calculate tenure in quarters
     let tenure = 0;
@@ -1649,7 +1682,7 @@ export class DatabaseStorage implements IStorage {
       FROM employees 
       WHERE reporting_to = ${teamLeadId} OR id = ${teamLeadId}
     `);
-    const teamMembers = teamMembersResult.rows as Employee[];
+    const teamMembers = teamMembersResult.rows.map(normalizeEmployee);
     
     let totalDelivered = 0;
     let totalRequired = 0;
@@ -1679,7 +1712,7 @@ export class DatabaseStorage implements IStorage {
       FROM employees 
       WHERE role IN ('recruiter', 'team_leader')
     `);
-    const recruiters = recruitersResult.rows as Employee[];
+    const recruiters = recruitersResult.rows.map(normalizeEmployee);
     
     let totalDelivered = 0;
     let totalRequired = 0;
