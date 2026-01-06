@@ -402,7 +402,6 @@ export default function UploadResumeModal({
                 className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
                 placeholder="Mobile Number *"
                 data-testid="input-mobile-number"
-                pattern="[0-9+\-()\s]*"
               />
               <Input
                 type="tel"
@@ -411,7 +410,6 @@ export default function UploadResumeModal({
                 className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
                 placeholder="WhatsApp Number"
                 data-testid="input-whatsapp-number"
-                pattern="[0-9+\-()\s]*"
               />
             </div>
 

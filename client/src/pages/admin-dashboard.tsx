@@ -1655,7 +1655,10 @@ export default function AdminDashboard() {
     rentPaid: masterDataTotals?.rentPaid ?? 0
   }), [masterDataTotals]);
 
-  // Fetch performance metrics from API
+  // State for right sidebar period filter (dashboard view)
+  const [dashboardPerformancePeriod, setDashboardPerformancePeriod] = useState<string>("quarterly");
+
+  // Fetch performance metrics from API (with period support for dashboard view)
   const { data: performanceMetrics = {
     currentQuarter: "Q4 2025",
     minimumTarget: 0,
@@ -1673,7 +1676,49 @@ export default function AdminDashboard() {
     closuresCount: number;
     performancePercentage: number;
   }>({
-    queryKey: ['/api/admin/performance-metrics'],
+    queryKey: ['/api/admin/performance-metrics', dashboardPerformancePeriod],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (dashboardPerformancePeriod) {
+        params.append('period', dashboardPerformancePeriod);
+      }
+      const url = `/api/admin/performance-metrics${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await apiRequest('GET', url);
+      return await response.json();
+    },
+  });
+
+  // Fetch performance metrics from API (with period support for Performance page)
+  const { data: performancePageMetrics = {
+    currentQuarter: "Q4 2025",
+    minimumTarget: 0,
+    targetAchieved: 0,
+    incentiveEarned: 0,
+    totalRevenue: 0,
+    closuresCount: 0,
+    performancePercentage: 0
+  }, isLoading: isLoadingPerformancePageMetrics } = useQuery<{
+    currentQuarter: string;
+    minimumTarget: number;
+    targetAchieved: number;
+    incentiveEarned: number;
+    totalRevenue: number;
+    closuresCount: number;
+    performancePercentage: number;
+  }>({
+    queryKey: ['/api/admin/performance-metrics', 'performance-page', selectedPerformancePeriod],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedPerformancePeriod) {
+        params.append('period', selectedPerformancePeriod);
+      }
+      const url = `/api/admin/performance-metrics${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await apiRequest('GET', url);
+      return await response.json();
+    },
+    enabled: true,
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch team performance data from API
@@ -5101,7 +5146,7 @@ export default function AdminDashboard() {
             <div className="w-64 bg-gray-100 dark:bg-gray-800 p-4 flex flex-col space-y-3 overflow-y-auto">
               {/* Quarterly/Yearly Selector */}
               <div>
-                <Select defaultValue="quarterly">
+                <Select value={dashboardPerformancePeriod} onValueChange={setDashboardPerformancePeriod}>
                   <SelectTrigger className="w-full bg-teal-400 text-black font-medium">
                     <SelectValue />
                   </SelectTrigger>
@@ -5202,15 +5247,16 @@ export default function AdminDashboard() {
               </div>
               
               {/* Add User Button with Dropdown Menu */}
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 ml-auto">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button 
-                      size="icon"
-                      className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white w-9 h-9"
+                      size="sm"
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 h-8 text-sm"
                       data-testid="button-add-user"
                     >
-                      <UserPlus className="h-4 w-4" />
+                      <UserPlus className="h-4 w-4 mr-1" />
+                      Add User
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
@@ -6582,7 +6628,7 @@ export default function AdminDashboard() {
             <div className="w-64 bg-gray-100 dark:bg-gray-800 p-4 flex flex-col space-y-3 overflow-y-auto">
               {/* Quarterly/Yearly Selector */}
               <div>
-                <Select defaultValue="quarterly">
+                <Select value={selectedPerformancePeriod} onValueChange={setSelectedPerformancePeriod}>
                   <SelectTrigger className="w-full bg-teal-400 text-black font-medium">
                     <SelectValue />
                   </SelectTrigger>
@@ -6598,35 +6644,35 @@ export default function AdminDashboard() {
               <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
                 <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">CURRENT</div>
                 <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">QUARTER</div>
-                <div className="text-right text-2xl font-bold mt-2" data-testid="text-current-quarter">{performanceMetrics.currentQuarter}</div>
+                <div className="text-right text-2xl font-bold mt-2" data-testid="text-current-quarter">{performancePageMetrics.currentQuarter}</div>
               </div>
 
               {/* Minimum Target */}
               <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
                 <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">MINIMUM</div>
                 <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">TARGET</div>
-                <div className="text-right text-2xl font-bold mt-2" data-testid="text-minimum-target">{performanceMetrics.minimumTarget.toLocaleString('en-IN')}</div>
+                <div className="text-right text-2xl font-bold mt-2" data-testid="text-minimum-target">{performancePageMetrics.minimumTarget.toLocaleString('en-IN')}</div>
               </div>
 
               {/* Target Achieved */}
               <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
                 <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">TARGET</div>
                 <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">ACHIEVED</div>
-                <div className="text-right text-2xl font-bold mt-2" data-testid="text-target-achieved">{performanceMetrics.targetAchieved.toLocaleString('en-IN')}</div>
+                <div className="text-right text-2xl font-bold mt-2" data-testid="text-target-achieved">{performancePageMetrics.targetAchieved.toLocaleString('en-IN')}</div>
               </div>
 
               {/* Closures Made */}
               <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
                 <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">CLOSURES</div>
                 <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">MADE</div>
-                <div className="text-right text-3xl font-bold mt-2" data-testid="text-closures-count">{performanceMetrics.closuresCount}</div>
+                <div className="text-right text-3xl font-bold mt-2" data-testid="text-closures-count">{performancePageMetrics.closuresCount}</div>
               </div>
 
               {/* Incentives Made */}
               <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
                 <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">INCENTIVES</div>
                 <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">MADE</div>
-                <div className="text-right text-2xl font-bold mt-2" data-testid="text-incentives-earned">{performanceMetrics.incentiveEarned.toLocaleString('en-IN')}</div>
+                <div className="text-right text-2xl font-bold mt-2" data-testid="text-incentives-earned">{performancePageMetrics.incentiveEarned.toLocaleString('en-IN')}</div>
               </div>
             </div>
           </div>
@@ -9819,15 +9865,16 @@ export default function AdminDashboard() {
                 </Select>
               </div>
               <div>
-                  <StandardDatePicker
-                    value={clientStartDate}
-                    onChange={(date) => {
-                      setClientStartDate(date);
-                      setClientForm({...clientForm, startDate: date ? format(date, "yyyy-MM-dd") : ''});
-                    }}
-                    placeholder="Start Date"
-                    className="w-full"
-                  />
+                <Label className="text-sm font-medium text-gray-700 mb-1 block">Start Date :</Label>
+                <StandardDatePicker
+                  value={clientStartDate}
+                  onChange={(date) => {
+                    setClientStartDate(date);
+                    setClientForm({...clientForm, startDate: date ? format(date, "yyyy-MM-dd") : ''});
+                  }}
+                  placeholder="dd-mm-yyyy"
+                  className="w-full"
+                />
               </div>
             </div>
 
@@ -9933,10 +9980,11 @@ export default function AdminDashboard() {
             {/* Row 4 - Date of Joining and Employment Status */}
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col w-full">
+                <Label className="text-sm font-medium text-gray-700 mb-1">Joining Date :</Label>
                 <StandardDatePicker
                   value={employeeForm.joiningDate ? new Date(employeeForm.joiningDate) : undefined}
                   onChange={(date) => setEmployeeForm({...employeeForm, joiningDate: date ? date.toISOString().split('T')[0] : ''})}
-                  placeholder="DD-MM-YYYY"
+                  placeholder="dd-mm-yyyy"
                   maxDate={new Date()}
                   className="w-full"
                 />
@@ -10015,10 +10063,11 @@ export default function AdminDashboard() {
             {/* Row 7 - DoB and Mother Name */}
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col w-full">
+                <Label className="text-sm font-medium text-gray-700 mb-1">Date of Birth :</Label>
                 <StandardDatePicker
                   value={employeeForm.fatherName ? new Date(employeeForm.fatherName) : undefined}
                   onChange={(date) => setEmployeeForm({...employeeForm, fatherName: date ? date.toISOString().split('T')[0] : ''})}
-                  placeholder="DD-MM-YYYY"
+                  placeholder="dd-mm-yyyy"
                   maxDate={new Date()}
                   className="w-full"
                 />
