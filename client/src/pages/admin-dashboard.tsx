@@ -5233,9 +5233,9 @@ export default function AdminDashboard() {
         return (
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
             {/* User Management Header */}
-            <div className="flex items-center justify-between mb-6 gap-4">
+            <div className="mb-6" style={{ display: 'block' }}>
               {/* Search Bar */}
-              <div className="flex-1 max-w-2xl relative">
+              <div className="w-full relative mb-4" style={{ display: 'block' }}>
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                 <Input
                   type="text"
@@ -5247,12 +5247,12 @@ export default function AdminDashboard() {
               </div>
               
               {/* Add User Button with Dropdown Menu */}
-              <div className="flex-shrink-0 ml-auto">
+              <div style={{ display: 'block' }}>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button 
                       size="sm"
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 h-8 text-sm"
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 h-8 text-sm whitespace-nowrap"
                       data-testid="button-add-user"
                     >
                       <UserPlus className="h-4 w-4 mr-1" />
@@ -6737,9 +6737,9 @@ export default function AdminDashboard() {
             {/* Main Content */}
             <div className="flex-1 px-6 py-6 space-y-6 overflow-y-auto admin-scrollbar">
               {/* Header with Search and Action Buttons */}
-              <div className="flex items-center justify-between gap-4">
+              <div className="space-y-4">
                 {/* Search Input */}
-                <div className="flex-1 max-w-sm relative">
+                <div className="w-full relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     type="text"
@@ -6752,16 +6752,17 @@ export default function AdminDashboard() {
                 </div>
                 
                 {/* Add User Button */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button 
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm flex items-center gap-2 w-full justify-start"
-                      data-testid="button-add-user-sidebar"
-                    >
-                      <UserPlus className="h-4 w-4" />
-                      Add User
-                    </Button>
-                  </DropdownMenuTrigger>
+                <div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 h-8 text-sm whitespace-nowrap"
+                        data-testid="button-add-user-sidebar"
+                      >
+                        <UserPlus className="h-4 w-4 mr-1" />
+                        Add User
+                      </Button>
+                    </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-48">
                     <DropdownMenuItem
                       onClick={() => setIsAddClientCredentialsModalOpen(true)}

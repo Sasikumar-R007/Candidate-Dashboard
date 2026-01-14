@@ -16,23 +16,44 @@
 ### Critical Issues to Address
 
 #### 1. ⚠️ Database Migration - REQUIRED BEFORE DEPLOYMENT
-**Status**: ⚠️ **MUST FIX BEFORE DEPLOYMENT**
+**Status**: ⚠️ **MUST FIX BEFORE DEPLOYMENT - CRITICAL**
 
-The production database is missing the `last_login_at` column in the `employees` table. This will cause errors when:
-- Adding new client users
-- Any operation that creates employee records
+The production database is missing multiple columns. This is causing 500 errors on several endpoints.
 
-**Action Required**:
+**Missing Columns**:
+1. `last_login_at` in `employees` table
+2. `jd_file` in `requirements` table
+3. `jd_text` in `requirements` table
+
+**Current Errors in Production**:
+- `GET /api/admin/requirements` - 500 error (missing jd_file column)
+- `GET /api/admin/client-jds` - 500 error (missing jd_file column)
+- `GET /api/admin/daily-metrics` - 500 error (missing jd_file column)
+- `POST /api/admin/clients/credentials` - 500 error (missing last_login_at column)
+
+**Action Required - Run ALL of these SQL commands**:
 ```sql
--- Run this in your production database BEFORE deploying
+-- 1. Add last_login_at to employees table
 ALTER TABLE employees 
 ADD COLUMN IF NOT EXISTS last_login_at TEXT;
+
+-- 2. Add jd_file to requirements table
+ALTER TABLE requirements 
+ADD COLUMN IF NOT EXISTS jd_file TEXT;
+
+-- 3. Add jd_text to requirements table
+ALTER TABLE requirements 
+ADD COLUMN IF NOT EXISTS jd_text TEXT;
 ```
 
 **OR** use Drizzle push (if you have DATABASE_URL configured):
 ```bash
 npm run db:push
 ```
+
+**Migration Files Available**:
+- `server/migrations/add_last_login_at.sql`
+- `server/migrations/add_jd_fields.sql`
 
 #### 2. ⚠️ Backend API - Period Parameter Support
 **Status**: ⚠️ **NEEDS VERIFICATION**
@@ -74,12 +95,25 @@ These are TypeScript type errors that existed before our changes:
 
 ## 📋 Deployment Steps
 
-### Step 1: Database Migration (REQUIRED)
+### Step 1: Database Migration (REQUIRED - CRITICAL)
 ```sql
--- Connect to production database and run:
+-- Connect to production database and run ALL of these:
+
+-- 1. Fix employees table
 ALTER TABLE employees 
 ADD COLUMN IF NOT EXISTS last_login_at TEXT;
+
+-- 2. Fix requirements table (currently causing 500 errors)
+ALTER TABLE requirements 
+ADD COLUMN IF NOT EXISTS jd_file TEXT;
+
+ALTER TABLE requirements 
+ADD COLUMN IF NOT EXISTS jd_text TEXT;
 ```
+
+**OR** use the migration files:
+- Run `server/migrations/add_last_login_at.sql`
+- Run `server/migrations/add_jd_fields.sql`
 
 ### Step 2: Verify Backend API
 Check if `server/routes.ts` `/api/admin/performance-metrics` endpoint handles `period` parameter:
@@ -144,18 +178,31 @@ npm run build
 - ⚠️ Date of Birth field mapping (uses wrong field, but won't crash)
 
 ### What Will Break (If Not Fixed):
-- ❌ Add Client User (if database migration not run)
+- ❌ **Add Client User** (if `last_login_at` column not added)
+- ❌ **View Requirements** (if `jd_file`/`jd_text` columns not added) - Currently showing 500 errors
+- ❌ **View Client JDs** (if `jd_file`/`jd_text` columns not added) - Currently showing 500 errors
+- ❌ **Daily Metrics** (if `jd_file`/`jd_text` columns not added) - Currently showing 500 errors
 
 ## 🎯 Final Verdict
 
 **Status**: ✅ **READY TO DEPLOY** (after database migration)
 
 **Action Items**:
-1. [ ] Run database migration: `ALTER TABLE employees ADD COLUMN IF NOT EXISTS last_login_at TEXT;`
+1. [ ] **CRITICAL**: Run database migrations (all 3 columns):
+   ```sql
+   ALTER TABLE employees ADD COLUMN IF NOT EXISTS last_login_at TEXT;
+   ALTER TABLE requirements ADD COLUMN IF NOT EXISTS jd_file TEXT;
+   ALTER TABLE requirements ADD COLUMN IF NOT EXISTS jd_text TEXT;
+   ```
 2. [ ] Build application: `npm run build`
 3. [ ] Deploy to production
-4. [ ] Test critical features (Add Client User, Resume Upload)
+4. [ ] Test critical features:
+   - [ ] Add Client User (should work after migration)
+   - [ ] View Requirements (should work after migration)
+   - [ ] View Client JDs (should work after migration)
+   - [ ] Daily Metrics (should work after migration)
+   - [ ] Resume Upload
 5. [ ] Monitor for errors in first 24 hours
 
-**Confidence Level**: **HIGH** - All changes are safe, only database migration is critical.
+**Confidence Level**: **HIGH** - All changes are safe, database migrations are critical and must be run.
 
