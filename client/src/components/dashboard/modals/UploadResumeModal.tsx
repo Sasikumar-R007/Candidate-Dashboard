@@ -69,6 +69,7 @@ export default function UploadResumeModal({
   const [domainOpen, setDomainOpen] = useState(false);
   const [locationInput, setLocationInput] = useState("");
   const [domainInput, setDomainInput] = useState("");
+  const [isParsing, setIsParsing] = useState(false);
 
   // Location suggestions - Tamil Nadu cities and other top Indian cities
   const locations = [
@@ -195,6 +196,114 @@ export default function UploadResumeModal({
   const handleURLChange = (field: 'linkedin' | 'website' | 'portfolio1' | 'portfolio2' | 'portfolio3', value: string) => {
     // Only update the value, validation happens on blur
     setFormData({ ...formData, [field]: value });
+  };
+
+  // Handle resume file upload and parsing
+  const handleResumeUpload = async (file: File) => {
+    setResumeFile(file);
+    setIsParsing(true);
+    setFormError('');
+
+    try {
+      const uploadFormData = new FormData();
+      uploadFormData.append('resume', file);
+
+      const response = await fetch('/api/recruiter/parse-resume', {
+        method: 'POST',
+        body: uploadFormData,
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to parse resume');
+      }
+
+      const result = await response.json();
+      const parsedData = result.data;
+
+      // Map parsed data to form fields
+      const updatedFormData = { ...formData };
+
+      // Parse fullName into firstName and lastName
+      if (parsedData.fullName) {
+        const nameParts = parsedData.fullName.trim().split(/\s+/);
+        if (nameParts.length > 0) {
+          updatedFormData.firstName = nameParts[0] || '';
+          updatedFormData.lastName = nameParts.slice(1).join(' ') || '';
+        }
+      }
+
+      // Map email
+      if (parsedData.email && !updatedFormData.primaryEmail) {
+        updatedFormData.primaryEmail = parsedData.email;
+      }
+
+      // Map phone
+      if (parsedData.phone && !updatedFormData.mobileNumber) {
+        updatedFormData.mobileNumber = parsedData.phone;
+      }
+
+      // Map location
+      if (parsedData.location && !updatedFormData.currentLocation) {
+        updatedFormData.currentLocation = parsedData.location;
+      }
+
+      // Map LinkedIn
+      if (parsedData.linkedinUrl && !updatedFormData.linkedin) {
+        updatedFormData.linkedin = parsedData.linkedinUrl;
+      }
+
+      // Map website
+      if (parsedData.websiteUrl && !updatedFormData.website) {
+        updatedFormData.website = parsedData.websiteUrl;
+      }
+
+      // Map portfolio
+      if (parsedData.portfolioUrl && !updatedFormData.portfolio1) {
+        updatedFormData.portfolio1 = parsedData.portfolioUrl;
+      }
+
+      // Map current role
+      if (parsedData.currentRole && !updatedFormData.currentRole) {
+        updatedFormData.currentRole = parsedData.currentRole;
+      }
+
+      // Map company
+      if (parsedData.company && !updatedFormData.currentCompany) {
+        updatedFormData.currentCompany = parsedData.company;
+      }
+
+      // Map education (college name)
+      if (parsedData.education && !updatedFormData.collegeName) {
+        updatedFormData.collegeName = parsedData.education;
+      }
+
+      // Map skills
+      if (parsedData.skills) {
+        const skillArray = parsedData.skills.split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0);
+        if (skillArray.length > 0) {
+          const skillsToFill = skillArray.slice(0, 5);
+          const emptySlots = 5 - skillsToFill.length;
+          updatedFormData.skills = [...skillsToFill, ...Array(emptySlots).fill('')].slice(0, 5);
+        }
+      }
+
+      setFormData(updatedFormData);
+
+      toast({
+        title: "Resume parsed successfully",
+        description: "Form fields have been auto-filled. Please review and complete any missing information.",
+      });
+    } catch (error: any) {
+      console.error('Resume parsing error:', error);
+      toast({
+        title: "Parsing failed",
+        description: "Could not parse resume. You can still fill the form manually.",
+        variant: 'default',
+      });
+    } finally {
+      setIsParsing(false);
+    }
   };
   
   // Mutation for creating candidate
@@ -365,6 +474,7 @@ export default function UploadResumeModal({
         <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(95vh - 4rem)' }}>
           <DialogHeader>
             <DialogTitle>Upload Resume</DialogTitle>
+            <p className="text-sm text-gray-500 mt-1">Upload resume for easy parsing and auto-fill</p>
           </DialogHeader>
           
           <div className="space-y-4 pt-4">
@@ -845,15 +955,18 @@ export default function UploadResumeModal({
                 <div className="flex flex-col items-center">
                   <Upload className="h-8 w-8 text-gray-400 mb-2" />
                   <p className="text-sm text-gray-600 mb-2">Choose File Drag File</p>
-                  {resumeFile && (
+                  {isParsing && (
+                    <p className="text-xs text-blue-600">Parsing resume...</p>
+                  )}
+                  {resumeFile && !isParsing && (
                     <p className="text-xs text-green-600">Selected: {resumeFile.name}</p>
                   )}
                   <input
                     type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
+                    accept=".pdf,.doc,.docx"
                     onChange={(e) => {
                       if (e.target.files && e.target.files[0]) {
-                        setResumeFile(e.target.files[0]);
+                        handleResumeUpload(e.target.files[0]);
                       }
                     }}
                     className="hidden"

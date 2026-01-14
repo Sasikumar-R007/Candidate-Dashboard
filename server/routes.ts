@@ -3810,6 +3810,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Recruiter parse resume file (extract details)
+  app.post("/api/recruiter/parse-resume", requireEmployeeAuth, resumeUpload.single('resume'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No resume file uploaded" });
+      }
+
+      const parsed = await parseResumeFile(req.file.path, req.file.mimetype);
+      
+      res.json({
+        success: true,
+        data: {
+          fullName: parsed.fullName,
+          email: parsed.email,
+          phone: parsed.phone,
+          designation: parsed.designation,
+          experience: parsed.experience,
+          skills: parsed.skills,
+          location: parsed.location,
+          company: parsed.company,
+          education: parsed.education,
+          linkedinUrl: parsed.linkedinUrl,
+          portfolioUrl: parsed.portfolioUrl,
+          websiteUrl: parsed.websiteUrl,
+          currentRole: parsed.currentRole
+        }
+      });
+    } catch (error: any) {
+      console.error('Parse resume error:', error);
+      res.status(500).json({ message: "Failed to parse resume", error: error.message || 'Unknown error' });
+    }
+  });
+
   // Recruiter upload resume file
   app.post("/api/recruiter/upload/resume", requireEmployeeAuth, resumeUpload.single('resume'), async (req, res) => {
     try {
