@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Upload, Check, ChevronsUpDown } from 'lucide-react';
+import { Upload, Check, ChevronsUpDown, RotateCcw, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -70,6 +70,45 @@ export default function UploadResumeModal({
   const [locationInput, setLocationInput] = useState("");
   const [domainInput, setDomainInput] = useState("");
   const [isParsing, setIsParsing] = useState(false);
+
+  // Reset function to clear all fields
+  const handleReset = () => {
+    setFormData({
+      firstName: '',
+      lastName: '',
+      mobileNumber: '',
+      whatsappNumber: '',
+      primaryEmail: '',
+      secondaryEmail: '',
+      highestQualification: '',
+      collegeName: '',
+      linkedin: '',
+      pedigreeLevel: '',
+      currentLocation: '',
+      noticePeriod: '',
+      website: '',
+      portfolio1: '',
+      currentCompany: '',
+      portfolio2: '',
+      currentRole: '',
+      portfolio3: '',
+      companyDomain: '',
+      companyLevel: '',
+      skills: ['', '', '', '', '']
+    });
+    setResumeFile(null);
+    setFormError('');
+    setDeliverToRequirement(false);
+    setSelectedRequirement('');
+    setLocationInput('');
+    setDomainInput('');
+    setIsParsing(false);
+    // Reset file input
+    const fileInput = document.getElementById('resume-upload') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  };
 
   // Location suggestions - Tamil Nadu cities and other top Indian cities
   const locations = [
@@ -472,9 +511,17 @@ export default function UploadResumeModal({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden">
         <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(95vh - 4rem)' }}>
-          <DialogHeader>
+          <DialogHeader className="relative">
             <DialogTitle>Upload Resume</DialogTitle>
             <p className="text-sm text-gray-500 mt-1">Upload resume for easy parsing and auto-fill</p>
+            <button
+              onClick={handleReset}
+              className="absolute top-0 right-0 p-2 hover:bg-gray-100 rounded-full transition-colors"
+              title="Reset all fields"
+              type="button"
+            >
+              <RotateCcw className="h-4 w-4 text-gray-600" />
+            </button>
           </DialogHeader>
           
           <div className="space-y-4 pt-4">
@@ -484,6 +531,41 @@ export default function UploadResumeModal({
                 {formError}
               </div>
             )}
+            
+            {/* Resume Upload - Moved to top */}
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">Upload Resume (PDF/Image)</p>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                <div className="flex flex-col items-center">
+                  <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-600 mb-2">Choose File Drag File</p>
+                  {isParsing && (
+                    <p className="text-xs text-blue-600">Parsing resume...</p>
+                  )}
+                  {resumeFile && !isParsing && (
+                    <p className="text-xs text-green-600">Selected: {resumeFile.name}</p>
+                  )}
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        handleResumeUpload(e.target.files[0]);
+                      }
+                    }}
+                    className="hidden"
+                    id="resume-upload"
+                    data-testid="input-resume-file"
+                  />
+                  <label
+                    htmlFor="resume-upload"
+                    className="cursor-pointer bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded text-xs text-gray-600 mt-2"
+                  >
+                    Browse Files
+                  </label>
+                </div>
+              </div>
+            </div>
             
             {/* Row 1: First Name, Last Name */}
             <div className="grid grid-cols-2 gap-4">
@@ -921,18 +1003,36 @@ export default function UploadResumeModal({
               <p className="text-xs text-gray-500 mb-3">Add up to 15 skills</p>
               <div className="flex flex-wrap gap-2">
                 {formData.skills.map((skill, index) => (
-                  <Input
-                    key={index}
-                    value={skill}
-                    onChange={(e) => {
-                      const newSkills = [...formData.skills];
-                      newSkills[index] = e.target.value;
-                      setFormData({...formData, skills: newSkills});
-                    }}
-                    className="bg-gray-50 rounded w-32 text-sm focus-visible:ring-1 focus-visible:ring-offset-0"
-                    placeholder={`Skill ${index + 1}`}
-                    data-testid={`input-skill-${index}`}
-                  />
+                  <div key={index} className="relative">
+                    <Input
+                      value={skill}
+                      onChange={(e) => {
+                        const newSkills = [...formData.skills];
+                        newSkills[index] = e.target.value;
+                        setFormData({...formData, skills: newSkills});
+                      }}
+                      className="bg-gray-50 rounded w-32 text-sm focus-visible:ring-1 focus-visible:ring-offset-0 pr-8"
+                      placeholder={`Skill ${index + 1}`}
+                      data-testid={`input-skill-${index}`}
+                    />
+                    {skill.trim() && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newSkills = formData.skills.filter((_, i) => i !== index);
+                          // Ensure at least one empty slot remains
+                          if (newSkills.length === 0) {
+                            newSkills.push('');
+                          }
+                          setFormData({...formData, skills: newSkills});
+                        }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-gray-200 rounded-full transition-colors"
+                        title="Remove skill"
+                      >
+                        <X className="h-3 w-3 text-gray-500" />
+                      </button>
+                    )}
+                  </div>
                 ))}
                 {formData.skills.length < 15 && (
                   <Button
@@ -948,43 +1048,8 @@ export default function UploadResumeModal({
               </div>
             </div>
 
-            {/* Resume Upload */}
-            <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">Upload Resume (PDF/Image)</p>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-                <div className="flex flex-col items-center">
-                  <Upload className="h-8 w-8 text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-600 mb-2">Choose File Drag File</p>
-                  {isParsing && (
-                    <p className="text-xs text-blue-600">Parsing resume...</p>
-                  )}
-                  {resumeFile && !isParsing && (
-                    <p className="text-xs text-green-600">Selected: {resumeFile.name}</p>
-                  )}
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        handleResumeUpload(e.target.files[0]);
-                      }
-                    }}
-                    className="hidden"
-                    id="resume-upload"
-                    data-testid="input-resume-file"
-                  />
-                  <label
-                    htmlFor="resume-upload"
-                    className="cursor-pointer bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded text-xs text-gray-600 mt-2"
-                  >
-                    Browse Files
-                  </label>
-                </div>
-              </div>
-            </div>
-
             {/* Deliver to Requirement Section */}
-            <div className="border-t pt-4">
+            <div className="border-t pt-4 bg-gray-50/50 rounded-lg p-4">
               <div className="flex items-center gap-3 mb-3">
                 <Label className="text-sm font-medium text-gray-700">Deliver to Requirement</Label>
                 <Switch

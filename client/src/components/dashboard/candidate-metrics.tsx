@@ -5,68 +5,63 @@ export default function CandidateMetrics() {
       label: 'TAT',
       sublabel: 'Recruiter reply time',
       value: '24',
-      bgColor: 'bg-cyan-50',
-      textColor: 'text-gray-700'
+      bgColor: 'bg-white',
+      textColor: 'text-gray-800'
     },
     {
       label: 'JOBS',
       sublabel: 'Applied',
       value: '24',
-      bgColor: 'bg-cyan-50',
-      textColor: 'text-gray-700'
+      bgColor: 'bg-white',
+      textColor: 'text-gray-800'
     },
     {
       label: 'REJECTED',
       sublabel: 'On Applications',
       value: '14',
-      bgColor: 'bg-red-50',
-      textColor: 'text-red-600'
+      bgColor: 'bg-white',
+      textColor: 'text-orange-600'
     },
     {
       label: 'INTERVIEWS',
       sublabel: 'In Process',
       value: '10',
-      bgColor: 'bg-cyan-50',
-      textColor: 'text-gray-700'
+      bgColor: 'bg-white',
+      textColor: 'text-gray-800'
     },
     {
       label: 'FEEDBACK',
       sublabel: 'Received',
       value: '9',
-      bgColor: 'bg-cyan-50',
-      textColor: 'text-gray-700'
+      bgColor: 'bg-white',
+      textColor: 'text-gray-800'
     },
     {
       label: 'PENDING',
       sublabel: 'Feedback',
       value: '3',
-      bgColor: 'bg-cyan-50',
-      textColor: 'text-gray-700'
+      bgColor: 'bg-white',
+      textColor: 'text-gray-800'
     }
   ];
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-      <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-6">
+    <div className="w-full">
+      <h2 className="text-lg font-semibold text-gray-900 mb-6">
         Candidate Metrics
       </h2>
-      <div className="space-y-0">
+      <div className="space-y-3">
         {metrics.map((metric, index) => (
           <div 
             key={index}
-            className={`${metric.bgColor} p-4 border-b border-gray-200 last:border-b-0`}
+            className={`${metric.bgColor} p-4 rounded-lg border border-gray-200`}
             data-testid={`metric-${metric.label.toLowerCase()}`}
           >
-            <div className="flex justify-between items-start">
-              <div className="flex-1">
-                <div className="font-bold text-sm text-gray-800 dark:text-gray-900">
-                  {metric.label}
-                </div>
-                <div className="text-xs text-gray-600 dark:text-gray-700">
-                  {metric.sublabel}
-                </div>
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-gray-700">
+                {metric.label} {metric.sublabel}:
               </div>
-              <div className={`text-3xl font-bold ${metric.textColor}`}>
+              <div className={`text-xl font-bold ${metric.textColor}`}>
                 {metric.value}
               </div>
             </div>

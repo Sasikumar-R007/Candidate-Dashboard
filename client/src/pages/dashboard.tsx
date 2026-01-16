@@ -72,9 +72,9 @@ export default function Dashboard() {
                 />
               </div>
             </header>
-            {/* Main content area */}
-            <div className="flex-1 overflow-hidden">
-              <MyJobsTab onNavigateToJobBoard={() => setSidebarTab('job-board')} />
+            {/* Main content area - Full height flex container */}
+            <div className="flex-1 overflow-hidden flex">
+              <MyJobsTab onNavigateToJobBoard={() => setSidebarTab('job-board')} className="flex-1" />
             </div>
           </div>
         );
@@ -206,7 +206,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 font-inter">
       <div className="flex h-screen overflow-hidden">
         <Sidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
-        <div className="flex-1 flex flex-col overflow-hidden ml-16">
+        <div className="flex-1 flex flex-col overflow-hidden ml-16 bg-gray-50">
           {renderSidebarContent()}
         </div>
         

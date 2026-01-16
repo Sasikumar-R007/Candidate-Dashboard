@@ -14,9 +14,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, ExternalLink, Phone, Star, Copy, FileText, Eye } from "lucide-react";
+import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, ExternalLink, Phone, Star, Copy, FileText, Eye, Loader2 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
@@ -109,6 +110,7 @@ export default function RecruiterDashboard2() {
   const [isReasonModalOpen, setIsReasonModalOpen] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
   const [reason, setReason] = useState('');
+  const [otherReasonText, setOtherReasonText] = useState('');
   const [requirementCountModal, setRequirementCountModal] = useState<{isOpen: boolean, requirement: any}>({isOpen: false, requirement: null});
   
   // Calendar modal state for requirements count
@@ -245,26 +247,44 @@ export default function RecruiterDashboard2() {
   // Calculate application stats
   const applicationStats = useMemo(() => {
     const total = allApplications.length;
-    const today = new Date().toISOString().split('T')[0];
-    // New applications = only self-applied (source: 'job_board') from today
-    const newApps = allApplications.filter((app: any) => 
-      app.source === 'job_board' && app.appliedDate && app.appliedDate.split('T')[0] === today
-    ).length;
+    // New applications = self-applied (source: 'job_board') with status 'In Process', 'Applied', or null/undefined
+    // These are applications that haven't been reviewed/processed yet
+    const newApps = allApplications.filter((app: any) => {
+      const isSelfApplied = app.source === 'job_board';
+      const isUnreviewed = !app.status || 
+                          app.status === 'In Process' || 
+                          app.status === 'In-Process' || 
+                          app.status === 'Applied' ||
+                          app.status === '';
+      return isSelfApplied && isUnreviewed;
+    }).length;
     return { total, new: newApps };
   }, [allApplications]);
 
   // Mutation for updating application status
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      setUpdatingApplicantId(id);
       const response = await apiRequest('PATCH', `/api/recruiter/applications/${id}/status`, { status });
-      return response;
+      return { ...response, id };
     },
     onSuccess: (data) => {
       // Invalidate and refetch applications to ensure UI reflects database state
       queryClient.invalidateQueries({ queryKey: ['/api/recruiter/applications'] });
+      setUpdatingApplicantId(null);
+      toast({
+        title: "Status Updated",
+        description: "Candidate status has been updated successfully.",
+      });
       console.log('Status updated successfully:', data);
     },
     onError: (error: any) => {
+      setUpdatingApplicantId(null);
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update status. Please try again.",
+        variant: 'destructive',
+      });
       console.error('Failed to update status:', error);
       // Remove local override on error to revert UI
       // The error will be logged but we don't show toast to avoid interrupting workflow
@@ -673,28 +693,40 @@ export default function RecruiterDashboard2() {
         'Applied': 'In-Process'
       };
 
+      // Get candidate name - prioritize candidateName from app, fallback to profile lookup
+      let candidateName = app.candidateName;
+      if (!candidateName || candidateName === 'Unknown Candidate' || candidateName.trim() === '') {
+        // Try to construct from profile if available (this should be handled by backend now, but keep as fallback)
+        candidateName = 'Unknown Candidate';
+      }
+
       return {
         id: app.id || `app-${index + 1}`,
         appliedOn: app.appliedDate ? new Date(app.appliedDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : 'N/A',
-        candidateName: app.candidateName || 'Unknown Candidate',
+        candidateName: candidateName,
         company: app.company || 'N/A',
         roleApplied: app.jobTitle || 'N/A',
         submission: app.source === 'recruiter_tagged' ? 'Uploaded' : 'Inbound',
         currentStatus: statusMap[app.status] || app.status || 'In-Process',
-        email: app.candidateEmail || 'N/A',
-        phone: app.candidatePhone || 'N/A',
+        email: app.candidateEmail || null,
+        phone: app.candidatePhone || null,
         location: app.location || 'N/A',
         experience: app.experience || 'N/A',
         skills: parsedSkills,
         education: 'N/A',
         currentCompany: app.company || 'N/A',
-        rating: 4.0
+        rating: 4.0,
+        resumeFile: app.resumeFile || null,
+        profileId: app.profileId || null,
+        appliedDate: app.appliedDate || null
       };
     });
   }, [allApplications]);
 
   // Track local changes to applicant statuses
   const [applicantStatusOverrides, setApplicantStatusOverrides] = useState<{[key: string]: string}>({});
+  // Track which applicant is currently being updated for loading state
+  const [updatingApplicantId, setUpdatingApplicantId] = useState<string | null>(null);
 
   // Map applicant statuses to pipeline stages (each status maps to exactly one stage)
   const getPipelineCandidatesByStage = useMemo(() => {
@@ -824,15 +856,29 @@ export default function RecruiterDashboard2() {
   // Archive candidate when screened out
   const archiveCandidate = () => {
     if (selectedCandidate) {
+      // Use otherReasonText if "Other" is selected, otherwise use reason
+      const finalReason = reason === 'Other' && otherReasonText.trim() 
+        ? `Other: ${otherReasonText.trim()}` 
+        : reason;
+      
+      // Store reason in console for now (can be added to API later)
+      if (finalReason) {
+        console.log('Archive reason:', finalReason);
+      }
+      
       setApplicantStatusOverrides(prev => ({
         ...prev,
         [selectedCandidate.id]: 'Archived'
       }));
       // Persist the archived status
-      updateStatusMutation.mutate({ id: selectedCandidate.id, status: 'Screened Out' });
+      updateStatusMutation.mutate({ 
+        id: selectedCandidate.id, 
+        status: 'Screened Out'
+      });
       setIsReasonModalOpen(false);
       setSelectedCandidate(null);
       setReason('');
+      setOtherReasonText('');
     }
   };
 
@@ -841,8 +887,11 @@ export default function RecruiterDashboard2() {
     return applicantData
       .filter(a => {
         const effectiveStatus = applicantStatusOverrides[a.id] || a.currentStatus;
-        // Filter out Archived and Closure statuses - these should not appear in Applicant Overview
-        return effectiveStatus !== 'Archived' && effectiveStatus !== 'Closure';
+        // Filter out Archived, Closure, Screened Out, and Removed statuses - these should not appear in Applicant Overview
+        return effectiveStatus !== 'Archived' 
+          && effectiveStatus !== 'Closure' 
+          && effectiveStatus !== 'Screened Out' 
+          && effectiveStatus !== 'Removed';
       })
       .map(a => ({
         ...a,
@@ -1012,7 +1061,7 @@ export default function RecruiterDashboard2() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600 mb-3"></div>
-          <div className="text-lg text-gray-600">Loading Recruiter Dashboard 2...</div>
+          <div className="text-lg text-gray-600">Loading Recruiter Dashboard...</div>
         </div>
       </div>
     );
@@ -1084,16 +1133,26 @@ export default function RecruiterDashboard2() {
               <Card className="bg-white border border-gray-200">
                 <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4 pt-6">
                   <CardTitle className="text-lg font-semibold text-gray-900">Applicant Overview</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline"
+                      size="sm"
+                      className="text-sm text-red-600 hover:text-red-700 border-red-300 hover:border-red-400"
+                      onClick={() => navigate('/archives')}
+                      data-testid="button-archive-applicants"
+                    >
+                      Archive
+                    </Button>
                   {getEffectiveApplicantData().length > 5 && (
                     <Button 
-                      variant="link"
-                      className="text-sm text-blue-600 hover:text-blue-800 p-0 flex items-center gap-1"
+                      className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded"
                       onClick={() => setIsApplicantOverviewModalOpen(true)}
                       data-testid="button-view-all-applicants"
                     >
-                      View All
+                      View More
                     </Button>
                   )}
+                  </div>
                 </CardHeader>
                 <CardContent className="p-0">
                   {getEffectiveApplicantData().length === 0 ? (
@@ -1139,35 +1198,61 @@ export default function RecruiterDashboard2() {
                           </tr>
                         </thead>
                         <tbody>
-                          {getEffectiveApplicantData().slice(0, 5).map((applicant, index) => (
-                            <tr key={applicant.id || index} className="border-b border-gray-100 hover:bg-gray-50">
-                              <td className="py-3 px-6 text-gray-900">{applicant.appliedOn}</td>
-                              <td className="py-3 px-6 text-gray-900 font-medium">{applicant.candidateName}</td>
-                              <td className="py-3 px-6 text-gray-900">{applicant.company}</td>
-                              <td className="py-3 px-6 text-gray-900">{applicant.roleApplied}</td>
-                              <td className="py-3 px-6">
-                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                  applicant.submission === 'Inbound' 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : 'bg-blue-100 text-blue-800'
-                                }`}>
-                                  {applicant.submission}
-                                </span>
-                              </td>
-                              <td className="py-3 px-6">
-                                <Select value={applicant.currentStatus} onValueChange={(value) => handleStatusChange(applicant, value)}>
-                                  <SelectTrigger className="w-32 h-8 text-sm">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {statuses.map((status) => (
-                                      <SelectItem key={status} value={status}>{status}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </td>
-                            </tr>
-                          ))}
+                          {getEffectiveApplicantData().slice(0, 5).map((applicant, index) => {
+                            const isUpdating = updatingApplicantId === applicant.id;
+                            return (
+                              <tr 
+                                key={applicant.id || index} 
+                                className={`border-b border-gray-100 hover:bg-gray-50 transition-all duration-300 ${
+                                  isUpdating ? 'opacity-70 bg-blue-50' : ''
+                                }`}
+                              >
+                                <td className="py-3 px-6 text-gray-900 transition-colors duration-200">{applicant.appliedOn}</td>
+                                <td className="py-3 px-6 text-gray-900 font-medium transition-colors duration-200">{applicant.candidateName}</td>
+                                <td className="py-3 px-6 text-gray-900 transition-colors duration-200">{applicant.company}</td>
+                                <td className="py-3 px-6 text-gray-900 transition-colors duration-200">{applicant.roleApplied}</td>
+                                <td className="py-3 px-6">
+                                  <span className={`px-3 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
+                                    applicant.submission === 'Inbound' 
+                                      ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                                      : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                                  }`}>
+                                    {applicant.submission}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-6">
+                                  <div className="relative">
+                                    {isUpdating && (
+                                      <div className="absolute inset-0 flex items-center justify-center bg-white/90 rounded-md z-10 backdrop-blur-sm animate-pulse">
+                                        <div className="flex items-center gap-2">
+                                          <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                                          <span className="text-xs text-blue-600 font-medium">Updating...</span>
+                                        </div>
+                                      </div>
+                                    )}
+                                    <Select 
+                                      value={applicant.currentStatus} 
+                                      onValueChange={(value) => handleStatusChange(applicant, value)}
+                                      disabled={isUpdating}
+                                    >
+                                      <SelectTrigger className={`w-32 h-8 text-sm transition-all duration-300 ${
+                                        isUpdating ? 'opacity-50 cursor-wait' : 'hover:border-blue-400'
+                                      }`}>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {statuses.map((status) => (
+                                          <SelectItem key={status} value={status} className="transition-colors hover:bg-blue-50">
+                                            {status}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -1318,31 +1403,37 @@ export default function RecruiterDashboard2() {
                         </div>
                       </div>
                       <div className="h-48 flex items-center justify-center bg-white rounded-lg p-4 border border-gray-200">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart 
-                            data={(dailyMetrics?.requirements || []).map((req: any) => ({
-                              criticality: req.criticality,
-                              delivered: req.delivered,
-                              remaining: req.required - req.delivered
-                            }))}
-                            margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
-                          >
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                            <XAxis dataKey="criticality" stroke="#6b7280" style={{ fontSize: '12px' }} />
-                            <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} label={{ value: 'Resumes', angle: -90, position: 'insideLeft', style: { fontSize: '12px' } }} />
-                            <Tooltip 
-                              contentStyle={{ 
-                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                border: '1px solid #e5e7eb',
-                                borderRadius: '0.5rem',
-                                fontSize: '11px'
-                              }}
-                            />
-                            <Legend wrapperStyle={{ fontSize: '10px' }} />
-                            <Bar dataKey="delivered" stackId="a" fill="#22c55e" name="Delivered" />
-                            <Bar dataKey="remaining" stackId="a" fill="#ef4444" name="Remaining" />
-                          </BarChart>
-                        </ResponsiveContainer>
+                        {dailyMetrics?.requirements && dailyMetrics.requirements.length > 0 ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart 
+                              data={dailyMetrics.requirements.map((req: any) => ({
+                                criticality: req.criticality,
+                                delivered: req.delivered || 0,
+                                remaining: Math.max(0, (req.required || 0) - (req.delivered || 0))
+                              }))}
+                              margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                            >
+                              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                              <XAxis dataKey="criticality" stroke="#6b7280" style={{ fontSize: '12px' }} />
+                              <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} label={{ value: 'Resumes', angle: -90, position: 'insideLeft', style: { fontSize: '12px' } }} />
+                              <Tooltip 
+                                contentStyle={{ 
+                                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                  border: '1px solid #e5e7eb',
+                                  borderRadius: '0.5rem',
+                                  fontSize: '11px'
+                                }}
+                              />
+                              <Legend wrapperStyle={{ fontSize: '10px' }} />
+                              <Bar dataKey="delivered" stackId="a" fill="#22c55e" name="Delivered" />
+                              <Bar dataKey="remaining" stackId="a" fill="#ef4444" name="Remaining" />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div className="text-center text-gray-500 text-sm">
+                            No requirements data available
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -2608,16 +2699,15 @@ export default function RecruiterDashboard2() {
       <DailyDeliveryModal
         open={isDefaultedModalOpen}
         onOpenChange={setIsDefaultedModalOpen}
-        title="Defaulted Candidates"
-        rows={[]}
+        title="Defaulted Requirements"
+        rows={(dailyMetrics?.defaultedRequirements as any[]) || []}
         columns={[
-          { key: 'candidate', label: 'Candidate' },
-          { key: 'position', label: 'Position' },
+          { key: 'requirement', label: 'Requirement' },
           { key: 'client', label: 'Client' },
-          { key: 'reason', label: 'Reason' },
-          { key: 'status', label: 'Status' }
+          { key: 'pendingProfiles', label: 'Pending Profiles' },
+          { key: 'status', label: 'Progress' }
         ]}
-        emptyMessage="No defaulted candidates today"
+        emptyMessage="No defaulted requirements. All requirements are completed!"
         statusClassName={(status) => "px-2 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"}
         testIdPrefix="defaulted"
       />
@@ -2891,7 +2981,13 @@ export default function RecruiterDashboard2() {
       </Dialog>
 
       {/* Reason Modal for Screened Out */}
-      <Dialog open={isReasonModalOpen} onOpenChange={setIsReasonModalOpen}>
+      <Dialog open={isReasonModalOpen} onOpenChange={(open) => {
+        setIsReasonModalOpen(open);
+        if (!open) {
+          setReason('');
+          setOtherReasonText('');
+        }
+      }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Reason for Screening Out</DialogTitle>
@@ -2902,7 +2998,12 @@ export default function RecruiterDashboard2() {
             </div>
             <div>
               <Label htmlFor="reason">Reason</Label>
-              <Select value={reason} onValueChange={setReason}>
+              <Select value={reason} onValueChange={(value) => {
+                setReason(value);
+                if (value !== 'Other') {
+                  setOtherReasonText('');
+                }
+              }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select reason" />
                 </SelectTrigger>
@@ -2913,9 +3014,32 @@ export default function RecruiterDashboard2() {
                 </SelectContent>
               </Select>
             </div>
+            {reason === 'Other' && (
+              <div>
+                <Label htmlFor="other-reason">Please specify the reason</Label>
+                <Textarea
+                  id="other-reason"
+                  value={otherReasonText}
+                  onChange={(e) => setOtherReasonText(e.target.value)}
+                  placeholder="Enter the reason for screening out..."
+                  className="mt-2"
+                  rows={3}
+                />
+              </div>
+            )}
             <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsReasonModalOpen(false)}>Cancel</Button>
-              <Button onClick={archiveCandidate} className="bg-red-600 hover:bg-red-700">Archive Candidate</Button>
+              <Button variant="outline" onClick={() => {
+                setIsReasonModalOpen(false);
+                setReason('');
+                setOtherReasonText('');
+              }}>Cancel</Button>
+              <Button 
+                onClick={archiveCandidate} 
+                className="bg-red-600 hover:bg-red-700"
+                disabled={reason === 'Other' && !otherReasonText.trim()}
+              >
+                Archive Candidate
+              </Button>
             </div>
           </div>
         </DialogContent>
@@ -3114,35 +3238,61 @@ export default function RecruiterDashboard2() {
                         applicant.currentStatus.toLowerCase().includes(query)
                       );
                     })
-                    .map((applicant, index) => (
-                      <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-3 px-4 text-gray-900">{applicant.appliedOn}</td>
-                        <td className="py-3 px-4 text-gray-900 font-medium">{applicant.candidateName}</td>
-                        <td className="py-3 px-4 text-gray-900">{applicant.company}</td>
-                        <td className="py-3 px-4 text-gray-900">{applicant.roleApplied}</td>
-                        <td className="py-3 px-4">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            applicant.submission === 'Inbound' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-blue-100 text-blue-800'
-                          }`}>
-                            {applicant.submission}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <Select value={applicant.currentStatus} onValueChange={(value) => handleStatusChange(applicant, value)}>
-                            <SelectTrigger className="w-32 h-8 text-sm">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {statuses.map((status) => (
-                                <SelectItem key={status} value={status}>{status}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </td>
-                      </tr>
-                    ))}
+                    .map((applicant, index) => {
+                      const isUpdating = updatingApplicantId === applicant.id;
+                      return (
+                        <tr 
+                          key={index} 
+                          className={`border-b border-gray-100 hover:bg-gray-50 transition-all duration-300 ${
+                            isUpdating ? 'opacity-70 bg-blue-50' : ''
+                          }`}
+                        >
+                          <td className="py-3 px-4 text-gray-900 transition-colors duration-200">{applicant.appliedOn}</td>
+                          <td className="py-3 px-4 text-gray-900 font-medium transition-colors duration-200">{applicant.candidateName}</td>
+                          <td className="py-3 px-4 text-gray-900 transition-colors duration-200">{applicant.company}</td>
+                          <td className="py-3 px-4 text-gray-900 transition-colors duration-200">{applicant.roleApplied}</td>
+                          <td className="py-3 px-4">
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
+                              applicant.submission === 'Inbound' 
+                                ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                                : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                            }`}>
+                              {applicant.submission}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="relative">
+                              {isUpdating && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-white/90 rounded-md z-10 backdrop-blur-sm animate-pulse">
+                                  <div className="flex items-center gap-2">
+                                    <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                                    <span className="text-xs text-blue-600 font-medium">Updating...</span>
+                                  </div>
+                                </div>
+                              )}
+                              <Select 
+                                value={applicant.currentStatus} 
+                                onValueChange={(value) => handleStatusChange(applicant, value)}
+                                disabled={isUpdating}
+                              >
+                                <SelectTrigger className={`w-32 h-8 text-sm transition-all duration-300 ${
+                                  isUpdating ? 'opacity-50 cursor-wait' : 'hover:border-blue-400'
+                                }`}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {statuses.map((status) => (
+                                    <SelectItem key={status} value={status} className="transition-colors hover:bg-blue-50">
+                                      {status}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </div>

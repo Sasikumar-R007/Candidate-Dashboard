@@ -32,9 +32,7 @@ export default defineConfig({
     host: "0.0.0.0",
     port: 5000,
     allowedHosts: true,
-    hmr: {
-      clientPort: 443,
-    },
+    // HMR will be configured in middleware mode by the Express server
     fs: {
       strict: true,
       deny: ["**/.*"],

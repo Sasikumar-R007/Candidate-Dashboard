@@ -127,8 +127,8 @@ export default function RecruiterApplicants() {
       return {
         id: app.id,
         name: app.candidateName || 'Unknown Candidate',
-        email: app.candidateEmail || 'N/A',
-        phone: app.candidatePhone || 'N/A',
+        email: app.candidateEmail || null,
+        phone: app.candidatePhone || null,
         jobTitle: app.jobTitle,
         company: app.company,
         location: app.location || 'N/A',
@@ -138,6 +138,9 @@ export default function RecruiterApplicants() {
         skills: skills,
         appliedDateRaw: appliedDate,
         recruiterJobId: app.recruiterJobId,
+        resumeUrl: app.resumeFile || null,
+        profileId: app.profileId || null,
+        applicationStatus: app.status || 'In Process'
       };
     });
   }, [allApplications]);
@@ -354,11 +357,13 @@ export default function RecruiterApplicants() {
                 <div className="space-y-2 mb-3">
                   <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                     <Mail size={14} />
-                    <span className="truncate">{candidate.email}</span>
+                    <span className="truncate">
+                      {candidate.email && candidate.email !== 'N/A' ? candidate.email : 'Not Available'}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                     <Phone size={14} />
-                    <span>{candidate.phone}</span>
+                    <span>{candidate.phone && candidate.phone !== 'N/A' ? candidate.phone : 'Not Available'}</span>
                   </div>
                   {candidate.location !== 'N/A' && (
                     <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
@@ -370,6 +375,56 @@ export default function RecruiterApplicants() {
                     <Calendar size={14} />
                     <span>Applied {candidate.appliedDate}</span>
                   </div>
+                </div>
+
+                {/* Email, Call, Resume Actions */}
+                <div className="flex items-center gap-2 mb-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex items-center gap-1 flex-1" 
+                    onClick={() => {
+                      if (candidate.email && candidate.email !== 'N/A') {
+                        window.location.href = `mailto:${candidate.email}`;
+                      }
+                    }}
+                    disabled={!candidate.email || candidate.email === 'N/A'}
+                  >
+                    <Mail size={14} />
+                    {candidate.email && candidate.email !== 'N/A' ? 'Email' : 'N/A'}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex items-center gap-1 flex-1" 
+                    onClick={() => {
+                      if (candidate.phone && candidate.phone !== 'N/A') {
+                        window.location.href = `tel:${candidate.phone}`;
+                      }
+                    }}
+                    disabled={!candidate.phone || candidate.phone === 'N/A'}
+                  >
+                    <Phone size={14} />
+                    {candidate.phone && candidate.phone !== 'N/A' ? 'Call' : 'N/A'}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex items-center gap-1 flex-1" 
+                    onClick={() => {
+                      if (candidate.resumeUrl && candidate.resumeUrl !== '#' && candidate.resumeUrl !== 'N/A') {
+                        let resumeUrl = candidate.resumeUrl;
+                        if (!resumeUrl.startsWith('http') && !resumeUrl.startsWith('/')) {
+                          resumeUrl = '/' + resumeUrl;
+                        }
+                        window.open(resumeUrl, '_blank');
+                      }
+                    }}
+                    disabled={!candidate.resumeUrl || candidate.resumeUrl === '#' || candidate.resumeUrl === 'N/A'}
+                  >
+                    <Download size={14} />
+                    {candidate.resumeUrl && candidate.resumeUrl !== '#' && candidate.resumeUrl !== 'N/A' ? 'Resume' : 'N/A'}
+                  </Button>
                 </div>
 
                 {candidate.skills && candidate.skills.length > 0 && (
@@ -406,6 +461,29 @@ export default function RecruiterApplicants() {
                       <SelectItem value="Rejected">Rejected</SelectItem>
                     </SelectContent>
                   </Select>
+                  {/* View in Pipeline Button */}
+                  {(() => {
+                    const pipelineStatuses = ['In-Process', 'Shortlisted', 'L1', 'L2', 'L3', 'Final Round', 'HR Round', 'Selected', 'Offer Stage', 'Closure', 'Joined'];
+                    const isInPipeline = pipelineStatuses.includes(candidate.applicationStatus) || 
+                                       (candidate.status !== 'New' && candidate.status !== 'Rejected' && candidate.status !== 'In Process');
+                    
+                    if (isInPipeline) {
+                      return (
+                        <Button
+                          size="sm"
+                          className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1"
+                          onClick={() => {
+                            sessionStorage.setItem('recruiterDashboardSidebarTab', 'pipeline');
+                            setLocation('/recruiter-login-2');
+                          }}
+                          data-testid={`button-view-pipeline-${candidate.id}`}
+                        >
+                          View in pipeline
+                        </Button>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               </div>
             ))}

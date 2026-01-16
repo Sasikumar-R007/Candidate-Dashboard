@@ -30,6 +30,7 @@ import {
   Database,
   UserPlus,
   ArrowUp,
+  Edit,
 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -55,6 +56,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import EditCandidateModal from "@/components/dashboard/modals/edit-candidate-modal";
 
 // Location data (same as Upload Resume)
 const locations = [
@@ -555,9 +557,10 @@ interface CandidateDisplay {
   portfolioUrl?: string;
   lastSeen: string;
   resumeFile?: string;
+  createdAt?: string; // For reactive lastSeen calculation
 }
 
-function mapDatabaseCandidateToDisplay(dbCandidate: DatabaseCandidate): CandidateDisplay {
+function mapDatabaseCandidateToDisplay(dbCandidate: DatabaseCandidate, currentTime: Date): CandidateDisplay {
   const skillsArray = dbCandidate.skills 
     ? dbCandidate.skills.split(',').map(s => s.trim()).filter(Boolean)
     : [];
@@ -567,10 +570,21 @@ function mapDatabaseCandidateToDisplay(dbCandidate: DatabaseCandidate): Candidat
     : 0;
   
   const createdDate = new Date(dbCandidate.createdAt);
-  const now = new Date();
-  const diffMs = now.getTime() - createdDate.getTime();
+  const diffMs = currentTime.getTime() - createdDate.getTime();
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const lastSeen = diffHours < 1 ? 'Just now' : diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  
+  let lastSeen = '';
+  if (diffHours < 1) {
+    lastSeen = 'Just now';
+  } else if (diffHours < 24) {
+    lastSeen = diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;
+  } else if (diffDays < 7) {
+    lastSeen = diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
+  } else {
+    const diffWeeks = Math.floor(diffDays / 7);
+    lastSeen = diffWeeks === 1 ? '1 week ago' : `${diffWeeks} weeks ago`;
+  }
 
   return {
     id: dbCandidate.id,
@@ -603,6 +617,7 @@ function mapDatabaseCandidateToDisplay(dbCandidate: DatabaseCandidate): Candidat
     lastSeen,
     resumeFile: dbCandidate.resumeFile,
     candidateId: dbCandidate.candidateId,
+    createdAt: dbCandidate.createdAt, // Store for reactive calculation
     // Show "DB" tag only for candidates uploaded via Master Database (has resumeFile or addedBy)
     // Direct registrations (no resumeFile and no addedBy) should not have any tag
     isFromDatabase: !!(dbCandidate.resumeFile || dbCandidate.addedBy),
@@ -832,6 +847,9 @@ const SourceResume = () => {
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
   const [showSavedProfiles, setShowSavedProfiles] = useState(false);
   const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [candidateToEdit, setCandidateToEdit] = useState<CandidateDisplay | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
   
   // State for showing/hiding input fields
   const [showExcludeKeywords, setShowExcludeKeywords] = useState(false);
@@ -883,15 +901,19 @@ const SourceResume = () => {
     return new Set(allApplications.map((app: any) => app.candidateEmail?.toLowerCase()).filter(Boolean));
   }, [allApplications]);
 
-  // Map candidates to display format
-  const [candidates, setCandidates] = useState<CandidateDisplay[]>([]);
-  
+  // Update current time every minute for reactive lastSeen calculation
   useEffect(() => {
-    const mapped = dbCandidates.map(mapDatabaseCandidateToDisplay);
-    // Use only database candidates (remove sample candidates)
-    setCandidates(mapped);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dbCandidates]);
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, []);
+
+  // Map candidates to display format - use useMemo to prevent infinite loops
+  const candidates = useMemo(() => {
+    if (!dbCandidates || dbCandidates.length === 0) return [];
+    return dbCandidates.map(c => mapDatabaseCandidateToDisplay(c, currentTime));
+  }, [dbCandidates, currentTime]);
 
   // Save search to recent searches
   const saveSearchToHistory = () => {
@@ -1861,7 +1883,14 @@ const SourceResume = () => {
                         ? "border-blue-500 shadow-lg"
                         : "border-gray-200"
                     }`}
-                    onClick={() => handleCandidateClick(candidate)}
+                    onClick={(e) => {
+                      // Don't handle card click if clicking on a button or link
+                      const target = e.target as HTMLElement;
+                      if (target.tagName === 'BUTTON' || target.closest('button') || target.tagName === 'A' || target.closest('a')) {
+                        return; // Let the button/link handle its own click
+                      }
+                      handleCandidateClick(candidate);
+                    }}
                   >
                     <div className="flex gap-4">
                       <div className="flex-1">
@@ -2017,7 +2046,43 @@ const SourceResume = () => {
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-2">
-                          <p className="text-xs text-gray-500">last seen: {candidate.lastSeen}</p>
+                          <p className="text-xs text-gray-500">
+                            last seen: {candidate.createdAt 
+                              ? (() => {
+                                  const createdDate = new Date(candidate.createdAt);
+                                  const diffMs = currentTime.getTime() - createdDate.getTime();
+                                  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                                  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                                  if (diffHours < 1) return 'Just now';
+                                  if (diffHours < 24) return diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;
+                                  if (diffDays < 7) return diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
+                                  const diffWeeks = Math.floor(diffDays / 7);
+                                  return diffWeeks === 1 ? '1 week ago' : `${diffWeeks} weeks ago`;
+                                })()
+                              : candidate.lastSeen}
+                          </p>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              console.log('Edit Profile button clicked', candidate);
+                              if (candidate && candidate.id) {
+                                console.log('Setting candidate to edit:', candidate);
+                                setCandidateToEdit(candidate);
+                                setIsEditModalOpen(true);
+                                console.log('Modal should open now');
+                              } else {
+                                console.error('Candidate or candidate.id is missing:', candidate);
+                              }
+                            }}
+                            className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-gray-300 rounded-md hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all duration-200 z-10 relative bg-white"
+                            title="Edit candidate profile"
+                            type="button"
+                            style={{ pointerEvents: 'auto' }}
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                            Edit Profile
+                          </button>
                           {isCandidateTagged(candidate) ? (
                             <TooltipProvider>
                               <Tooltip>
@@ -2172,12 +2237,22 @@ const SourceResume = () => {
                             {candidate.resumeFile ? (
                               <>
                                 {(() => {
-                                  const resumeUrl = candidate.resumeFile;
+                                  // Fix resume URL - ensure it's properly formatted
+                                  let resumeUrl = candidate.resumeFile;
+                                  // If it's a relative path without leading slash, add it
+                                  if (resumeUrl && !resumeUrl.startsWith('http') && !resumeUrl.startsWith('/')) {
+                                    resumeUrl = '/' + resumeUrl;
+                                  } else if (resumeUrl && resumeUrl.startsWith('uploads/')) {
+                                    // If it starts with uploads/, ensure it has leading slash
+                                    resumeUrl = '/' + resumeUrl;
+                                  }
+                                  
                                   const lowerUrl = resumeUrl.toLowerCase();
                                   const urlWithoutQuery = lowerUrl.split('?')[0];
                                   const isPdf = urlWithoutQuery.endsWith('.pdf');
                                   const isDocx = urlWithoutQuery.endsWith('.docx');
                                   const isDoc = urlWithoutQuery.endsWith('.doc') && !isDocx;
+                                  const isImage = urlWithoutQuery.endsWith('.jpg') || urlWithoutQuery.endsWith('.jpeg') || urlWithoutQuery.endsWith('.png');
                                   
                                   if (isPdf) {
                                     return (
@@ -2186,7 +2261,25 @@ const SourceResume = () => {
                                         src={resumeUrl}
                                         className="w-full h-full border-0"
                                         title="Resume Preview"
+                                        onError={(e) => {
+                                          console.error('Resume iframe error:', e);
+                                          // Fallback to download button if iframe fails
+                                        }}
                                       />
+                                    );
+                                  } else if (isImage) {
+                                    return (
+                                      <div className="w-full h-full flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+                                        <img
+                                          src={resumeUrl}
+                                          alt="Resume"
+                                          className="max-w-full max-h-full object-contain"
+                                          onError={(e) => {
+                                            console.error('Resume image error:', e);
+                                            // Show download option on error
+                                          }}
+                                        />
+                                      </div>
                                     );
                                   } else if (isDocx || isDoc) {
                                     return (
@@ -2248,7 +2341,14 @@ const SourceResume = () => {
                                     size="icon"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      window.open(candidate.resumeFile, '_blank');
+                                      // Fix URL before opening
+                                      let resumeUrl = candidate.resumeFile;
+                                      if (resumeUrl && !resumeUrl.startsWith('http') && !resumeUrl.startsWith('/')) {
+                                        resumeUrl = '/' + resumeUrl;
+                                      } else if (resumeUrl && resumeUrl.startsWith('uploads/')) {
+                                        resumeUrl = '/' + resumeUrl;
+                                      }
+                                      window.open(resumeUrl, '_blank');
                                     }}
                                     className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm hover:bg-white dark:hover:bg-gray-800 shadow-md"
                                     title="Download Resume"
@@ -2287,7 +2387,14 @@ const SourceResume = () => {
               <div
                 key={candidate.id}
                 className="bg-gray-50 rounded-lg border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => handleCandidateClick(candidate)}
+                onClick={(e) => {
+                  // Don't handle card click if clicking on a button or link
+                  const target = e.target as HTMLElement;
+                  if (target.tagName === 'BUTTON' || target.closest('button') || target.tagName === 'A' || target.closest('a')) {
+                    return; // Let the button/link handle its own click
+                  }
+                  handleCandidateClick(candidate);
+                }}
               >
                 <div className="flex gap-3 mb-3">
                   {candidate.profilePic ? (
@@ -2327,18 +2434,54 @@ const SourceResume = () => {
                     </span>
                   ))}
                 </div>
-                <div className="mt-3">
+                <div className="mt-3 flex gap-2">
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
                       handleOpenCandidateDetails(candidate.id, e);
                     }}
-                    className="w-full px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700"
+                    className="flex-1 px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700 transition-colors"
                   >
                     View Profile
                   </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
+                      console.log('Edit Profile button clicked (recommended)', candidate);
+                      if (candidate && candidate.id) {
+                        console.log('Setting candidate to edit (recommended):', candidate);
+                        setCandidateToEdit(candidate);
+                        setIsEditModalOpen(true);
+                        console.log('Modal should open now (recommended)');
+                      } else {
+                        console.error('Candidate or candidate.id is missing (recommended):', candidate);
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-xs font-medium transition-colors flex items-center gap-1"
+                    title="Edit candidate profile"
+                    type="button"
+                    style={{ pointerEvents: 'auto' }}
+                  >
+                    <Edit className="w-3 h-3" />
+                    Edit
+                  </button>
                 </div>
-                <p className="text-xs text-gray-500 mt-2 text-right">last seen: {candidate.lastSeen}</p>
+                <p className="text-xs text-gray-500 mt-2 text-right">
+                  last seen: {candidate.createdAt 
+                    ? (() => {
+                        const createdDate = new Date(candidate.createdAt);
+                        const diffMs = currentTime.getTime() - createdDate.getTime();
+                        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                        if (diffHours < 1) return 'Just now';
+                        if (diffHours < 24) return diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;
+                        if (diffDays < 7) return diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
+                        const diffWeeks = Math.floor(diffDays / 7);
+                        return diffWeeks === 1 ? '1 week ago' : `${diffWeeks} weeks ago`;
+                      })()
+                    : candidate.lastSeen}
+                </p>
               </div>
             ))}
           </div>
@@ -3016,6 +3159,21 @@ const SourceResume = () => {
         <span>Source Resume</span>
         <ArrowRight className="w-5 h-5" />
       </button>
+
+      {/* Edit Candidate Modal - Only render when candidate is selected */}
+      {candidateToEdit && (
+        <EditCandidateModal
+          open={isEditModalOpen}
+          onOpenChange={(open) => {
+            setIsEditModalOpen(open);
+            if (!open) {
+              // Clear candidate when modal closes
+              setTimeout(() => setCandidateToEdit(null), 300);
+            }
+          }}
+          candidate={candidateToEdit}
+        />
+      )}
     </div>
   );
 };

@@ -6,6 +6,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth, useCandidateAuth } from "@/contexts/auth-context";
 import { SignOutDialog } from "@/components/ui/sign-out-dialog";
+import staffosLogo from "@/assets/staffos logo 2.png";
 
 interface SidebarProps {
   activeTab: string;

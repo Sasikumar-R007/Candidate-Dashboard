@@ -20,6 +20,7 @@ interface JobBoardTabProps {
 
 interface JobListing {
   id: string;
+  recruiterJobId?: string;
   company: string;
   title: string;
   description: string;
@@ -67,6 +68,7 @@ function transformRecruiterJobToJobListing(job: RecruiterJob, index: number): Jo
 
   return {
     id: job.id,
+    recruiterJobId: job.id, // Store recruiter job ID for linking applications
     company: job.companyName || 'Unknown Company',
     title: job.role || 'Unknown Position',
     description: job.aboutCompany || job.roleDefinitions || 'Join our team and make an impact!',
@@ -260,6 +262,7 @@ export default function JobBoardTab({ onNavigateToJobPreferences, onNavigateToPr
           experience: pendingApplyJob.experience,
           skills: JSON.stringify(pendingApplyJob.skills),
           logo: pendingApplyJob.logo,
+          recruiterJobId: pendingApplyJob.recruiterJobId || pendingApplyJob.id, // Include recruiter job ID
         });
         
         const jobKey = `${pendingApplyJob.title}-${pendingApplyJob.company}`;

@@ -318,19 +318,20 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
   }
 
   return (
-    <div className={`flex h-full ${className}`}>
-      {/* Left Column - Applied Jobs and Job Suggestions (Scrollable) */}
-      <div className="flex-1 min-w-0 overflow-y-auto">
-        <div className="p-6 space-y-8">
-        {/* Applied Jobs Section */}
-        <div className="bg-white rounded-lg p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-gray-800 mb-6">Applied Jobs</h2>
-        
-        <div className="overflow-x-auto">
+    <>
+    <div className={`flex h-full overflow-hidden ${className || ''}`}>
+      {/* Main Content Area - Applied Jobs and Job Suggestions (Scrollable) */}
+      <div className="flex-1 min-w-0 overflow-y-auto bg-gray-50">
+        <div className="p-6 space-y-6 max-w-full">
+          {/* Applied Jobs Section */}
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-gray-800 mb-6">Applied Jobs</h2>
+          
+          <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 font-medium text-gray-600">Job Title</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-600">Role</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-600">Company</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-600">Type</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
@@ -343,17 +344,30 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
               {jobApplications
                 .slice(0, showAllJobs ? undefined : 5)
                 .map((job: JobApplication) => (
-                <tr key={job.id} className="border-b border-gray-100 hover:bg-gray-50">
+                <tr key={job.id} className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                   <td className="py-4 px-4 font-medium text-gray-900">{job.jobTitle}</td>
                   <td className="py-4 px-4 text-gray-700">{job.company}</td>
-                  <td className="py-4 px-4 text-gray-700">{job.jobType}</td>
+                  <td className="py-4 px-4 text-gray-700">{job.jobType || 'Full-Time'}</td>
                   <td className="py-4 px-4">
-                    <Badge className={`${getStatusBadge(job.status || 'In Process')} border`}>
-                      ● {job.status || 'In Process'}
-                    </Badge>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+                      job.status === 'Rejected' 
+                        ? 'bg-red-100 text-red-800' 
+                        : job.status === 'In Process' || job.status === 'Applied'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-green-100 text-green-800'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        job.status === 'Rejected' 
+                          ? 'bg-red-500' 
+                          : job.status === 'In Process' || job.status === 'Applied'
+                          ? 'bg-blue-500'
+                          : 'bg-green-500'
+                      }`}></span>
+                      {job.status || 'In Process'}
+                    </span>
                   </td>
                   <td className="py-4 px-4 text-gray-700">{formatDate(job.appliedDate)}</td>
-                  <td className="py-4 px-4 text-gray-600">{calculateDaysAgo(job.appliedDate)}</td>
+                  <td className="py-4 px-4 text-gray-600">{formatDate(job.appliedDate)}</td>
                   <td className="py-4 px-4">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -387,162 +401,117 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
           </div>
         )}
 
-        {/* See all button for Applied Jobs - moved below the table */}
+        {/* View More button for Applied Jobs */}
         {jobApplications.length > 5 && !showAllJobs && (
-          <div className="mt-6 pt-4 border-t border-gray-200 text-center">
+          <div className="mt-4 pt-4 border-t border-gray-200">
             <Button 
               variant="link" 
-              className="text-blue-600 hover:text-blue-700 p-0 rounded"
+              className="text-blue-600 hover:text-blue-700 p-0 font-normal"
               onClick={() => setShowAllJobs(true)}
               data-testid="button-see-all-applied"
             >
-              See all applied jobs
+              View More
             </Button>
           </div>
         )}
-      </div>
+          </div>
 
-        {/* Job Suggestions Section */}
-        <div className="bg-white rounded-lg p-6 shadow-sm">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold text-gray-800">Job Suggestions</h2>
-        </div>
+          {/* Job Suggestions Section */}
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-800">Job Suggestions</h2>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {jobSuggestions
-            .slice((currentPage - 1) * jobsPerPage, currentPage * jobsPerPage)
-            .map((job) => (
-            <Card key={job.id} className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow rounded-xl overflow-hidden relative">
+          {/* Horizontal Scrollable Cards */}
+          <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          {jobSuggestions.map((job) => (
+            <Card key={job.id} className="min-w-[320px] max-w-[320px] bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow rounded-lg overflow-hidden relative flex-shrink-0">
               <CardContent className="p-0">
                 {/* Save Button */}
                 <button
                   onClick={() => toggleSaveJob(job)}
-                  className={`absolute top-6 right-6 p-3 rounded-full transition-all duration-200 z-10 ${
+                  className={`absolute top-4 right-4 p-2 rounded-full transition-all duration-200 z-10 ${
                     savedJobs.has(`${job.title}-${job.company}`) 
                       ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg' 
-                      : 'bg-orange-500 hover:bg-orange-600 text-white'
+                      : 'bg-white hover:bg-gray-100 border border-gray-300'
                   }`}
                   data-testid={`button-save-${job.id}`}
                 >
-                  <i className={`${savedJobs.has(`${job.title}-${job.company}`) ? 'fas fa-bookmark' : 'far fa-bookmark'} text-white`}></i>
+                  <i className={`${savedJobs.has(`${job.title}-${job.company}`) ? 'fas fa-bookmark' : 'far fa-bookmark'} ${savedJobs.has(`${job.title}-${job.company}`) ? 'text-white' : 'text-gray-600'}`}></i>
                 </button>
 
-                {/* Company Logo Section */}
-                <div className="flex items-center justify-between p-4">
-                <div className={`${job.bgColor} p-6 text-center rounded w-full`}>
-                  <div className="w-20 h-14 bg-white rounded-lg flex items-center justify-center mx-auto mb-3">
-                    <img 
-                      src={job.logo} 
-                      alt={`${job.company} logo`}
-                      className="w-12 h-10 object-contain"
-                    />
+                {/* Company Logo and Title */}
+                <div className="p-4 border-b border-gray-200">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-12 h-12 bg-white border border-gray-200 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <img 
+                        src={job.logo} 
+                        alt={`${job.company} logo`}
+                        className="w-10 h-10 object-contain"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-gray-900 text-base truncate">{job.title}</h3>
+                      <p className="text-sm text-gray-600 truncate">{job.company}</p>
+                    </div>
                   </div>
-                  <h3 className="font-semibold text-gray-900 text-lg">{job.company}</h3>
-                </div>
-                </div>
-
-                {/* Job Details Section */}
-                <div className="pt-2 p-6">
-                  {/* Product Badge */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <Badge className="bg-gray-100 text-gray-700 border-gray-200 text-xs px-2 py-1 rounded">
+                  
+                  {/* Tags */}
+                  <div className="flex flex-wrap gap-2">
+                    <Badge className="bg-gray-100 text-gray-700 border-gray-200 text-xs px-2 py-0.5 rounded">
+                      Remote
+                    </Badge>
+                    <Badge className="bg-gray-100 text-gray-700 border-gray-200 text-xs px-2 py-0.5 rounded">
+                      {job.experience}
+                    </Badge>
+                    <Badge className="bg-gray-100 text-gray-700 border-gray-200 text-xs px-2 py-0.5 rounded">
                       Product
                     </Badge>
-                    <div className="w-4 h-4 text-orange-500">
-                      <Flame className="w-full h-full" />
-                    </div>
                   </div>
+                </div>
 
-                  {/* Job Title */}
-                  <h4 className="text-xl font-semibold text-gray-900 mb-3">{job.title}</h4>
-
-                  {/* Salary and Location - Same Row */}
-                  <div className="flex items-center gap-7 mb-1">
-                    <span className="text-gray-900 font-medium">{job.salary}</span>
-                    <div className="flex items-center gap-1 text-gray-600">
-                      <MapPin className="w-4 h-4" />
-                      <span>{job.location}</span>
-                    </div>
-                  </div>
-                  <div className="text-gray-600 text-sm mb-3">{job.workMode}</div>
+                {/* Job Description */}
+                <div className="p-4">
+                  <p className="text-sm text-gray-600 mb-4 line-clamp-3">
+                    {job.description || "We're Looking for a Product Designer who can merge Creativity, Strategy, and user-centered thinking...."}
+                  </p>
 
                   {/* Skills */}
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {job.skills.map((skill) => (
-                      <Badge 
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {job.skills.slice(0, 6).map((skill) => (
+                      <span 
                         key={skill} 
-                        className="bg-green-100 text-green-700 border-green-200 text-xs px-2 py-1"
+                        className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded"
                       >
                         {skill}
-                      </Badge>
+                      </span>
                     ))}
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex gap-2">
-                    <Button 
-                      className="flex-1 bg-slate-700 hover:bg-slate-800 text-white py-3 rounded"
-                      onClick={() => handleViewMore(job)}
-                      data-testid={`button-view-more-${job.id}`}
-                    >
-                      View More
-                    </Button>
-                    <Button 
-                      className={`flex-1 py-3 rounded ${
-                        appliedJobs.has(`${job.title}-${job.company}`)
-                          ? 'bg-green-600 hover:bg-green-700 text-white'
-                          : 'bg-blue-600 hover:bg-blue-700 text-white'
-                      }`}
-                      onClick={() => handleApplyJob(job)}
-                      disabled={appliedJobs.has(`${job.title}-${job.company}`)}
-                      data-testid={`button-apply-${job.id}`}
-                    >
-                      {appliedJobs.has(`${job.title}-${job.company}`) ? 'Applied' : 'Apply'}
-                    </Button>
+                  {/* Footer Info */}
+                  <div className="flex items-center justify-between text-xs text-gray-500 pt-3 border-t border-gray-100">
+                    <span>Applied: 1,200</span>
+                    <span>Posted on: Two days ago</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
           ))}
-        </div>
-
-        {/* Pagination */}
-        <div className="flex items-center justify-center gap-2 mt-8">
-          {Array.from({ length: Math.ceil(jobSuggestions.length / jobsPerPage) }, (_, i) => (
-            <Button 
-              key={i + 1}
-              variant="ghost" 
-              size="sm" 
-              className={`w-8 h-8 p-0 rounded ${
-                currentPage === i + 1 
-                  ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                  : 'hover:bg-gray-100'
-              }`}
-              onClick={() => setCurrentPage(i + 1)}
-            >
-              {i + 1}
-            </Button>
-          ))}
-          <Button 
-            variant="link" 
-            className="text-blue-600 hover:text-blue-700 p-0 ml-2 rounded"
-            onClick={handleSeeAllJobs}
-            data-testid="button-see-all-suggestions"
-          >
-            See all
-          </Button>
-        </div>
+          </div>
+          </div>
         </div>
       </div>
 
-      {/* Right Column - Candidate Metrics (Fixed) */}
-      <div className="w-80 flex-shrink-0 p-6 overflow-y-auto bg-gray-50 border-l-4 border-red-500" data-testid="candidate-metrics-column">
-        <CandidateMetrics />
+      {/* Right Sidebar - Candidate Metrics (Fixed) */}
+      <div className="w-80 flex-shrink-0 bg-white border-l border-gray-200 overflow-y-auto h-full" data-testid="candidate-metrics-column">
+        <div className="p-6">
+          <CandidateMetrics />
+        </div>
       </div>
-      </div>
+    </div>
 
-      {/* Job Details Modal - Exact copy of JobBoardTab modal */}
-      {showJobModal && selectedJob && (
+    {/* Job Details Modal - Exact copy of JobBoardTab modal */}
+    {showJobModal && selectedJob && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
           <div className="bg-blue-50 dark:bg-blue-900/30 rounded-2xl shadow-2xl max-w-2xl w-full mx-8 max-h-[85vh] flex flex-col">
             {/* Scrollable Content */}
@@ -926,6 +895,6 @@ export default function MyJobsTab({ className, onNavigateToJobBoard }: MyJobsTab
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

@@ -98,8 +98,8 @@ export default function RecruiterAllCandidates() {
       return {
         id: app.id,
         name: app.candidateName || 'Unknown Candidate',
-        email: app.candidateEmail || 'N/A',
-        phone: app.candidatePhone || 'N/A',
+        email: app.candidateEmail || null,
+        phone: app.candidatePhone || null,
         jobTitle: app.jobTitle || 'N/A',
         company: app.company || 'N/A',
         location: app.location || 'N/A',
@@ -109,9 +109,11 @@ export default function RecruiterAllCandidates() {
         skills: skills,
         currentCompany: app.company || 'N/A',
         education: 'N/A',
-        resumeUrl: '#',
+        resumeUrl: app.resumeFile || null,
         rating: 4.0,
-        source: app.source || 'job_board'
+        source: app.source || 'job_board',
+        profileId: app.profileId || null,
+        applicationStatus: app.status || 'In Process'
       };
     });
   }, [allApplications]);
@@ -359,53 +361,81 @@ export default function RecruiterAllCandidates() {
                 </div>
 
                 <div className="flex items-center gap-2 mb-4">
-                  <Button variant="outline" size="sm" className="flex items-center gap-1" data-testid={`button-email-${candidate.id}`}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex items-center gap-1" 
+                    data-testid={`button-email-${candidate.id}`}
+                    onClick={() => {
+                      if (candidate.email && candidate.email !== 'N/A') {
+                        window.location.href = `mailto:${candidate.email}`;
+                      }
+                    }}
+                    disabled={!candidate.email || candidate.email === 'N/A'}
+                  >
                     <Mail size={14} />
-                    Email
+                    {candidate.email && candidate.email !== 'N/A' ? 'Email' : 'Not Available'}
                   </Button>
-                  <Button variant="outline" size="sm" className="flex items-center gap-1" data-testid={`button-call-${candidate.id}`}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex items-center gap-1" 
+                    data-testid={`button-call-${candidate.id}`}
+                    onClick={() => {
+                      if (candidate.phone && candidate.phone !== 'N/A') {
+                        window.location.href = `tel:${candidate.phone}`;
+                      }
+                    }}
+                    disabled={!candidate.phone || candidate.phone === 'N/A'}
+                  >
                     <Phone size={14} />
-                    Call
+                    {candidate.phone && candidate.phone !== 'N/A' ? 'Call' : 'Not Available'}
                   </Button>
-                  <Button variant="outline" size="sm" className="flex items-center gap-1" data-testid={`button-resume-${candidate.id}`}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex items-center gap-1" 
+                    data-testid={`button-resume-${candidate.id}`}
+                    onClick={() => {
+                      if (candidate.resumeUrl && candidate.resumeUrl !== '#' && candidate.resumeUrl !== 'N/A') {
+                        let resumeUrl = candidate.resumeUrl;
+                        if (!resumeUrl.startsWith('http') && !resumeUrl.startsWith('/')) {
+                          resumeUrl = '/' + resumeUrl;
+                        }
+                        window.open(resumeUrl, '_blank');
+                      }
+                    }}
+                    disabled={!candidate.resumeUrl || candidate.resumeUrl === '#' || candidate.resumeUrl === 'N/A'}
+                  >
                     <Download size={14} />
-                    Resume
+                    {candidate.resumeUrl && candidate.resumeUrl !== '#' && candidate.resumeUrl !== 'N/A' ? 'Resume' : 'Not Available'}
                   </Button>
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      onClick={() => updateCandidateStatus(candidate.id, 'Shortlisted')}
-                      className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-1"
-                      disabled={updateStatusMutation.isPending}
-                      data-testid={`button-shortlist-${candidate.id}`}
-                    >
-                      <CheckCircle size={14} />
-                      Shortlist
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => updateCandidateStatus(candidate.id, 'Rejected')}
-                      className="text-red-600 hover:text-red-700 border-red-300 hover:border-red-400 flex items-center gap-1"
-                      disabled={updateStatusMutation.isPending}
-                      data-testid={`button-reject-${candidate.id}`}
-                    >
-                      <XCircle size={14} />
-                      Reject
-                    </Button>
-                  </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => updateCandidateStatus(candidate.id, 'Reviewed')}
-                    disabled={candidate.status === 'Reviewed' || updateStatusMutation.isPending}
-                    data-testid={`button-review-${candidate.id}`}
-                  >
-                    {candidate.status === 'Reviewed' ? 'Reviewed' : 'Mark as Reviewed'}
-                  </Button>
+                <div className="flex items-center justify-end pt-4 border-t border-gray-200">
+                  {/* Check if candidate is in pipeline */}
+                  {(() => {
+                    const pipelineStatuses = ['In-Process', 'Shortlisted', 'L1', 'L2', 'L3', 'Final Round', 'HR Round', 'Selected', 'Offer Stage', 'Closure', 'Joined'];
+                    const isInPipeline = pipelineStatuses.includes(candidate.applicationStatus) || 
+                                       (candidate.status !== 'New' && candidate.status !== 'Rejected');
+                    
+                    if (isInPipeline) {
+                      return (
+                        <Button
+                          size="sm"
+                          className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1"
+                          onClick={() => {
+                            sessionStorage.setItem('recruiterDashboardSidebarTab', 'pipeline');
+                            setLocation('/recruiter-login-2');
+                          }}
+                          data-testid={`button-view-pipeline-${candidate.id}`}
+                        >
+                          View in pipeline
+                        </Button>
+                      );
+                    }
+                    return null;
+                  })()}
                 </div>
               </div>
             ))}

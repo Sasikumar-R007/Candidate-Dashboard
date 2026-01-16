@@ -8,7 +8,16 @@ interface MetricCardProps {
   textColor?: string;
 }
 
-function MetricCard({ title, subtitle, value, bgColor, textColor = "text-slate-600" }: MetricCardProps) {
+interface MetricCardProps {
+  title: string;
+  subtitle: string;
+  value: number;
+  bgColor: string;
+  textColor?: string;
+  highlightValue?: boolean;
+}
+
+function MetricCard({ title, subtitle, value, bgColor, textColor = "text-slate-600", highlightValue = false }: MetricCardProps) {
   return (
     <Card className={`${bgColor} border-0 shadow-sm rounded`}>
       <CardContent className="p-4">
@@ -19,7 +28,7 @@ function MetricCard({ title, subtitle, value, bgColor, textColor = "text-slate-6
           <p className="text-xs text-slate-500">
             {subtitle}
           </p>
-          <div className="text-2xl font-bold text-slate-800 pt-1">
+          <div className={`text-2xl font-bold pt-1 ${highlightValue ? 'text-orange-600' : 'text-slate-800'}`}>
             {value}
           </div>
         </div>
@@ -46,11 +55,12 @@ export default function CandidateMetricsSidebar() {
       title: "REJECTED",
       subtitle: "On Applications",
       value: 14,
-      bgColor: "bg-red-50"
+      bgColor: "bg-orange-50",
+      highlightValue: true
     },
     {
       title: "INTERVIEWS",
-      subtitle: "In Progress",
+      subtitle: "In Process",
       value: 10,
       bgColor: "bg-green-50"
     },
@@ -82,6 +92,7 @@ export default function CandidateMetricsSidebar() {
               subtitle={metric.subtitle}
               value={metric.value}
               bgColor={metric.bgColor}
+              highlightValue={metric.highlightValue}
             />
           ))}
         </div>

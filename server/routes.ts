@@ -1505,9 +1505,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Create the job application with server-side defaults
+      // Populate candidate details from profile if not provided
       const applicationData = {
         ...validationResult.data,
         profileId: candidate.id,
+        candidateName: validationResult.data.candidateName || candidate.fullName || null,
+        candidateEmail: validationResult.data.candidateEmail || candidate.email || null,
+        candidatePhone: validationResult.data.candidatePhone || candidate.phone || null,
       };
 
       const application = await storage.createJobApplication(applicationData);
@@ -3303,6 +3307,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return appDate === today && app.requirementId && recruiterRequirementIds.includes(app.requirementId);
       });
       
+      // Also get all tagged applications (not just for today) for delivered candidates count
+      // This includes candidates tagged to requirements at any time (cumulative)
+      const allTaggedForRecruiter = taggedApplicationsRaw.filter(app => 
+        app.requirementId && recruiterRequirementIds.includes(app.requirementId)
+      );
+      
       // Build delivered candidates list for the selected date
       for (const sub of submissionsForDate) {
         const req = filteredRequirements.find(r => r.id === sub.requirementId);
@@ -3330,6 +3340,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Build defaulted requirements list (requirements with pending profiles)
+      const defaultedRequirements: Array<{
+        requirement: string;
+        client: string;
+        pendingProfiles: string;
+        target: number;
+        delivered: number;
+        status: string;
+      }> = [];
+      
       // Calculate metrics for requirements that existed on or before the selected date
       for (const req of filteredRequirements) {
         const target = getResumeTarget(req.criticality, req.toughness);
@@ -3348,6 +3368,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Check if this requirement is fully delivered
         if (deliveredForReq >= target) {
           completedRequirements++;
+        } else {
+          // Add to defaulted requirements if not fully delivered
+          const pending = target - deliveredForReq;
+          defaultedRequirements.push({
+            requirement: req.position,
+            client: req.company,
+            pendingProfiles: `${pending} pending`,
+            target: target,
+            delivered: deliveredForReq,
+            status: `${deliveredForReq}/${target}`
+          });
         }
       }
       
@@ -3357,6 +3388,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate daily delivery count (for the specific date, not cumulative)
       const dailyDeliveryCount = submissionsForDate.length + taggedForDate.length;
       
+      // Calculate total delivered candidates count (cumulative - all tagged candidates to requirements)
+      // This counts all candidates tagged to recruiter's requirements, not just today's
+      const totalDeliveredCandidatesCount = allSubmissions.length + allTaggedForRecruiter.length;
+      
+      // Build requirements data for graph - group by criticality
+      const requirementsByCriticality: Record<string, { delivered: number; required: number }> = {};
+      for (const req of filteredRequirements) {
+        const target = getResumeTarget(req.criticality, req.toughness);
+        const deliveredFromSubmissions = allSubmissions.filter(s => s.requirementId === req.id).length;
+        const deliveredFromTagged = recruiterTaggedApps.filter(app => app.requirementId === req.id).length;
+        const deliveredForReq = deliveredFromSubmissions + deliveredFromTagged;
+        
+        if (!requirementsByCriticality[req.criticality]) {
+          requirementsByCriticality[req.criticality] = { delivered: 0, required: 0 };
+        }
+        requirementsByCriticality[req.criticality].delivered += deliveredForReq;
+        requirementsByCriticality[req.criticality].required += target;
+      }
+      
+      // Convert to array format for graph
+      const requirementsData = Object.entries(requirementsByCriticality).map(([criticality, data]) => ({
+        criticality,
+        delivered: data.delivered,
+        required: data.required
+      }));
+      
       const dailyMetrics = {
         id: `daily-rec-${employee.id}`,
         date: new Date(today).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
@@ -3365,7 +3422,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalResumes: totalResumesDelivered,
         totalResumesDelivered,
         totalResumesRequired,
-        dailyDeliveryDelivered: dailyDeliveryCount, // Count for the specific date
+        dailyDeliveryDelivered: totalDeliveredCandidatesCount, // Total delivered candidates (cumulative - all tagged to requirements)
+        dailyDeliveryDeliveredToday: dailyDeliveryCount, // Count for the specific date only
         dailyDeliveryDefaulted: Math.max(0, totalResumesRequired - totalResumesDelivered), // Cumulative defaulted
         overallPerformance: (() => {
           if (totalResumesRequired === 0) return "G";
@@ -3378,7 +3436,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         defaulted: Math.max(0, totalResumesRequired - totalResumesDelivered),
         required: totalResumesRequired,
         requirementCount: totalRequirements,
-        deliveredCandidates: deliveredCandidatesForDate // Add delivered candidates list for modal
+        deliveredCandidates: deliveredCandidatesForDate, // Add delivered candidates list for modal
+        defaultedRequirements: defaultedRequirements, // Add defaulted requirements list for modal
+        requirements: requirementsData // Add requirements data for graph
       };
       res.json(dailyMetrics);
     } catch (error) {
@@ -6544,6 +6604,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get candidate counts for dashboard (scoped by recruiter's job applications)
+  // Update candidate (recruiter) - Secure endpoint for recruiters to edit candidate profiles
+  app.put("/api/recruiter/candidates/:id", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const candidate = await storage.getCandidateById(id);
+      
+      if (!candidate) {
+        return res.status(404).json({ message: "Candidate not found" });
+      }
+
+      // Validate update data
+      const updateSchema = z.object({
+        fullName: z.string().optional(),
+        email: z.string().email().optional(),
+        phone: z.string().optional(),
+        position: z.string().optional(),
+        designation: z.string().optional(),
+        currentRole: z.string().optional(),
+        experience: z.string().optional(),
+        skills: z.string().optional(),
+        location: z.string().optional(),
+        preferredLocation: z.string().optional(),
+        pipelineStatus: z.string().optional(),
+        company: z.string().optional(),
+        education: z.string().optional(),
+        highestQualification: z.string().optional(),
+        collegeName: z.string().optional(),
+        resumeFile: z.string().optional(),
+        resumeText: z.string().optional(),
+        linkedinUrl: z.string().optional(),
+        websiteUrl: z.string().optional(),
+        portfolioUrl: z.string().optional(),
+        noticePeriod: z.string().optional(),
+        ctc: z.string().optional(),
+        ectc: z.string().optional(),
+        pedigreeLevel: z.string().optional(),
+        companyLevel: z.string().optional(),
+        companyDomain: z.string().optional(),
+      });
+
+      const validatedData = updateSchema.parse(req.body);
+      
+      // Update candidate in database - this updates the candidates table
+      const updatedCandidate = await storage.updateCandidate(id, validatedData);
+      
+      if (!updatedCandidate) {
+        return res.status(404).json({ message: "Failed to update candidate" });
+      }
+      
+      // Also update related records if needed (profiles, jobApplications)
+      // This ensures data consistency across all tables
+      try {
+        const { profiles, jobApplications } = await import("@shared/schema");
+        
+        // Update profiles table if candidateId exists
+        if (candidate.candidateId) {
+          const profileRecords = await db.select().from(profiles).where(eq(profiles.userId, candidate.id));
+          if (profileRecords.length > 0) {
+            const profileUpdates: any = {};
+            if (validatedData.fullName) {
+              const nameParts = validatedData.fullName.split(' ');
+              profileUpdates.firstName = nameParts[0] || '';
+              profileUpdates.lastName = nameParts.slice(1).join(' ') || '';
+            }
+            if (validatedData.email) profileUpdates.email = validatedData.email;
+            if (validatedData.phone) profileUpdates.phone = validatedData.phone;
+            if (validatedData.location) profileUpdates.location = validatedData.location;
+            if (validatedData.skills) profileUpdates.skills = validatedData.skills;
+            if (validatedData.resumeFile) profileUpdates.resumeFile = validatedData.resumeFile;
+            
+            if (Object.keys(profileUpdates).length > 0) {
+              await db.update(profiles)
+                .set(profileUpdates)
+                .where(eq(profiles.userId, candidate.id));
+            }
+          }
+        }
+        
+        // Update jobApplications table if candidateEmail matches
+        if (validatedData.email || candidate.email) {
+          const emailToUpdate = validatedData.email || candidate.email;
+          const jobAppUpdates: any = {};
+          if (validatedData.fullName) jobAppUpdates.candidateName = validatedData.fullName;
+          if (validatedData.email) jobAppUpdates.candidateEmail = validatedData.email;
+          if (validatedData.phone) jobAppUpdates.candidatePhone = validatedData.phone;
+          if (validatedData.resumeFile) jobAppUpdates.resumeFile = validatedData.resumeFile;
+          
+          if (Object.keys(jobAppUpdates).length > 0) {
+            await db.update(jobApplications)
+              .set(jobAppUpdates)
+              .where(eq(jobApplications.candidateEmail, emailToUpdate));
+          }
+        }
+      } catch (updateError) {
+        console.error('Error updating related records:', updateError);
+        // Don't fail the request if related updates fail, but log it
+      }
+      
+      res.json({ message: "Candidate updated successfully", candidate: updatedCandidate });
+    } catch (error: any) {
+      console.error('Update candidate error:', error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: "Invalid candidate data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update candidate" });
+    }
+  });
+
   app.get("/api/recruiter/candidates/counts", requireEmployeeAuth, async (req, res) => {
     try {
       const session = req.session as any;
@@ -6709,18 +6877,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
         (app.requirementId && requirementIds.includes(app.requirementId))
       );
       
+      // Enrich applications with candidate profile data if candidateName is missing
+      const enrichedApplications = await Promise.all(recruiterApplications.map(async (app) => {
+        // If candidateName is missing or "Unknown", try to fetch from profiles/candidates
+        if (!app.candidateName || app.candidateName === 'Unknown Candidate') {
+          try {
+            // Try to get from profiles table first
+            const { profiles, candidates } = await import("@shared/schema");
+            const profileResult = await db.select().from(profiles).where(eq(profiles.id, app.profileId)).limit(1);
+            
+            if (profileResult.length > 0) {
+              const profile = profileResult[0];
+              app.candidateName = `${profile.firstName} ${profile.lastName}`.trim();
+              app.candidateEmail = app.candidateEmail || profile.email || null;
+              app.candidatePhone = app.candidatePhone || profile.phone || profile.mobile || null;
+              // Add resumeFile if available in profile
+              if (!app.resumeFile && profile.resumeFile) {
+                app.resumeFile = profile.resumeFile;
+              }
+            } else {
+              // Try candidates table
+              const candidateResult = await db.select().from(candidates).where(eq(candidates.id, app.profileId)).limit(1);
+              if (candidateResult.length > 0) {
+                const candidate = candidateResult[0];
+                app.candidateName = candidate.fullName || app.candidateName;
+                app.candidateEmail = app.candidateEmail || candidate.email || null;
+                app.candidatePhone = app.candidatePhone || candidate.phone || null;
+                // Add resumeFile if available in candidate
+                if (!app.resumeFile && candidate.resumeFile) {
+                  app.resumeFile = candidate.resumeFile;
+                }
+              }
+            }
+          } catch (error) {
+            console.error('Error enriching application data:', error);
+            // Keep original data if enrichment fails
+          }
+        }
+        return app;
+      }));
+      
       // Apply additional filters
+      let filteredApplications = enrichedApplications;
+      
       if (jobId && typeof jobId === 'string') {
-        recruiterApplications = recruiterApplications.filter(app => app.recruiterJobId === jobId);
+        filteredApplications = filteredApplications.filter(app => app.recruiterJobId === jobId);
       }
       
       if (status && typeof status === 'string') {
-        recruiterApplications = recruiterApplications.filter(app => app.status === status);
+        filteredApplications = filteredApplications.filter(app => app.status === status);
       }
       
       if (dateFrom && typeof dateFrom === 'string') {
         const fromDate = new Date(dateFrom);
-        recruiterApplications = recruiterApplications.filter(app => {
+        filteredApplications = filteredApplications.filter(app => {
           if (!app.appliedDate) return false;
           return new Date(app.appliedDate) >= fromDate;
         });
@@ -6729,13 +6939,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (dateTo && typeof dateTo === 'string') {
         const toDate = new Date(dateTo);
         toDate.setHours(23, 59, 59, 999); // Include entire day
-        recruiterApplications = recruiterApplications.filter(app => {
+        filteredApplications = filteredApplications.filter(app => {
           if (!app.appliedDate) return false;
           return new Date(app.appliedDate) <= toDate;
         });
       }
       
-      res.json(recruiterApplications);
+      res.json(filteredApplications);
     } catch (error) {
       console.error("Get applications error:", error);
       res.status(500).json({ message: "Failed to get applications" });

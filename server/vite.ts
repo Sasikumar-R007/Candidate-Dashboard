@@ -38,11 +38,28 @@ export async function setupVite(app: Express, server: any) {
     app.use(vite.middlewares);
 
     // Serve index.html for all non-API routes (SPA fallback)
-    app.use("*", async (req, res, next) => {
+    // This MUST be after vite.middlewares so Vite handles module requests first
+    app.get("*", async (req, res, next) => {
       const url = req.originalUrl;
 
       // Skip API routes
       if (url.startsWith("/api")) {
+        return next();
+      }
+
+      // Skip if Vite has already handled this request (headers sent)
+      if (res.headersSent) {
+        return;
+      }
+
+      // Skip Vite-specific internal paths
+      if (
+        url.startsWith("/@id/") ||
+        url.startsWith("/@fs/") ||
+        url.startsWith("/@vite/") ||
+        url.startsWith("/src/") ||
+        url.startsWith("/node_modules/")
+      ) {
         return next();
       }
 
