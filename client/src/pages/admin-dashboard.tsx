@@ -96,10 +96,10 @@ const teamsData = [
     quartersAchieved: 6,
     nextMilestone: "+3",
     members: [
-      { 
-        name: "Sudharshan", 
-        salary: "3,50,000 INR", 
-        year: "2024-2025", 
+      {
+        name: "Sudharshan",
+        salary: "3,50,000 INR",
+        year: "2024-2025",
         count: 10,
         id: "STTA001",
         role: "Recruitment Executive",
@@ -108,10 +108,10 @@ const teamsData = [
         joined: "1/4/2023",
         closures: "3 this month"
       },
-      { 
-        name: "Deepika", 
-        salary: "4,50,000 INR", 
-        year: "2024-2025", 
+      {
+        name: "Deepika",
+        salary: "4,50,000 INR",
+        year: "2024-2025",
         count: 5,
         id: "STTA002",
         role: "Senior Recruiter",
@@ -120,10 +120,10 @@ const teamsData = [
         joined: "15/2/2023",
         closures: "2 this month"
       },
-      { 
-        name: "Dharshan", 
-        salary: "1,00,000 INR", 
-        year: "2024-2025", 
+      {
+        name: "Dharshan",
+        salary: "1,00,000 INR",
+        year: "2024-2025",
         count: 4,
         id: "STTA003",
         role: "Junior Recruiter",
@@ -132,10 +132,10 @@ const teamsData = [
         joined: "10/3/2023",
         closures: "1 this month"
       },
-      { 
-        name: "Kavya", 
-        salary: "2,20,000 INR", 
-        year: "2024-2025", 
+      {
+        name: "Kavya",
+        salary: "2,20,000 INR",
+        year: "2024-2025",
         count: 2,
         id: "STTA004",
         role: "Recruitment Executive",
@@ -144,10 +144,10 @@ const teamsData = [
         joined: "5/1/2023",
         closures: "4 this month"
       },
-      { 
-        name: "Thamarai Selvi", 
-        salary: "7,50,000 INR", 
-        year: "2024-2025", 
+      {
+        name: "Thamarai Selvi",
+        salary: "7,50,000 INR",
+        year: "2024-2025",
         count: 3,
         id: "STTA005",
         role: "Lead Recruiter",
@@ -156,10 +156,10 @@ const teamsData = [
         joined: "20/6/2022",
         closures: "5 this month"
       },
-      { 
-        name: "Karthikayan", 
-        salary: "2,90,000 INR", 
-        year: "2024-2025", 
+      {
+        name: "Karthikayan",
+        salary: "2,90,000 INR",
+        year: "2024-2025",
         count: 2,
         id: "STTA006",
         role: "Recruitment Executive",
@@ -172,16 +172,16 @@ const teamsData = [
   },
   {
     name: "Anusha",
-    teamName: "Anusha's Team", 
+    teamName: "Anusha's Team",
     teamMembers: 4,
     tenure: "4y3m",
     quartersAchieved: 6,
     nextMilestone: "+3",
     members: [
-      { 
-        name: "Sudharshan", 
-        salary: "3,50,000 INR", 
-        year: "2024-2025", 
+      {
+        name: "Sudharshan",
+        salary: "3,50,000 INR",
+        year: "2024-2025",
         count: 10,
         id: "STTA007",
         role: "Recruitment Executive",
@@ -190,10 +190,10 @@ const teamsData = [
         joined: "1/4/2023",
         closures: "3 this month"
       },
-      { 
-        name: "Deepika", 
-        salary: "4,50,000 INR", 
-        year: "2024-2025", 
+      {
+        name: "Deepika",
+        salary: "4,50,000 INR",
+        year: "2024-2025",
         count: 5,
         id: "STTA008",
         role: "Senior Recruiter",
@@ -202,10 +202,10 @@ const teamsData = [
         joined: "15/2/2023",
         closures: "2 this month"
       },
-      { 
-        name: "Dharshan", 
-        salary: "1,00,000 INR", 
-        year: "2024-2025", 
+      {
+        name: "Dharshan",
+        salary: "1,00,000 INR",
+        year: "2024-2025",
         count: 4,
         id: "STTA009",
         role: "Junior Recruiter",
@@ -214,10 +214,10 @@ const teamsData = [
         joined: "10/3/2023",
         closures: "1 this month"
       },
-      { 
-        name: "Kavya", 
-        salary: "2,20,000 INR", 
-        year: "2024-2025", 
+      {
+        name: "Kavya",
+        salary: "2,20,000 INR",
+        year: "2024-2025",
         count: 2,
         id: "STTA010",
         role: "Recruitment Executive",
@@ -226,10 +226,10 @@ const teamsData = [
         joined: "5/1/2023",
         closures: "4 this month"
       },
-      { 
-        name: "Thamarai Selvi", 
-        salary: "7,50,000 INR", 
-        year: "2024-2025", 
+      {
+        name: "Thamarai Selvi",
+        salary: "7,50,000 INR",
+        year: "2024-2025",
         count: 3,
         id: "STTA011",
         role: "Lead Recruiter",
@@ -238,10 +238,10 @@ const teamsData = [
         joined: "20/6/2022",
         closures: "5 this month"
       },
-      { 
-        name: "Karthikayan", 
-        salary: "2,90,000 INR", 
-        year: "2024-2025", 
+      {
+        name: "Karthikayan",
+        salary: "2,90,000 INR",
+        year: "2024-2025",
         count: 2,
         id: "STTA012",
         role: "Recruitment Executive",
@@ -306,11 +306,11 @@ function PerformanceChart({ data, height = "100%", benchmarkValue = 10, showDual
     );
   }
 
-  const maxResumes = showDualLines 
+  const maxResumes = showDualLines
     ? Math.max(...data.map(d => Math.max(d.resumesA || 0, d.resumesB || 0)))
     : 15;
   const roundedMax = Math.ceil(maxResumes / 2) * 2 + 2;
-  const ticks = showDualLines 
+  const ticks = showDualLines
     ? Array.from({ length: Math.ceil(roundedMax / 2) + 1 }, (_, i) => i * 2)
     : [3, 6, 9, 12, 15];
 
@@ -319,22 +319,22 @@ function PerformanceChart({ data, height = "100%", benchmarkValue = 10, showDual
       <AreaChart data={data}>
         <defs>
           <linearGradient id="colorRequirementsMain" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
-            <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
+            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8} />
+            <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1} />
           </linearGradient>
           <linearGradient id="colorResumesAMain" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
-            <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
+            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8} />
+            <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1} />
           </linearGradient>
           <linearGradient id="colorResumesBMain" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
-            <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
+            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8} />
+            <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.3} />
-        <XAxis 
+        <XAxis
           dataKey="member"
-          stroke="#6b7280" 
+          stroke="#6b7280"
           style={{ fontSize: '11px' }}
           tick={{ fill: '#6b7280' }}
           tickFormatter={(value, index) => {
@@ -344,16 +344,16 @@ function PerformanceChart({ data, height = "100%", benchmarkValue = 10, showDual
             return value;
           }}
         />
-        <YAxis 
-          stroke="#6b7280" 
+        <YAxis
+          stroke="#6b7280"
           style={{ fontSize: '12px' }}
           tick={{ fill: '#6b7280' }}
           ticks={ticks}
           domain={[0, showDualLines ? roundedMax : 15]}
         />
-        <Tooltip 
-          contentStyle={{ 
-            backgroundColor: '#ffffff', 
+        <Tooltip
+          contentStyle={{
+            backgroundColor: '#ffffff',
             border: '1px solid #e5e7eb',
             borderRadius: '8px'
           }}
@@ -361,18 +361,18 @@ function PerformanceChart({ data, height = "100%", benchmarkValue = 10, showDual
         <Legend />
         {!showDualLines && (
           <>
-            <ReferenceLine 
-              y={benchmarkValue} 
-              stroke="#ef4444" 
+            <ReferenceLine
+              y={benchmarkValue}
+              stroke="#ef4444"
               strokeWidth={2}
               strokeDasharray="5 5"
               label={{ value: `Avg: ${benchmarkValue}`, position: 'right', fill: '#ef4444', fontSize: 12 }}
             />
-            <Area 
-              type="monotone" 
-              dataKey="requirements" 
-              stroke="#22c55e" 
-              strokeWidth={2} 
+            <Area
+              type="monotone"
+              dataKey="requirements"
+              stroke="#22c55e"
+              strokeWidth={2}
               fill="url(#colorRequirementsMain)"
               dot={{ fill: '#22c55e', r: 4 }}
               activeDot={{ r: 6 }}
@@ -382,21 +382,21 @@ function PerformanceChart({ data, height = "100%", benchmarkValue = 10, showDual
         )}
         {showDualLines && (
           <>
-            <Area 
-              type="monotone" 
-              dataKey="resumesA" 
-              stroke="#ef4444" 
-              strokeWidth={2} 
+            <Area
+              type="monotone"
+              dataKey="resumesA"
+              stroke="#ef4444"
+              strokeWidth={2}
               fill="url(#colorResumesAMain)"
               dot={{ fill: '#ef4444', r: 4 }}
               activeDot={{ r: 6 }}
               name="Resume Count A"
             />
-            <Area 
-              type="monotone" 
-              dataKey="resumesB" 
-              stroke="#22c55e" 
-              strokeWidth={2} 
+            <Area
+              type="monotone"
+              dataKey="resumesB"
+              stroke="#22c55e"
+              strokeWidth={2}
               fill="url(#colorResumesBMain)"
               fillOpacity={0.6}
               dot={{ fill: '#22c55e', r: 4 }}
@@ -420,7 +420,7 @@ interface RevenueChartProps {
 function RevenueChart({ data, height = "100%", benchmarkValue = 230000 }: RevenueChartProps) {
   // Filter out zero values
   const filteredData = data?.filter(item => item.revenue > 0) || [];
-  
+
   // Show empty state if no data
   if (!filteredData || filteredData.length === 0) {
     return (
@@ -438,7 +438,7 @@ function RevenueChart({ data, height = "100%", benchmarkValue = 230000 }: Revenu
   const minRevenue = Math.min(...revenueValues);
   const maxRevenue = Math.max(...revenueValues);
   const benchmark = benchmarkValue || 0;
-  
+
   // Set Y-axis domain to start from minimum value (not zero) with some padding
   const yAxisMin = Math.max(0, minRevenue * 0.9); // Start slightly below minimum
   const yAxisMax = Math.max(maxRevenue, benchmark) * 1.1; // Go slightly above maximum or benchmark
@@ -447,22 +447,22 @@ function RevenueChart({ data, height = "100%", benchmarkValue = 230000 }: Revenu
     <ResponsiveContainer width="100%" height={height}>
       <ComposedChart data={filteredData}>
         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-        <XAxis 
-          dataKey="member" 
-          stroke="#6b7280" 
+        <XAxis
+          dataKey="member"
+          stroke="#6b7280"
           style={{ fontSize: '11px' }}
           tick={{ fill: '#6b7280' }}
         />
-        <YAxis 
-          stroke="#6b7280" 
+        <YAxis
+          stroke="#6b7280"
           style={{ fontSize: '12px' }}
           tick={{ fill: '#6b7280' }}
           tickFormatter={(value) => value != null ? `${value / 1000}K` : '0K'}
           domain={[yAxisMin, yAxisMax]}
         />
-        <Tooltip 
-          contentStyle={{ 
-            backgroundColor: '#ffffff', 
+        <Tooltip
+          contentStyle={{
+            backgroundColor: '#ffffff',
             border: '1px solid #e5e7eb',
             borderRadius: '8px'
           }}
@@ -471,21 +471,21 @@ function RevenueChart({ data, height = "100%", benchmarkValue = 230000 }: Revenu
             return `₹${numValue.toLocaleString()}`;
           }}
         />
-        <ReferenceLine 
-          y={benchmarkValue} 
-          stroke="#10b981" 
+        <ReferenceLine
+          y={benchmarkValue}
+          stroke="#10b981"
           strokeWidth={2}
           strokeDasharray="5 5"
-          label={{ 
-            value: benchmarkValue != null ? `Avg: ₹${(benchmarkValue / 1000).toFixed(0)}K` : 'Avg: ₹0K', 
-            position: 'right', 
-            fill: '#10b981', 
-            fontSize: 12 
+          label={{
+            value: benchmarkValue != null ? `Avg: ₹${(benchmarkValue / 1000).toFixed(0)}K` : 'Avg: ₹0K',
+            position: 'right',
+            fill: '#10b981',
+            fontSize: 12
           }}
         />
-        <Line 
-          type="monotone" 
-          dataKey="revenue" 
+        <Line
+          type="monotone"
+          dataKey="revenue"
           stroke="#8b5cf6"
           strokeWidth={3}
           dot={{ fill: '#8b5cf6', r: 5 }}
@@ -593,7 +593,7 @@ function ImpactMetricsEditor() {
 
   const MetricCard = ({ title, value, unit, subtitle, bgColor, borderColor, textColor, field, testId }: any) => {
     const isEditing = editingMetric === field;
-    
+
     return (
       <div className={`${bgColor} rounded-lg p-4 border ${borderColor} cursor-pointer hover:shadow-md transition-shadow overflow-hidden`} data-testid={testId}>
         <h3 className={`text-sm font-medium ${textColor} mb-2`}>{title}</h3>
@@ -827,7 +827,7 @@ function ClientSettingsSection() {
   return (
     <div className="px-6 py-6 space-y-4 overflow-auto">
       <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Client Settings</h2>
-      
+
       {/* Impact Metrics Section */}
       <Card className="bg-white dark:bg-gray-800">
         <CardHeader className="pb-2 pt-3">
@@ -885,8 +885,8 @@ function ClientSettingsSection() {
                     <span className="text-xs text-gray-600 dark:text-gray-400">days)*</span>
                   </div>
                   <div className="flex gap-1">
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       onClick={handleSave}
                       disabled={updateMutation.isPending}
                       className="text-xs h-7"
@@ -894,9 +894,9 @@ function ClientSettingsSection() {
                     >
                       {updateMutation.isPending ? "Saving..." : "Save"}
                     </Button>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={handleCancel}
                       className="text-xs h-7"
                       data-testid="button-cancel-feedback"
@@ -952,12 +952,12 @@ export default function AdminDashboard() {
   const queryClient = useQueryClient();
   const employee = useEmployeeAuth();
   const [profileData, setProfileData] = useState<any>(null);
-  
+
   // Load profile data for chat
   useEffect(() => {
     const loadProfileData = async () => {
       if (!employee?.role) return;
-      
+
       try {
         let endpoint = '';
         switch (employee.role) {
@@ -974,7 +974,7 @@ export default function AdminDashboard() {
             endpoint = '/api/client/profile';
             break;
         }
-        
+
         if (endpoint) {
           const response = await fetch(endpoint);
           if (response.ok) {
@@ -986,29 +986,29 @@ export default function AdminDashboard() {
         console.error('Failed to load profile data:', error);
       }
     };
-    
+
     loadProfileData();
   }, [employee?.role]);
-  
+
   const userName = profileData?.name || employee?.name || "Admin User";
   const userRole = employee?.role || 'admin';
-  
+
   // Restore sidebarTab from sessionStorage for proper back navigation
   const initialSidebarTab = () => {
     const saved = sessionStorage.getItem('adminDashboardSidebarTab');
     sessionStorage.removeItem('adminDashboardSidebarTab');
     return saved ? saved : 'dashboard';
   };
-  
+
   const [sidebarTab, setSidebarTab] = useState(initialSidebarTab());
-  
+
   // Restore activeTab from sessionStorage for proper back navigation
   const initialActiveTab = () => {
     const saved = sessionStorage.getItem('adminDashboardActiveTab');
     sessionStorage.removeItem('adminDashboardActiveTab');
     return saved ? saved : 'team';
   };
-  
+
   const [activeTab, setActiveTab] = useState(initialActiveTab());
   const [adminProfile, setAdminProfile] = useState(initialAdminProfile);
   const [requirementsVisible, setRequirementsVisible] = useState(10);
@@ -1052,31 +1052,31 @@ export default function AdminDashboard() {
     month: '', year: '', employees: '', salary: '', incentive: '', tools: '', rent: '', others: ''
   });
   const [selectedRequirement, setSelectedRequirement] = useState<any>(null);
-  
+
   // Check if all cashout form fields are filled
   const isCashoutFormComplete = useMemo(() => {
     return !!(
-      cashoutForm.month && 
-      cashoutForm.year && 
-      cashoutForm.employees && 
-      cashoutForm.salary && 
-      cashoutForm.incentive && 
-      cashoutForm.tools && 
-      cashoutForm.rent && 
+      cashoutForm.month &&
+      cashoutForm.year &&
+      cashoutForm.employees &&
+      cashoutForm.salary &&
+      cashoutForm.incentive &&
+      cashoutForm.tools &&
+      cashoutForm.rent &&
       cashoutForm.others
     );
   }, [cashoutForm]);
-  
+
   // Fetch target mappings from API (enriched with teamLeadName, teamMemberName, teamMemberRole)
   const { data: targetMappings = [], isLoading: isLoadingTargets } = useQuery<any[]>({
     queryKey: ["/api/admin/target-mappings"],
   });
-  
+
   // Fetch revenue mappings from API
   const { data: revenueMappings = [], isLoading: isLoadingRevenue } = useQuery<any[]>({
     queryKey: ["/api/admin/revenue-mappings"],
   });
-  
+
   // Fetch pipeline data from API (all applications from all recruiters)
   const { data: pipelineApplications = [], isLoading: isLoadingPipeline } = useQuery<any[]>({
     queryKey: ["/api/admin/pipeline"],
@@ -1088,11 +1088,11 @@ export default function AdminDashboard() {
   });
 
   const [selectedTeamLeadId, setSelectedTeamLeadId] = useState<string>("");
-  
+
   // Transform pipeline applications to candidate data with status stages
   const pipelineApplicantData = useMemo(() => {
     if (!pipelineApplications || pipelineApplications.length === 0) return [];
-    
+
     return pipelineApplications.map((app: any, index: number) => {
       let parsedSkills: string[] = [];
       if (app.skills) {
@@ -1147,8 +1147,8 @@ export default function AdminDashboard() {
 
   // Map applicant statuses to pipeline stages (each status maps to exactly one stage)
   const getPipelineCandidatesByStage = useMemo(() => {
-    const effectiveApplicants = pipelineApplicantData.filter((a: any) => 
-      a.currentStatus !== 'Archived' && 
+    const effectiveApplicants = pipelineApplicantData.filter((a: any) =>
+      a.currentStatus !== 'Archived' &&
       a.currentStatus !== 'Screened Out'
     );
 
@@ -1189,10 +1189,10 @@ export default function AdminDashboard() {
       rejected: getCandidatesForStage('Rejected')
     };
   }, [pipelineApplicantData]);
-  
+
   // Revenue mapping state for editing
   const [editingRevenueMapping, setEditingRevenueMapping] = useState<any>(null);
-  
+
   // Delete revenue mapping mutation
   const deleteRevenueMappingMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -1215,7 +1215,7 @@ export default function AdminDashboard() {
       });
     },
   });
-  
+
   // Pipeline modal state
   const [, navigate] = useLocation();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -1285,7 +1285,7 @@ export default function AdminDashboard() {
   const [memberSearchTerm, setMemberSearchTerm] = useState('');
   const [isMeetingsMenuModalOpen, setIsMeetingsMenuModalOpen] = useState(false);
   const [editingCalendarEventId, setEditingCalendarEventId] = useState<string | null>(null);
-  
+
   // Search term states for modals and tables
   const [targetSearch, setTargetSearch] = useState('');
   const [messagesSearch, setMessagesSearch] = useState('');
@@ -1299,25 +1299,25 @@ export default function AdminDashboard() {
   const [requirementsSearch, setRequirementsSearch] = useState('');
   const [userManagementTab, setUserManagementTab] = useState<'all' | 'clients' | 'team_leaders' | 'talent_advisors'>('all');
   const [userManagementSearch, setUserManagementSearch] = useState('');
-  
+
   // Password confirmation dialog state for user deletion
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
-  const [userToDelete, setUserToDelete] = useState<{id: string, name: string} | null>(null);
+  const [userToDelete, setUserToDelete] = useState<{ id: string, name: string } | null>(null);
   // Password confirmation dialog state for target deletion
-  const [targetToDelete, setTargetToDelete] = useState<{id: string, description: string} | null>(null);
+  const [targetToDelete, setTargetToDelete] = useState<{ id: string, description: string } | null>(null);
   const [isTargetPasswordDialogOpen, setIsTargetPasswordDialogOpen] = useState(false);
   // Password confirmation dialog state for cash outflow deletion
-  const [cashoutToDelete, setCashoutToDelete] = useState<{id: string, description: string} | null>(null);
+  const [cashoutToDelete, setCashoutToDelete] = useState<{ id: string, description: string } | null>(null);
   const [isCashoutPasswordDialogOpen, setIsCashoutPasswordDialogOpen] = useState(false);
   // Password confirmation dialog state for revenue mapping deletion
-  const [revenueMappingToDelete, setRevenueMappingToDelete] = useState<{id: string, description: string} | null>(null);
+  const [revenueMappingToDelete, setRevenueMappingToDelete] = useState<{ id: string, description: string } | null>(null);
   const [isRevenueMappingPasswordDialogOpen, setIsRevenueMappingPasswordDialogOpen] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
   const [passwordAttempts, setPasswordAttempts] = useState(0);
   const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
   const [editingTarget, setEditingTarget] = useState<any>(null);
   const [editingCashout, setEditingCashout] = useState<any>(null);
-  
+
   const [clientForm, setClientForm] = useState({
     brandName: '', incorporatedName: '', gstin: '',
     address: '', location: '', spoc: '', email: '', password: '',
@@ -1327,8 +1327,8 @@ export default function AdminDashboard() {
   });
   const [clientStartDate, setClientStartDate] = useState<Date | undefined>();
   const [employeeForm, setEmployeeForm] = useState({
-    employeeId: '', 
-    name: '', 
+    employeeId: '',
+    name: '',
     address: '',
     designation: '',
     email: '',
@@ -1366,7 +1366,7 @@ export default function AdminDashboard() {
   const [teamsPeriod, setTeamsPeriod] = useState('');
   const [teamsCustomDate, setTeamsCustomDate] = useState<Date | undefined>();
   const [teamsFileFormat, setTeamsFileFormat] = useState('');
-  
+
   const [reportsCheckboxes, setReportsCheckboxes] = useState({
     requirements: true,
     pipeline: true,
@@ -1377,10 +1377,10 @@ export default function AdminDashboard() {
   const [reportsPriority, setReportsPriority] = useState('');
   const [reportsType, setReportsType] = useState('');
   const [reportsFileFormat, setReportsFileFormat] = useState('');
-  
+
   const [generalReportType, setGeneralReportType] = useState('');
   const [generalFileFormat, setGeneralFileFormat] = useState('');
-  
+
   const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
   const [downloadSection, setDownloadSection] = useState<'teams' | 'reports' | 'general'>('teams');
 
@@ -1395,7 +1395,7 @@ export default function AdminDashboard() {
     refetchOnMount: true,
     refetchOnWindowFocus: true
   });
-  
+
 
   // State for JD preview modal
   const [selectedJD, setSelectedJD] = useState<any>(null);
@@ -1412,16 +1412,19 @@ export default function AdminDashboard() {
   });
 
   // Fetch active sessions to determine login status
+  // Fetch active employee sessions for real-time online/offline status
   const { data: activeSessionsData } = useQuery<{ activeEmployeeIds: string[] }>({
     queryKey: ['/api/admin/active-sessions'],
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 10000, // Refresh every 10 seconds for more real-time updates
+    refetchOnWindowFocus: true, // Refresh when user returns to the tab
+    enabled: sidebarTab === 'user-management' || activeTab === 'user-management', // Only fetch when on User Management page
   });
   const activeEmployeeIds = new Set(activeSessionsData?.activeEmployeeIds || []);
 
   // Filter employees for HR-related tables (Employees Master)
   // Only include employee_record role, exclude TL/TA (they belong in User Management), admin, and clients
   const hrEmployees = useMemo(() => {
-    return employees.filter((emp: any) => 
+    return employees.filter((emp: any) =>
       !emp.employeeId?.startsWith('STAFFOS') &&
       emp.role !== 'client' &&
       emp.role !== 'admin' &&
@@ -1432,9 +1435,9 @@ export default function AdminDashboard() {
 
   // Filter employees for User Management based on selected tab and search
   const userManagementEmployees = useMemo(() => {
-    let filtered = employees.filter((emp: any) => 
-      emp.role === 'team_leader' || 
-      emp.role === 'recruiter' || 
+    let filtered = employees.filter((emp: any) =>
+      emp.role === 'team_leader' ||
+      emp.role === 'recruiter' ||
       emp.role === 'client'
     );
 
@@ -1451,7 +1454,7 @@ export default function AdminDashboard() {
     // Apply search filter
     if (userManagementSearch.trim()) {
       const search = userManagementSearch.toLowerCase();
-      filtered = filtered.filter((emp: any) => 
+      filtered = filtered.filter((emp: any) =>
         emp.employeeId?.toLowerCase().includes(search) ||
         emp.name?.toLowerCase().includes(search) ||
         emp.email?.toLowerCase().includes(search) ||
@@ -1462,17 +1465,13 @@ export default function AdminDashboard() {
     return filtered;
   }, [employees, userManagementTab, userManagementSearch]);
 
-  // Calculate online count (users who logged in within last 15 minutes)
+  // Calculate online count based on active sessions (real-time)
   const onlineCount = useMemo(() => {
-    const now = new Date();
-    const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
-    
-    return userManagementEmployees.filter((emp: any) => {
-      if (!emp.lastLoginAt) return false;
-      const lastLogin = new Date(emp.lastLoginAt);
-      return lastLogin >= fifteenMinutesAgo;
-    }).length;
-  }, [userManagementEmployees]);
+    // Count only employees in userManagementEmployees who have active sessions
+    return userManagementEmployees.filter((emp: any) =>
+      activeEmployeeIds.has(emp.id)
+    ).length;
+  }, [userManagementEmployees, activeEmployeeIds]);
 
   // Fetch candidates from database
   const { data: candidates = [], isLoading: isLoadingCandidates } = useQuery<any[]>({
@@ -1493,7 +1492,7 @@ export default function AdminDashboard() {
   const filteredTargetMappings = useMemo(() => {
     if (!targetSearch.trim()) return targetMappings;
     const search = targetSearch.toLowerCase();
-    return targetMappings.filter((mapping: any) => 
+    return targetMappings.filter((mapping: any) =>
       mapping.teamLeadName?.toLowerCase().includes(search) ||
       mapping.teamMemberName?.toLowerCase().includes(search) ||
       mapping.teamMemberRole?.toLowerCase().includes(search) ||
@@ -1505,7 +1504,7 @@ export default function AdminDashboard() {
   const filteredMessages = useMemo(() => {
     if (!messagesSearch.trim()) return messagesData;
     const search = messagesSearch.toLowerCase();
-    return messagesData.filter(msg => 
+    return messagesData.filter(msg =>
       msg.name?.toLowerCase().includes(search) ||
       msg.message?.toLowerCase().includes(search) ||
       msg.date?.toLowerCase().includes(search) ||
@@ -1516,7 +1515,7 @@ export default function AdminDashboard() {
   const filteredCashoutData = useMemo(() => {
     if (!cashoutSearch.trim()) return cashoutData;
     const search = cashoutSearch.toLowerCase();
-    return cashoutData.filter(row => 
+    return cashoutData.filter(row =>
       row.month?.toLowerCase().includes(search) ||
       row.year?.toString().includes(search)
     );
@@ -1530,7 +1529,7 @@ export default function AdminDashboard() {
   const filteredClients = useMemo(() => {
     if (!clientMasterSearch.trim()) return masterDataClients;
     const search = clientMasterSearch.toLowerCase();
-    return masterDataClients.filter((client: any) => 
+    return masterDataClients.filter((client: any) =>
       client.brandName?.toLowerCase().includes(search) ||
       client.location?.toLowerCase().includes(search) ||
       client.spoc?.toLowerCase().includes(search) ||
@@ -1542,7 +1541,7 @@ export default function AdminDashboard() {
   const filteredHrEmployees = useMemo(() => {
     if (!employeeMasterSearch.trim()) return hrEmployees;
     const search = employeeMasterSearch.toLowerCase();
-    return hrEmployees.filter((emp: any) => 
+    return hrEmployees.filter((emp: any) =>
       emp.name?.toLowerCase().includes(search) ||
       emp.email?.toLowerCase().includes(search) ||
       emp.designation?.toLowerCase().includes(search) ||
@@ -1555,7 +1554,7 @@ export default function AdminDashboard() {
     const candidatesList = (candidates as any[]) || [];
     if (!resumeDatabaseSearch.trim()) return candidatesList;
     const search = resumeDatabaseSearch.toLowerCase();
-    return candidatesList.filter((candidate: any) => 
+    return candidatesList.filter((candidate: any) =>
       candidate.candidateId?.toLowerCase().includes(search) ||
       candidate.fullName?.toLowerCase().includes(search) ||
       candidate.currentRole?.toLowerCase().includes(search) ||
@@ -1567,7 +1566,7 @@ export default function AdminDashboard() {
   const filteredRequirements = useMemo(() => {
     if (!requirementsSearch.trim()) return requirements;
     const search = requirementsSearch.toLowerCase();
-    return requirements.filter((req: any) => 
+    return requirements.filter((req: any) =>
       req.position?.toLowerCase().includes(search) ||
       req.criticality?.toLowerCase().includes(search) ||
       req.company?.toLowerCase().includes(search) ||
@@ -1767,7 +1766,7 @@ export default function AdminDashboard() {
   const filteredClosureReports = useMemo(() => {
     if (!closureReportsSearch) return closureReportsData;
     const searchLower = closureReportsSearch.toLowerCase();
-    return closureReportsData.filter(report => 
+    return closureReportsData.filter(report =>
       report.candidate?.toLowerCase().includes(searchLower) ||
       report.position?.toLowerCase().includes(searchLower) ||
       report.client?.toLowerCase().includes(searchLower) ||
@@ -1835,7 +1834,7 @@ export default function AdminDashboard() {
   const monthlyChartData = useMemo(() => {
     return monthlyPerformanceData?.data ?? [];
   }, [monthlyPerformanceData]);
-  
+
   // Outer Performance graph data - uses performance-graph endpoint with period support
   const outerPerformanceChartData = useMemo(() => {
     return outerPerformanceGraphData.map(item => ({
@@ -2050,8 +2049,8 @@ export default function AdminDashboard() {
       });
       setIsEmployeeModalOpen(false);
       setEmployeeForm({
-        employeeId: '', 
-        name: '', 
+        employeeId: '',
+        name: '',
         address: '',
         designation: '',
         email: '',
@@ -2290,7 +2289,7 @@ export default function AdminDashboard() {
     const now = new Date();
     const sevenDaysAgo = new Date(now);
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
+
     const allMeetings = [...tlMeetings, ...ceoMeetings].filter((m: any) => {
       try {
         const meetingDateTime = new Date(`${m.meetingDate} ${m.meetingTime}`);
@@ -2299,7 +2298,7 @@ export default function AdminDashboard() {
         return false;
       }
     });
-    
+
     return allMeetings.sort((a: any, b: any) => {
       const dateA = new Date(`${a.meetingDate} ${a.meetingTime}`);
       const dateB = new Date(`${b.meetingDate} ${b.meetingTime}`);
@@ -2408,7 +2407,7 @@ export default function AdminDashboard() {
       });
       return;
     }
-    
+
     // Determine person name and category based on meetingWith (Admin or Client)
     let personName = '';
     let personId = '';
@@ -2466,7 +2465,7 @@ export default function AdminDashboard() {
         regarding: meetingDescription || 'General Discussion',
         participants: allParticipantNames,
       });
-      
+
       if (calendarUrl) {
         window.open(calendarUrl, '_blank', 'noopener,noreferrer');
       }
@@ -2491,7 +2490,7 @@ export default function AdminDashboard() {
       meetingCategory,
       members: meetingMembers,
     };
-    
+
     if (editingMeetingId) {
       updateMeetingMutation.mutate({ id: editingMeetingId, data: meetingData });
       setEditingMeetingId(null);
@@ -2499,7 +2498,7 @@ export default function AdminDashboard() {
     } else {
       createMeetingMutation.mutate(meetingData);
     }
-    
+
     setShowPreviewModal(false);
   };
 
@@ -2516,7 +2515,7 @@ export default function AdminDashboard() {
       return;
     }
     const recipientName = employees.find((e: Employee) => e.id === selectedRecipient)?.name || selectedRecipient;
-    
+
     // Add new message to Message Status table
     const today = new Date();
     const dateStr = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
@@ -2528,7 +2527,7 @@ export default function AdminDashboard() {
       timestamp: today
     };
     setMessagesData(prev => [newMessage, ...prev]);
-    
+
     showSuccessAlert(`Message sent to ${recipientName} successfully`);
     resetForm();
     setIsCreateMessageModalOpen(false);
@@ -2600,7 +2599,7 @@ export default function AdminDashboard() {
       });
       return;
     }
-    
+
     // Show preview modal instead of directly creating
     setShowPreviewModal(true);
   };
@@ -2638,7 +2637,7 @@ export default function AdminDashboard() {
       age: '',
       reportingTo: userData.reportingTo || ''
     };
-    
+
     // Save to database using the employee mutation
     createEmployeeMutation.mutate(employeeData);
     setUserList(prev => [...prev, userData]);
@@ -2688,10 +2687,10 @@ export default function AdminDashboard() {
       age: '',
       reportingTo: userData.reportingTo || ''
     };
-    
-    updateEmployeeMutation.mutate({ 
-      id: userData.dbId, 
-      data: employeeData 
+
+    updateEmployeeMutation.mutate({
+      id: userData.dbId,
+      data: employeeData
     });
   };
 
@@ -2723,7 +2722,7 @@ export default function AdminDashboard() {
       const response = await apiRequest('POST', '/api/admin/verify-password', {
         password: passwordInput
       });
-      
+
       // Parse the response JSON
       const responseData = await response.json() as any;
 
@@ -2733,10 +2732,10 @@ export default function AdminDashboard() {
           try {
             // Call the actual delete API endpoint
             const deleteResponse = await apiRequest('DELETE', `/api/admin/employees/${userToDelete.id}`, {});
-            
+
             // Parse the response
             const deleteResult = await deleteResponse.json();
-            
+
             if (!deleteResponse.ok) {
               throw new Error(deleteResult.message || 'Failed to delete user');
             }
@@ -2745,7 +2744,7 @@ export default function AdminDashboard() {
             queryClient.setQueryData<Employee[]>(['/api/admin/employees'], (oldData = []) => {
               return oldData.filter(emp => emp.id !== userToDelete.id);
             });
-            
+
             // Then refetch in the background to ensure data is in sync
             queryClient.invalidateQueries({ queryKey: ['/api/admin/employees'] });
             refetchEmployees(); // Don't await - let it happen in background
@@ -2755,7 +2754,7 @@ export default function AdminDashboard() {
               description: `${userToDelete.name} has been permanently deleted from the database. Email and password have been completely removed.`,
               className: "bg-green-50 border-green-200 text-green-800",
             });
-            
+
             // Close dialog after successful deletion
             setIsPasswordDialogOpen(false);
             setPasswordInput("");
@@ -2840,7 +2839,7 @@ export default function AdminDashboard() {
       const response = await apiRequest('POST', '/api/admin/verify-password', {
         password: passwordInput
       });
-      
+
       const responseData = await response.json() as any;
 
       if (responseData && responseData.success) {
@@ -2849,19 +2848,19 @@ export default function AdminDashboard() {
           try {
             const deleteResponse = await apiRequest('DELETE', `/api/admin/target-mappings/${targetToDelete.id}`, {});
             const deleteResult = await deleteResponse.json();
-            
+
             if (!deleteResponse.ok) {
               throw new Error(deleteResult.message || 'Failed to delete target mapping');
             }
 
             queryClient.invalidateQueries({ queryKey: ['/api/admin/target-mappings'] });
-            
+
             toast({
               title: "Success",
               description: "Target mapping deleted successfully",
               className: "bg-green-50 border-green-200 text-green-800",
             });
-            
+
             setIsTargetPasswordDialogOpen(false);
             setPasswordInput("");
             setPasswordAttempts(0);
@@ -2963,7 +2962,7 @@ export default function AdminDashboard() {
       const response = await apiRequest('POST', '/api/admin/verify-password', {
         password: passwordInput
       });
-      
+
       const responseData = await response.json() as any;
 
       if (responseData && responseData.success) {
@@ -2971,19 +2970,19 @@ export default function AdminDashboard() {
           try {
             const deleteResponse = await apiRequest('DELETE', `/api/admin/cash-outflows/${cashoutToDelete.id}`, {});
             const deleteResult = await deleteResponse.json();
-            
+
             if (!deleteResponse.ok) {
               throw new Error(deleteResult.message || 'Failed to delete cash outflow');
             }
 
             queryClient.invalidateQueries({ queryKey: ['/api/admin/cash-outflows'] });
-            
+
             toast({
               title: "Success",
               description: "Cash outflow deleted successfully",
               className: "bg-green-50 border-green-200 text-green-800",
             });
-            
+
             setIsCashoutPasswordDialogOpen(false);
             setPasswordInput("");
             setPasswordAttempts(0);
@@ -3086,7 +3085,7 @@ export default function AdminDashboard() {
       const response = await apiRequest('POST', '/api/admin/verify-password', {
         password: passwordInput
       });
-      
+
       const responseData = await response.json() as any;
 
       if (responseData && responseData.success) {
@@ -3094,19 +3093,19 @@ export default function AdminDashboard() {
           try {
             const deleteResponse = await apiRequest('DELETE', `/api/admin/revenue-mappings/${revenueMappingToDelete.id}`, {});
             const deleteResult = await deleteResponse.json();
-            
+
             if (!deleteResponse.ok) {
               throw new Error(deleteResult.message || 'Failed to delete revenue mapping');
             }
 
             queryClient.invalidateQueries({ queryKey: ['/api/admin/revenue-mappings'] });
-            
+
             toast({
               title: "Success",
               description: "Revenue mapping deleted successfully",
               className: "bg-green-50 border-green-200 text-green-800",
             });
-            
+
             setIsRevenueMappingPasswordDialogOpen(false);
             setPasswordInput("");
             setPasswordAttempts(0);
@@ -3258,7 +3257,7 @@ export default function AdminDashboard() {
     }
 
     const metrics = impactMetricsQuery.data;
-    
+
     // If no metrics exist, create one first
     if (!metrics || metrics.length === 0) {
       const defaultMetrics = {
@@ -3272,7 +3271,7 @@ export default function AdminDashboard() {
         fulfillmentRate: 20,
         revenueRecovered: 1.5,
       };
-      
+
       try {
         const response = await apiRequest('POST', '/api/admin/impact-metrics', defaultMetrics);
         await response.json();
@@ -3382,7 +3381,7 @@ export default function AdminDashboard() {
       <Card className="bg-gray-50 dark:bg-gray-800">
         <CardHeader className="pb-1 pt-1 flex flex-row items-center justify-between">
           <CardTitle className="text-lg text-gray-900 dark:text-white">Target & Incentives</CardTitle>
-          <Button 
+          <Button
             className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
             onClick={() => setIsTargetModalOpen(true)}
             data-testid="button-view-all-targets"
@@ -3496,7 +3495,7 @@ export default function AdminDashboard() {
                   ))}
               </SelectContent>
             </Select>
-            
+
             <StandardDatePicker
               value={selectedDate}
               onChange={(date) => date && setSelectedDate(date)}
@@ -3505,7 +3504,7 @@ export default function AdminDashboard() {
             />
           </div>
         </CardHeader>
-        
+
         <CardContent className="p-3">
           <div className="grid grid-cols-3 gap-4">
             {/* Left side - Metrics with simplified design matching image 2 */}
@@ -3546,7 +3545,7 @@ export default function AdminDashboard() {
                 <span className="text-2xl font-bold text-blue-600">{dailyMetricsData.completedRequirements}</span>
               </div>
             </div>
-            
+
             {/* Center - Daily Delivery */}
             <div className="bg-slate-800 dark:bg-slate-900 rounded p-4 text-white relative">
               <h3 className="text-lg font-semibold text-center mb-4 text-white">Daily Delivery</h3>
@@ -3556,8 +3555,8 @@ export default function AdminDashboard() {
                   <p className="text-4xl font-bold mb-3 text-white">
                     {dailyMetricsData.dailyDeliveryDelivered}
                   </p>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-sm rounded"
                     onClick={() => setIsDeliveredModalOpen(true)}
                     data-testid="button-view-delivered"
@@ -3572,8 +3571,8 @@ export default function AdminDashboard() {
                   <p className="text-4xl font-bold mb-3 text-white">
                     {dailyMetricsData.dailyDeliveryDefaulted}
                   </p>
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 text-sm rounded"
                     onClick={() => setIsDefaultedModalOpen(true)}
                     data-testid="button-view-defaulted"
@@ -3583,7 +3582,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </div>
-            
+
             {/* Right side - Overall Performance */}
             <div className="bg-white dark:bg-gray-900 rounded p-4">
               <div className="text-left">
@@ -3600,13 +3599,12 @@ export default function AdminDashboard() {
                       <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                     </Button>
                   </div>
-                  <div className={`text-4xl font-bold ${
-                    dailyMetricsData.overallPerformance === 'G' 
-                      ? 'text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900' 
-                      : dailyMetricsData.overallPerformance === 'A'
+                  <div className={`text-4xl font-bold ${dailyMetricsData.overallPerformance === 'G'
+                    ? 'text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900'
+                    : dailyMetricsData.overallPerformance === 'A'
                       ? 'text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900'
                       : 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900'
-                  } w-16 h-16 rounded-sm flex items-center justify-center`} data-testid="indicator-performance">
+                    } w-16 h-16 rounded-sm flex items-center justify-center`} data-testid="indicator-performance">
                     {dailyMetricsData.overallPerformance || 'G'}
                   </div>
                 </div>
@@ -3674,10 +3672,10 @@ export default function AdminDashboard() {
                   const isExpanded = expandedMeetings.has(meeting.id);
                   const meetingTime = meeting.meetingTime || '8:30 am';
                   const meetingDate = meeting.meetingDate ? new Date(meeting.meetingDate) : new Date();
-                  const formattedTime = meetingTime.includes('am') || meetingTime.includes('pm') 
-                    ? meetingTime 
+                  const formattedTime = meetingTime.includes('am') || meetingTime.includes('pm')
+                    ? meetingTime
                     : `${meetingTime} am`;
-                  
+
                   return (
                     <div
                       key={meeting.id}
@@ -3730,22 +3728,20 @@ export default function AdminDashboard() {
                                   const now = new Date();
                                   const isCompleted = meetingDateTime < now || meeting.status === 'completed';
                                   return (
-                                    <span className={`text-sm font-medium ${
-                                      isCompleted 
-                                        ? 'text-green-600 dark:text-green-400' 
-                                        : 'text-yellow-600 dark:text-yellow-400'
-                                    }`}>
+                                    <span className={`text-sm font-medium ${isCompleted
+                                      ? 'text-green-600 dark:text-green-400'
+                                      : 'text-yellow-600 dark:text-yellow-400'
+                                      }`}>
                                       {isCompleted ? 'Completed' : 'Scheduled'}
                                     </span>
                                   );
                                 } catch (e) {
                                   // Fallback to status if date parsing fails
                                   return (
-                                    <span className={`text-sm font-medium ${
-                                      meeting.status === 'completed'
-                                        ? 'text-green-600 dark:text-green-400' 
-                                        : 'text-yellow-600 dark:text-yellow-400'
-                                    }`}>
+                                    <span className={`text-sm font-medium ${meeting.status === 'completed'
+                                      ? 'text-green-600 dark:text-green-400'
+                                      : 'text-yellow-600 dark:text-yellow-400'
+                                      }`}>
                                       {meeting.status === 'completed' ? 'Completed' : 'Scheduled'}
                                     </span>
                                   );
@@ -3774,25 +3770,25 @@ export default function AdminDashboard() {
                               </button>
                             </div>
                           </div>
-                          
+
                           {/* Date */}
                           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                             <span className="font-medium">Date:</span>
                             <span>{format(new Date(meeting.meetingDate), 'dd-MMM-yyyy')}</span>
                           </div>
-                          
+
                           {/* Time */}
                           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                             <span className="font-medium">Time:</span>
                             <span>{formattedTime}</span>
                           </div>
-                          
+
                           {/* Meeting With */}
                           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                             <span className="font-medium">Meeting With:</span>
                             <span>{meeting.person || 'N/A'}</span>
                           </div>
-                          
+
                           {/* Description if available */}
                           {meeting.agenda && meeting.agenda !== 'General Discussion' && (
                             <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
@@ -3800,7 +3796,7 @@ export default function AdminDashboard() {
                               <span className="flex-1">{meeting.agenda}</span>
                             </div>
                           )}
-                          
+
                           {/* Participants */}
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Members:</span>
@@ -3817,19 +3813,19 @@ export default function AdminDashboard() {
                                 // Remove duplicates
                                 const uniqueParticipants = Array.from(new Set(participants));
                                 const participantCount = uniqueParticipants.length;
-                                
+
                                 // Get participant names
                                 const participantNames = uniqueParticipants
                                   .map(id => employees.find((e: Employee) => e.id === id))
                                   .filter(Boolean)
                                   .slice(0, 5);
-                                
+
                                 const remainingCount = Math.max(0, participantCount - 5);
-                                
+
                                 if (participantCount === 0) {
                                   return <span className="text-xs text-gray-500">No members added</span>;
                                 }
-                                
+
                                 return (
                                   <>
                                     {participantNames.map((emp: Employee | undefined, idx: number) => {
@@ -3903,10 +3899,10 @@ export default function AdminDashboard() {
               ) : (
                 messagesData.slice(0, 5).map((message, index) => {
                   const isActive = message.status === 'active';
-                  const timeStr = message.timestamp 
+                  const timeStr = message.timestamp
                     ? new Date(message.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
                     : message.date;
-                  
+
                   return (
                     <div
                       key={index}
@@ -3973,7 +3969,7 @@ export default function AdminDashboard() {
                   placeholder="Search requirements..."
                   testId="input-search-requirements"
                 />
-                <Button 
+                <Button
                   className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded text-sm whitespace-nowrap"
                   onClick={() => setIsAddRequirementModalOpen(true)}
                   data-testid="button-add-requirements"
@@ -3982,7 +3978,7 @@ export default function AdminDashboard() {
                 </Button>
               </div>
             </div>
-            
+
             {/* Client JDs Table */}
             <div className="mb-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
@@ -4046,7 +4042,7 @@ export default function AdminDashboard() {
                 </table>
               </div>
             </div>
-            
+
             <div className="flex gap-6 h-full">
               {/* Middle Section - Requirements Table */}
               <div className="flex-1 overflow-y-auto admin-scrollbar">
@@ -4124,16 +4120,16 @@ export default function AdminDashboard() {
                       </tbody>
                     </table>
                   </div>
-                  
+
                   <div className="flex justify-center gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="px-6 py-2 rounded bg-red-100 hover:bg-red-200 text-red-800 border-red-200"
                       onClick={handleArchivesClick}
                     >
                       Archives
                     </Button>
-                    <Button 
+                    <Button
                       className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
                       onClick={handleRequirementsViewMore}
                       disabled={requirements.length <= 10}
@@ -4148,7 +4144,7 @@ export default function AdminDashboard() {
               <div className="w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 px-6 py-6">
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Priority Distribution</h3>
-                  
+
                   <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                     <CardContent className="p-4">
                       <div className="space-y-3">
@@ -4172,7 +4168,7 @@ export default function AdminDashboard() {
                             </div>
                           </div>
                         </div>
-                        
+
                         {/* MED Priority Group */}
                         <div className="space-y-1">
                           <div className="flex items-center justify-between bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 rounded">
@@ -4193,7 +4189,7 @@ export default function AdminDashboard() {
                             </div>
                           </div>
                         </div>
-                        
+
                         {/* LOW Priority Group */}
                         <div className="space-y-1">
                           <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded">
@@ -4279,7 +4275,7 @@ export default function AdminDashboard() {
                               <td className="p-3 align-top" data-testid="column-pipeline-level1">
                                 <div className="space-y-2">
                                   {getPipelineCandidatesByStage.level1.map((candidate: any, index: number) => (
-                                    <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{backgroundColor: '#E6F4EA'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`} data-testid={`pipeline-l1-candidate-${index}`}>
+                                    <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{ backgroundColor: '#E6F4EA' }} title={`${candidate.candidateName} - ${candidate.roleApplied}`} data-testid={`pipeline-l1-candidate-${index}`}>
                                       {candidate.candidateName}
                                     </div>
                                   ))}
@@ -4291,7 +4287,7 @@ export default function AdminDashboard() {
                               <td className="p-3 align-top" data-testid="column-pipeline-level2">
                                 <div className="space-y-2">
                                   {getPipelineCandidatesByStage.level2.map((candidate: any, index: number) => (
-                                    <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{backgroundColor: '#D9F0E1'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`} data-testid={`pipeline-l2-candidate-${index}`}>
+                                    <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{ backgroundColor: '#D9F0E1' }} title={`${candidate.candidateName} - ${candidate.roleApplied}`} data-testid={`pipeline-l2-candidate-${index}`}>
                                       {candidate.candidateName}
                                     </div>
                                   ))}
@@ -4303,7 +4299,7 @@ export default function AdminDashboard() {
                               <td className="p-3 align-top" data-testid="column-pipeline-level3">
                                 <div className="space-y-2">
                                   {getPipelineCandidatesByStage.level3.map((candidate: any, index: number) => (
-                                    <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{backgroundColor: '#C2EED0'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`} data-testid={`pipeline-l3-candidate-${index}`}>
+                                    <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{ backgroundColor: '#C2EED0' }} title={`${candidate.candidateName} - ${candidate.roleApplied}`} data-testid={`pipeline-l3-candidate-${index}`}>
                                       {candidate.candidateName}
                                     </div>
                                   ))}
@@ -4315,7 +4311,7 @@ export default function AdminDashboard() {
                               <td className="p-3 align-top" data-testid="column-pipeline-finalround">
                                 <div className="space-y-2">
                                   {getPipelineCandidatesByStage.finalRound.map((candidate: any, index: number) => (
-                                    <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{backgroundColor: '#B5E1C1'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`} data-testid={`pipeline-finalround-candidate-${index}`}>
+                                    <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{ backgroundColor: '#B5E1C1' }} title={`${candidate.candidateName} - ${candidate.roleApplied}`} data-testid={`pipeline-finalround-candidate-${index}`}>
                                       {candidate.candidateName}
                                     </div>
                                   ))}
@@ -4327,7 +4323,7 @@ export default function AdminDashboard() {
                               <td className="p-3 align-top" data-testid="column-pipeline-hrround">
                                 <div className="space-y-2">
                                   {getPipelineCandidatesByStage.hrRound.map((candidate: any, index: number) => (
-                                    <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-white text-center cursor-default" style={{backgroundColor: '#99D9AE'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`} data-testid={`pipeline-hrround-candidate-${index}`}>
+                                    <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-white text-center cursor-default" style={{ backgroundColor: '#99D9AE' }} title={`${candidate.candidateName} - ${candidate.roleApplied}`} data-testid={`pipeline-hrround-candidate-${index}`}>
                                       {candidate.candidateName}
                                     </div>
                                   ))}
@@ -4339,7 +4335,7 @@ export default function AdminDashboard() {
                               <td className="p-3 align-top" data-testid="column-pipeline-offerstage">
                                 <div className="space-y-2">
                                   {getPipelineCandidatesByStage.offerStage.map((candidate: any, index: number) => (
-                                    <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-white text-center cursor-default" style={{backgroundColor: '#7CCBA0'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`} data-testid={`pipeline-offerstage-candidate-${index}`}>
+                                    <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-white text-center cursor-default" style={{ backgroundColor: '#7CCBA0' }} title={`${candidate.candidateName} - ${candidate.roleApplied}`} data-testid={`pipeline-offerstage-candidate-${index}`}>
                                       {candidate.candidateName}
                                     </div>
                                   ))}
@@ -4351,7 +4347,7 @@ export default function AdminDashboard() {
                               <td className="p-3 align-top" data-testid="column-pipeline-closure">
                                 <div className="space-y-2">
                                   {getPipelineCandidatesByStage.closure.map((candidate: any, index: number) => (
-                                    <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-white text-center cursor-default" style={{backgroundColor: '#2F6F52'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`} data-testid={`pipeline-closure-candidate-${index}`}>
+                                    <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-white text-center cursor-default" style={{ backgroundColor: '#2F6F52' }} title={`${candidate.candidateName} - ${candidate.roleApplied}`} data-testid={`pipeline-closure-candidate-${index}`}>
                                       {candidate.candidateName}
                                     </div>
                                   ))}
@@ -4374,84 +4370,84 @@ export default function AdminDashboard() {
                     <CardContent className="p-4">
                       <div className="space-y-3">
                         {/* REJECTED */}
-                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#FEE2E2'}}>
+                        <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#FEE2E2' }}>
                           <span className="font-semibold text-black">R</span>
                           <span className="text-sm text-black">EJECTED</span>
                           <span className="font-bold text-lg text-black" data-testid="count-rejected">{getPipelineCandidatesByStage.rejected.length}</span>
                         </div>
-                        
+
                         {/* SHORTLISTED */}
-                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#D9F0E1'}}>
+                        <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#D9F0E1' }}>
                           <span className="font-semibold text-black">S</span>
                           <span className="text-sm text-black">HORTLISTED</span>
                           <span className="font-bold text-lg text-black" data-testid="count-shortlisted">{getPipelineCandidatesByStage.shortlisted.length}</span>
                         </div>
-                        
+
                         {/* INTRO CALL */}
-                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#C2EED0'}}>
+                        <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#C2EED0' }}>
                           <span className="font-semibold text-black">I</span>
                           <span className="text-sm text-black">NTRO CALL</span>
                           <span className="font-bold text-lg text-black" data-testid="count-introcall">{getPipelineCandidatesByStage.introCall.length}</span>
                         </div>
-                        
+
                         {/* ASSIGNMENT */}
-                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#B5E1C1'}}>
+                        <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#B5E1C1' }}>
                           <span className="font-semibold text-black">A</span>
                           <span className="text-sm text-black">SSIGNMENT</span>
                           <span className="font-bold text-lg text-black" data-testid="count-assignment">{getPipelineCandidatesByStage.assignment.length}</span>
                         </div>
-                        
+
                         {/* L1 */}
-                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#99D9AE'}}>
+                        <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#99D9AE' }}>
                           <span className="font-semibold text-white">L1</span>
                           <span className="text-sm text-white"></span>
                           <span className="font-bold text-lg text-white" data-testid="count-l1">{getPipelineCandidatesByStage.level1.length}</span>
                         </div>
-                        
+
                         {/* L2 */}
-                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#7CCBA0'}}>
+                        <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#7CCBA0' }}>
                           <span className="font-semibold text-white">L2</span>
                           <span className="text-sm text-white"></span>
                           <span className="font-bold text-lg text-white" data-testid="count-l2">{getPipelineCandidatesByStage.level2.length}</span>
                         </div>
-                        
+
                         {/* L3 */}
-                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#6BB68C'}}>
+                        <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#6BB68C' }}>
                           <span className="font-semibold text-white">L3</span>
                           <span className="text-sm text-white"></span>
                           <span className="font-bold text-lg text-white" data-testid="count-l3">{getPipelineCandidatesByStage.level3.length}</span>
                         </div>
-                        
+
                         {/* FINAL ROUND */}
-                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#56A87D'}}>
+                        <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#56A87D' }}>
                           <span className="font-semibold text-white">F</span>
                           <span className="text-sm text-white">INAL ROUND</span>
                           <span className="font-bold text-lg text-white" data-testid="count-finalround">{getPipelineCandidatesByStage.finalRound.length}</span>
                         </div>
-                        
+
                         {/* HR ROUND */}
-                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#479E72'}}>
+                        <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#479E72' }}>
                           <span className="font-semibold text-white">H</span>
                           <span className="text-sm text-white">R ROUND</span>
                           <span className="font-bold text-lg text-white" data-testid="count-hrround">{getPipelineCandidatesByStage.hrRound.length}</span>
                         </div>
-                        
+
                         {/* OFFER STAGE */}
-                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#3F8E66'}}>
+                        <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#3F8E66' }}>
                           <span className="font-semibold text-white">O</span>
                           <span className="text-sm text-white">FFER STAGE</span>
                           <span className="font-bold text-lg text-white" data-testid="count-offerstage">{getPipelineCandidatesByStage.offerStage.length}</span>
                         </div>
-                        
+
                         {/* CLOSURE */}
-                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#2F6F52'}}>
+                        <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#2F6F52' }}>
                           <span className="font-semibold text-white">C</span>
                           <span className="text-sm text-white">LOSURE</span>
                           <span className="font-bold text-lg text-white" data-testid="count-closure">{getPipelineCandidatesByStage.closure.length}</span>
                         </div>
-                        
+
                         {/* OFFER DROP */}
-                        <div className="flex items-center justify-between p-3 rounded" style={{backgroundColor: '#C59445'}}>
+                        <div className="flex items-center justify-between p-3 rounded" style={{ backgroundColor: '#C59445' }}>
                           <span className="font-semibold text-white">O</span>
                           <span className="text-sm text-white">FFER DROP</span>
                           <span className="font-bold text-lg text-white" data-testid="count-offerdrop">{getPipelineCandidatesByStage.offerDrop.length}</span>
@@ -4466,7 +4462,7 @@ export default function AdminDashboard() {
             {/* Closure Reports */}
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle 
+                <CardTitle
                   className="text-lg font-semibold text-gray-900 dark:text-white cursor-pointer hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors flex items-center gap-2"
                   onClick={() => setIsPipelineModalOpen(true)}
                   onKeyDown={(e) => {
@@ -4506,8 +4502,8 @@ export default function AdminDashboard() {
                         </tr>
                       ) : (
                         getPipelineCandidatesByStage.closure.slice(0, 5).map((candidate: any, index: number) => (
-                          <tr 
-                            key={candidate.id || index} 
+                          <tr
+                            key={candidate.id || index}
                             className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 1 ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}
                             data-testid={`closure-row-${index}`}
                           >
@@ -4545,7 +4541,7 @@ export default function AdminDashboard() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Resume Database</CardTitle>
-                <Button 
+                <Button
                   className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white"
                   onClick={() => {
                     sessionStorage.setItem('adminDashboardSidebarTab', sidebarTab);
@@ -4565,14 +4561,14 @@ export default function AdminDashboard() {
                       <div className="text-3xl font-bold text-red-600 dark:text-red-400">{masterTotals.resumes.toLocaleString('en-IN')}</div>
                     </CardContent>
                   </Card>
-                  
+
                   <Card className="text-center p-4">
                     <CardContent className="p-0">
                       <div className="text-sm text-blue-600 dark:text-blue-400 mb-2 font-semibold">DIRECT UPLOADS</div>
                       <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{masterTotals.directUploads.toLocaleString('en-IN')}</div>
                     </CardContent>
                   </Card>
-                  
+
                   <Card className="text-center p-4">
                     <CardContent className="p-0">
                       <div className="text-sm text-blue-600 dark:text-blue-400 mb-2 font-semibold">RECRUITER UPLOADS</div>
@@ -4638,7 +4634,7 @@ export default function AdminDashboard() {
                     </tbody>
                   </table>
                 </div>
-                
+
                 <div className="mt-4 text-center">
                   <p className="text-sm text-gray-600 dark:text-gray-400 italic">
                     Click on "View Full Database" button above to see the complete master database
@@ -4651,7 +4647,7 @@ export default function AdminDashboard() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Employees Master</CardTitle>
-                <Button 
+                <Button
                   className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white"
                   onClick={() => setIsEmployeeModalOpen(true)}
                   data-testid="button-add-employee-master"
@@ -4716,9 +4712,9 @@ export default function AdminDashboard() {
                     </tbody>
                   </table>
                 </div>
-                
+
                 <div className="flex justify-end mt-4">
-                  <Button 
+                  <Button
                     className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
                     onClick={() => {
                       sessionStorage.setItem('adminDashboardSidebarTab', sidebarTab);
@@ -4736,7 +4732,7 @@ export default function AdminDashboard() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Client Master</CardTitle>
-                <Button 
+                <Button
                   className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white"
                   onClick={() => setIsClientModalOpen(true)}
                   data-testid="button-add-client-master"
@@ -4768,9 +4764,9 @@ export default function AdminDashboard() {
                         </tr>
                       ) : (
                         masterDataClients.slice(0, 5).map((row: any, index: number) => {
-                          const statusClass = row.currentStatus === 'active' ? 'bg-green-100 text-green-800' : 
-                                            row.currentStatus === 'frozen' ? 'bg-orange-100 text-orange-800' : 
-                                            'bg-red-100 text-red-800';
+                          const statusClass = row.currentStatus === 'active' ? 'bg-green-100 text-green-800' :
+                            row.currentStatus === 'frozen' ? 'bg-orange-100 text-orange-800' :
+                              'bg-red-100 text-red-800';
                           return (
                             <tr key={row.id || index} className="border-b border-gray-100 dark:border-gray-800">
                               <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.clientCode}</td>
@@ -4788,9 +4784,9 @@ export default function AdminDashboard() {
                     </tbody>
                   </table>
                 </div>
-                
+
                 <div className="flex justify-end mt-4">
-                  <Button 
+                  <Button
                     className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
                     onClick={() => {
                       sessionStorage.setItem('adminDashboardSidebarTab', sidebarTab);
@@ -4814,13 +4810,13 @@ export default function AdminDashboard() {
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Performance</h2>
                 <div className="flex gap-2">
-                  <Button 
+                  <Button
                     className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm"
                     onClick={() => setIsTargetMappingModalOpen(true)}
                   >
                     Target Mapping
                   </Button>
-                  <Button 
+                  <Button
                     className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm"
                     onClick={() => setIsRevenueMappingModalOpen(true)}
                   >
@@ -4846,7 +4842,7 @@ export default function AdminDashboard() {
                     )}
                   </SelectContent>
                 </Select>
-                
+
                 <Select value={selectedPerformancePeriod} onValueChange={setSelectedPerformancePeriod}>
                   <SelectTrigger className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm w-32">
                     <SelectValue />
@@ -4861,39 +4857,39 @@ export default function AdminDashboard() {
 
               {/* Chart Area - Grid Layout */}
               <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 bg-white dark:bg-gray-900 px-6 pb-6">
-                  {/* Performance Chart */}
-                  <div className="xl:col-span-5">
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300">Performance</h3>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-6 w-6"
-                        onClick={() => setIsPerformanceChartModalOpen(true)}
-                        data-testid="button-expand-performance-chart"
-                      >
-                        <HelpCircle className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                      </Button>
-                    </div>
-                    <div className="h-[260px]">
-                      {(!outerPerformanceChartData || outerPerformanceChartData.length === 0) ? (
-                        <div className="flex items-center justify-center w-full h-full bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
-                          <div className="text-center">
-                            <p className="text-gray-600 dark:text-gray-400 text-sm">No performance data available</p>
-                            <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">Data will appear once teams submit their performance metrics</p>
-                          </div>
+                {/* Performance Chart */}
+                <div className="xl:col-span-5">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300">Performance</h3>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6"
+                      onClick={() => setIsPerformanceChartModalOpen(true)}
+                      data-testid="button-expand-performance-chart"
+                    >
+                      <HelpCircle className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                    </Button>
+                  </div>
+                  <div className="h-[260px]">
+                    {(!outerPerformanceChartData || outerPerformanceChartData.length === 0) ? (
+                      <div className="flex items-center justify-center w-full h-full bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
+                        <div className="text-center">
+                          <p className="text-gray-600 dark:text-gray-400 text-sm">No performance data available</p>
+                          <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">Data will appear once teams submit their performance metrics</p>
                         </div>
-                      ) : (
+                      </div>
+                    ) : (
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={outerPerformanceChartData}>
                           <defs>
                             <linearGradient id="colorDeliveredOuter" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
-                              <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
+                              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8} />
+                              <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1} />
                             </linearGradient>
                             <linearGradient id="colorRequiredOuter" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
-                              <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
+                              <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8} />
+                              <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1} />
                             </linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" />
@@ -4901,20 +4897,20 @@ export default function AdminDashboard() {
                           <YAxis />
                           <Tooltip />
                           <Legend />
-                          <Area 
-                            type="monotone" 
-                            dataKey="delivered" 
-                            stroke="#ef4444" 
-                            strokeWidth={2} 
+                          <Area
+                            type="monotone"
+                            dataKey="delivered"
+                            stroke="#ef4444"
+                            strokeWidth={2}
                             fill="url(#colorDeliveredOuter)"
                             dot={{ fill: '#ef4444', r: 4 }}
                             name="Delivered"
                           />
-                          <Area 
-                            type="monotone" 
-                            dataKey="required" 
-                            stroke="#22c55e" 
-                            strokeWidth={2} 
+                          <Area
+                            type="monotone"
+                            dataKey="required"
+                            stroke="#22c55e"
+                            strokeWidth={2}
                             fill="url(#colorRequiredOuter)"
                             fillOpacity={0.6}
                             dot={{ fill: '#22c55e', r: 4 }}
@@ -4922,64 +4918,64 @@ export default function AdminDashboard() {
                           />
                         </AreaChart>
                       </ResponsiveContainer>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Revenue Analysis Chart */}
-                  <div className="xl:col-span-4">
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300">Revenue Analysis</h3>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-6 w-6"
-                        onClick={() => setIsRevenueGraphModalOpen(true)}
-                        data-testid="button-expand-revenue-graph"
-                      >
-                        <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                      </Button>
-                    </div>
-                    <div className="flex justify-start space-x-4 mb-2">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Team Revenue</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-4 h-0.5 bg-green-500"></div>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Avg (₹230K)</span>
-                      </div>
-                    </div>
-                    <div className="h-[200px]">
-                      <RevenueChart
-                        data={revenueData}
-                        height="100%"
-                        benchmarkValue={230000}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Performance Gauge */}
-                  <div className="xl:col-span-3 flex flex-col items-center justify-center">
-                    <div className="w-full max-w-sm mx-auto">
-                      <PerformanceGauge value={performanceMetrics.performancePercentage} />
-                    </div>
-                    
-                    <Button 
-                      className="bg-cyan-400 hover:bg-cyan-500 text-black mt-4 px-6 py-2 rounded"
-                      onClick={() => setIsPerformanceDataModalOpen(true)}
-                      data-testid="button-show-performance-data"
-                    >
-                      Show Data
-                    </Button>
+                    )}
                   </div>
                 </div>
+
+                {/* Revenue Analysis Chart */}
+                <div className="xl:col-span-4">
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300">Revenue Analysis</h3>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6"
+                      onClick={() => setIsRevenueGraphModalOpen(true)}
+                      data-testid="button-expand-revenue-graph"
+                    >
+                      <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                    </Button>
+                  </div>
+                  <div className="flex justify-start space-x-4 mb-2">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Team Revenue</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-0.5 bg-green-500"></div>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Avg (₹230K)</span>
+                    </div>
+                  </div>
+                  <div className="h-[200px]">
+                    <RevenueChart
+                      data={revenueData}
+                      height="100%"
+                      benchmarkValue={230000}
+                    />
+                  </div>
+                </div>
+
+                {/* Performance Gauge */}
+                <div className="xl:col-span-3 flex flex-col items-center justify-center">
+                  <div className="w-full max-w-sm mx-auto">
+                    <PerformanceGauge value={performanceMetrics.performancePercentage} />
+                  </div>
+
+                  <Button
+                    className="bg-cyan-400 hover:bg-cyan-500 text-black mt-4 px-6 py-2 rounded"
+                    onClick={() => setIsPerformanceDataModalOpen(true)}
+                    data-testid="button-show-performance-data"
+                  >
+                    Show Data
+                  </Button>
+                </div>
+              </div>
 
               {/* Team Performance Table */}
               <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
                 <CardHeader className="pb-2 pt-3 flex flex-row flex-wrap items-center justify-between gap-2">
                   <CardTitle className="text-lg text-gray-900 dark:text-white">Team Performance</CardTitle>
-                  <Button 
+                  <Button
                     className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded"
                     onClick={() => setIsTeamPerformanceTableModalOpen(true)}
                     data-testid="button-view-team-performance-table"
@@ -5035,7 +5031,7 @@ export default function AdminDashboard() {
               <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
                 <CardHeader className="pb-2 pt-3 flex flex-row flex-wrap items-center justify-between gap-2">
                   <CardTitle className="text-lg text-gray-900 dark:text-white">Revenue Data</CardTitle>
-                  <Button 
+                  <Button
                     className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded"
                     onClick={() => {
                       setEditingRevenueMapping(null);
@@ -5084,11 +5080,10 @@ export default function AdminDashboard() {
                                 {mapping.revenue ? `₹${Number(mapping.revenue).toLocaleString('en-IN')}` : 'N/A'}
                               </td>
                               <td className="py-3 px-4">
-                                <span className={`px-2 py-1 text-xs rounded ${
-                                  mapping.receivedPayment 
-                                    ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
-                                    : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
-                                }`}>
+                                <span className={`px-2 py-1 text-xs rounded ${mapping.receivedPayment
+                                  ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                                  : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
+                                  }`}>
                                   {mapping.receivedPayment ? 'Received' : 'Pending'}
                                 </span>
                               </td>
@@ -5195,47 +5190,95 @@ export default function AdminDashboard() {
             </div>
           </div>
         );
-      case 'user-management':
-        const formatLastLogin = (lastLoginAt: string | null | undefined) => {
-          if (!lastLoginAt) return 'N/A';
-          try {
-            const date = new Date(lastLoginAt);
-            const now = new Date();
-            const diffMs = now.getTime() - date.getTime();
-            const diffMins = Math.floor(diffMs / 60000);
-            const diffHours = Math.floor(diffMs / 3600000);
-            const diffDays = Math.floor(diffMs / 86400000);
+      default:
+        return renderTeamSection();
+    }
+  };
 
-            if (diffMins < 1) return 'Just now';
-            if (diffMins < 60) return `${diffMins}m ago`;
-            if (diffHours < 24) return `${diffHours}h ago`;
-            if (diffDays < 7) return `${diffDays}d ago`;
-            
-            return date.toLocaleDateString('en-GB', {
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            });
-          } catch {
-            return 'N/A';
-          }
-        };
+  // User Management Content Function
+  const renderUserManagementContent = () => {
+    const formatLastLogin = (lastLoginAt: string | null | undefined) => {
+      if (!lastLoginAt) return 'N/A';
+      try {
+        const date = new Date(lastLoginAt);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
 
-        const getRoleDisplayName = (role: string) => {
-          if (role === 'team_leader') return 'Team Leader';
-          if (role === 'recruiter') return 'Talent Advisor';
-          if (role === 'client') return 'Client';
-          return role;
-        };
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays < 7) return `${diffDays}d ago`;
 
-        return (
-          <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
-            {/* User Management Header */}
-            <div className="mb-6" style={{ display: 'block' }}>
+        return date.toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      } catch {
+        return 'N/A';
+      }
+    };
+
+    const getRoleDisplayName = (role: string) => {
+      if (role === 'team_leader') return 'Team Leader';
+      if (role === 'recruiter') return 'Talent Advisor';
+      if (role === 'client') return 'Client';
+      return role;
+    };
+
+    return (
+      <div className="flex h-full overflow-hidden">
+        {/* Main Content Area - Scrollable */}
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+          <div className="px-6 py-6 space-y-6 overflow-y-auto admin-scrollbar" style={{ height: 'calc(100vh - 4rem)' }}>
+            {/* User Management Header - Add User Button at top left */}
+            <div className="flex items-center justify-between mb-6">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 h-10 text-sm whitespace-nowrap"
+                    data-testid="button-add-user"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add User
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuItem
+                    onClick={() => setIsAddClientCredentialsModalOpen(true)}
+                    className="cursor-pointer"
+                    data-testid="button-add-client-user-expanded"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add Client User
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setIsAddTeamLeaderModalNewOpen(true)}
+                    className="cursor-pointer"
+                    data-testid="button-add-team-leader-expanded"
+                  >
+                    <Users className="h-4 w-4 mr-2" />
+                    Add Team Leader
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setIsAddTalentAdvisorModalOpen(true)}
+                    className="cursor-pointer"
+                    data-testid="button-add-talent-advisor-expanded"
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add Talent Advisor
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               {/* Search Bar */}
-              <div className="w-full relative mb-4" style={{ display: 'block' }}>
+              <div className="w-full max-w-md relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
                 <Input
                   type="text"
@@ -5245,89 +5288,43 @@ export default function AdminDashboard() {
                   className="pl-10 bg-white dark:bg-gray-800"
                 />
               </div>
-              
-              {/* Add User Button with Dropdown Menu */}
-              <div style={{ display: 'block' }}>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button 
-                      size="sm"
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 h-8 text-sm whitespace-nowrap"
-                      data-testid="button-add-user"
-                    >
-                      <UserPlus className="h-4 w-4 mr-1" />
-                      Add User
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem
-                      onClick={() => setIsAddClientCredentialsModalOpen(true)}
-                      className="cursor-pointer"
-                      data-testid="button-add-client-user-expanded"
-                    >
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Add Client User
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => setIsAddTeamLeaderModalNewOpen(true)}
-                      className="cursor-pointer"
-                      data-testid="button-add-team-leader-expanded"
-                    >
-                      <Users className="h-4 w-4 mr-2" />
-                      Add Team Leader
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => setIsAddTalentAdvisorModalOpen(true)}
-                      className="cursor-pointer"
-                      data-testid="button-add-talent-advisor-expanded"
-                    >
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Add Talent Advisor
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
             </div>
 
             {/* Tabs Navigation */}
             <div className="flex space-x-1 border-b border-gray-200 dark:border-gray-700">
               <button
                 onClick={() => setUserManagementTab('all')}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  userManagementTab === 'all'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${userManagementTab === 'all'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
               >
                 All
               </button>
               <button
                 onClick={() => setUserManagementTab('clients')}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  userManagementTab === 'clients'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${userManagementTab === 'clients'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
               >
                 Clients
               </button>
               <button
                 onClick={() => setUserManagementTab('team_leaders')}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  userManagementTab === 'team_leaders'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${userManagementTab === 'team_leaders'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
               >
                 Team Leaders
               </button>
               <button
                 onClick={() => setUserManagementTab('talent_advisors')}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  userManagementTab === 'talent_advisors'
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                }`}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${userManagementTab === 'talent_advisors'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
               >
                 Talent Advisors
               </button>
@@ -5369,11 +5366,10 @@ export default function AdminDashboard() {
                               {(() => {
                                 const isLoggedIn = activeEmployeeIds.has(emp.id);
                                 return (
-                                  <span className={`px-2 py-1 rounded text-xs ${
-                                    isLoggedIn 
-                                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' 
-                                      : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                                  }`}>
+                                  <span className={`px-2 py-1 rounded text-xs ${isLoggedIn
+                                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                    : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                                    }`}>
                                     {isLoggedIn ? 'Active' : 'In-Active'}
                                   </span>
                                 );
@@ -5394,7 +5390,7 @@ export default function AdminDashboard() {
                                     <Edit2 className="mr-2 h-4 w-4" />
                                     Edit
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem 
+                                  <DropdownMenuItem
                                     onClick={() => {
                                       setUserToDelete({ id: emp.id, name: emp.name });
                                       setIsPasswordDialogOpen(true);
@@ -5415,42 +5411,47 @@ export default function AdminDashboard() {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Online Activity Section */}
-            <div className="grid grid-cols-2 gap-6 max-w-md">
-              <Card className="bg-yellow-50 dark:bg-yellow-900/20 text-center">
-                <CardContent className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Online Activity</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Online</div>
-                      <div className="text-4xl font-bold text-gray-900 dark:text-white">{onlineCount}</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-yellow-50 dark:bg-yellow-900/20 text-center">
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    <div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Offline</div>
-                      <div className="text-4xl font-bold text-gray-900 dark:text-white">{userManagementEmployees.length - onlineCount}</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </div>
-        );
-      default:
-        return renderTeamSection();
-    }
+        </div>
+
+        {/* Right Side - Online Activities (Fixed Width, Non-scrollable) */}
+        <div className="w-80 bg-gray-50 dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 px-4 py-6 flex flex-col space-y-3 flex-shrink-0 overflow-hidden">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-2">Online Activities</h3>
+
+          {/* Online Card */}
+          <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+            <CardContent className="p-4 text-center">
+              <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">Online</div>
+              <div className="text-3xl font-bold text-gray-900 dark:text-white">{onlineCount}</div>
+            </CardContent>
+          </Card>
+
+          {/* Offline Card */}
+          <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800">
+            <CardContent className="p-4 text-center">
+              <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">Offline</div>
+              <div className="text-3xl font-bold text-gray-900 dark:text-white">{userManagementEmployees.length - onlineCount}</div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
   };
+
+  // Reset activeTab when switching between sidebar tabs
+  useEffect(() => {
+    // When switching to dashboard, ensure activeTab is reset to 'team' (default dashboard tab)
+    if (sidebarTab === 'dashboard') {
+      if (activeTab === 'user-management') {
+        setActiveTab('team');
+      }
+    }
+  }, [sidebarTab]);
 
   const renderSidebarContent = () => {
     switch (sidebarTab) {
       case 'dashboard':
+        // Dashboard shows the Team section with tabs (team, requirements, pipeline, etc.)
         return (
           <div className="flex flex-col h-full">
             <div className="flex-1 overflow-y-auto admin-scrollbar">
@@ -5458,6 +5459,9 @@ export default function AdminDashboard() {
             </div>
           </div>
         );
+      case 'user-management':
+        // User Management is a separate section - render it directly
+        return renderUserManagementContent();
       case 'requirements':
         return (
           <div className="px-6 py-6 space-y-6 h-full overflow-y-auto admin-scrollbar">
@@ -5531,7 +5535,7 @@ export default function AdminDashboard() {
                               variant="outline"
                               size="sm"
                               onClick={() => {
-                                setSelectedJD({...jd.requirement, clientId: jd.clientId, spocName: jd.spocName});
+                                setSelectedJD({ ...jd.requirement, clientId: jd.clientId, spocName: jd.spocName });
                                 setIsJDPreviewModalOpen(true);
                               }}
                               className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 hover:border-blue-300"
@@ -5560,11 +5564,11 @@ export default function AdminDashboard() {
                 </table>
               </div>
             </div>
-            
+
             <div className="flex gap-6 h-full">
               {/* Middle Section - Requirements Table */}
               <div className="flex-1 overflow-y-auto admin-scrollbar">
-                
+
                 <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
                   {/* Table Header with Search and Add Button */}
                   <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 gap-4">
@@ -5576,7 +5580,7 @@ export default function AdminDashboard() {
                         placeholder="Search requirements..."
                         testId="input-search-requirements"
                       />
-                      <Button 
+                      <Button
                         className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded text-sm whitespace-nowrap"
                         onClick={() => {
                           setInitialRequirementData(null);
@@ -5678,16 +5682,16 @@ export default function AdminDashboard() {
                       </tbody>
                     </table>
                   </div>
-                  
+
                   <div className="flex justify-center gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="px-6 py-2 rounded bg-red-100 hover:bg-red-200 text-red-800 border-red-200"
                       onClick={handleArchivesClick}
                     >
                       Archives
                     </Button>
-                    <Button 
+                    <Button
                       className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
                       onClick={handleRequirementsViewMore}
                       disabled={requirements.length <= 10}
@@ -5702,7 +5706,7 @@ export default function AdminDashboard() {
               <div className="w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 px-6 py-6">
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Priority Distribution</h3>
-                  
+
                   <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                     <CardContent className="p-4">
                       <div className="space-y-3">
@@ -5726,7 +5730,7 @@ export default function AdminDashboard() {
                             </div>
                           </div>
                         </div>
-                        
+
                         {/* MED Priority Group */}
                         <div className="space-y-1">
                           <div className="flex items-center justify-between bg-yellow-50 dark:bg-yellow-900/20 px-3 py-2 rounded">
@@ -5747,7 +5751,7 @@ export default function AdminDashboard() {
                             </div>
                           </div>
                         </div>
-                        
+
                         {/* LOW Priority Group */}
                         <div className="space-y-1">
                           <div className="flex items-center justify-between bg-green-50 dark:bg-green-900/20 px-3 py-2 rounded">
@@ -5829,7 +5833,7 @@ export default function AdminDashboard() {
                             <td className="p-3 align-top">
                               <div className="space-y-2">
                                 {getPipelineCandidatesByStage.level1.map((candidate: any, index: number) => (
-                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{backgroundColor: '#E6F4EA'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
+                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{ backgroundColor: '#E6F4EA' }} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
                                     {candidate.candidateName}
                                   </div>
                                 ))}
@@ -5841,7 +5845,7 @@ export default function AdminDashboard() {
                             <td className="p-3 align-top">
                               <div className="space-y-2">
                                 {getPipelineCandidatesByStage.level2.map((candidate: any, index: number) => (
-                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{backgroundColor: '#D9F0E1'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
+                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{ backgroundColor: '#D9F0E1' }} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
                                     {candidate.candidateName}
                                   </div>
                                 ))}
@@ -5853,7 +5857,7 @@ export default function AdminDashboard() {
                             <td className="p-3 align-top">
                               <div className="space-y-2">
                                 {getPipelineCandidatesByStage.level3.map((candidate: any, index: number) => (
-                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{backgroundColor: '#C2EED0'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
+                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{ backgroundColor: '#C2EED0' }} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
                                     {candidate.candidateName}
                                   </div>
                                 ))}
@@ -5865,7 +5869,7 @@ export default function AdminDashboard() {
                             <td className="p-3 align-top">
                               <div className="space-y-2">
                                 {getPipelineCandidatesByStage.finalRound.map((candidate: any, index: number) => (
-                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{backgroundColor: '#B5E1C1'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
+                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{ backgroundColor: '#B5E1C1' }} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
                                     {candidate.candidateName}
                                   </div>
                                 ))}
@@ -5877,7 +5881,7 @@ export default function AdminDashboard() {
                             <td className="p-3 align-top">
                               <div className="space-y-2">
                                 {getPipelineCandidatesByStage.hrRound.map((candidate: any, index: number) => (
-                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-white text-center cursor-default" style={{backgroundColor: '#99D9AE'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
+                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-white text-center cursor-default" style={{ backgroundColor: '#99D9AE' }} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
                                     {candidate.candidateName}
                                   </div>
                                 ))}
@@ -5889,7 +5893,7 @@ export default function AdminDashboard() {
                             <td className="p-3 align-top">
                               <div className="space-y-2">
                                 {getPipelineCandidatesByStage.offerStage.map((candidate: any, index: number) => (
-                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-white text-center cursor-default" style={{backgroundColor: '#7CCBA0'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
+                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-white text-center cursor-default" style={{ backgroundColor: '#7CCBA0' }} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
                                     {candidate.candidateName}
                                   </div>
                                 ))}
@@ -5901,7 +5905,7 @@ export default function AdminDashboard() {
                             <td className="p-3 align-top">
                               <div className="space-y-2">
                                 {getPipelineCandidatesByStage.closure.map((candidate: any, index: number) => (
-                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-white text-center cursor-default" style={{backgroundColor: '#2F6F52'}} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
+                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-white text-center cursor-default" style={{ backgroundColor: '#2F6F52' }} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
                                     {candidate.candidateName}
                                   </div>
                                 ))}
@@ -5945,8 +5949,8 @@ export default function AdminDashboard() {
                             </tr>
                           ) : (
                             getPipelineCandidatesByStage.closure.slice(0, 5).map((candidate: any, index: number) => (
-                              <tr 
-                                key={candidate.id || index} 
+                              <tr
+                                key={candidate.id || index}
                                 className={`border-b border-gray-200 dark:border-gray-700 ${index % 2 === 1 ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}
                               >
                                 <td className="p-3 text-gray-900 dark:text-white">{candidate.candidateName}</td>
@@ -5968,7 +5972,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
                       <div className="flex justify-end">
-                        <Button 
+                        <Button
                           className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
                           onClick={() => setIsClosureReportsModalOpen(true)}
                           data-testid="button-see-more-closure-admin"
@@ -6047,7 +6051,7 @@ export default function AdminDashboard() {
                 <CardHeader className="flex flex-col items-start gap-4">
                   {/* Top buttons row */}
                   <div className="flex gap-2 w-full">
-                    <Button 
+                    <Button
                       className="btn-rounded bg-purple-600 hover:bg-purple-700 text-white text-sm px-4 py-2 rounded"
                       onClick={() => {
                         sessionStorage.setItem('adminDashboardSidebarTab', sidebarTab);
@@ -6057,14 +6061,14 @@ export default function AdminDashboard() {
                     >
                       View Full Database
                     </Button>
-                    <Button 
+                    <Button
                       className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded"
                       onClick={() => setIsClientModalOpen(true)}
                       data-testid="button-add-new-client"
                     >
                       + Add New Client
                     </Button>
-                    <Button 
+                    <Button
                       className="btn-rounded bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 rounded"
                       onClick={() => setIsEmployeeModalOpen(true)}
                       data-testid="button-add-employee"
@@ -6075,7 +6079,7 @@ export default function AdminDashboard() {
                   {/* Title and View More row */}
                   <div className="flex flex-row items-center justify-between w-full">
                     <CardTitle className="text-lg text-gray-900 dark:text-white">Resume Database</CardTitle>
-                    <Button 
+                    <Button
                       className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded text-sm"
                       onClick={() => {
                         sessionStorage.setItem('adminDashboardSidebarTab', sidebarTab);
@@ -6130,7 +6134,7 @@ export default function AdminDashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="text-lg text-gray-900 dark:text-white">Employees Master</CardTitle>
-                  <Button 
+                  <Button
                     className="btn-rounded bg-cyan-400 hover:bg-cyan-500 text-slate-900 text-sm px-4"
                     onClick={() => {
                       sessionStorage.setItem('adminDashboardSidebarTab', sidebarTab);
@@ -6185,7 +6189,7 @@ export default function AdminDashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="text-lg text-gray-900 dark:text-white">Client Master</CardTitle>
-                  <Button 
+                  <Button
                     className="btn-rounded bg-cyan-400 hover:bg-cyan-500 text-slate-900 text-sm px-4"
                     onClick={() => {
                       sessionStorage.setItem('adminDashboardSidebarTab', sidebarTab);
@@ -6220,9 +6224,9 @@ export default function AdminDashboard() {
                           </tr>
                         ) : (
                           masterDataClients.slice(0, 5).map((row: any, index: number) => {
-                            const statusClass = row.currentStatus === 'active' ? 'bg-green-100 text-green-800' : 
-                                              row.currentStatus === 'frozen' ? 'bg-orange-100 text-orange-800' : 
-                                              'bg-red-100 text-red-800';
+                            const statusClass = row.currentStatus === 'active' ? 'bg-green-100 text-green-800' :
+                              row.currentStatus === 'frozen' ? 'bg-orange-100 text-orange-800' :
+                                'bg-red-100 text-red-800';
                             return (
                               <tr key={row.id || index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
                                 <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{row.clientCode}</td>
@@ -6247,43 +6251,43 @@ export default function AdminDashboard() {
             {/* Statistics Panel */}
             <div className="w-80 bg-blue-50 dark:bg-blue-900/20 border-l border-gray-200 dark:border-gray-700 px-6 pb-6 space-y-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Totals</h3>
-              
+
               <div className="space-y-4">
                 <div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">DIRECT UPLOADS</div>
                   <div className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-direct-uploads">{masterTotals.directUploads.toLocaleString()}</div>
                 </div>
-                
+
                 <div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">RECRUITER UPLOADS</div>
                   <div className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-recruiter-uploads">{masterTotals.recruiterUploads.toLocaleString()}</div>
                 </div>
-                
+
                 <div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">RESUMES</div>
                   <div className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-resumes">{masterTotals.resumes.toLocaleString()}</div>
                 </div>
-                
+
                 <div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">HEAD COUNT</div>
                   <div className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-head-count">{masterTotals.headCount.toLocaleString()}</div>
                 </div>
-                
+
                 <div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">SALARY PAID</div>
                   <div className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-salary-paid">{masterTotals.salaryPaid.toLocaleString()}</div>
                 </div>
-                
+
                 <div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">OTHER EXPENSES</div>
                   <div className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-other-expenses">{masterTotals.otherExpenses.toLocaleString()}</div>
                 </div>
-                
+
                 <div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">TOOLS & DATABASES</div>
                   <div className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-tools-databases">{masterTotals.toolsAndDatabases.toLocaleString()}</div>
                 </div>
-                
+
                 <div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">RENT PAID</div>
                   <div className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="text-rent-paid">{masterTotals.rentPaid.toLocaleString()}</div>
@@ -6301,13 +6305,13 @@ export default function AdminDashboard() {
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Performance</h2>
                 <div className="flex gap-2">
-                  <Button 
+                  <Button
                     className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm"
                     onClick={() => setIsTargetMappingModalOpen(true)}
                   >
                     Target Mapping
                   </Button>
-                  <Button 
+                  <Button
                     className="bg-purple-800 hover:bg-purple-900 text-white px-4 py-2 rounded text-sm"
                     onClick={() => setIsRevenueMappingModalOpen(true)}
                   >
@@ -6320,308 +6324,307 @@ export default function AdminDashboard() {
               <div className="flex gap-6">
                 {/* Left Section with Chart */}
                 <div className="flex-1">
-                {/* Filter Dropdowns */}
-                <div className="flex gap-4 mb-4">
-                  <Select value={selectedPerformanceTeam} onValueChange={setSelectedPerformanceTeam} data-testid="select-performance-team">
-                    <SelectTrigger className="w-48 bg-cyan-400 text-black">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All</SelectItem>
-                      {monthlyPerformanceData?.teams?.map((team) => (
-                        <SelectItem key={team} value={team.toLowerCase()}>
-                          {team}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  
-                  <Select value={selectedPerformancePeriod} onValueChange={setSelectedPerformancePeriod}>
-                    <SelectTrigger className="w-32 bg-cyan-400 text-black">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monthly">Monthly</SelectItem>
-                      <SelectItem value="quarterly">Quarterly</SelectItem>
-                      <SelectItem value="yearly">Yearly</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                  {/* Filter Dropdowns */}
+                  <div className="flex gap-4 mb-4">
+                    <Select value={selectedPerformanceTeam} onValueChange={setSelectedPerformanceTeam} data-testid="select-performance-team">
+                      <SelectTrigger className="w-48 bg-cyan-400 text-black">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All</SelectItem>
+                        {monthlyPerformanceData?.teams?.map((team) => (
+                          <SelectItem key={team} value={team.toLowerCase()}>
+                            {team}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
 
-                {/* Chart Area - Grid Layout */}
-                <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 bg-white dark:bg-gray-900 px-6 pb-6">
-                  {/* Performance Chart */}
-                  <div className="xl:col-span-5">
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300">Performance</h3>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-6 w-6"
-                        onClick={() => setIsPerformanceChartModalOpen(true)}
-                        data-testid="button-expand-performance-chart-alt"
-                      >
-                        <HelpCircle className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                      </Button>
-                    </div>
-                    <div className="h-[260px]">
-                      {(!outerPerformanceChartData || outerPerformanceChartData.length === 0) ? (
-                        <div className="flex items-center justify-center w-full h-full bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
-                          <div className="text-center">
-                            <p className="text-gray-600 dark:text-gray-400 text-sm">No performance data available</p>
-                            <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">Data will appear once teams submit their performance metrics</p>
+                    <Select value={selectedPerformancePeriod} onValueChange={setSelectedPerformancePeriod}>
+                      <SelectTrigger className="w-32 bg-cyan-400 text-black">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="quarterly">Quarterly</SelectItem>
+                        <SelectItem value="yearly">Yearly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Chart Area - Grid Layout */}
+                  <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 bg-white dark:bg-gray-900 px-6 pb-6">
+                    {/* Performance Chart */}
+                    <div className="xl:col-span-5">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300">Performance</h3>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6"
+                          onClick={() => setIsPerformanceChartModalOpen(true)}
+                          data-testid="button-expand-performance-chart-alt"
+                        >
+                          <HelpCircle className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                        </Button>
+                      </div>
+                      <div className="h-[260px]">
+                        {(!outerPerformanceChartData || outerPerformanceChartData.length === 0) ? (
+                          <div className="flex items-center justify-center w-full h-full bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
+                            <div className="text-center">
+                              <p className="text-gray-600 dark:text-gray-400 text-sm">No performance data available</p>
+                              <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">Data will appear once teams submit their performance metrics</p>
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={outerPerformanceChartData}>
-                          <defs>
-                            <linearGradient id="colorDeliveredOuterAlt" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
-                              <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
-                            </linearGradient>
-                            <linearGradient id="colorRequiredOuterAlt" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
-                              <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="period" />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Area 
-                            type="monotone" 
-                            dataKey="delivered" 
-                            stroke="#ef4444" 
-                            strokeWidth={2} 
-                            fill="url(#colorDeliveredOuterAlt)"
-                            dot={{ fill: '#ef4444', r: 4 }}
-                            name="Delivered"
-                          />
-                          <Area 
-                            type="monotone" 
-                            dataKey="required" 
-                            stroke="#22c55e" 
-                            strokeWidth={2} 
-                            fill="url(#colorRequiredOuterAlt)"
-                            fillOpacity={0.6}
-                            dot={{ fill: '#22c55e', r: 4 }}
-                            name="Required"
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                      )}
+                        ) : (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={outerPerformanceChartData}>
+                              <defs>
+                                <linearGradient id="colorDeliveredOuterAlt" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8} />
+                                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1} />
+                                </linearGradient>
+                                <linearGradient id="colorRequiredOuterAlt" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8} />
+                                  <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1} />
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="period" />
+                              <YAxis />
+                              <Tooltip />
+                              <Legend />
+                              <Area
+                                type="monotone"
+                                dataKey="delivered"
+                                stroke="#ef4444"
+                                strokeWidth={2}
+                                fill="url(#colorDeliveredOuterAlt)"
+                                dot={{ fill: '#ef4444', r: 4 }}
+                                name="Delivered"
+                              />
+                              <Area
+                                type="monotone"
+                                dataKey="required"
+                                stroke="#22c55e"
+                                strokeWidth={2}
+                                fill="url(#colorRequiredOuterAlt)"
+                                fillOpacity={0.6}
+                                dot={{ fill: '#22c55e', r: 4 }}
+                                name="Required"
+                              />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Revenue Analysis Chart */}
-                  <div className="xl:col-span-4">
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300">Revenue Analysis</h3>
+                    {/* Revenue Analysis Chart */}
+                    <div className="xl:col-span-4">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-300">Revenue Analysis</h3>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6"
+                          onClick={() => setIsRevenueGraphModalOpen(true)}
+                          data-testid="button-expand-revenue-graph"
+                        >
+                          <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                        </Button>
+                      </div>
+                      <div className="flex justify-start space-x-4 mb-2">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Team Revenue</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-4 h-0.5 bg-green-500"></div>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Avg (₹230K)</span>
+                        </div>
+                      </div>
+                      <div className="h-[200px]">
+                        <RevenueChart
+                          data={revenueData}
+                          height="100%"
+                          benchmarkValue={230000}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Performance Gauge */}
+                    <div className="xl:col-span-3 flex flex-col items-center justify-center">
+                      <div className="w-full max-w-sm mx-auto">
+                        <PerformanceGauge value={performanceMetrics.performancePercentage} />
+                      </div>
+
                       <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-6 w-6"
-                        onClick={() => setIsRevenueGraphModalOpen(true)}
-                        data-testid="button-expand-revenue-graph"
+                        className="bg-cyan-400 hover:bg-cyan-500 text-black mt-4 px-6 py-2 rounded"
+                        onClick={() => setIsPerformanceDataModalOpen(true)}
+                        data-testid="button-show-performance-data"
                       >
-                        <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                        Show Data
                       </Button>
                     </div>
-                    <div className="flex justify-start space-x-4 mb-2">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Team Revenue</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-4 h-0.5 bg-green-500"></div>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Avg (₹230K)</span>
-                      </div>
-                    </div>
-                    <div className="h-[200px]">
-                      <RevenueChart
-                        data={revenueData}
-                        height="100%"
-                        benchmarkValue={230000}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Performance Gauge */}
-                  <div className="xl:col-span-3 flex flex-col items-center justify-center">
-                    <div className="w-full max-w-sm mx-auto">
-                      <PerformanceGauge value={performanceMetrics.performancePercentage} />
-                    </div>
-                    
-                    <Button 
-                      className="bg-cyan-400 hover:bg-cyan-500 text-black mt-4 px-6 py-2 rounded"
-                      onClick={() => setIsPerformanceDataModalOpen(true)}
-                      data-testid="button-show-performance-data"
-                    >
-                      Show Data
-                    </Button>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Team Performance Table */}
-            <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
-              <CardHeader className="pb-2 pt-3 flex flex-row flex-wrap items-center justify-between gap-2">
-                <CardTitle className="text-lg text-gray-900 dark:text-white">Team Performance</CardTitle>
-                <Button 
-                  className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded"
-                  onClick={() => setIsTeamPerformanceTableModalOpen(true)}
-                  data-testid="button-view-team-performance-table-alt"
-                >
-                  View List
-                </Button>
-              </CardHeader>
-              <CardContent className="p-3">
-                <div className="overflow-x-auto admin-scrollbar">
-                  <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
-                    <thead>
-                      <tr className="bg-gray-200 dark:bg-gray-700">
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Talent Advisor</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Joining Date</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Tenure</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Closures</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Last Closure</th>
-                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Qtrs Achieved</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {teamPerformanceData.length === 0 ? (
-                        <tr>
-                          <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                            No team performance data available
-                          </td>
-                        </tr>
-                      ) : (
-                        teamPerformanceData.slice(0, 4).map((member, index) => (
-                          <tr key={member.id || index} className="border-b border-gray-100 dark:border-gray-700">
-                            <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{member.talentAdvisor}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{member.joiningDate}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{member.tenure}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{member.closures}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{member.lastClosure}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{member.qtrsAchieved}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Revenue Data Table */}
-            <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
-              <CardHeader className="pb-2 pt-3 flex flex-row flex-wrap items-center justify-between gap-2">
-                <CardTitle className="text-lg text-gray-900 dark:text-white">Revenue Data</CardTitle>
-                <Button 
-                  className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded font-medium text-sm"
-                  onClick={() => setIsClosureModalOpen(true)}
-                  data-testid="button-view-more-revenue"
-                >
-                  View More
-                </Button>
-              </CardHeader>
-              <CardContent className="p-3">
-                <div className="overflow-x-auto admin-scrollbar">
-                  {isLoadingRevenue ? (
-                    <div className="text-center py-8 text-gray-600 dark:text-gray-400">
-                      Loading revenue data...
-                    </div>
-                  ) : revenueMappings.length === 0 ? (
-                    <div className="text-center py-8 text-gray-600 dark:text-gray-400">
-                      No revenue data available
-                    </div>
-                  ) : (
+              {/* Team Performance Table */}
+              <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
+                <CardHeader className="pb-2 pt-3 flex flex-row flex-wrap items-center justify-between gap-2">
+                  <CardTitle className="text-lg text-gray-900 dark:text-white">Team Performance</CardTitle>
+                  <Button
+                    className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded"
+                    onClick={() => setIsTeamPerformanceTableModalOpen(true)}
+                    data-testid="button-view-team-performance-table-alt"
+                  >
+                    View List
+                  </Button>
+                </CardHeader>
+                <CardContent className="p-3">
+                  <div className="overflow-x-auto admin-scrollbar">
                     <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
                       <thead>
                         <tr className="bg-gray-200 dark:bg-gray-700">
                           <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Talent Advisor</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Team Lead</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Position</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Client</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Quarter</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Year</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Revenue</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Payment Status</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Joining Date</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Tenure</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Closures</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Last Closure</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Qtrs Achieved</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {revenueMappings.map((mapping: any) => (
-                          <tr key={mapping.id} className="border-b border-gray-100 dark:border-gray-700" data-testid={`row-revenue-2-${mapping.id}`}>
-                            <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{mapping.talentAdvisorName || 'N/A'}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{mapping.teamLeadName || 'N/A'}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{mapping.position || 'N/A'}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{mapping.clientName || 'N/A'}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{mapping.quarter || 'N/A'}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{mapping.year || 'N/A'}</td>
-                            <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
-                              {mapping.revenue ? `₹${Number(mapping.revenue).toLocaleString('en-IN')}` : 'N/A'}
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className={`px-2 py-1 text-xs rounded ${
-                                mapping.receivedPayment 
-                                  ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' 
-                                  : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
-                              }`}>
-                                {mapping.receivedPayment ? 'Received' : 'Pending'}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={(e) => e.stopPropagation()}
-                                    data-testid={`button-actions-revenue-2-${mapping.id}`}
-                                  >
-                                    <MoreVertical className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setEditingRevenueMapping(mapping);
-                                      setIsRevenueMappingModalOpen(true);
-                                    }}
-                                    className="cursor-pointer"
-                                    data-testid={`button-edit-revenue-2-${mapping.id}`}
-                                  >
-                                    <EditIcon className="mr-2 h-4 w-4" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteRevenueMapping(mapping.id, `${mapping.talentAdvisorName || 'N/A'} - ${mapping.position || 'N/A'}`);
-                                    }}
-                                    className="cursor-pointer text-red-600 focus:text-red-600"
-                                    data-testid={`button-delete-revenue-2-${mapping.id}`}
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                        {teamPerformanceData.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                              No team performance data available
                             </td>
                           </tr>
-                        ))}
+                        ) : (
+                          teamPerformanceData.slice(0, 4).map((member, index) => (
+                            <tr key={member.id || index} className="border-b border-gray-100 dark:border-gray-700">
+                              <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{member.talentAdvisor}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{member.joiningDate}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{member.tenure}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{member.closures}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{member.lastClosure}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{member.qtrsAchieved}</td>
+                            </tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Revenue Data Table */}
+              <Card className="bg-gray-50 dark:bg-gray-800 mt-6">
+                <CardHeader className="pb-2 pt-3 flex flex-row flex-wrap items-center justify-between gap-2">
+                  <CardTitle className="text-lg text-gray-900 dark:text-white">Revenue Data</CardTitle>
+                  <Button
+                    className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded font-medium text-sm"
+                    onClick={() => setIsClosureModalOpen(true)}
+                    data-testid="button-view-more-revenue"
+                  >
+                    View More
+                  </Button>
+                </CardHeader>
+                <CardContent className="p-3">
+                  <div className="overflow-x-auto admin-scrollbar">
+                    {isLoadingRevenue ? (
+                      <div className="text-center py-8 text-gray-600 dark:text-gray-400">
+                        Loading revenue data...
+                      </div>
+                    ) : revenueMappings.length === 0 ? (
+                      <div className="text-center py-8 text-gray-600 dark:text-gray-400">
+                        No revenue data available
+                      </div>
+                    ) : (
+                      <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
+                        <thead>
+                          <tr className="bg-gray-200 dark:bg-gray-700">
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Talent Advisor</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Team Lead</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Position</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Client</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Quarter</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Year</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Revenue</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Payment Status</th>
+                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {revenueMappings.map((mapping: any) => (
+                            <tr key={mapping.id} className="border-b border-gray-100 dark:border-gray-700" data-testid={`row-revenue-2-${mapping.id}`}>
+                              <td className="py-3 px-4 text-gray-900 dark:text-white font-medium">{mapping.talentAdvisorName || 'N/A'}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{mapping.teamLeadName || 'N/A'}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{mapping.position || 'N/A'}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{mapping.clientName || 'N/A'}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{mapping.quarter || 'N/A'}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{mapping.year || 'N/A'}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
+                                {mapping.revenue ? `₹${Number(mapping.revenue).toLocaleString('en-IN')}` : 'N/A'}
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className={`px-2 py-1 text-xs rounded ${mapping.receivedPayment
+                                  ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                                  : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
+                                  }`}>
+                                  {mapping.receivedPayment ? 'Received' : 'Pending'}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={(e) => e.stopPropagation()}
+                                      data-testid={`button-actions-revenue-2-${mapping.id}`}
+                                    >
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingRevenueMapping(mapping);
+                                        setIsRevenueMappingModalOpen(true);
+                                      }}
+                                      className="cursor-pointer"
+                                      data-testid={`button-edit-revenue-2-${mapping.id}`}
+                                    >
+                                      <EditIcon className="mr-2 h-4 w-4" />
+                                      Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteRevenueMapping(mapping.id, `${mapping.talentAdvisorName || 'N/A'} - ${mapping.position || 'N/A'}`);
+                                      }}
+                                      className="cursor-pointer text-red-600 focus:text-red-600"
+                                      data-testid={`button-delete-revenue-2-${mapping.id}`}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
             {/* Right Sidebar - Quarterly/Yearly Metrics */}
@@ -6748,7 +6751,7 @@ export default function AdminDashboard() {
                   </div>
 
                   <div className="pt-2">
-                    <Button 
+                    <Button
                       className="bg-cyan-400 hover:bg-cyan-500 text-black w-full h-8 text-sm"
                       onClick={() => handleDownloadClick('teams')}
                       data-testid="button-download-teams"
@@ -6758,7 +6761,7 @@ export default function AdminDashboard() {
                   </div>
                 </CardContent>
               </Card>
-              
+
               {/* Reports Section */}
               <Card className="flex flex-col min-h-0">
                 <CardHeader className="pb-3 flex-shrink-0">
@@ -6769,7 +6772,7 @@ export default function AdminDashboard() {
                     <label className="text-xs font-medium text-gray-700 dark:text-gray-300 block mb-2">Select Reports</label>
                     <div className="grid grid-cols-2 gap-2">
                       <label className="flex items-center space-x-1 cursor-pointer" data-testid="checkbox-requirements">
-                        <Checkbox 
+                        <Checkbox
                           checked={reportsCheckboxes.requirements}
                           onCheckedChange={() => toggleReportCheckbox('requirements')}
                         />
@@ -6778,7 +6781,7 @@ export default function AdminDashboard() {
                         </span>
                       </label>
                       <label className="flex items-center space-x-1 cursor-pointer" data-testid="checkbox-pipeline">
-                        <Checkbox 
+                        <Checkbox
                           checked={reportsCheckboxes.pipeline}
                           onCheckedChange={() => toggleReportCheckbox('pipeline')}
                         />
@@ -6787,7 +6790,7 @@ export default function AdminDashboard() {
                         </span>
                       </label>
                       <label className="flex items-center space-x-1 cursor-pointer" data-testid="checkbox-closure-reports">
-                        <Checkbox 
+                        <Checkbox
                           checked={reportsCheckboxes.closureReports}
                           onCheckedChange={() => toggleReportCheckbox('closureReports')}
                         />
@@ -6796,7 +6799,7 @@ export default function AdminDashboard() {
                         </span>
                       </label>
                       <label className="flex items-center space-x-1 cursor-pointer" data-testid="checkbox-team-performance">
-                        <Checkbox 
+                        <Checkbox
                           checked={reportsCheckboxes.teamPerformance}
                           onCheckedChange={() => toggleReportCheckbox('teamPerformance')}
                         />
@@ -6823,7 +6826,7 @@ export default function AdminDashboard() {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Priority</label>
                     <Select value={reportsPriority} onValueChange={setReportsPriority}>
@@ -6838,7 +6841,7 @@ export default function AdminDashboard() {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Type</label>
                     <Select value={reportsType} onValueChange={setReportsType}>
@@ -6869,7 +6872,7 @@ export default function AdminDashboard() {
                   </div>
 
                   <div className="pt-2">
-                    <Button 
+                    <Button
                       className="bg-cyan-400 hover:bg-cyan-500 text-black w-full h-8 text-sm"
                       onClick={() => handleDownloadClick('reports')}
                       data-testid="button-download-reports"
@@ -6879,7 +6882,7 @@ export default function AdminDashboard() {
                   </div>
                 </CardContent>
               </Card>
-              
+
               {/* General Section */}
               <Card className="flex flex-col min-h-0">
                 <CardHeader className="pb-3 flex-shrink-0">
@@ -6914,7 +6917,7 @@ export default function AdminDashboard() {
                   </div>
 
                   <div className="pt-2">
-                    <Button 
+                    <Button
                       className="bg-cyan-400 hover:bg-cyan-500 text-black w-full h-8 text-sm"
                       onClick={() => handleDownloadClick('general')}
                       data-testid="button-download-general"
@@ -6932,387 +6935,387 @@ export default function AdminDashboard() {
           <div className="flex h-full gap-6 px-6 py-6">
             {/* Middle Section - Key Metrics and Cash Outflow - Scrollable */}
             <div className="flex-1 overflow-y-auto space-y-6 admin-scrollbar pr-4">
-                {/* Split Section - Key Metrics and Client Metrics */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
-                  {/* Key Metrics Section (Half Size) */}
-                  <Card>
-                    <CardHeader className="p-4 lg:p-6">
-                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-                        <CardTitle className="text-base lg:text-lg font-semibold text-gray-900 dark:text-white">Key Metrics</CardTitle>
-                        <div className="flex gap-2 flex-wrap">
-                          <Select>
-                            <SelectTrigger className="w-28 sm:w-32 input-styled rounded text-xs sm:text-sm" data-testid="select-key-metrics-client">
-                              <SelectValue placeholder="Client" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {clients.map((client: any) => (
-                                <SelectItem key={client.id} value={client.id}>
-                                  {client.brandName || client.incorporatedName || 'Unknown'}
-                                </SelectItem>
-                              ))}
-                              <SelectItem value="all">All Clients</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          
-                          <Select>
-                            <SelectTrigger className="w-28 sm:w-32 input-styled rounded text-xs sm:text-sm" data-testid="select-key-metrics-period">
-                              <SelectValue placeholder="Monthly" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="monthly">Monthly</SelectItem>
-                              <SelectItem value="quarterly">Quarterly</SelectItem>
-                              <SelectItem value="yearly">Yearly</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-4 lg:p-6">
-                      <div className="h-48 sm:h-64 mb-4">
-                        {!keyAspectsData.chartData || keyAspectsData.chartData.length === 0 ? (
-                          <div className="flex items-center justify-center w-full h-full bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
-                            <div className="text-center">
-                              <p className="text-gray-600 dark:text-gray-400 text-sm">No metrics data available</p>
-                              <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">Data will appear once metrics are recorded</p>
-                            </div>
-                          </div>
-                        ) : (
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart
-                              data={keyAspectsData.chartData}
-                              margin={{
-                                top: 5,
-                                right: 15,
-                                left: 10,
-                                bottom: 5,
-                              }}
-                            >
-                              <CartesianGrid strokeDasharray="3 3" />
-                              <XAxis dataKey="name" style={{ fontSize: '10px' }} />
-                              <YAxis style={{ fontSize: '10px' }} />
-                              <Tooltip />
-                              <Legend wrapperStyle={{ fontSize: '10px' }} />
-                              <Line type="monotone" dataKey="growthMoM" name="Growth MoM (%)" stroke="#82ca9d" strokeWidth={2} />
-                              <Line type="monotone" dataKey="burnRate" name="Burn Rate (%)" stroke="#ff7c7c" strokeWidth={2} />
-                              <Line type="monotone" dataKey="churnRate" name="Churn Rate (%)" stroke="#ffc658" strokeWidth={2} />
-                              <Line type="monotone" dataKey="attrition" name="Attrition (%)" stroke="#8884d8" strokeWidth={2} />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        )}
-                      </div>
-                      
-                      <div className="flex justify-end mt-4">
-                        <Button 
-                          className="bg-cyan-400 hover:bg-cyan-500 text-black px-3 sm:px-4 py-2 rounded text-xs sm:text-sm"
-                          onClick={() => setIsMetricsModalOpen(true)}
-                          data-testid="button-show-more-key-metrics"
-                        >
-                          Show More
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Client Metrics Summary Section (Half Size) */}
-                  <Card>
-                    <CardHeader className="p-4 lg:p-6">
-                      <div className="flex justify-between items-center">
-                        <CardTitle className="text-base lg:text-lg font-semibold text-gray-900 dark:text-white">Client Metrics</CardTitle>
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setIsClientMetricsModalOpen(true)}
-                            className="h-8 w-8"
-                            data-testid="button-open-client-metrics-modal"
-                          >
-                            <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-4 lg:p-6">
-                      <div className="space-y-3 sm:space-y-4">
-                        {/* Speed Metrics Summary */}
-                        <div>
-                          <h3 className="text-xs sm:text-sm font-semibold text-blue-700 dark:text-blue-400 mb-2">Speed Metrics</h3>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-2 border border-blue-100 dark:border-blue-800">
-                              <div className="text-xs font-medium text-blue-700 dark:text-blue-400">1st Submission</div>
-                              <div className="text-base sm:text-lg font-bold text-blue-900 dark:text-blue-300">0 <span className="text-xs">days</span></div>
-                            </div>
-                            <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-2 border border-blue-100 dark:border-blue-800">
-                              <div className="text-xs font-medium text-blue-700 dark:text-blue-400">Time to Fill</div>
-                              <div className="text-base sm:text-lg font-bold text-blue-900 dark:text-blue-300">0 <span className="text-xs">days</span></div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Quality Metrics Summary */}
-                        <div>
-                          <h3 className="text-xs sm:text-sm font-semibold text-green-700 dark:text-green-400 mb-2">Quality Metrics</h3>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-green-50 dark:bg-green-900/20 rounded p-2 border border-green-100 dark:border-green-800">
-                              <div className="text-xs font-medium text-green-700 dark:text-green-400">Submission Rate</div>
-                              <div className="text-base sm:text-lg font-bold text-green-900 dark:text-green-300">0<span className="text-xs">%</span></div>
-                            </div>
-                            <div className="bg-green-50 dark:bg-green-900/20 rounded p-2 border border-green-100 dark:border-green-800">
-                              <div className="text-xs font-medium text-green-700 dark:text-green-400">Offer Rate</div>
-                              <div className="text-base sm:text-lg font-bold text-green-900 dark:text-green-300">0<span className="text-xs">%</span></div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Impact Metrics Summary */}
-                        <div>
-                          <h3 className="text-xs sm:text-sm font-semibold text-red-700 dark:text-red-400 mb-2">Impact Metrics</h3>
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-red-50 dark:bg-red-900/20 rounded p-2 border border-red-100 dark:border-red-800">
-                              <div className="text-xs font-medium text-red-700 dark:text-red-400">Client NPS</div>
-                              <div className="text-base sm:text-lg font-bold text-red-900 dark:text-red-300">+0</div>
-                            </div>
-                            <div className="bg-red-50 dark:bg-red-900/20 rounded p-2 border border-red-100 dark:border-red-800">
-                              <div className="text-xs font-medium text-red-700 dark:text-red-400">Retention Rate</div>
-                              <div className="text-base sm:text-lg font-bold text-red-900 dark:text-red-300">0<span className="text-xs">%</span></div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end mt-4">
-                        <Button 
-                          className="bg-cyan-400 hover:bg-cyan-500 text-black px-3 sm:px-4 py-2 rounded text-xs sm:text-sm flex items-center gap-2"
-                          onClick={() => {
-                            setIsClientMetricsModalOpen(true);
-                            setTimeout(() => window.print(), 300);
-                          }}
-                          data-testid="button-download-client-metrics-summary"
-                        >
-                          <Download className="h-4 w-4" />
-                          Download
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Cash Outflow Section */}
+              {/* Split Section - Key Metrics and Client Metrics */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+                {/* Key Metrics Section (Half Size) */}
                 <Card>
-                  <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 pb-3">
-                    <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Cash Outflow</CardTitle>
-                    {cashoutData.length > 5 && (
-                      <Button 
-                        className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded"
-                        onClick={() => setIsCashoutModalOpen(true)}
-                        size="sm"
-                        data-testid="button-view-more-cashout"
-                      >
-                        View More
-                      </Button>
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    {/* Input Form */}
-                    <div className="grid grid-cols-3 gap-4 mb-6">
-                      <div>
-                        <Select 
-                          value={cashoutForm.month}
-                          onValueChange={(value) => setCashoutForm({...cashoutForm, month: value})}
-                        >
-                          <SelectTrigger className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" data-testid="select-cashout-month">
-                            <SelectValue placeholder="Month" />
+                  <CardHeader className="p-4 lg:p-6">
+                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                      <CardTitle className="text-base lg:text-lg font-semibold text-gray-900 dark:text-white">Key Metrics</CardTitle>
+                      <div className="flex gap-2 flex-wrap">
+                        <Select>
+                          <SelectTrigger className="w-28 sm:w-32 input-styled rounded text-xs sm:text-sm" data-testid="select-key-metrics-client">
+                            <SelectValue placeholder="Client" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="January">January</SelectItem>
-                            <SelectItem value="February">February</SelectItem>
-                            <SelectItem value="March">March</SelectItem>
-                            <SelectItem value="April">April</SelectItem>
-                            <SelectItem value="May">May</SelectItem>
-                            <SelectItem value="June">June</SelectItem>
-                            <SelectItem value="July">July</SelectItem>
-                            <SelectItem value="August">August</SelectItem>
-                            <SelectItem value="September">September</SelectItem>
-                            <SelectItem value="October">October</SelectItem>
-                            <SelectItem value="November">November</SelectItem>
-                            <SelectItem value="December">December</SelectItem>
+                            {clients.map((client: any) => (
+                              <SelectItem key={client.id} value={client.id}>
+                                {client.brandName || client.incorporatedName || 'Unknown'}
+                              </SelectItem>
+                            ))}
+                            <SelectItem value="all">All Clients</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        <Select>
+                          <SelectTrigger className="w-28 sm:w-32 input-styled rounded text-xs sm:text-sm" data-testid="select-key-metrics-period">
+                            <SelectValue placeholder="Monthly" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                            <SelectItem value="quarterly">Quarterly</SelectItem>
+                            <SelectItem value="yearly">Yearly</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
-                      <div>
-                        <Input 
-                          type="number"
-                          placeholder="Year" 
-                          className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
-                          value={cashoutForm.year}
-                          onChange={(e) => setCashoutForm({...cashoutForm, year: e.target.value})}
-                          data-testid="input-cashout-year"
-                        />
-                      </div>
-                      <div>
-                        <Input 
-                          type="number"
-                          placeholder="Number of Employees" 
-                          className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
-                          value={cashoutForm.employees}
-                          onChange={(e) => setCashoutForm({...cashoutForm, employees: e.target.value})}
-                          data-testid="input-cashout-employees"
-                        />
-                      </div>
                     </div>
-                    
-                    <div className="grid grid-cols-3 gap-4 mb-6">
-                      <div>
-                        <Input 
-                          type="number"
-                          placeholder="Total Salary" 
-                          className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
-                          value={cashoutForm.salary}
-                          onChange={(e) => setCashoutForm({...cashoutForm, salary: e.target.value})}
-                          data-testid="input-cashout-salary"
-                        />
-                      </div>
-                      <div>
-                        <Input 
-                          type="number"
-                          placeholder="Incentive" 
-                          className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
-                          value={cashoutForm.incentive}
-                          onChange={(e) => setCashoutForm({...cashoutForm, incentive: e.target.value})}
-                          data-testid="input-cashout-incentive"
-                        />
-                      </div>
-                      <div>
-                        <Input 
-                          type="number"
-                          placeholder="Database & Tools cost" 
-                          className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
-                          value={cashoutForm.tools}
-                          onChange={(e) => setCashoutForm({...cashoutForm, tools: e.target.value})}
-                          data-testid="input-cashout-tools"
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-3 gap-4 mb-6">
-                      <div>
-                        <Input 
-                          type="number"
-                          placeholder="Rent" 
-                          className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
-                          value={cashoutForm.rent}
-                          onChange={(e) => setCashoutForm({...cashoutForm, rent: e.target.value})}
-                          data-testid="input-cashout-rent"
-                        />
-                      </div>
-                      <div>
-                        <Input 
-                          type="number"
-                          placeholder="Other Expenses" 
-                          className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" 
-                          value={cashoutForm.others}
-                          onChange={(e) => setCashoutForm({...cashoutForm, others: e.target.value})}
-                          data-testid="input-cashout-others"
-                        />
-                      </div>
-                      <div className="flex items-end">
-                        <Button 
-                          className="bg-cyan-400 hover:bg-cyan-500 text-black px-4 py-2 rounded w-20 disabled:opacity-50 disabled:cursor-not-allowed"
-                          onClick={handleAddCashoutData}
-                          disabled={!isCashoutFormComplete || createCashOutflowMutation.isPending}
-                          data-testid="button-add-cashout"
-                        >
-                          Add
-                        </Button>
-                      </div>
+                  </CardHeader>
+                  <CardContent className="p-4 lg:p-6">
+                    <div className="h-48 sm:h-64 mb-4">
+                      {!keyAspectsData.chartData || keyAspectsData.chartData.length === 0 ? (
+                        <div className="flex items-center justify-center w-full h-full bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
+                          <div className="text-center">
+                            <p className="text-gray-600 dark:text-gray-400 text-sm">No metrics data available</p>
+                            <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">Data will appear once metrics are recorded</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart
+                            data={keyAspectsData.chartData}
+                            margin={{
+                              top: 5,
+                              right: 15,
+                              left: 10,
+                              bottom: 5,
+                            }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" style={{ fontSize: '10px' }} />
+                            <YAxis style={{ fontSize: '10px' }} />
+                            <Tooltip />
+                            <Legend wrapperStyle={{ fontSize: '10px' }} />
+                            <Line type="monotone" dataKey="growthMoM" name="Growth MoM (%)" stroke="#82ca9d" strokeWidth={2} />
+                            <Line type="monotone" dataKey="burnRate" name="Burn Rate (%)" stroke="#ff7c7c" strokeWidth={2} />
+                            <Line type="monotone" dataKey="churnRate" name="Churn Rate (%)" stroke="#ffc658" strokeWidth={2} />
+                            <Line type="monotone" dataKey="attrition" name="Attrition (%)" stroke="#8884d8" strokeWidth={2} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      )}
                     </div>
 
-                    {/* Data Table */}
-                    <div className="overflow-x-auto admin-scrollbar">
-                      <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
-                        <thead>
-                          <tr className="bg-gray-100 dark:bg-gray-700">
-                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Month</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Year</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Employees Count</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Total Salary</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Incentives</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Tools Cost</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Rent</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Others Cost</th>
-                            <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {isLoadingCashout ? (
-                            <tr>
-                              <td colSpan={9} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                                Loading cash outflow data...
-                              </td>
-                            </tr>
-                          ) : cashoutData.length === 0 ? (
-                            <tr>
-                              <td colSpan={9} className="py-8 text-center text-gray-500 dark:text-gray-400">
-                                No cash outflow data found. Add your first entry above.
-                              </td>
-                            </tr>
-                          ) : (
-                            cashoutData.slice(0, 5).map((row, index) => (
-                              <tr key={row.id || index} className="border-b border-gray-100 dark:border-gray-800">
-                                <td className="py-3 px-4 text-gray-900 dark:text-white">{row.month}</td>
-                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.year}</td>
-                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.employees}</td>
-                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.salary.toLocaleString('en-IN')}</td>
-                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.incentive.toLocaleString('en-IN')}</td>
-                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.tools.toLocaleString('en-IN')}</td>
-                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.rent.toLocaleString('en-IN')}</td>
-                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.others.toLocaleString('en-IN')}</td>
-                                <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8"
-                                        onClick={(e) => e.stopPropagation()}
-                                        data-testid={`button-actions-cashout-${row.id}`}
-                                      >
-                                        <MoreVertical className="h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleEditCashout(row);
-                                        }}
-                                        className="cursor-pointer"
-                                        data-testid={`button-edit-cashout-${row.id}`}
-                                      >
-                                        <EditIcon className="mr-2 h-4 w-4" />
-                                        Edit
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleDeleteCashout(row.id, `${row.month} ${row.year}`);
-                                        }}
-                                        className="cursor-pointer text-red-600 focus:text-red-600"
-                                        data-testid={`button-delete-cashout-${row.id}`}
-                                      >
-                                        <Trash2 className="mr-2 h-4 w-4" />
-                                        Delete
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
+                    <div className="flex justify-end mt-4">
+                      <Button
+                        className="bg-cyan-400 hover:bg-cyan-500 text-black px-3 sm:px-4 py-2 rounded text-xs sm:text-sm"
+                        onClick={() => setIsMetricsModalOpen(true)}
+                        data-testid="button-show-more-key-metrics"
+                      >
+                        Show More
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Client Metrics Summary Section (Half Size) */}
+                <Card>
+                  <CardHeader className="p-4 lg:p-6">
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-base lg:text-lg font-semibold text-gray-900 dark:text-white">Client Metrics</CardTitle>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setIsClientMetricsModalOpen(true)}
+                          className="h-8 w-8"
+                          data-testid="button-open-client-metrics-modal"
+                        >
+                          <ExternalLink className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-4 lg:p-6">
+                    <div className="space-y-3 sm:space-y-4">
+                      {/* Speed Metrics Summary */}
+                      <div>
+                        <h3 className="text-xs sm:text-sm font-semibold text-blue-700 dark:text-blue-400 mb-2">Speed Metrics</h3>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-2 border border-blue-100 dark:border-blue-800">
+                            <div className="text-xs font-medium text-blue-700 dark:text-blue-400">1st Submission</div>
+                            <div className="text-base sm:text-lg font-bold text-blue-900 dark:text-blue-300">0 <span className="text-xs">days</span></div>
+                          </div>
+                          <div className="bg-blue-50 dark:bg-blue-900/20 rounded p-2 border border-blue-100 dark:border-blue-800">
+                            <div className="text-xs font-medium text-blue-700 dark:text-blue-400">Time to Fill</div>
+                            <div className="text-base sm:text-lg font-bold text-blue-900 dark:text-blue-300">0 <span className="text-xs">days</span></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Quality Metrics Summary */}
+                      <div>
+                        <h3 className="text-xs sm:text-sm font-semibold text-green-700 dark:text-green-400 mb-2">Quality Metrics</h3>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-green-50 dark:bg-green-900/20 rounded p-2 border border-green-100 dark:border-green-800">
+                            <div className="text-xs font-medium text-green-700 dark:text-green-400">Submission Rate</div>
+                            <div className="text-base sm:text-lg font-bold text-green-900 dark:text-green-300">0<span className="text-xs">%</span></div>
+                          </div>
+                          <div className="bg-green-50 dark:bg-green-900/20 rounded p-2 border border-green-100 dark:border-green-800">
+                            <div className="text-xs font-medium text-green-700 dark:text-green-400">Offer Rate</div>
+                            <div className="text-base sm:text-lg font-bold text-green-900 dark:text-green-300">0<span className="text-xs">%</span></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Impact Metrics Summary */}
+                      <div>
+                        <h3 className="text-xs sm:text-sm font-semibold text-red-700 dark:text-red-400 mb-2">Impact Metrics</h3>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-red-50 dark:bg-red-900/20 rounded p-2 border border-red-100 dark:border-red-800">
+                            <div className="text-xs font-medium text-red-700 dark:text-red-400">Client NPS</div>
+                            <div className="text-base sm:text-lg font-bold text-red-900 dark:text-red-300">+0</div>
+                          </div>
+                          <div className="bg-red-50 dark:bg-red-900/20 rounded p-2 border border-red-100 dark:border-red-800">
+                            <div className="text-xs font-medium text-red-700 dark:text-red-400">Retention Rate</div>
+                            <div className="text-base sm:text-lg font-bold text-red-900 dark:text-red-300">0<span className="text-xs">%</span></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end mt-4">
+                      <Button
+                        className="bg-cyan-400 hover:bg-cyan-500 text-black px-3 sm:px-4 py-2 rounded text-xs sm:text-sm flex items-center gap-2"
+                        onClick={() => {
+                          setIsClientMetricsModalOpen(true);
+                          setTimeout(() => window.print(), 300);
+                        }}
+                        data-testid="button-download-client-metrics-summary"
+                      >
+                        <Download className="h-4 w-4" />
+                        Download
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Cash Outflow Section */}
+              <Card>
+                <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 pb-3">
+                  <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Cash Outflow</CardTitle>
+                  {cashoutData.length > 5 && (
+                    <Button
+                      className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded"
+                      onClick={() => setIsCashoutModalOpen(true)}
+                      size="sm"
+                      data-testid="button-view-more-cashout"
+                    >
+                      View More
+                    </Button>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  {/* Input Form */}
+                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    <div>
+                      <Select
+                        value={cashoutForm.month}
+                        onValueChange={(value) => setCashoutForm({ ...cashoutForm, month: value })}
+                      >
+                        <SelectTrigger className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" data-testid="select-cashout-month">
+                          <SelectValue placeholder="Month" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="January">January</SelectItem>
+                          <SelectItem value="February">February</SelectItem>
+                          <SelectItem value="March">March</SelectItem>
+                          <SelectItem value="April">April</SelectItem>
+                          <SelectItem value="May">May</SelectItem>
+                          <SelectItem value="June">June</SelectItem>
+                          <SelectItem value="July">July</SelectItem>
+                          <SelectItem value="August">August</SelectItem>
+                          <SelectItem value="September">September</SelectItem>
+                          <SelectItem value="October">October</SelectItem>
+                          <SelectItem value="November">November</SelectItem>
+                          <SelectItem value="December">December</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Input
+                        type="number"
+                        placeholder="Year"
+                        className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm"
+                        value={cashoutForm.year}
+                        onChange={(e) => setCashoutForm({ ...cashoutForm, year: e.target.value })}
+                        data-testid="input-cashout-year"
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        type="number"
+                        placeholder="Number of Employees"
+                        className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm"
+                        value={cashoutForm.employees}
+                        onChange={(e) => setCashoutForm({ ...cashoutForm, employees: e.target.value })}
+                        data-testid="input-cashout-employees"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    <div>
+                      <Input
+                        type="number"
+                        placeholder="Total Salary"
+                        className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm"
+                        value={cashoutForm.salary}
+                        onChange={(e) => setCashoutForm({ ...cashoutForm, salary: e.target.value })}
+                        data-testid="input-cashout-salary"
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        type="number"
+                        placeholder="Incentive"
+                        className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm"
+                        value={cashoutForm.incentive}
+                        onChange={(e) => setCashoutForm({ ...cashoutForm, incentive: e.target.value })}
+                        data-testid="input-cashout-incentive"
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        type="number"
+                        placeholder="Database & Tools cost"
+                        className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm"
+                        value={cashoutForm.tools}
+                        onChange={(e) => setCashoutForm({ ...cashoutForm, tools: e.target.value })}
+                        data-testid="input-cashout-tools"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    <div>
+                      <Input
+                        type="number"
+                        placeholder="Rent"
+                        className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm"
+                        value={cashoutForm.rent}
+                        onChange={(e) => setCashoutForm({ ...cashoutForm, rent: e.target.value })}
+                        data-testid="input-cashout-rent"
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        type="number"
+                        placeholder="Other Expenses"
+                        className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm"
+                        value={cashoutForm.others}
+                        onChange={(e) => setCashoutForm({ ...cashoutForm, others: e.target.value })}
+                        data-testid="input-cashout-others"
+                      />
+                    </div>
+                    <div className="flex items-end">
+                      <Button
+                        className="bg-cyan-400 hover:bg-cyan-500 text-black px-4 py-2 rounded w-20 disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={handleAddCashoutData}
+                        disabled={!isCashoutFormComplete || createCashOutflowMutation.isPending}
+                        data-testid="button-add-cashout"
+                      >
+                        Add
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Data Table */}
+                  <div className="overflow-x-auto admin-scrollbar">
+                    <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded">
+                      <thead>
+                        <tr className="bg-gray-100 dark:bg-gray-700">
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Month</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Year</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Employees Count</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Total Salary</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Incentives</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Tools Cost</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Rent</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Others Cost</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {isLoadingCashout ? (
+                          <tr>
+                            <td colSpan={9} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                              Loading cash outflow data...
+                            </td>
+                          </tr>
+                        ) : cashoutData.length === 0 ? (
+                          <tr>
+                            <td colSpan={9} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                              No cash outflow data found. Add your first entry above.
+                            </td>
+                          </tr>
+                        ) : (
+                          cashoutData.slice(0, 5).map((row, index) => (
+                            <tr key={row.id || index} className="border-b border-gray-100 dark:border-gray-800">
+                              <td className="py-3 px-4 text-gray-900 dark:text-white">{row.month}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.year}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">{row.employees}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.salary.toLocaleString('en-IN')}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.incentive.toLocaleString('en-IN')}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.tools.toLocaleString('en-IN')}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.rent.toLocaleString('en-IN')}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">₹{row.others.toLocaleString('en-IN')}</td>
+                              <td className="py-3 px-4 text-gray-600 dark:text-gray-400">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8"
+                                      onClick={(e) => e.stopPropagation()}
+                                      data-testid={`button-actions-cashout-${row.id}`}
+                                    >
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleEditCashout(row);
+                                      }}
+                                      className="cursor-pointer"
+                                      data-testid={`button-edit-cashout-${row.id}`}
+                                    >
+                                      <EditIcon className="mr-2 h-4 w-4" />
+                                      Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteCashout(row.id, `${row.month} ${row.year}`);
+                                      }}
+                                      className="cursor-pointer text-red-600 focus:text-red-600"
+                                      data-testid={`button-delete-cashout-${row.id}`}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
             {/* Right Side - Key Aspects - Separately Scrollable */}
@@ -7323,69 +7326,69 @@ export default function AdminDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-0">
-                      {/* Growth MoM */}
-                      <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
-                        <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                          GROWTH<span className="text-xs align-super ml-0.5">MoM</span>
-                        </div>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-growth-mom">{keyAspectsData.growthMoM}%</div>
+                    {/* Growth MoM */}
+                    <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+                      <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                        GROWTH<span className="text-xs align-super ml-0.5">MoM</span>
                       </div>
-                      
-                      {/* Growth YoY */}
-                      <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
-                        <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                          GROWTH<span className="text-xs align-super ml-0.5">YoY</span>
-                        </div>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-growth-yoy">{keyAspectsData.growthYoY}%</div>
-                      </div>
-                      
-                      {/* Burn Rate */}
-                      <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
-                        <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                          BURN<span className="text-xs align-super ml-0.5">RATE</span>
-                        </div>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-burn-rate">{keyAspectsData.burnRate}%</div>
-                      </div>
-                      
-                      {/* Churn Rate */}
-                      <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
-                        <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                          CHURN<span className="text-xs align-super ml-0.5">RATE</span>
-                        </div>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-churn-rate">{keyAspectsData.churnRate}%</div>
-                      </div>
-                      
-                      {/* Attrition */}
-                      <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
-                        <div className="text-sm font-bold text-gray-700 dark:text-gray-300">ATTRITION</div>
-                        <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-attrition">{keyAspectsData.attrition}%</div>
-                      </div>
-                      
-                      {/* Net Profit */}
-                      <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
-                        <div className="text-sm font-bold text-gray-700 dark:text-gray-300">NET PROFIT</div>
-                        <div className="text-xl font-bold text-gray-900 dark:text-white" data-testid="text-net-profit">{keyAspectsData.netProfit.toLocaleString()}</div>
-                      </div>
-                      
-                      {/* Revenue */}
-                      <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
-                        <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                          REVENUE<span className="text-xs align-super ml-0.5">PER EMPLOYEE</span>
-                        </div>
-                        <div className="text-xl font-bold text-gray-900 dark:text-white" data-testid="text-revenue-per-employee">{keyAspectsData.revenuePerEmployee.toLocaleString()}</div>
-                      </div>
-                      
-                      {/* Client Acquisition Cost */}
-                      <div className="flex items-center justify-between py-4">
-                        <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                          CLIENT<span className="text-xs align-super ml-0.5">ACQUISITION COST</span>
-                        </div>
-                        <div className="text-xl font-bold text-gray-900 dark:text-white" data-testid="text-client-acquisition-cost">{keyAspectsData.clientAcquisitionCost.toLocaleString()}</div>
-                      </div>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-growth-mom">{keyAspectsData.growthMoM}%</div>
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
+
+                    {/* Growth YoY */}
+                    <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+                      <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                        GROWTH<span className="text-xs align-super ml-0.5">YoY</span>
+                      </div>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-growth-yoy">{keyAspectsData.growthYoY}%</div>
+                    </div>
+
+                    {/* Burn Rate */}
+                    <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+                      <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                        BURN<span className="text-xs align-super ml-0.5">RATE</span>
+                      </div>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-burn-rate">{keyAspectsData.burnRate}%</div>
+                    </div>
+
+                    {/* Churn Rate */}
+                    <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+                      <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                        CHURN<span className="text-xs align-super ml-0.5">RATE</span>
+                      </div>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-churn-rate">{keyAspectsData.churnRate}%</div>
+                    </div>
+
+                    {/* Attrition */}
+                    <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+                      <div className="text-sm font-bold text-gray-700 dark:text-gray-300">ATTRITION</div>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-attrition">{keyAspectsData.attrition}%</div>
+                    </div>
+
+                    {/* Net Profit */}
+                    <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+                      <div className="text-sm font-bold text-gray-700 dark:text-gray-300">NET PROFIT</div>
+                      <div className="text-xl font-bold text-gray-900 dark:text-white" data-testid="text-net-profit">{keyAspectsData.netProfit.toLocaleString()}</div>
+                    </div>
+
+                    {/* Revenue */}
+                    <div className="flex items-center justify-between py-4 border-b border-gray-200 dark:border-gray-700">
+                      <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                        REVENUE<span className="text-xs align-super ml-0.5">PER EMPLOYEE</span>
+                      </div>
+                      <div className="text-xl font-bold text-gray-900 dark:text-white" data-testid="text-revenue-per-employee">{keyAspectsData.revenuePerEmployee.toLocaleString()}</div>
+                    </div>
+
+                    {/* Client Acquisition Cost */}
+                    <div className="flex items-center justify-between py-4">
+                      <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                        CLIENT<span className="text-xs align-super ml-0.5">ACQUISITION COST</span>
+                      </div>
+                      <div className="text-xl font-bold text-gray-900 dark:text-white" data-testid="text-client-acquisition-cost">{keyAspectsData.clientAcquisitionCost.toLocaleString()}</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         );
       default:
@@ -7395,13 +7398,13 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex flex-col bg-gray-50 dark:bg-gray-900 min-h-screen">
-      <AdminTopHeader 
-        companyName="Scaling Theory" 
+      <AdminTopHeader
+        companyName="Scaling Theory"
         onHelpClick={() => setIsChatOpen(true)}
       />
       <div className="flex flex-1">
         <AdminSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
-        <div className="flex-1 ml-16 flex flex-col overflow-hidden" style={{height: 'calc(100vh - 4rem)'}}>
+        <div className="flex-1 ml-16 flex flex-col overflow-hidden" style={{ height: 'calc(100vh - 4rem)' }}>
           {renderSidebarContent()}
         </div>
         {sidebarTab === 'dashboard' && <TeamMembersSidebar />}
@@ -7438,17 +7441,17 @@ export default function AdminDashboard() {
                   <span className="text-gray-700 dark:text-gray-300 font-medium w-20">Email:</span>
                   <span className="text-gray-600 dark:text-gray-400">{selectedMember.email}</span>
                 </div>
-                
+
                 <div className="flex">
                   <span className="text-gray-700 dark:text-gray-300 font-medium w-20">Mobile:</span>
                   <span className="text-gray-600 dark:text-gray-400">{selectedMember.mobile}</span>
                 </div>
-                
+
                 <div className="flex">
                   <span className="text-gray-700 dark:text-gray-300 font-medium w-20">Joined:</span>
                   <span className="text-gray-600 dark:text-gray-400">{selectedMember.joined}</span>
                 </div>
-                
+
                 <div className="flex">
                   <span className="text-gray-700 dark:text-gray-300 font-medium w-20">Closures:</span>
                   <span className="text-green-600 dark:text-green-400 font-medium">{selectedMember.closures}</span>
@@ -7479,7 +7482,7 @@ export default function AdminDashboard() {
 
       {/* Target & Incentives View All Modal */}
       <Dialog open={isTargetModalOpen} onOpenChange={setIsTargetModalOpen}>
-        <DialogContent className="max-w-5xl mx-auto max-h-[80vh]" style={{scrollbarWidth: 'none', msOverflowStyle: 'none'}}>
+        <DialogContent className="max-w-5xl mx-auto max-h-[80vh]" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
           <DialogHeader>
             <div className="flex items-center justify-between gap-4">
               <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
@@ -7493,7 +7496,7 @@ export default function AdminDashboard() {
               />
             </div>
           </DialogHeader>
-          <div className="p-4 overflow-y-auto admin-scrollbar" style={{maxHeight: '60vh'}}>
+          <div className="p-4 overflow-y-auto admin-scrollbar" style={{ maxHeight: '60vh' }}>
             <div className="overflow-x-auto">
               <table className="w-full border-collapse bg-white dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700">
                 <thead>
@@ -7579,7 +7582,7 @@ export default function AdminDashboard() {
               </table>
             </div>
             <div className="mt-4 flex justify-end">
-              <Button 
+              <Button
                 onClick={() => setIsTargetModalOpen(false)}
                 className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded"
                 data-testid="button-close-targets-modal"
@@ -7667,9 +7670,8 @@ export default function AdminDashboard() {
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.person}</td>
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.agenda}</td>
                         <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
-                          <span className={`px-2 py-1 rounded-full text-sm font-medium ${
-                            meeting.status === 'scheduled' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
-                          }`}>
+                          <span className={`px-2 py-1 rounded-full text-sm font-medium ${meeting.status === 'scheduled' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                            }`}>
                             {meeting.status}
                           </span>
                         </td>
@@ -7709,7 +7711,7 @@ export default function AdminDashboard() {
               </table>
             </div>
             <div className="mt-4 flex justify-end">
-              <Button 
+              <Button
                 onClick={() => setIsTlMeetingsModalOpen(false)}
                 className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded"
                 data-testid="button-close-tl-meetings-modal"
@@ -7761,9 +7763,8 @@ export default function AdminDashboard() {
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{message.message}</td>
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{message.date}</td>
                         <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
-                          <span className={`w-3 h-3 rounded-full inline-block ${
-                            message.status === 'active' ? 'bg-green-500' : 'bg-red-500'
-                          }`}></span>
+                          <span className={`w-3 h-3 rounded-full inline-block ${message.status === 'active' ? 'bg-green-500' : 'bg-red-500'
+                            }`}></span>
                         </td>
                       </tr>
                     ))}
@@ -7771,7 +7772,7 @@ export default function AdminDashboard() {
               </table>
             </div>
             <div className="mt-4 flex justify-end">
-              <Button 
+              <Button
                 onClick={() => setIsAllMessagesModalOpen(false)}
                 className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded"
                 data-testid="button-close-all-messages-modal"
@@ -7823,9 +7824,8 @@ export default function AdminDashboard() {
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.person}</td>
                         <td className="py-3 px-4 text-sm text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-gray-700">{meeting.agenda}</td>
                         <td className="py-3 px-4 text-sm border-b border-gray-100 dark:border-gray-700">
-                          <span className={`px-2 py-1 rounded-full text-sm font-medium ${
-                            meeting.status === 'scheduled' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
-                          }`}>
+                          <span className={`px-2 py-1 rounded-full text-sm font-medium ${meeting.status === 'scheduled' ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400'
+                            }`}>
                             {meeting.status}
                           </span>
                         </td>
@@ -7865,7 +7865,7 @@ export default function AdminDashboard() {
               </table>
             </div>
             <div className="mt-4 flex justify-end">
-              <Button 
+              <Button
                 onClick={() => setIsCeoMeetingsModalOpen(false)}
                 className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded"
                 data-testid="button-close-ceo-meetings-modal"
@@ -7894,8 +7894,8 @@ export default function AdminDashboard() {
                     <SelectItem value="loading" disabled>Loading...</SelectItem>
                   ) : (
                     employees
-                      .filter((e: Employee) => 
-                        (e.role === 'team_leader' || e.role === 'recruiter') && 
+                      .filter((e: Employee) =>
+                        (e.role === 'team_leader' || e.role === 'recruiter') &&
                         (e.isActive === true || e.isActive === undefined)
                       )
                       .map((employee: Employee) => (
@@ -7906,7 +7906,7 @@ export default function AdminDashboard() {
                   )}
                 </SelectContent>
               </Select>
-              
+
               <Textarea
                 placeholder="Enter here!"
                 rows={4}
@@ -7916,15 +7916,15 @@ export default function AdminDashboard() {
                 data-testid="textarea-message-content"
                 required
               />
-              
+
               <div className="flex justify-end">
-                <Button 
+                <Button
                   onClick={handleSendMessage}
                   disabled={!selectedRecipient || !messageContent.trim()}
                   className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-2 rounded flex items-center gap-2"
                   data-testid="button-send-message"
                 >
-                  Send 
+                  Send
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
@@ -7951,7 +7951,7 @@ export default function AdminDashboard() {
                 {meetingsLast7Days.map((meeting: any) => {
                   const meetingDateTime = new Date(`${meeting.meetingDate} ${meeting.meetingTime}`);
                   const isExpanded = expandedMeetings.has(meeting.id);
-                  
+
                   return (
                     <div
                       key={meeting.id}
@@ -8011,11 +8011,11 @@ export default function AdminDashboard() {
                                   .filter(Boolean)
                                   .slice(0, 5);
                                 const remainingCount = Math.max(0, uniqueParticipants.length - 5);
-                                
+
                                 if (uniqueParticipants.length === 0) {
                                   return <span className="text-xs text-gray-500">No members</span>;
                                 }
-                                
+
                                 return (
                                   <>
                                     {participantNames.map((emp: Employee | undefined, idx: number) => {
@@ -8042,11 +8042,10 @@ export default function AdminDashboard() {
                             </div>
                           </div>
                           <div className="text-sm">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              meeting.status === 'completed' || meetingDateTime < new Date()
-                                ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
-                                : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300'
-                            }`}>
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${meeting.status === 'completed' || meetingDateTime < new Date()
+                              ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
+                              : 'bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300'
+                              }`}>
                               {meeting.status === 'completed' || meetingDateTime < new Date() ? 'Completed' : 'Scheduled'}
                             </span>
                           </div>
@@ -8059,7 +8058,7 @@ export default function AdminDashboard() {
             )}
           </div>
           <div className="mt-4 flex justify-end p-4 border-t border-gray-200 dark:border-gray-700">
-            <Button 
+            <Button
               onClick={() => setIsMeetingsMenuModalOpen(false)}
               className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded"
               data-testid="button-close-meetings-menu-modal"
@@ -8101,12 +8100,12 @@ export default function AdminDashboard() {
                 Meeting For
               </label>
               <div className="relative flex-1">
-                <Select 
-                  value={meetingFor} 
+                <Select
+                  value={meetingFor}
                   onValueChange={(value) => {
                     setMeetingFor(value);
-                  }} 
-                  data-testid="select-meeting-for" 
+                  }}
+                  data-testid="select-meeting-for"
                   required
                 >
                   <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded pr-10 py-2">
@@ -8152,15 +8151,15 @@ export default function AdminDashboard() {
                 Meeting With
               </label>
               <div className="relative flex-1">
-                <Select 
-                  value={meetingWith} 
+                <Select
+                  value={meetingWith}
                   onValueChange={(value) => {
                     setMeetingWith(value);
                     if (value !== 'client') {
                       setSelectedClientId('');
                     }
-                  }} 
-                  data-testid="select-meeting-with" 
+                  }}
+                  data-testid="select-meeting-with"
                   required
                 >
                   <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded pr-10 py-2">
@@ -8191,10 +8190,10 @@ export default function AdminDashboard() {
                   Select Client
                 </label>
                 <div className="relative flex-1">
-                  <Select 
-                    value={selectedClientId} 
-                    onValueChange={setSelectedClientId} 
-                    data-testid="select-client" 
+                  <Select
+                    value={selectedClientId}
+                    onValueChange={setSelectedClientId}
+                    data-testid="select-client"
                     required
                   >
                     <SelectTrigger className="w-full bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded pr-10 py-2">
@@ -8205,9 +8204,9 @@ export default function AdminDashboard() {
                         <SelectItem value="loading" disabled>Loading clients...</SelectItem>
                       ) : (
                         (clients as any[]).map((client: any) => (
-                          <SelectItem 
-                            key={client.id} 
-                            value={client.id} 
+                          <SelectItem
+                            key={client.id}
+                            value={client.id}
                             className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700"
                           >
                             {client.spoc || 'N/A'} - {client.brandName || client.incorporatedName || 'Unknown Company'}
@@ -8237,7 +8236,7 @@ export default function AdminDashboard() {
                 <EditIcon className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
               </div>
             </div>
-            
+
             {/* Add Members Checkbox */}
             <div className="flex items-center space-x-2">
               <Checkbox
@@ -8288,7 +8287,7 @@ export default function AdminDashboard() {
                     data-testid="input-member-search"
                   />
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                  
+
                   {/* Autocomplete Suggestions Dropdown */}
                   {memberSuggestions.length > 0 && (
                     <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg max-h-48 overflow-y-auto">
@@ -8297,11 +8296,10 @@ export default function AdminDashboard() {
                         return (
                           <div
                             key={employee.id}
-                            className={`flex items-center justify-between p-2 cursor-pointer transition-colors ${
-                              isSelected
-                                ? 'bg-blue-100 dark:bg-blue-900/30'
-                                : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                            }`}
+                            className={`flex items-center justify-between p-2 cursor-pointer transition-colors ${isSelected
+                              ? 'bg-blue-100 dark:bg-blue-900/30'
+                              : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                              }`}
                             onMouseDown={(e) => {
                               e.preventDefault(); // Prevent input blur
                               if (isSelected) {
@@ -8367,12 +8365,12 @@ export default function AdminDashboard() {
                     type="button"
                     variant="outline"
                     size="sm"
-                        onClick={() => {
-                          const allTLs = employees
-                            .filter((e: Employee) => e.role === 'team_leader')
-                            .map((e: Employee) => e.id);
-                          setMeetingMembers(Array.from(new Set([...meetingMembers, ...allTLs])));
-                        }}
+                    onClick={() => {
+                      const allTLs = employees
+                        .filter((e: Employee) => e.role === 'team_leader')
+                        .map((e: Employee) => e.id);
+                      setMeetingMembers(Array.from(new Set([...meetingMembers, ...allTLs])));
+                    }}
                     className="text-xs"
                     data-testid="button-add-both-tl"
                   >
@@ -8430,7 +8428,7 @@ export default function AdminDashboard() {
                 )}
               </div>
             )}
-            
+
             {/* Date with Label on Left */}
             <div className="flex items-center gap-3">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap min-w-[120px]">
@@ -8445,7 +8443,7 @@ export default function AdminDashboard() {
                 />
               </div>
             </div>
-            
+
             {/* Time with Label on Left */}
             <div className="flex items-center gap-3">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap min-w-[120px]">
@@ -8463,10 +8461,10 @@ export default function AdminDashboard() {
               </div>
             </div>
           </div>
-          
+
           {/* Set Meeting Button - Fixed at bottom */}
           <div className="flex justify-center p-4 border-t border-gray-200 dark:border-gray-700">
-            <Button 
+            <Button
               onClick={handleSetMeeting}
               disabled={!meetingTitle || !meetingFor || !meetingWith || !meetingDate || !meetingTime || (meetingWith === 'client' && !selectedClientId)}
               className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-8 py-2 rounded text-base font-medium w-full"
@@ -8497,34 +8495,34 @@ export default function AdminDashboard() {
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Meeting For:</label>
                 <p className="text-gray-900 dark:text-white mt-1">
                   {meetingFor === 'all_tl' ? 'All Team Leaders' :
-                   meetingFor === 'all_ta' ? 'All Talent Advisors' :
-                   meetingFor.startsWith('team_') ? 
-                     (() => {
-                       const tlId = meetingFor.replace('team_', '');
-                       const tl = employees.find((e: Employee) => e.id === tlId);
-                       return tl ? `${tl.name}'s Team` : meetingFor;
-                     })() :
-                   (() => {
-                     const person = employees.find((e: Employee) => e.id === meetingFor);
-                     return person ? person.name : meetingFor;
-                   })()}
+                    meetingFor === 'all_ta' ? 'All Talent Advisors' :
+                      meetingFor.startsWith('team_') ?
+                        (() => {
+                          const tlId = meetingFor.replace('team_', '');
+                          const tl = employees.find((e: Employee) => e.id === tlId);
+                          return tl ? `${tl.name}'s Team` : meetingFor;
+                        })() :
+                        (() => {
+                          const person = employees.find((e: Employee) => e.id === meetingFor);
+                          return person ? person.name : meetingFor;
+                        })()}
                 </p>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Meeting With:</label>
                 <p className="text-gray-900 dark:text-white mt-1">
                   {meetingWith === 'all_tl' ? 'All Team Leaders' :
-                   meetingWith === 'all_ta' ? 'All Talent Advisors' :
-                   meetingWith.startsWith('team_') ? 
-                     (() => {
-                       const tlId = meetingWith.replace('team_', '');
-                       const tl = employees.find((e: Employee) => e.id === tlId);
-                       return tl ? `${tl.name}'s Team` : meetingWith;
-                     })() :
-                   (() => {
-                     const person = employees.find((e: Employee) => e.id === meetingWith);
-                     return person ? person.name : meetingWith;
-                   })()}
+                    meetingWith === 'all_ta' ? 'All Talent Advisors' :
+                      meetingWith.startsWith('team_') ?
+                        (() => {
+                          const tlId = meetingWith.replace('team_', '');
+                          const tl = employees.find((e: Employee) => e.id === tlId);
+                          return tl ? `${tl.name}'s Team` : meetingWith;
+                        })() :
+                        (() => {
+                          const person = employees.find((e: Employee) => e.id === meetingWith);
+                          return person ? person.name : meetingWith;
+                        })()}
                 </p>
               </div>
               {meetingDescription && (
@@ -8564,14 +8562,14 @@ export default function AdminDashboard() {
             </div>
           </div>
           <DialogFooter className="flex gap-2 sm:gap-0">
-            <Button 
+            <Button
               variant="outline"
               onClick={() => setShowPreviewModal(false)}
               className="flex-1"
             >
               Edit
             </Button>
-            <Button 
+            <Button
               onClick={handleScheduleMeeting}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
             >
@@ -8597,7 +8595,7 @@ export default function AdminDashboard() {
               />
             </div>
           </DialogHeader>
-          <div className="p-4 overflow-y-auto admin-scrollbar" style={{maxHeight: '60vh'}}>
+          <div className="p-4 overflow-y-auto admin-scrollbar" style={{ maxHeight: '60vh' }}>
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
@@ -8636,11 +8634,10 @@ export default function AdminDashboard() {
                         <td className="p-3 text-gray-600 dark:text-gray-400">{report.offeredDate}</td>
                         <td className="p-3 text-gray-600 dark:text-gray-400">{report.joinedDate}</td>
                         <td className="p-3">
-                          <span className={`text-sm px-2 py-1 rounded ${
-                            report.status === "Joined" 
-                              ? "bg-green-100 text-green-800" 
-                              : "bg-yellow-100 text-yellow-800"
-                          }`}>
+                          <span className={`text-sm px-2 py-1 rounded ${report.status === "Joined"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-yellow-100 text-yellow-800"
+                            }`}>
                             {report.status}
                           </span>
                         </td>
@@ -8780,12 +8777,12 @@ export default function AdminDashboard() {
           <DialogHeader>
             <DialogTitle>Confirm Revenue Mapping Deletion</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               To delete revenue mapping "{revenueMappingToDelete?.description}", please enter your admin password for security.
             </p>
-            
+
             <div className="space-y-2">
               <Label htmlFor="delete-revenue-mapping-password">Admin Password</Label>
               <PasswordInput
@@ -8843,12 +8840,12 @@ export default function AdminDashboard() {
           <DialogHeader>
             <DialogTitle>Confirm Cash Outflow Deletion</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               To delete cash outflow "{cashoutToDelete?.description}", please enter your admin password for security.
             </p>
-            
+
             <div className="space-y-2">
               <Label htmlFor="delete-cashout-password">Admin Password</Label>
               <PasswordInput
@@ -8906,12 +8903,12 @@ export default function AdminDashboard() {
           <DialogHeader>
             <DialogTitle>Confirm Target Deletion</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               To delete target "{targetToDelete?.description}", please enter your admin password for security.
             </p>
-            
+
             <div className="space-y-2">
               <Label htmlFor="delete-target-password">Admin Password</Label>
               <PasswordInput
@@ -8969,12 +8966,12 @@ export default function AdminDashboard() {
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               To delete "{userToDelete?.name}", please enter your admin password for security.
             </p>
-            
+
             <div className="space-y-2">
               <Label htmlFor="delete-password">Admin Password</Label>
               <PasswordInput
@@ -9006,7 +9003,7 @@ export default function AdminDashboard() {
           </div>
 
           <DialogFooter className="flex gap-2">
-            <Button 
+            <Button
               variant="outline"
               onClick={handleCancelDelete}
               disabled={isVerifyingPassword}
@@ -9014,7 +9011,7 @@ export default function AdminDashboard() {
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               variant="destructive"
               onClick={handleVerifyPassword}
               disabled={isVerifyingPassword || passwordAttempts >= 3 || !passwordInput}
@@ -9418,20 +9415,20 @@ export default function AdminDashboard() {
             {/* Row 1 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Input 
-                  placeholder="Brand Name *" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="Brand Name *"
+                  className="input-styled rounded"
                   value={clientForm.brandName}
-                  onChange={(e) => setClientForm({...clientForm, brandName: e.target.value})}
+                  onChange={(e) => setClientForm({ ...clientForm, brandName: e.target.value })}
                   data-testid="input-brand-name"
                 />
               </div>
               <div>
-                <Input 
-                  placeholder="Incorporated Name" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="Incorporated Name"
+                  className="input-styled rounded"
                   value={clientForm.incorporatedName}
-                  onChange={(e) => setClientForm({...clientForm, incorporatedName: e.target.value})}
+                  onChange={(e) => setClientForm({ ...clientForm, incorporatedName: e.target.value })}
                   data-testid="input-incorporated-name"
                 />
               </div>
@@ -9440,20 +9437,20 @@ export default function AdminDashboard() {
             {/* Row 2 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Input 
-                  placeholder="GSTIN" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="GSTIN"
+                  className="input-styled rounded"
                   value={clientForm.gstin}
-                  onChange={(e) => setClientForm({...clientForm, gstin: e.target.value})}
+                  onChange={(e) => setClientForm({ ...clientForm, gstin: e.target.value })}
                   data-testid="input-gstin"
                 />
               </div>
               <div>
-                <Input 
-                  placeholder="Address" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="Address"
+                  className="input-styled rounded"
                   value={clientForm.address}
-                  onChange={(e) => setClientForm({...clientForm, address: e.target.value})}
+                  onChange={(e) => setClientForm({ ...clientForm, address: e.target.value })}
                   data-testid="input-address"
                 />
               </div>
@@ -9462,20 +9459,20 @@ export default function AdminDashboard() {
             {/* Row 3 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Input 
-                  placeholder="Location" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="Location"
+                  className="input-styled rounded"
                   value={clientForm.location}
-                  onChange={(e) => setClientForm({...clientForm, location: e.target.value})}
+                  onChange={(e) => setClientForm({ ...clientForm, location: e.target.value })}
                   data-testid="input-location"
                 />
               </div>
               <div>
-                <Input 
-                  placeholder="SPOC" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="SPOC"
+                  className="input-styled rounded"
                   value={clientForm.spoc}
-                  onChange={(e) => setClientForm({...clientForm, spoc: e.target.value})}
+                  onChange={(e) => setClientForm({ ...clientForm, spoc: e.target.value })}
                   data-testid="input-spoc"
                 />
               </div>
@@ -9484,21 +9481,21 @@ export default function AdminDashboard() {
             {/* Row 4 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Input 
-                  placeholder="Email *" 
-                  type="email" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="Email *"
+                  type="email"
+                  className="input-styled rounded"
                   value={clientForm.email}
-                  onChange={(e) => setClientForm({...clientForm, email: e.target.value})}
+                  onChange={(e) => setClientForm({ ...clientForm, email: e.target.value })}
                   data-testid="input-email"
                 />
               </div>
               <div>
-                <Input 
-                  placeholder="Website" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="Website"
+                  className="input-styled rounded"
                   value={clientForm.website}
-                  onChange={(e) => setClientForm({...clientForm, website: e.target.value})}
+                  onChange={(e) => setClientForm({ ...clientForm, website: e.target.value })}
                   data-testid="input-website"
                 />
               </div>
@@ -9507,18 +9504,18 @@ export default function AdminDashboard() {
             {/* Row 5 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Input 
-                  placeholder="LinkedIn" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="LinkedIn"
+                  className="input-styled rounded"
                   value={clientForm.linkedin}
-                  onChange={(e) => setClientForm({...clientForm, linkedin: e.target.value})}
+                  onChange={(e) => setClientForm({ ...clientForm, linkedin: e.target.value })}
                   data-testid="input-linkedin"
                 />
               </div>
               <div>
-                <Select 
+                <Select
                   value={clientForm.agreement}
-                  onValueChange={(value) => setClientForm({...clientForm, agreement: value})}
+                  onValueChange={(value) => setClientForm({ ...clientForm, agreement: value })}
                 >
                   <SelectTrigger className="input-styled rounded" data-testid="select-agreement">
                     <SelectValue placeholder="Agreement" />
@@ -9534,22 +9531,22 @@ export default function AdminDashboard() {
             {/* Row 6 */}
             <div className="grid grid-cols-2 gap-4">
               <div className="relative">
-                <Input 
-                  placeholder="Percentage" 
+                <Input
+                  placeholder="Percentage"
                   type="number"
                   min="0"
                   max="100"
-                  className="input-styled rounded pr-8" 
+                  className="input-styled rounded pr-8"
                   value={clientForm.percentage}
-                  onChange={(e) => setClientForm({...clientForm, percentage: e.target.value})}
+                  onChange={(e) => setClientForm({ ...clientForm, percentage: e.target.value })}
                   data-testid="input-percentage"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">%</span>
               </div>
               <div>
-                <Select 
+                <Select
                   value={clientForm.currentStatus}
-                  onValueChange={(value) => setClientForm({...clientForm, currentStatus: value})}
+                  onValueChange={(value) => setClientForm({ ...clientForm, currentStatus: value })}
                 >
                   <SelectTrigger className="input-styled rounded" data-testid="select-active">
                     <SelectValue placeholder="Active" />
@@ -9566,9 +9563,9 @@ export default function AdminDashboard() {
             {/* Row 7 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Select 
+                <Select
                   value={clientForm.category}
-                  onValueChange={(value) => setClientForm({...clientForm, category: value})}
+                  onValueChange={(value) => setClientForm({ ...clientForm, category: value })}
                 >
                   <SelectTrigger className="input-styled rounded" data-testid="select-category">
                     <SelectValue placeholder="Category" />
@@ -9580,11 +9577,11 @@ export default function AdminDashboard() {
                 </Select>
               </div>
               <div>
-                <Input 
-                  placeholder="Payment terms" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="Payment terms"
+                  className="input-styled rounded"
                   value={clientForm.paymentTerms}
-                  onChange={(e) => setClientForm({...clientForm, paymentTerms: e.target.value})}
+                  onChange={(e) => setClientForm({ ...clientForm, paymentTerms: e.target.value })}
                   data-testid="input-payment-terms"
                 />
               </div>
@@ -9593,9 +9590,9 @@ export default function AdminDashboard() {
             {/* Row 8 */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Select 
+                <Select
                   value={clientForm.source}
-                  onValueChange={(value) => setClientForm({...clientForm, source: value})}
+                  onValueChange={(value) => setClientForm({ ...clientForm, source: value })}
                 >
                   <SelectTrigger className="input-styled rounded" data-testid="select-source">
                     <SelectValue placeholder="Source" />
@@ -9615,7 +9612,7 @@ export default function AdminDashboard() {
                   value={clientStartDate}
                   onChange={(date) => {
                     setClientStartDate(date);
-                    setClientForm({...clientForm, startDate: date ? format(date, "yyyy-MM-dd") : ''});
+                    setClientForm({ ...clientForm, startDate: date ? format(date, "yyyy-MM-dd") : '' });
                   }}
                   placeholder="dd-mm-yyyy"
                   className="w-full"
@@ -9625,7 +9622,7 @@ export default function AdminDashboard() {
 
 
             <div className="flex justify-center pt-6">
-              <Button 
+              <Button
                 className="bg-cyan-400 hover:bg-cyan-500 text-white px-8 py-2 rounded"
                 onClick={() => {
                   if (!clientForm.brandName || !clientForm.email) {
@@ -9658,20 +9655,20 @@ export default function AdminDashboard() {
             {/* Row 1 - Employee ID (read-only/auto-generated) and Employee Name */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Input 
-                  placeholder="Employee ID" 
-                  className="input-styled rounded bg-gray-50 dark:bg-gray-800" 
+                <Input
+                  placeholder="Employee ID"
+                  className="input-styled rounded bg-gray-50 dark:bg-gray-800"
                   value={employeeForm.employeeId || 'Unique ID (Auto-generated)'}
                   readOnly
                   data-testid="input-employee-id"
                 />
               </div>
               <div>
-                <Input 
-                  placeholder="Employee Name *" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="Employee Name *"
+                  className="input-styled rounded"
                   value={employeeForm.name}
-                  onChange={(e) => setEmployeeForm({...employeeForm, name: e.target.value})}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, name: e.target.value })}
                   data-testid="input-employee-name"
                 />
               </div>
@@ -9680,20 +9677,20 @@ export default function AdminDashboard() {
             {/* Row 2 - Address and Designation */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Input 
-                  placeholder="Address" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="Address"
+                  className="input-styled rounded"
                   value={employeeForm.address}
-                  onChange={(e) => setEmployeeForm({...employeeForm, address: e.target.value})}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, address: e.target.value })}
                   data-testid="input-address"
                 />
               </div>
               <div>
-                <Input 
-                  placeholder="Designation" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="Designation"
+                  className="input-styled rounded"
                   value={employeeForm.designation}
-                  onChange={(e) => setEmployeeForm({...employeeForm, designation: e.target.value})}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, designation: e.target.value })}
                   data-testid="input-designation"
                 />
               </div>
@@ -9702,21 +9699,21 @@ export default function AdminDashboard() {
             {/* Row 3 - Email and Mobile Number */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Input 
-                  placeholder="Email *" 
-                  type="email" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="Email *"
+                  type="email"
+                  className="input-styled rounded"
                   value={employeeForm.email}
-                  onChange={(e) => setEmployeeForm({...employeeForm, email: e.target.value})}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, email: e.target.value })}
                   data-testid="input-employee-email"
                 />
               </div>
               <div>
-                <Input 
-                  placeholder="Mobile Number" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="Mobile Number"
+                  className="input-styled rounded"
                   value={employeeForm.phone}
-                  onChange={(e) => setEmployeeForm({...employeeForm, phone: e.target.value})}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, phone: e.target.value })}
                   data-testid="input-phone"
                 />
               </div>
@@ -9728,16 +9725,16 @@ export default function AdminDashboard() {
                 <Label className="text-sm font-medium text-gray-700 mb-1">Joining Date :</Label>
                 <StandardDatePicker
                   value={employeeForm.joiningDate ? new Date(employeeForm.joiningDate) : undefined}
-                  onChange={(date) => setEmployeeForm({...employeeForm, joiningDate: date ? date.toISOString().split('T')[0] : ''})}
+                  onChange={(date) => setEmployeeForm({ ...employeeForm, joiningDate: date ? date.toISOString().split('T')[0] : '' })}
                   placeholder="dd-mm-yyyy"
                   maxDate={new Date()}
                   className="w-full"
                 />
               </div>
               <div className="flex flex-col w-full">
-                <Select 
+                <Select
                   value={employeeForm.employmentStatus}
-                  onValueChange={(value) => setEmployeeForm({...employeeForm, employmentStatus: value})}
+                  onValueChange={(value) => setEmployeeForm({ ...employeeForm, employmentStatus: value })}
                 >
                   <SelectTrigger className="input-styled rounded w-full" data-testid="select-employment-status">
                     <SelectValue placeholder="Employment Status" />
@@ -9754,9 +9751,9 @@ export default function AdminDashboard() {
             {/* Row 5 - ESIC and EPFO */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Select 
+                <Select
                   value={employeeForm.esic}
-                  onValueChange={(value) => setEmployeeForm({...employeeForm, esic: value})}
+                  onValueChange={(value) => setEmployeeForm({ ...employeeForm, esic: value })}
                 >
                   <SelectTrigger className="input-styled rounded" data-testid="select-esic">
                     <SelectValue placeholder="ESIC" />
@@ -9768,9 +9765,9 @@ export default function AdminDashboard() {
                 </Select>
               </div>
               <div>
-                <Select 
+                <Select
                   value={employeeForm.epfo}
-                  onValueChange={(value) => setEmployeeForm({...employeeForm, epfo: value})}
+                  onValueChange={(value) => setEmployeeForm({ ...employeeForm, epfo: value })}
                 >
                   <SelectTrigger className="input-styled rounded" data-testid="select-epfo">
                     <SelectValue placeholder="EPFO" />
@@ -9786,20 +9783,20 @@ export default function AdminDashboard() {
             {/* Row 6 - ESIC.No and EPFO.No */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Input 
-                  placeholder="ESIC.No" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="ESIC.No"
+                  className="input-styled rounded"
                   value={employeeForm.esicNo}
-                  onChange={(e) => setEmployeeForm({...employeeForm, esicNo: e.target.value})}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, esicNo: e.target.value })}
                   data-testid="input-esic-no"
                 />
               </div>
               <div>
-                <Input 
-                  placeholder="EPFO.No" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="EPFO.No"
+                  className="input-styled rounded"
                   value={employeeForm.epfoNo}
-                  onChange={(e) => setEmployeeForm({...employeeForm, epfoNo: e.target.value})}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, epfoNo: e.target.value })}
                   data-testid="input-epfo-no"
                 />
               </div>
@@ -9811,19 +9808,19 @@ export default function AdminDashboard() {
                 <Label className="text-sm font-medium text-gray-700 mb-1">Date of Birth :</Label>
                 <StandardDatePicker
                   value={employeeForm.fatherName ? new Date(employeeForm.fatherName) : undefined}
-                  onChange={(date) => setEmployeeForm({...employeeForm, fatherName: date ? date.toISOString().split('T')[0] : ''})}
+                  onChange={(date) => setEmployeeForm({ ...employeeForm, fatherName: date ? date.toISOString().split('T')[0] : '' })}
                   placeholder="dd-mm-yyyy"
                   maxDate={new Date()}
                   className="w-full"
                 />
               </div>
               <div className="flex flex-col w-full">
-                <Input 
+                <Input
                   type="text"
                   placeholder="Mother Name"
-                  className="input-styled rounded w-full" 
+                  className="input-styled rounded w-full"
                   value={employeeForm.motherName}
-                  onChange={(e) => setEmployeeForm({...employeeForm, motherName: e.target.value})}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, motherName: e.target.value })}
                   data-testid="input-mother-name"
                 />
               </div>
@@ -9832,20 +9829,20 @@ export default function AdminDashboard() {
             {/* Row 8 - Father's contact number and Mother's Number */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Input 
-                  placeholder="Father's Contact Number" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="Father's Contact Number"
+                  className="input-styled rounded"
                   value={employeeForm.fatherNumber}
-                  onChange={(e) => setEmployeeForm({...employeeForm, fatherNumber: e.target.value})}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, fatherNumber: e.target.value })}
                   data-testid="input-father-number"
                 />
               </div>
               <div>
-                <Input 
-                  placeholder="Mother's Contact Number" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="Mother's Contact Number"
+                  className="input-styled rounded"
                   value={employeeForm.motherNumber}
-                  onChange={(e) => setEmployeeForm({...employeeForm, motherNumber: e.target.value})}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, motherNumber: e.target.value })}
                   data-testid="input-mother-number"
                 />
               </div>
@@ -9854,18 +9851,18 @@ export default function AdminDashboard() {
             {/* Row 9 - Offered CTC and Current Status */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Input 
-                  placeholder="Offered CTC" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="Offered CTC"
+                  className="input-styled rounded"
                   value={employeeForm.offeredCtc}
-                  onChange={(e) => setEmployeeForm({...employeeForm, offeredCtc: e.target.value})}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, offeredCtc: e.target.value })}
                   data-testid="input-offered-ctc"
                 />
               </div>
               <div>
-                <Select 
+                <Select
                   value={employeeForm.currentStatus}
-                  onValueChange={(value) => setEmployeeForm({...employeeForm, currentStatus: value})}
+                  onValueChange={(value) => setEmployeeForm({ ...employeeForm, currentStatus: value })}
                 >
                   <SelectTrigger className="input-styled rounded" data-testid="select-current-status">
                     <SelectValue placeholder="Current Status" />
@@ -9883,9 +9880,9 @@ export default function AdminDashboard() {
             {/* Row 10 - Increment Count and Appraised Quarter */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Select 
+                <Select
                   value={employeeForm.incrementCount}
-                  onValueChange={(value) => setEmployeeForm({...employeeForm, incrementCount: value})}
+                  onValueChange={(value) => setEmployeeForm({ ...employeeForm, incrementCount: value })}
                 >
                   <SelectTrigger className="input-styled rounded" data-testid="select-increment-count">
                     <SelectValue placeholder="Increment Count" />
@@ -9901,9 +9898,9 @@ export default function AdminDashboard() {
                 </Select>
               </div>
               <div>
-                <Select 
+                <Select
                   value={employeeForm.appraisedQuarter}
-                  onValueChange={(value) => setEmployeeForm({...employeeForm, appraisedQuarter: value})}
+                  onValueChange={(value) => setEmployeeForm({ ...employeeForm, appraisedQuarter: value })}
                 >
                   <SelectTrigger className="input-styled rounded" data-testid="select-appraised-quarter">
                     <SelectValue placeholder="Appraised Quarter" />
@@ -9921,18 +9918,18 @@ export default function AdminDashboard() {
             {/* Row 11 - Appraised Amount and Appraised Year */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Input 
-                  placeholder="Appraised Amount" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="Appraised Amount"
+                  className="input-styled rounded"
                   value={employeeForm.appraisedAmount}
-                  onChange={(e) => setEmployeeForm({...employeeForm, appraisedAmount: e.target.value})}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, appraisedAmount: e.target.value })}
                   data-testid="input-appraised-amount"
                 />
               </div>
               <div>
-                <Select 
+                <Select
                   value={employeeForm.appraisedYear}
-                  onValueChange={(value) => setEmployeeForm({...employeeForm, appraisedYear: value})}
+                  onValueChange={(value) => setEmployeeForm({ ...employeeForm, appraisedYear: value })}
                 >
                   <SelectTrigger className="input-styled rounded" data-testid="select-appraised-year">
                     <SelectValue placeholder="Appraised Year" />
@@ -9950,20 +9947,20 @@ export default function AdminDashboard() {
             {/* Row 12 - Yearly CTC and Current Monthly CTC */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Input 
-                  placeholder="Yearly CTC" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="Yearly CTC"
+                  className="input-styled rounded"
                   value={employeeForm.yearlyCTC}
-                  onChange={(e) => setEmployeeForm({...employeeForm, yearlyCTC: e.target.value})}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, yearlyCTC: e.target.value })}
                   data-testid="input-yearly-ctc"
                 />
               </div>
               <div>
-                <Input 
-                  placeholder="Current Monthly CTC" 
-                  className="input-styled rounded" 
+                <Input
+                  placeholder="Current Monthly CTC"
+                  className="input-styled rounded"
                   value={employeeForm.currentMonthlyCTC}
-                  onChange={(e) => setEmployeeForm({...employeeForm, currentMonthlyCTC: e.target.value})}
+                  onChange={(e) => setEmployeeForm({ ...employeeForm, currentMonthlyCTC: e.target.value })}
                   data-testid="input-current-monthly-ctc"
                 />
               </div>
@@ -9972,24 +9969,24 @@ export default function AdminDashboard() {
             {/* Bank Details Section */}
             <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Bank Details</h3>
-              
+
               {/* Row 13 - Name as per Bank and Account Number */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Input 
-                    placeholder="Name as per Bank" 
-                    className="input-styled rounded" 
+                  <Input
+                    placeholder="Name as per Bank"
+                    className="input-styled rounded"
                     value={employeeForm.nameAsPerBank}
-                    onChange={(e) => setEmployeeForm({...employeeForm, nameAsPerBank: e.target.value})}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, nameAsPerBank: e.target.value })}
                     data-testid="input-name-as-per-bank"
                   />
                 </div>
                 <div>
-                  <Input 
-                    placeholder="Account Number" 
-                    className="input-styled rounded" 
+                  <Input
+                    placeholder="Account Number"
+                    className="input-styled rounded"
                     value={employeeForm.accountNumber}
-                    onChange={(e) => setEmployeeForm({...employeeForm, accountNumber: e.target.value})}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, accountNumber: e.target.value })}
                     data-testid="input-account-number"
                   />
                 </div>
@@ -9998,20 +9995,20 @@ export default function AdminDashboard() {
               {/* Row 14 - IFSC Code and Bank Name */}
               <div className="grid grid-cols-2 gap-4 mt-4">
                 <div>
-                  <Input 
-                    placeholder="IFSC Code" 
-                    className="input-styled rounded" 
+                  <Input
+                    placeholder="IFSC Code"
+                    className="input-styled rounded"
                     value={employeeForm.ifscCode}
-                    onChange={(e) => setEmployeeForm({...employeeForm, ifscCode: e.target.value})}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, ifscCode: e.target.value })}
                     data-testid="input-ifsc-code"
                   />
                 </div>
                 <div>
-                  <Input 
-                    placeholder="Bank Name" 
-                    className="input-styled rounded" 
+                  <Input
+                    placeholder="Bank Name"
+                    className="input-styled rounded"
                     value={employeeForm.bankName}
-                    onChange={(e) => setEmployeeForm({...employeeForm, bankName: e.target.value})}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, bankName: e.target.value })}
                     data-testid="input-bank-name"
                   />
                 </div>
@@ -10020,20 +10017,20 @@ export default function AdminDashboard() {
               {/* Row 15 - Branch and City */}
               <div className="grid grid-cols-2 gap-4 mt-4">
                 <div>
-                  <Input 
-                    placeholder="Branch" 
-                    className="input-styled rounded" 
+                  <Input
+                    placeholder="Branch"
+                    className="input-styled rounded"
                     value={employeeForm.branch}
-                    onChange={(e) => setEmployeeForm({...employeeForm, branch: e.target.value})}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, branch: e.target.value })}
                     data-testid="input-branch"
                   />
                 </div>
                 <div>
-                  <Input 
-                    placeholder="City" 
-                    className="input-styled rounded" 
+                  <Input
+                    placeholder="City"
+                    className="input-styled rounded"
                     value={employeeForm.city}
-                    onChange={(e) => setEmployeeForm({...employeeForm, city: e.target.value})}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, city: e.target.value })}
                     data-testid="input-city"
                   />
                 </div>
@@ -10041,7 +10038,7 @@ export default function AdminDashboard() {
             </div>
 
             <div className="flex justify-center pt-6">
-              <Button 
+              <Button
                 className="bg-cyan-400 hover:bg-cyan-500 text-white px-8 py-2 rounded"
                 onClick={() => {
                   if (!employeeForm.name || !employeeForm.email) {
@@ -10103,9 +10100,9 @@ export default function AdminDashboard() {
                     </tr>
                   ) : (
                     filteredClients.map((row: any, index: number) => {
-                      const statusClass = row.currentStatus === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
-                                        row.currentStatus === 'frozen' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' : 
-                                        'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+                      const statusClass = row.currentStatus === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                        row.currentStatus === 'frozen' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' :
+                          'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
                       return (
                         <tr key={row.id || index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}>
                           <td className="py-3 px-3 text-gray-900 dark:text-white font-medium">{row.clientCode}</td>
@@ -10264,14 +10261,14 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setIsResumeDatabaseModalOpen(false)}
               data-testid="button-close-resume-modal"
             >
               Close
             </Button>
-            <Button 
+            <Button
               className="bg-blue-600 hover:bg-blue-700 text-white"
               onClick={() => {
                 setIsResumeDatabaseModalOpen(false);
@@ -10292,8 +10289,8 @@ export default function AdminDashboard() {
         <DialogContent className="max-w-4xl w-[90vw] max-h-[85vh]">
           <DialogHeader className="flex flex-row items-center justify-between gap-2">
             <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">Performance Data - Quarter {performanceMetrics?.currentQuarter || 'Q1 2024'}</DialogTitle>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               size="sm"
               onClick={() => setIsResetPerformanceConfirmOpen(true)}
               disabled={resetPerformanceDataMutation.isPending}
@@ -10375,10 +10372,10 @@ export default function AdminDashboard() {
                       const targetValue = typeof row.minimumTarget === 'number' ? row.minimumTarget : parseInt(String(row.minimumTarget).replace(/,/g, ''), 10);
                       const achievedValue = typeof row.targetAchieved === 'number' ? row.targetAchieved : parseInt(String(row.targetAchieved).replace(/,/g, ''), 10);
                       const performancePercent = targetValue > 0 ? ((achievedValue / targetValue) * 100).toFixed(2) : '0.00';
-                      const performanceColor = parseFloat(performancePercent) >= 80 ? 'text-green-600 dark:text-green-400' : 
-                                              parseFloat(performancePercent) >= 60 ? 'text-yellow-600 dark:text-yellow-400' : 
-                                              'text-red-600 dark:text-red-400';
-                      
+                      const performanceColor = parseFloat(performancePercent) >= 80 ? 'text-green-600 dark:text-green-400' :
+                        parseFloat(performancePercent) >= 60 ? 'text-yellow-600 dark:text-yellow-400' :
+                          'text-red-600 dark:text-red-400';
+
                       return (
                         <tr key={row.id || index} className={`border-b border-gray-100 dark:border-gray-800 ${index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-900/50' : ''}`}>
                           <td className="py-3 px-3 text-gray-900 dark:text-white font-medium" data-testid={`text-resource-${index}`}>{row.teamMemberName || 'N/A'}</td>
@@ -10411,7 +10408,7 @@ export default function AdminDashboard() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel data-testid="button-cancel-reset-performance">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={() => {
                 resetPerformanceDataMutation.mutate();
                 setIsResetPerformanceConfirmOpen(false);
@@ -10436,7 +10433,7 @@ export default function AdminDashboard() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel data-testid="button-cancel-reset-master">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={() => {
                 resetMasterDataMutation.mutate();
                 setIsResetMasterDataConfirmOpen(false);
@@ -10461,7 +10458,7 @@ export default function AdminDashboard() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel data-testid="button-cancel-download">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleConfirmDownload}
               className="bg-cyan-400 hover:bg-cyan-500 text-black"
               data-testid="button-confirm-download"
@@ -10553,7 +10550,7 @@ export default function AdminDashboard() {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="flex-1 space-y-1">
                 <label className="text-xs font-medium text-gray-700 dark:text-gray-300">From</label>
                 <StandardDatePicker
@@ -10563,7 +10560,7 @@ export default function AdminDashboard() {
                   className="w-full"
                 />
               </div>
-              
+
               <div className="flex-1 space-y-1">
                 <label className="text-xs font-medium text-gray-700 dark:text-gray-300">To</label>
                 <StandardDatePicker
@@ -10573,7 +10570,7 @@ export default function AdminDashboard() {
                   className="w-full"
                 />
               </div>
-              
+
               <div className="flex-1 space-y-1">
                 <label className="text-xs font-medium text-gray-700 dark:text-gray-300">Period</label>
                 <Select value={revenuePeriod} onValueChange={setRevenuePeriod}>
@@ -10616,7 +10613,7 @@ export default function AdminDashboard() {
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Client Metrics - Full View</DialogTitle>
           </DialogHeader>
-          
+
           <div className="space-y-6 py-4">
             {/* Header Section */}
             <div className="flex justify-between items-center">
@@ -10631,7 +10628,7 @@ export default function AdminDashboard() {
                     className="w-auto"
                   />
                 )}
-                
+
                 {clientMetricsPeriod === "weekly" && (
                   <StandardDatePicker
                     value={clientMetricsWeekStart}
@@ -10640,7 +10637,7 @@ export default function AdminDashboard() {
                     className="w-auto"
                   />
                 )}
-                
+
                 {clientMetricsPeriod === "monthly" && (
                   <div className="flex items-center gap-2">
                     <Select value={clientMetricsMonth} onValueChange={setClientMetricsMonth}>
@@ -10676,7 +10673,7 @@ export default function AdminDashboard() {
                     </Select>
                   </div>
                 )}
-                
+
                 <Select value={clientMetricsPeriod} onValueChange={setClientMetricsPeriod}>
                   <SelectTrigger className="w-24" data-testid="select-client-metrics-period">
                     <SelectValue />
@@ -10700,7 +10697,7 @@ export default function AdminDashboard() {
                   <div className="w-3 h-3 bg-cyan-400 rounded-full mb-1"></div>
                 </div>
               </div>
-              
+
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
                 <h3 className="text-sm font-medium text-blue-700 mb-2">Time to Interview</h3>
                 <div className="flex items-end space-x-3 mb-2">
@@ -10709,7 +10706,7 @@ export default function AdminDashboard() {
                   <div className="w-3 h-3 bg-red-400 rounded-full mb-1"></div>
                 </div>
               </div>
-              
+
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
                 <h3 className="text-sm font-medium text-blue-700 mb-2">Time to Offer</h3>
                 <div className="flex items-end space-x-3 mb-2">
@@ -10718,7 +10715,7 @@ export default function AdminDashboard() {
                   <div className="w-3 h-3 bg-purple-400 rounded-full mb-1"></div>
                 </div>
               </div>
-              
+
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
                 <h3 className="text-sm font-medium text-blue-700 mb-2">Time to Fill</h3>
                 <div className="flex items-end space-x-3 mb-2">
@@ -10741,7 +10738,7 @@ export default function AdminDashboard() {
                     <div className="w-3 h-3 bg-cyan-400 rounded-full mb-1"></div>
                   </div>
                 </div>
-                
+
                 <div className="bg-green-100 rounded-lg p-4 border border-green-200">
                   <h3 className="text-sm font-medium text-green-700 mb-2">Interview to Offer %</h3>
                   <div className="flex items-end space-x-3 mb-2">
@@ -10750,7 +10747,7 @@ export default function AdminDashboard() {
                     <div className="w-3 h-3 bg-red-400 rounded-full mb-1"></div>
                   </div>
                 </div>
-                
+
                 <div className="bg-green-100 rounded-lg p-4 border border-green-200">
                   <h3 className="text-sm font-medium text-green-700 mb-2">Offer Acceptance %</h3>
                   <div className="flex items-end space-x-3 mb-2">
@@ -10759,7 +10756,7 @@ export default function AdminDashboard() {
                     <div className="w-3 h-3 bg-purple-400 rounded-full mb-1"></div>
                   </div>
                 </div>
-                
+
                 <div className="bg-green-100 rounded-lg p-4 border border-green-200">
                   <h3 className="text-sm font-medium text-green-700 mb-2">Early Attrition %</h3>
                   <div className="flex items-end space-x-3 mb-2">
@@ -10780,26 +10777,26 @@ export default function AdminDashboard() {
                   <div className="text-3xl font-bold text-red-600">0</div>
                   <div className="text-sm text-gray-600 mt-1">Days faster*</div>
                 </div>
-                
+
                 <div className="bg-red-50 rounded-lg p-4 border border-red-200">
                   <h3 className="text-sm font-medium text-red-700 mb-2">Revenue Impact Of Delay</h3>
                   <div className="text-3xl font-bold text-red-600">0</div>
                   <div className="text-sm text-gray-600 mt-1">Lost per Role*</div>
                 </div>
-                
+
                 <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
                   <h3 className="text-sm font-medium text-purple-700 mb-2">Client NPS</h3>
                   <div className="text-3xl font-bold text-purple-600">+0</div>
                   <div className="text-sm text-gray-600 mt-1">Net Promoter Score*</div>
                 </div>
-                
+
                 <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
                   <h3 className="text-sm font-medium text-purple-700 mb-2">Candidate NPS</h3>
                   <div className="text-3xl font-bold text-purple-600">+0</div>
                   <div className="text-sm text-gray-600 mt-1">Net Promoter Score*</div>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-4 gap-4">
                 <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200 relative">
                   <h3 className="text-sm font-medium text-yellow-700 mb-2">Feedback Turn Around</h3>
@@ -10819,16 +10816,16 @@ export default function AdminDashboard() {
                         <span className="text-xs text-gray-600">days)*</span>
                       </div>
                       <div className="flex gap-1">
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           onClick={handleSaveModal}
                           className="h-7 text-xs"
                           data-testid="button-save-feedback-turnaround-modal"
                         >
                           Save
                         </Button>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           onClick={handleCancelModal}
                           className="h-7 text-xs"
                           variant="outline"
@@ -10853,19 +10850,19 @@ export default function AdminDashboard() {
                     </>
                   )}
                 </div>
-                
+
                 <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
                   <h3 className="text-sm font-medium text-yellow-700 mb-2">First Year Retention Rate</h3>
                   <div className="text-3xl font-bold text-yellow-600">0</div>
                   <div className="text-sm text-gray-600 mt-1">%</div>
                 </div>
-                
+
                 <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
                   <h3 className="text-sm font-medium text-yellow-700 mb-2">Fulfillment Rate</h3>
                   <div className="text-3xl font-bold text-yellow-600">0</div>
                   <div className="text-sm text-gray-600 mt-1">%</div>
                 </div>
-                
+
                 <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
                   <h3 className="text-sm font-medium text-yellow-700 mb-2">Revenue Recovered</h3>
                   <div className="text-3xl font-bold text-yellow-600">0 <span className="text-2xl">L</span></div>
@@ -10876,7 +10873,7 @@ export default function AdminDashboard() {
 
             {/* Download Button */}
             <div className="flex justify-end mt-6">
-              <Button 
+              <Button
                 onClick={() => window.print()}
                 className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded shadow-lg flex items-center gap-2"
                 data-testid="button-download-metrics-modal"
@@ -10890,9 +10887,9 @@ export default function AdminDashboard() {
       </Dialog>
 
       {/* Chat Support Modal */}
-      <ChatDock 
-        open={isChatOpen} 
-        onClose={() => setIsChatOpen(false)} 
+      <ChatDock
+        open={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
         userName={userName}
         userRole={userRole}
       />
@@ -10927,27 +10924,27 @@ export default function AdminDashboard() {
                     <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">CLIENT ID:</span>
                     <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedJD.clientId || 'N/A'}</span>
                   </div>
-                  
+
                   <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded border border-gray-200 dark:border-gray-700">
                     <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">ROLE ID:</span>
                     <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedJD.id || 'N/A'}</span>
                   </div>
-                  
+
                   <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded border border-gray-200 dark:border-gray-700">
                     <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">POSITION:</span>
                     <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedJD.position || 'N/A'}</span>
                   </div>
-                  
+
                   <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded border border-gray-200 dark:border-gray-700">
                     <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">SPOC NAME:</span>
                     <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedJD.spocName || selectedJD.spoc || 'N/A'}</span>
                   </div>
-                  
+
                   <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded border border-gray-200 dark:border-gray-700">
                     <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">COMPANY:</span>
                     <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedJD.company || 'N/A'}</span>
                   </div>
-                  
+
                   <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800/50 rounded border border-gray-200 dark:border-gray-700">
                     <span className="text-sm font-semibold text-gray-600 dark:text-gray-400">STATUS:</span>
                     <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedJD.status || 'N/A'}</span>
@@ -10958,7 +10955,7 @@ export default function AdminDashboard() {
                 {(selectedJD.jdFile || selectedJD.jdText) && (
                   <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
                     <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Job Description Document</h3>
-                    
+
                     {/* PDF/DOC Preview */}
                     {selectedJD.jdFile && (
                       <div className="mb-4">
@@ -10991,7 +10988,7 @@ export default function AdminDashboard() {
                         )}
                       </div>
                     )}
-                    
+
                     {/* JD Text Content */}
                     {selectedJD.jdText && (
                       <div>
@@ -11009,7 +11006,7 @@ export default function AdminDashboard() {
             )}
           </div>
           <div className="flex justify-end space-x-3 px-6 py-4 border-t bg-gray-50 dark:bg-gray-800/50">
-            <Button 
+            <Button
               onClick={() => setIsJDPreviewModalOpen(false)}
               className="px-6 bg-blue-600 hover:bg-blue-700 text-white"
             >
@@ -11057,7 +11054,7 @@ export default function AdminDashboard() {
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              setSelectedJD({...jd.requirement, clientId: jd.clientId, spocName: jd.spocName});
+                              setSelectedJD({ ...jd.requirement, clientId: jd.clientId, spocName: jd.spocName });
                               setIsViewMoreJDModalOpen(false);
                               setIsJDPreviewModalOpen(true);
                             }}
@@ -11089,7 +11086,7 @@ export default function AdminDashboard() {
             </div>
           </div>
           <div className="flex justify-end space-x-3 px-6 py-4 border-t bg-gray-50 dark:bg-gray-800/50">
-            <Button 
+            <Button
               onClick={() => setIsViewMoreJDModalOpen(false)}
               className="px-6 bg-blue-600 hover:bg-blue-700 text-white"
             >
