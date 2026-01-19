@@ -456,6 +456,8 @@ export const chatMessages = pgTable("chat_messages", {
   messageType: text("message_type").notNull(), // text, image, file, link
   content: text("content").notNull(),
   createdAt: text("created_at").notNull(),
+  deliveredAt: text("delivered_at"), // When message was delivered to recipient
+  readAt: text("read_at"), // When message was read by recipient
 });
 
 export const chatAttachments = pgTable("chat_attachments", {
@@ -466,6 +468,15 @@ export const chatAttachments = pgTable("chat_attachments", {
   fileType: text("file_type").notNull(), // image, pdf, doc, etc
   fileSize: integer("file_size").notNull(),
   uploadedAt: text("uploaded_at").notNull(),
+});
+
+export const chatUnreadCounts = pgTable("chat_unread_counts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  roomId: varchar("room_id").notNull(),
+  participantId: text("participant_id").notNull(), // employee ID
+  unreadCount: integer("unread_count").notNull().default(0),
+  lastReadAt: text("last_read_at"), // Last time user read messages in this room
+  updatedAt: text("updated_at").notNull(),
 });
 
 export const revenueMappings = pgTable("revenue_mappings", {

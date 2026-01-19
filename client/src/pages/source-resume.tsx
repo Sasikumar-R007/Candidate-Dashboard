@@ -524,6 +524,7 @@ interface DatabaseCandidate {
   collegeName?: string;
   preferredLocation?: string;
   resumeFile?: string;
+  resumeText?: string; // Raw resume text for better searchability
   addedBy?: string;
 }
 
@@ -557,7 +558,9 @@ interface CandidateDisplay {
   portfolioUrl?: string;
   lastSeen: string;
   resumeFile?: string;
+  resumeText?: string; // Raw resume text for better searchability
   createdAt?: string; // For reactive lastSeen calculation
+  isFromDatabase?: boolean;
 }
 
 function mapDatabaseCandidateToDisplay(dbCandidate: DatabaseCandidate, currentTime: Date): CandidateDisplay {
@@ -616,6 +619,7 @@ function mapDatabaseCandidateToDisplay(dbCandidate: DatabaseCandidate, currentTi
     portfolioUrl: dbCandidate.portfolioUrl,
     lastSeen,
     resumeFile: dbCandidate.resumeFile,
+    resumeText: dbCandidate.resumeText, // Include raw resume text for enhanced searchability
     candidateId: dbCandidate.candidateId,
     createdAt: dbCandidate.createdAt, // Store for reactive calculation
     // Show "DB" tag only for candidates uploaded via Master Database (has resumeFile or addedBy)
@@ -1031,63 +1035,301 @@ const SourceResume = () => {
     });
   };
 
-  // Boolean search parser
-  const parseBooleanSearch = (query: string): boolean => {
-    if (!filters.booleanMode) return true;
+  // Fuzzy string matching utility (Levenshtein distance based)
+  const fuzzyMatch = (text: string, pattern: string, threshold: number = 0.8): boolean => {
+    const lowerText = text.toLowerCase();
+    const lowerPattern = pattern.toLowerCase();
     
-    const andPattern = /AND/gi;
-    const orPattern = /OR/gi;
+    // Exact match (highest priority)
+    if (lowerText.includes(lowerPattern)) return true;
     
-    if (andPattern.test(query)) {
-      const terms = query.split(/AND/gi).map(t => t.trim()).filter(Boolean);
-      return terms.every(term => 
-        resultsSearchQuery.toLowerCase().includes(term.toLowerCase())
-      );
-    } else if (orPattern.test(query)) {
-      const terms = query.split(/OR/gi).map(t => t.trim()).filter(Boolean);
-      return terms.some(term => 
-        resultsSearchQuery.toLowerCase().includes(term.toLowerCase())
-      );
+    // Word boundary match
+    const wordBoundaryRegex = new RegExp(`\\b${lowerPattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+    if (wordBoundaryRegex.test(lowerText)) return true;
+    
+    // Fuzzy match using simple similarity
+    const words = lowerText.split(/\s+/);
+    for (const word of words) {
+      if (word.length >= 3 && lowerPattern.length >= 3) {
+        // Check if pattern is contained in word or vice versa with similarity
+        const similarity = calculateSimilarity(word, lowerPattern);
+        if (similarity >= threshold) return true;
+      }
     }
-    return true;
+    
+    return false;
+  };
+
+  // Calculate similarity between two strings (simple Jaccard-like similarity)
+  const calculateSimilarity = (str1: string, str2: string): number => {
+    if (str1 === str2) return 1.0;
+    if (str1.length === 0 || str2.length === 0) return 0.0;
+    
+    // Check if one contains the other
+    if (str1.includes(str2) || str2.includes(str1)) {
+      return Math.min(str1.length, str2.length) / Math.max(str1.length, str2.length);
+    }
+    
+    // Simple character overlap similarity
+    const set1 = new Set(str1.split(''));
+    const set2 = new Set(str2.split(''));
+    const intersection = new Set([...set1].filter(x => set2.has(x)));
+    const union = new Set([...set1, ...set2]);
+    
+    return intersection.size / union.size;
+  };
+
+  // Extract searchable text from candidate - includes resumeText for comprehensive searching
+  const getCandidateSearchText = (candidate: CandidateDisplay): string => {
+    // Base searchable fields
+    let searchText = `${candidate.name} ${candidate.title} ${candidate.currentCompany} ${candidate.skills.join(' ')} ${candidate.location} ${candidate.education} ${candidate.email}`;
+    
+    // Add resumeText if available for more comprehensive search (first 2000 chars to avoid performance issues)
+    if (candidate.resumeText) {
+      const resumeTextSnippet = candidate.resumeText.substring(0, 2000).toLowerCase();
+      searchText += ` ${resumeTextSnippet}`;
+    }
+    
+    // Add other searchable fields
+    if (candidate.preferredLocation) {
+      searchText += ` ${candidate.preferredLocation}`;
+    }
+    if (candidate.university) {
+      searchText += ` ${candidate.university}`;
+    }
+    if (candidate.productDomain) {
+      searchText += ` ${candidate.productDomain}`;
+    }
+    
+    return searchText.toLowerCase();
+  };
+
+  // Advanced boolean search parser with support for:
+  // - AND/OR operators
+  // - NOT operator
+  // - Parentheses for grouping
+  // - Phrase matching with quotes
+  // - Field-specific searches (e.g., "skills:React", "location:Chennai")
+  const parseAdvancedBooleanSearch = (query: string, candidate: CandidateDisplay): boolean => {
+    if (!filters.booleanMode || !query.trim()) return true;
+    
+    const searchText = getCandidateSearchText(candidate);
+    const queryLower = query.toLowerCase().trim();
+    
+    // Extract field-specific searches (e.g., "skills:React", "location:Chennai")
+    const fieldPattern = /(\w+):\s*([^\s]+(?:\s+[^\s]+)*)/gi;
+    let modifiedQuery = query;
+    const fieldSearches: { field: string; value: string }[] = [];
+    
+    let fieldMatch;
+    while ((fieldMatch = fieldPattern.exec(query)) !== null) {
+      const field = fieldMatch[1].toLowerCase();
+      const value = fieldMatch[2];
+      fieldSearches.push({ field, value });
+      // Remove from query for further processing
+      modifiedQuery = modifiedQuery.replace(fieldMatch[0], '');
+    }
+    
+    // Check field-specific searches
+    for (const { field, value } of fieldSearches) {
+      let fieldText = '';
+      switch (field) {
+        case 'skill':
+        case 'skills':
+          fieldText = candidate.skills.join(' ').toLowerCase();
+          break;
+        case 'name':
+          fieldText = candidate.name.toLowerCase();
+          break;
+        case 'title':
+        case 'role':
+          fieldText = candidate.title.toLowerCase();
+          break;
+        case 'company':
+          fieldText = candidate.currentCompany.toLowerCase();
+          break;
+        case 'location':
+          fieldText = candidate.location.toLowerCase();
+          break;
+        case 'education':
+          fieldText = candidate.education.toLowerCase();
+          break;
+        default:
+          fieldText = searchText; // Fallback to full search
+      }
+      
+      // Remove quotes if present for phrase matching
+      const cleanValue = value.replace(/^["']|["']$/g, '');
+      if (!fuzzyMatch(fieldText, cleanValue)) {
+        return false;
+      }
+    }
+    
+    // Extract phrase searches (quoted strings)
+    const phrasePattern = /"([^"]+)"/g;
+    const phrases: string[] = [];
+    let phraseMatch;
+    while ((phraseMatch = phrasePattern.exec(modifiedQuery)) !== null) {
+      phrases.push(phraseMatch[1]);
+      modifiedQuery = modifiedQuery.replace(phraseMatch[0], `__PHRASE_${phrases.length - 1}__`);
+    }
+    
+    // Process NOT operators first
+    const notPattern = /\bNOT\s+([^\s]+(?:\s+(?!(?:AND|OR|NOT))[^\s]+)*)/gi;
+    const notTerms: string[] = [];
+    let notMatch;
+    while ((notMatch = notPattern.exec(modifiedQuery)) !== null) {
+      const notTerm = notMatch[1].trim();
+      // Replace phrase placeholders
+      const cleanNotTerm = notTerm.replace(/__PHRASE_(\d+)__/g, (_, idx) => phrases[parseInt(idx)]);
+      notTerms.push(cleanNotTerm);
+      modifiedQuery = modifiedQuery.replace(notMatch[0], '');
+    }
+    
+    // Check NOT terms - candidate must not contain these
+    for (const notTerm of notTerms) {
+      if (fuzzyMatch(searchText, notTerm)) {
+        return false;
+      }
+    }
+    
+    // Replace remaining phrase placeholders back to original phrases for processing
+    modifiedQuery = modifiedQuery.replace(/__PHRASE_(\d+)__/g, (_, idx) => `"${phrases[parseInt(idx)]}"`);
+    
+    // Handle parentheses for grouping (basic support)
+    // Remove parentheses and process inner expressions first
+    const parenthesesPattern = /\(([^()]+)\)/g;
+    let hasParentheses = false;
+    let processedQuery = modifiedQuery;
+    
+    while (parenthesesPattern.test(processedQuery)) {
+      hasParentheses = true;
+      processedQuery = processedQuery.replace(parenthesesPattern, (match, inner) => {
+        // Evaluate inner expression
+        const innerResult = evaluateBooleanExpression(inner.trim(), searchText, phrases);
+        return innerResult ? '__TRUE__' : '__FALSE__';
+      });
+    }
+    
+    // Now evaluate the main expression
+    if (hasParentheses) {
+      // Replace true/false placeholders
+      processedQuery = processedQuery.replace(/__TRUE__/g, 'true');
+      processedQuery = processedQuery.replace(/__FALSE__/g, 'false');
+      
+      // If only true/false remain, evaluate directly
+      if (/^(true|false)(\s+(?:AND|OR)\s+(true|false))*$/i.test(processedQuery.trim())) {
+        // Simple boolean evaluation
+        let result = true;
+        const parts = processedQuery.split(/\s+(?:AND|OR)\s+/i);
+        const operators = processedQuery.match(/\s+(AND|OR)\s+/gi) || [];
+        
+        if (parts.length > 0) {
+          result = parts[0].toLowerCase() === 'true';
+          for (let i = 0; i < operators.length; i++) {
+            const op = operators[i].trim().toUpperCase();
+            const nextPart = parts[i + 1].toLowerCase() === 'true';
+            result = op === 'AND' ? (result && nextPart) : (result || nextPart);
+          }
+        }
+        return result;
+      }
+    }
+    
+    // Evaluate remaining expression
+    return evaluateBooleanExpression(processedQuery, searchText, phrases);
+  };
+
+  // Helper function to evaluate boolean expression
+  const evaluateBooleanExpression = (expression: string, searchText: string, phrases: string[]): boolean => {
+    if (!expression.trim()) return true;
+    
+    // Handle phrase matches
+    const phrasePlaceholder = /__PHRASE_(\d+)__/g;
+    const phraseInQuotes = /"([^"]+)"/g;
+    
+    // Replace quoted phrases with placeholders first
+    let tempExpression = expression;
+    const tempPhrases: string[] = [];
+    let match;
+    while ((match = phraseInQuotes.exec(expression)) !== null) {
+      const phraseIndex = tempPhrases.length;
+      tempPhrases.push(match[1]);
+      tempExpression = tempExpression.replace(match[0], `__PHRASE_${phraseIndex}__`);
+    }
+    
+    const allPhrases = [...phrases, ...tempPhrases];
+    
+    // Process AND/OR logic
+    const andPattern = /\bAND\b/gi;
+    const orPattern = /\bOR\b/gi;
+    
+    if (andPattern.test(tempExpression)) {
+      const terms = tempExpression.split(/\s+AND\s+/gi).map(t => t.trim()).filter(Boolean);
+      return terms.every(term => {
+        // Check for phrase
+        const phraseMatch = term.match(/__PHRASE_(\d+)__/);
+        if (phraseMatch) {
+          const phrase = allPhrases[parseInt(phraseMatch[1])];
+          return searchText.includes(phrase.toLowerCase());
+        }
+        return fuzzyMatch(searchText, term);
+      });
+    } else if (orPattern.test(tempExpression)) {
+      const terms = tempExpression.split(/\s+OR\s+/gi).map(t => t.trim()).filter(Boolean);
+      return terms.some(term => {
+        const phraseMatch = term.match(/__PHRASE_(\d+)__/);
+        if (phraseMatch) {
+          const phrase = allPhrases[parseInt(phraseMatch[1])];
+          return searchText.includes(phrase.toLowerCase());
+        }
+        return fuzzyMatch(searchText, term);
+      });
+    } else {
+      // Single term or phrase
+      const phraseMatch = tempExpression.match(/__PHRASE_(\d+)__/);
+      if (phraseMatch) {
+        const phrase = allPhrases[parseInt(phraseMatch[1])];
+        return searchText.includes(phrase.toLowerCase());
+      }
+      return fuzzyMatch(searchText, tempExpression);
+    }
   };
 
   // Filter candidates based on search criteria
   const filterCandidates = (candidatesList: CandidateDisplay[]): CandidateDisplay[] => {
     return candidatesList.filter((candidate) => {
-      // Excluded keywords filter (must not contain)
+      // Excluded keywords filter (must not contain) - with fuzzy matching
       if (filters.excludedKeywords.length > 0) {
+        const searchText = getCandidateSearchText(candidate);
         const hasExcluded = filters.excludedKeywords.some(keyword =>
-          candidate.skills.some(skill => skill.toLowerCase().includes(keyword.toLowerCase())) ||
-          candidate.name.toLowerCase().includes(keyword.toLowerCase()) ||
-          candidate.title.toLowerCase().includes(keyword.toLowerCase()) ||
-          candidate.currentCompany.toLowerCase().includes(keyword.toLowerCase())
+          fuzzyMatch(searchText, keyword, 0.85) // Higher threshold for exclusion to avoid false positives
         );
         if (hasExcluded) return false;
       }
 
-      // Excluded companies filter
+      // Excluded companies filter - with fuzzy matching
       if (filters.excludedCompanies.length > 0) {
         const hasExcludedCompany = filters.excludedCompanies.some(company =>
-          candidate.currentCompany.toLowerCase().includes(company.toLowerCase())
+          fuzzyMatch(candidate.currentCompany.toLowerCase(), company.toLowerCase(), 0.85)
         );
         if (hasExcludedCompany) return false;
       }
 
-      // Keywords filter
+      // Keywords filter - with fuzzy matching
       if (filters.keywords.length > 0) {
+        const searchText = getCandidateSearchText(candidate);
         const hasKeyword = filters.keywords.some(keyword =>
-          candidate.skills.some(skill => skill.toLowerCase().includes(keyword.toLowerCase())) ||
-          candidate.name.toLowerCase().includes(keyword.toLowerCase()) ||
-          candidate.title.toLowerCase().includes(keyword.toLowerCase())
+          fuzzyMatch(searchText, keyword, 0.75)
         );
         if (!hasKeyword) return false;
       }
 
-      // Specific skills filter (must have all)
+      // Specific skills filter (must have all) - with fuzzy matching
       if (filters.specificSkills.length > 0) {
+        const skillsText = candidate.skills.join(' ').toLowerCase();
         const hasAllSkills = filters.specificSkills.every(skill =>
-          candidate.skills.some(cSkill => cSkill.toLowerCase().includes(skill.toLowerCase()))
+          fuzzyMatch(skillsText, skill.toLowerCase(), 0.75)
         );
         if (!hasAllSkills) return false;
       }
@@ -1095,38 +1337,18 @@ const SourceResume = () => {
       // Search query filter - Multiple words use OR logic by default
       if (resultsSearchQuery.trim()) {
         if (filters.booleanMode) {
-          // Boolean search: parse AND/OR logic
-          const query = resultsSearchQuery.toLowerCase();
-          const andMatch = /AND/gi.test(query);
-          const orMatch = /OR/gi.test(query);
-          
-          if (andMatch) {
-            const terms = query.split(/AND/gi).map(t => t.trim()).filter(Boolean);
-            const allMatch = terms.every(term => {
-              const searchText = `${candidate.name} ${candidate.title} ${candidate.currentCompany} ${candidate.skills.join(' ')}`.toLowerCase();
-              return searchText.includes(term);
-            });
-            if (!allMatch) return false;
-          } else if (orMatch) {
-            const terms = query.split(/OR/gi).map(t => t.trim()).filter(Boolean);
-            const anyMatch = terms.some(term => {
-              const searchText = `${candidate.name} ${candidate.title} ${candidate.currentCompany} ${candidate.skills.join(' ')}`.toLowerCase();
-              return searchText.includes(term);
-            });
-            if (!anyMatch) return false;
-          } else {
-            // Single term search
-            const searchText = `${candidate.name} ${candidate.title} ${candidate.currentCompany} ${candidate.skills.join(' ')}`.toLowerCase();
-            if (!searchText.includes(query)) return false;
+          // Use advanced boolean search parser with full capabilities
+          if (!parseAdvancedBooleanSearch(resultsSearchQuery, candidate)) {
+            return false;
           }
         } else {
-          // Default behavior: Split multiple words and use OR logic (show candidates with ANY of the words)
+          // Default behavior: Split multiple words and use OR logic with fuzzy matching
           const searchTerms = extractSearchTerms(resultsSearchQuery);
-          const searchText = `${candidate.name} ${candidate.title} ${candidate.currentCompany} ${candidate.skills.join(' ')}`.toLowerCase();
+          const searchText = getCandidateSearchText(candidate);
           
-          // At least one term must match
+          // At least one term must match (with fuzzy matching for better results)
           const matches = searchTerms.some(term => 
-            searchText.includes(term.toLowerCase())
+            fuzzyMatch(searchText, term, 0.7) // Lower threshold for default mode
           );
           
           if (!matches) return false;
@@ -1138,45 +1360,67 @@ const SourceResume = () => {
         return false;
       }
 
-      // Location filter
-      if (filters.location && filters.location.trim() !== "" && 
-          !candidate.location.toLowerCase().includes(filters.location.toLowerCase())) {
-        return false;
+      // Location filter - with fuzzy matching for better accuracy
+      if (filters.location && filters.location.trim() !== "") {
+        const locationMatch = fuzzyMatch(candidate.location.toLowerCase(), filters.location.toLowerCase(), 0.8) ||
+                             candidate.location.toLowerCase().includes(filters.location.toLowerCase());
+        if (!locationMatch) return false;
       }
 
-      // Preferred Location filter
-      if (filters.preferredLocation && filters.preferredLocation.trim() !== "" && 
-          !candidate.preferredLocation.toLowerCase().includes(filters.preferredLocation.toLowerCase())) {
-        return false;
+      // Preferred Location filter - with fuzzy matching
+      if (filters.preferredLocation && filters.preferredLocation.trim() !== "") {
+        const prefLocationMatch = fuzzyMatch(candidate.preferredLocation.toLowerCase(), filters.preferredLocation.toLowerCase(), 0.8) ||
+                                 candidate.preferredLocation.toLowerCase().includes(filters.preferredLocation.toLowerCase());
+        if (!prefLocationMatch) return false;
       }
 
-      // Role filter
-      if (filters.role && filters.role.trim() !== "" && 
-          !candidate.title.toLowerCase().includes(filters.role.toLowerCase())) {
-        return false;
+      // Role filter - with fuzzy matching for partial matches
+      if (filters.role && filters.role.trim() !== "") {
+        const roleMatch = fuzzyMatch(candidate.title.toLowerCase(), filters.role.toLowerCase(), 0.75) ||
+                         candidate.title.toLowerCase().includes(filters.role.toLowerCase());
+        if (!roleMatch) return false;
       }
 
-      // Company filter
-      if (filters.company && filters.company.trim() !== "" && 
-          !candidate.currentCompany.toLowerCase().includes(filters.company.toLowerCase())) {
-        return false;
+      // Company filter - with fuzzy matching
+      if (filters.company && filters.company.trim() !== "") {
+        const companyMatch = fuzzyMatch(candidate.currentCompany.toLowerCase(), filters.company.toLowerCase(), 0.8) ||
+                            candidate.currentCompany.toLowerCase().includes(filters.company.toLowerCase());
+        if (!companyMatch) return false;
       }
 
-      // Notice period filter
-      if (filters.noticePeriod && filters.noticePeriod.trim() !== "" && 
-          !candidate.noticePeriod.toLowerCase().includes(filters.noticePeriod.toLowerCase())) {
-        return false;
+      // Notice period filter - exact/partial matching
+      if (filters.noticePeriod && filters.noticePeriod.trim() !== "") {
+        const noticeLower = candidate.noticePeriod.toLowerCase();
+        const filterLower = filters.noticePeriod.toLowerCase();
+        
+        // Handle special cases like "Immediate", "Any"
+        if (filterLower === "any") {
+          // Accept all
+        } else if (filterLower === "immediate" && !noticeLower.includes("immediate") && !noticeLower.includes("0")) {
+          return false;
+        } else if (!noticeLower.includes(filterLower)) {
+          // Try to match numbers
+          const noticeNum = noticeLower.match(/\d+/);
+          const filterNum = filterLower.match(/\d+/);
+          if (noticeNum && filterNum && noticeNum[0] !== filterNum[0]) {
+            return false;
+          } else if (!noticeNum || !filterNum) {
+            return false;
+          }
+        }
       }
 
-      // Education filter
-      if (filters.educationUG && filters.educationUG.trim() !== "" && 
-          !candidate.education.toLowerCase().includes(filters.educationUG.toLowerCase())) {
-        return false;
+      // Education filter - with fuzzy matching
+      if (filters.educationUG && filters.educationUG.trim() !== "") {
+        const eduMatch = fuzzyMatch(candidate.education.toLowerCase(), filters.educationUG.toLowerCase(), 0.8) ||
+                        candidate.education.toLowerCase().includes(filters.educationUG.toLowerCase());
+        if (!eduMatch) return false;
       }
 
-      if (filters.educationPG && filters.educationPG.trim() !== "" && 
-          !candidate.education.toLowerCase().includes(filters.educationPG.toLowerCase())) {
-        return false;
+      if (filters.educationPG && filters.educationPG.trim() !== "") {
+        const eduMatch = fuzzyMatch(candidate.education.toLowerCase(), filters.educationPG.toLowerCase(), 0.8) ||
+                        candidate.education.toLowerCase().includes(filters.educationPG.toLowerCase());
+        if (!eduMatch) return false;
       }
 
       // Additional degrees filter

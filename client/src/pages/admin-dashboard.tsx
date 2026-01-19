@@ -44,6 +44,7 @@ import { useEmployeeAuth } from "@/contexts/auth-context";
 import GaugeComponent from 'react-gauge-component';
 import PerformanceGauge from '@/components/dashboard/performance-gauge';
 import { ChatDock } from '@/components/chat/chat-dock';
+import { ChatModal } from '@/components/chat/admin-chat-modal';
 // TypeScript interfaces
 interface Requirement {
   id: number;
@@ -1285,6 +1286,8 @@ export default function AdminDashboard() {
   const [memberSearchTerm, setMemberSearchTerm] = useState('');
   const [isMeetingsMenuModalOpen, setIsMeetingsMenuModalOpen] = useState(false);
   const [editingCalendarEventId, setEditingCalendarEventId] = useState<string | null>(null);
+  const [selectedChatRoom, setSelectedChatRoom] = useState<string | null>(null);
+  const [isChatModalOpen, setIsChatModalOpen] = useState(false);
 
   // Search term states for modals and tables
   const [targetSearch, setTargetSearch] = useState('');
@@ -1410,6 +1413,28 @@ export default function AdminDashboard() {
   const { data: employees = [], isLoading: isLoadingEmployees, refetch: refetchEmployees } = useQuery<Employee[]>({
     queryKey: ['/api/admin/employees']
   });
+
+  // Fetch chat rooms for admin (direct messages with TL/TA)
+  const { data: chatRoomsData, isLoading: isLoadingChatRooms, refetch: refetchChatRooms } = useQuery<{ rooms: any[] }>({
+    queryKey: ['/api/chat/rooms'],
+    enabled: !!employee, // Only fetch if logged in
+    refetchInterval: 15000, // Refresh every 15 seconds for real-time updates
+  });
+
+  // Filter chat rooms to show only direct messages (Admin-TL/TA conversations)
+  const adminChatRooms = useMemo(() => {
+    if (!chatRoomsData?.rooms) return [];
+    return chatRoomsData.rooms.filter((room: any) => {
+      // Only show direct messages with TL or TA
+      if (room.type !== 'direct') return false;
+      // Check if room has participants who are TL or TA
+      const participants = room.participants || [];
+      return participants.some((p: any) =>
+        p.participantId !== employee?.id &&
+        (p.participantRole === 'team_leader' || p.participantRole === 'recruiter')
+      );
+    });
+  }, [chatRoomsData, employee?.id]);
 
   // Fetch active sessions to determine login status
   // Fetch active employee sessions for real-time online/offline status
@@ -2510,27 +2535,50 @@ export default function AdminDashboard() {
     }, 3000);
   };
 
-  const handleSendMessage = () => {
-    if (!selectedRecipient || !messageContent.trim()) {
+  const handleSendMessage = async () => {
+    if (!selectedRecipient || !messageContent.trim() || !employee?.id) {
       return;
     }
-    const recipientName = employees.find((e: Employee) => e.id === selectedRecipient)?.name || selectedRecipient;
 
-    // Add new message to Message Status table
-    const today = new Date();
-    const dateStr = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
-    const newMessage = {
-      name: recipientName,
-      message: messageContent.substring(0, 20) + (messageContent.length > 20 ? '...' : ''),
-      date: dateStr,
-      status: 'active',
-      timestamp: today
-    };
-    setMessagesData(prev => [newMessage, ...prev]);
+    const recipient = employees.find((e: Employee) => e.id === selectedRecipient);
+    if (!recipient) {
+      showSuccessAlert('Recipient not found');
+      return;
+    }
 
-    showSuccessAlert(`Message sent to ${recipientName} successfully`);
-    resetForm();
-    setIsCreateMessageModalOpen(false);
+    try {
+      // Step 1: Get or create a direct chat room with the recipient
+      const roomResponse = await apiRequest('POST', '/api/chat/rooms/direct', {
+        participantId: selectedRecipient
+      });
+
+      if (!roomResponse.ok) {
+        throw new Error('Failed to create/get chat room');
+      }
+
+      const roomData = await roomResponse.json();
+      const roomId = roomData.room.id;
+
+      // Step 2: Send the message in the room
+      const messageResponse = await apiRequest('POST', `/api/chat/rooms/${roomId}/messages`, {
+        content: messageContent.trim(),
+        messageType: 'text'
+      });
+
+      if (!messageResponse.ok) {
+        throw new Error('Failed to send message');
+      }
+
+      // Refresh chat rooms to show updated message
+      await refetchChatRooms();
+
+      showSuccessAlert(`Message sent to ${recipient.name} successfully`);
+      resetForm();
+      setIsCreateMessageModalOpen(false);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      showSuccessAlert('Failed to send message. Please try again.');
+    }
   };
 
   // Helper function to generate Google Calendar URL for meetings
@@ -3878,69 +3926,70 @@ export default function AdminDashboard() {
                 >
                   <Plus className="h-4 w-4 text-gray-700 dark:text-gray-300" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
-                  onClick={() => setIsAllMessagesModalOpen(true)}
-                  data-testid="button-message-options"
-                >
-                  <MoreVertical className="h-4 w-4 text-gray-700 dark:text-gray-300" />
-                </Button>
               </div>
             </div>
           </CardHeader>
           <CardContent className="px-4 pb-4">
             <div className="space-y-3 max-h-[500px] overflow-y-auto">
-              {messagesData.length === 0 ? (
+              {isLoadingChatRooms ? (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  No messages
+                  Loading messages...
+                </div>
+              ) : adminChatRooms.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  No messages yet. Start a conversation by clicking the + button.
                 </div>
               ) : (
-                messagesData.slice(0, 5).map((message, index) => {
-                  const isActive = message.status === 'active';
-                  const timeStr = message.timestamp
-                    ? new Date(message.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
-                    : message.date;
+                adminChatRooms.slice(0, 5).map((room: any) => {
+                  // Get the other participant (not admin)
+                  const otherParticipant = room.participants?.find((p: any) => p.participantId !== employee?.id);
+                  const participantName = otherParticipant?.participantName || 'Unknown';
+                  const participantRole = otherParticipant?.participantRole || '';
+                  const roleLabel = participantRole === 'team_leader' ? 'TL' : participantRole === 'recruiter' ? 'TA' : '';
+                  const timeStr = room.lastMessageAt
+                    ? new Date(room.lastMessageAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+                    : new Date(room.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
+                  const unreadCount = room.unreadCount || 0;
+                  
                   return (
                     <div
-                      key={index}
-                      className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
+                      key={room.id}
+                      className={`bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all cursor-pointer ${
+                        unreadCount > 0 ? 'border-l-4 border-l-green-500' : ''
+                      }`}
+                      onClick={() => {
+                        setSelectedChatRoom(room.id);
+                        setIsChatModalOpen(true);
+                      }}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-gray-900 dark:text-white mb-1">
-                            {message.name}
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="font-semibold text-gray-900 dark:text-white">
+                              {participantName} {roleLabel && <span className="text-xs text-gray-500">({roleLabel})</span>}
+                            </div>
+                            {unreadCount > 0 && (
+                              <span className="bg-green-500 text-white text-xs font-semibold rounded-full px-2 py-0.5 min-w-[20px] text-center">
+                                {unreadCount}
+                              </span>
+                            )}
                           </div>
                           <div className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                            {message.message || 'Please provide a quick status update on your team\'s progress ...'}
+                            {unreadCount > 0 ? `${unreadCount} new message${unreadCount > 1 ? 's' : ''}` : 'Click to view messages'}
                           </div>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <div className="text-xs text-gray-500 dark:text-gray-400">
                             {timeStr}
                           </div>
-                          {isActive ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <CheckCircle2 className="h-4 w-4 text-gray-400" />
-                          )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0"
-                            data-testid={`button-message-options-${index}`}
-                          >
-                            <MoreVertical className="h-4 w-4 text-gray-500" />
-                          </Button>
                         </div>
                       </div>
                     </div>
                   );
                 })
               )}
-              {messagesData.length > 5 && (
+              {adminChatRooms.length > 5 && (
                 <div className="text-center pt-2">
                   <ChevronDown className="h-4 w-4 text-gray-400 mx-auto" />
                 </div>
@@ -3982,7 +4031,7 @@ export default function AdminDashboard() {
             {/* Client JDs Table */}
             <div className="mb-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">JD from Client</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Roles to Assign</h3>
                 <Button
                   variant="outline"
                   size="sm"
@@ -5468,7 +5517,7 @@ export default function AdminDashboard() {
             {/* Client JDs Table */}
             <div className="mb-6 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">JD from Client</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Roles to Assign</h3>
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -7898,11 +7947,14 @@ export default function AdminDashboard() {
                         (e.role === 'team_leader' || e.role === 'recruiter') &&
                         (e.isActive === true || e.isActive === undefined)
                       )
-                      .map((employee: Employee) => (
-                        <SelectItem key={employee.id} value={employee.id} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
-                          {employee.name}
-                        </SelectItem>
-                      ))
+                      .map((employee: Employee) => {
+                        const roleLabel = employee.role === 'team_leader' ? 'TL' : employee.role === 'recruiter' ? 'TA' : '';
+                        return (
+                          <SelectItem key={employee.id} value={employee.id} className="text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-700">
+                            {roleLabel ? `${employee.name} (${roleLabel})` : employee.name}
+                          </SelectItem>
+                        );
+                      })
                   )}
                 </SelectContent>
               </Select>
@@ -7932,6 +7984,9 @@ export default function AdminDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Chat Modal for viewing and replying to messages */}
+      {selectedChatRoom && <ChatModal roomId={selectedChatRoom} isOpen={isChatModalOpen} onClose={() => { setIsChatModalOpen(false); setSelectedChatRoom(null); }} onMessageSent={refetchChatRooms} employeeId={employee?.id} />}
 
       {/* Meetings Menu Modal - Last 7 Days */}
       <Dialog open={isMeetingsMenuModalOpen} onOpenChange={setIsMeetingsMenuModalOpen}>

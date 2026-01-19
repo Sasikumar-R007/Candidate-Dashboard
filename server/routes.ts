@@ -6,7 +6,7 @@ import fs from "fs";
 import passport from "passport";
 import { randomBytes } from "crypto";
 import { storage } from "./storage";
-import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema, insertRecruiterCommandSchema, recruiterCommands, employees, candidates } from "@shared/schema";
+import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, chatUnreadCounts, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema, insertRecruiterCommandSchema, recruiterCommands, employees, candidates } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import multer from "multer";
@@ -52,7 +52,7 @@ const upload = multer({
     // Allow image files and PDFs only
     const allowedExtensions = /\.(jpeg|jpg|png|gif|webp|avif|pdf)$/i;
     const extname = allowedExtensions.test(file.originalname.toLowerCase());
-    
+
     // Check MIME types including modern image formats and PDF
     const allowedMimeTypes = [
       'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
@@ -60,7 +60,7 @@ const upload = multer({
       'application/pdf'
     ];
     const mimetype = allowedMimeTypes.includes(file.mimetype);
-    
+
     if (extname && mimetype) {
       return cb(null, true);
     } else {
@@ -86,7 +86,7 @@ const chatUpload = multer({
     // Allow images, PDFs, and document files
     const allowedExtensions = /\.(jpeg|jpg|png|gif|webp|avif|pdf|doc|docx)$/i;
     const extname = allowedExtensions.test(file.originalname.toLowerCase());
-    
+
     const allowedMimeTypes = [
       'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
       'image/webp', 'image/avif',
@@ -95,7 +95,7 @@ const chatUpload = multer({
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     ];
     const mimetype = allowedMimeTypes.includes(file.mimetype);
-    
+
     if (extname && mimetype) {
       return cb(null, true);
     } else {
@@ -121,7 +121,7 @@ const resumeUpload = multer({
     // Allow PDF, Word documents, and images (for scanned/photographed resumes)
     const allowedExtensions = /\.(pdf|doc|docx|jpg|jpeg|png)$/i;
     const extname = allowedExtensions.test(file.originalname.toLowerCase());
-    
+
     const allowedMimeTypes = [
       'application/pdf',
       'application/msword',
@@ -131,7 +131,7 @@ const resumeUpload = multer({
       'image/png'
     ];
     const mimetype = allowedMimeTypes.includes(file.mimetype);
-    
+
     if (extname && mimetype) {
       return cb(null, true);
     } else {
@@ -211,19 +211,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize Passport for Google OAuth
   app.use(passport.initialize());
   app.use(passport.session());
-  
+
   // Setup Google OAuth (will only work if credentials are configured)
   const googleAuthEnabled = setupGoogleAuth();
-  
+
   // Google OAuth routes for candidates
   app.get("/api/auth/google", (req, res, next) => {
     if (!googleAuthEnabled) {
-      return res.status(503).json({ 
-        message: "Google login is not configured. Please contact the administrator." 
+      return res.status(503).json({
+        message: "Google login is not configured. Please contact the administrator."
       });
     }
-    passport.authenticate("google", { 
-      scope: ["profile", "email"] 
+    passport.authenticate("google", {
+      scope: ["profile", "email"]
     })(req, res, next);
   });
 
@@ -231,8 +231,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!googleAuthEnabled) {
       return res.redirect("/candidate-login?error=google_not_configured");
     }
-    passport.authenticate("google", { 
-      failureRedirect: "/candidate-login?error=google_auth_failed" 
+    passport.authenticate("google", {
+      failureRedirect: "/candidate-login?error=google_auth_failed"
     })(req, res, () => {
       const candidate = req.user as any;
       if (candidate && candidate.candidateId) {
@@ -242,11 +242,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             console.error('Session regeneration error:', err);
             return res.redirect("/candidate-login?error=session_error");
           }
-          
+
           // Set session after regeneration to ensure proper isolation
           req.session.candidateId = candidate.candidateId;
           req.session.userType = 'candidate';
-          
+
           // Save session before redirecting
           req.session.save((saveErr) => {
             if (saveErr) {
@@ -265,8 +265,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint for Render and monitoring
   app.get("/api/health", async (req, res) => {
     try {
-      res.status(200).json({ 
-        status: "healthy", 
+      res.status(200).json({
+        status: "healthy",
         timestamp: new Date().toISOString(),
         environment: process.env.NODE_ENV || "development"
       });
@@ -290,7 +290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       // Check for candidate session
       if (req.session.candidateId) {
         const candidate = await storage.getCandidateByCandidateId(req.session.candidateId);
@@ -303,7 +303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       // No valid session
       return res.json({ authenticated: false });
     } catch (error) {
@@ -332,69 +332,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request body
       const validationResult = loginSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ 
-          message: "Invalid input", 
-          errors: validationResult.error.errors 
+        return res.status(400).json({
+          message: "Invalid input",
+          errors: validationResult.error.errors
         });
       }
-      
+
       const { email, password } = validationResult.data;
-      
+
       // Find employee by email
       const employee = await storage.getEmployeeByEmail(email);
       console.log('[DEBUG] Employee found:', employee ? `Yes (${employee.email})` : 'No');
       if (!employee) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
-      
+
       // Check if employee has login credentials configured
       if (!employee.password) {
         return res.status(401).json({ message: "Login credentials not configured for this account. Please contact your administrator." });
       }
-      
+
       // Check password using bcrypt
       const isPasswordValid = await bcrypt.compare(password, employee.password);
       console.log('[DEBUG] Password valid:', isPasswordValid);
       if (!isPasswordValid) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
-      
+
       // Check if employee is active
       if (!employee.isActive) {
         return res.status(401).json({ message: "Account is inactive" });
       }
-      
+
       // Note: lastLoginAt update skipped as column may not exist in production
-      
+
       // Regenerate session to prevent session fixation attacks
       req.session.regenerate((err) => {
         if (err) {
           console.error('Session regeneration error:', err);
           const errorMessage = err instanceof Error ? err.message : String(err);
           console.error('Session error details:', errorMessage);
-          return res.status(500).json({ 
+          return res.status(500).json({
             message: "Internal server error",
             error: process.env.NODE_ENV === 'development' ? errorMessage : undefined
           });
         }
-        
+
         // Set session after regeneration
         req.session.employeeId = employee.id;
         req.session.employeeRole = employee.role;
         req.session.userType = 'employee';
-        
+
         // Save session before responding
         req.session.save((saveErr) => {
           if (saveErr) {
             console.error('Session save error:', saveErr);
             const errorMessage = saveErr instanceof Error ? saveErr.message : String(saveErr);
             console.error('Session save error details:', errorMessage);
-            return res.status(500).json({ 
+            return res.status(500).json({
               message: "Internal server error",
               error: process.env.NODE_ENV === 'development' ? errorMessage : undefined
             });
           }
-          
+
           // Return employee data (excluding password) for frontend routing
           const { password: _, ...employeeData } = employee;
           res.json({
@@ -409,7 +409,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
       console.error('Login error details:', { errorMessage, errorStack });
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Internal server error",
         error: process.env.NODE_ENV === 'development' ? errorMessage : undefined
       });
@@ -421,57 +421,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validationResult = loginSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ 
-          message: "Invalid input", 
-          errors: validationResult.error.errors 
+        return res.status(400).json({
+          message: "Invalid input",
+          errors: validationResult.error.errors
         });
       }
-      
+
       const { email, password } = validationResult.data;
-      
+
       // Find employee by email
       const employee = await storage.getEmployeeByEmail(email);
-      
+
       // Check if employee exists and has support role
       if (!employee || employee.role !== 'support') {
         return res.status(401).json({ message: "Invalid credentials or access denied" });
       }
-      
+
       // Check if employee has login credentials configured
       if (!employee.password) {
         return res.status(401).json({ message: "Login credentials not configured for this account. Please contact your administrator." });
       }
-      
+
       // Check password using bcrypt
       const isPasswordValid = await bcrypt.compare(password, employee.password);
       if (!isPasswordValid) {
         return res.status(401).json({ message: "Invalid credentials or access denied" });
       }
-      
+
       // Check if employee is active
       if (!employee.isActive) {
         return res.status(401).json({ message: "Account is inactive" });
       }
-      
+
       // Regenerate session to prevent session fixation attacks
       req.session.regenerate((err) => {
         if (err) {
           console.error('Session regeneration error:', err);
           return res.status(500).json({ message: "Internal server error" });
         }
-        
+
         // Set session with support role
         req.session.employeeId = employee.id;
         req.session.employeeRole = 'support';
         req.session.userType = 'support';
-        
+
         // Save session before responding
         req.session.save((saveErr) => {
           if (saveErr) {
             console.error('Session save error:', saveErr);
             return res.status(500).json({ message: "Internal server error" });
           }
-          
+
           // Return employee data (excluding password)
           const { password: _, ...employeeData } = employee;
           res.json({
@@ -519,7 +519,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update to verified status (bypassing OTP requirement)
       const updatedCandidate = await storage.updateCandidate(newCandidate.id, { isVerified: true });
-      
+
       if (!updatedCandidate) {
         throw new Error("Failed to update candidate verification status");
       }
@@ -571,15 +571,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Generate 4-digit OTP for verification
       const otp = Math.floor(1000 + Math.random() * 9000).toString();
-      
+
       // Store OTP with expiry (10 minutes)
       await storage.storeOTP(candidateData.email, otp);
-      
+
       // Send welcome email to new candidate
-      const loginUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+      const loginUrl = process.env.REPLIT_DEV_DOMAIN
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
         : process.env.FRONTEND_URL || 'http://localhost:5000';
-      
+
       await sendCandidateWelcomeEmail({
         fullName: newCandidate.fullName,
         email: newCandidate.email,
@@ -594,11 +594,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         otp: otp,
         expiresInMinutes: 10
       });
-      
+
       if (!otpEmailSent) {
         console.error(`[Registration] Failed to send OTP email to ${newCandidate.email}`);
       }
-      
+
       res.json({
         success: true,
         message: "Registration successful! Please check your email for the verification code.",
@@ -628,7 +628,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check login attempts and lockout
       const loginAttempts = await storage.getLoginAttempts(email);
       const now = new Date().toISOString();
-      
+
       if (loginAttempts?.lockedUntil && new Date(loginAttempts.lockedUntil) > new Date()) {
         return res.status(423).json({
           message: "You can't login for next 30 mins",
@@ -655,12 +655,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isPasswordValid = await bcrypt.compare(password, candidate.password);
       if (!isPasswordValid) {
         const currentAttempts = loginAttempts ? parseInt(loginAttempts.attempts) + 1 : 1;
-        
+
         // Check if this is the 3rd failed attempt
         if (currentAttempts >= 3) {
           const lockUntil = new Date();
           lockUntil.setMinutes(lockUntil.getMinutes() + 30);
-          
+
           await storage.createOrUpdateLoginAttempts({
             email,
             attempts: currentAttempts.toString(),
@@ -668,7 +668,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lockedUntil: lockUntil.toISOString(),
             createdAt: loginAttempts?.createdAt || now
           });
-          
+
           return res.status(423).json({
             message: "You can't login for next 30 mins",
             locked: true,
@@ -682,7 +682,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lockedUntil: null,
             createdAt: loginAttempts?.createdAt || now
           });
-          
+
           return res.status(401).json({
             message: "Invalid credentials",
             attemptsRemaining: 3 - currentAttempts
@@ -700,7 +700,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Generate new 4-digit OTP for unverified accounts
         const otp = Math.floor(1000 + Math.random() * 9000).toString();
         await storage.storeOTP(candidate.email, otp);
-        
+
         // Send OTP via email
         const otpEmailSent = await sendOTPEmail({
           fullName: candidate.fullName,
@@ -708,11 +708,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           otp: otp,
           expiresInMinutes: 10
         });
-        
+
         if (!otpEmailSent) {
           console.error(`[Login] Failed to send OTP email to ${candidate.email}`);
         }
-        
+
         return res.status(403).json({
           message: "Account not verified. Please check your email for the verification code.",
           requiresVerification: true,
@@ -727,26 +727,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session.regenerate((err) => {
         if (err) {
           console.error('Session regeneration error:', err);
-          return res.status(500).json({ 
+          return res.status(500).json({
             message: "Internal server error",
             error: process.env.NODE_ENV === 'development' ? (err instanceof Error ? err.message : String(err)) : undefined
           });
         }
-        
+
         // Set session after regeneration to ensure proper isolation
         req.session.candidateId = candidate.candidateId;
         req.session.userType = 'candidate';
-        
+
         // Save session before responding
         req.session.save((saveErr) => {
           if (saveErr) {
             console.error('Session save error:', saveErr);
-            return res.status(500).json({ 
+            return res.status(500).json({
               message: "Internal server error",
               error: process.env.NODE_ENV === 'development' ? (saveErr instanceof Error ? saveErr.message : String(saveErr)) : undefined
             });
           }
-          
+
           // Return candidate data (excluding password) for frontend routing
           const { password: _, ...candidateData } = candidate;
           res.json({
@@ -766,7 +766,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/auth/resend-otp", async (req, res) => {
     try {
       const { email } = req.body;
-      
+
       if (!email) {
         return res.status(400).json({ message: "Email is required" });
       }
@@ -787,7 +787,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         otp: otp,
         expiresInMinutes: 10
       });
-      
+
       if (!otpEmailSent) {
         console.error(`[Resend OTP] Failed to send OTP email to ${candidate.email}`);
       }
@@ -822,7 +822,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Verify OTP against stored value with expiry check
       const isOtpValid = await storage.verifyOTP(email, otp);
-      
+
       if (isOtpValid) {
         // Mark candidate as verified
         await storage.updateCandidate(candidate.id, { isVerified: true });
@@ -834,26 +834,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session.regenerate((err) => {
           if (err) {
             console.error('Session regeneration error:', err);
-            return res.status(500).json({ 
+            return res.status(500).json({
               message: "Internal server error",
               error: process.env.NODE_ENV === 'development' ? (err instanceof Error ? err.message : String(err)) : undefined
             });
           }
-          
+
           // Set session after regeneration to ensure proper isolation
           req.session.candidateId = candidate.candidateId;
           req.session.userType = 'candidate';
-          
+
           // Save session before responding
           req.session.save((saveErr) => {
             if (saveErr) {
               console.error('Session save error:', saveErr);
-              return res.status(500).json({ 
+              return res.status(500).json({
                 message: "Internal server error",
                 error: process.env.NODE_ENV === 'development' ? (saveErr instanceof Error ? saveErr.message : String(saveErr)) : undefined
               });
             }
-            
+
             const { password: _, ...candidateData } = candidate;
             res.json({
               success: true,
@@ -875,37 +875,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/employee/change-password", async (req, res) => {
     try {
       const { email, currentPassword, newPassword } = req.body;
-      
+
       if (!email || !currentPassword || !newPassword) {
         return res.status(400).json({ message: "Email, current password and new password are required" });
       }
-      
+
       if (newPassword.length < 6) {
         return res.status(400).json({ message: "New password must be at least 6 characters long" });
       }
-      
+
       // Find employee by email
       const employee = await storage.getEmployeeByEmail(email);
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
       }
-      
+
       // Verify current password
       const isCurrentPasswordValid = await bcrypt.compare(currentPassword, employee.password);
       if (!isCurrentPasswordValid) {
         return res.status(401).json({ message: "Current password is incorrect" });
       }
-      
+
       // Hash new password
       const saltRounds = 10;
       const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
-      
+
       // Update password in storage
       const updateSuccess = await storage.updateEmployeePassword(email, hashedNewPassword);
       if (!updateSuccess) {
         return res.status(500).json({ message: "Failed to update password" });
       }
-      
+
       res.json({
         success: true,
         message: "Password changed successfully"
@@ -919,37 +919,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/candidate/change-password", async (req, res) => {
     try {
       const { email, currentPassword, newPassword } = req.body;
-      
+
       if (!email || !currentPassword || !newPassword) {
         return res.status(400).json({ message: "Email, current password and new password are required" });
       }
-      
+
       if (newPassword.length < 6) {
         return res.status(400).json({ message: "New password must be at least 6 characters long" });
       }
-      
+
       // Find candidate by email
       const candidate = await storage.getCandidateByEmail(email);
       if (!candidate) {
         return res.status(404).json({ message: "Candidate not found" });
       }
-      
+
       // Verify current password
       const isCurrentPasswordValid = await bcrypt.compare(currentPassword, candidate.password);
       if (!isCurrentPasswordValid) {
         return res.status(401).json({ message: "Current password is incorrect" });
       }
-      
+
       // Hash new password
       const saltRounds = 10;
       const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
-      
+
       // Update password in storage
       const updateSuccess = await storage.updateCandidatePassword(email, hashedNewPassword);
       if (!updateSuccess) {
         return res.status(500).json({ message: "Failed to update password" });
       }
-      
+
       res.json({
         success: true,
         message: "Password changed successfully"
@@ -1007,13 +1007,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         case 6: // Job Preferences & Password
           updateData.position = data.jobTitle;
           updateData.employmentType = data.employmentType;
-          
+
           // Handle password creation on final step
           if (isComplete && data.password) {
             if (data.password !== data.confirmPassword) {
               return res.status(400).json({ message: "Passwords do not match" });
             }
-            
+
             const saltRounds = 10;
             const hashedPassword = await bcrypt.hash(data.password, saltRounds);
             updateData.password = hashedPassword;
@@ -1095,7 +1095,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         {
           employeeId: "STTA001",
           name: "Ram Kumar",
-          email: "ram@gmail.com", 
+          email: "ram@gmail.com",
           password: "ram123",
           role: "recruiter",
           age: "28",
@@ -1109,7 +1109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           employeeId: "STTL001",
           name: "Priya Sharma",
           email: "priya@gmail.com",
-          password: "priya123", 
+          password: "priya123",
           role: "team_leader",
           age: "32",
           phone: "9876543211",
@@ -1124,7 +1124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: "arjun@gmail.com",
           password: "arjun123",
           role: "client",
-          age: "35", 
+          age: "35",
           phone: "9876543212",
           department: "Client Relations",
           joiningDate: "2023-03-20",
@@ -1138,7 +1138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           password: "admin123",
           role: "admin",
           age: "40",
-          phone: "9876543213", 
+          phone: "9876543213",
           department: "Administration",
           joiningDate: "2022-01-01",
           reportingTo: "CEO",
@@ -1152,9 +1152,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdEmployees.push({ id: employee.id, name: employee.name, email: employee.email, role: employee.role });
       }
 
-      res.json({ 
-        message: "Sample employees created successfully", 
-        employees: createdEmployees 
+      res.json({
+        message: "Sample employees created successfully",
+        employees: createdEmployees
       });
     } catch (error) {
       console.error('Seed employees error:', error);
@@ -1169,11 +1169,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const candidateId = req.session.candidateId!;
       const candidate = await storage.getCandidateByCandidateId(candidateId);
-      
+
       if (!candidate) {
         return res.status(404).json({ message: "Candidate not found" });
       }
-      
+
       // Transform candidate data to match profile structure expected by frontend
       const profile = {
         id: candidate.id,
@@ -1198,7 +1198,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         websiteUrl: candidate.websiteUrl || '',
         linkedinUrl: candidate.linkedinUrl || '',
       };
-      
+
       res.json(profile);
     } catch (error) {
       console.error('Get profile error:', error);
@@ -1213,12 +1213,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!users) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       const profile = await storage.getProfile(users.id);
       if (!profile) {
         return res.status(404).json({ message: "Profile not found" });
       }
-      
+
       res.json(profile);
     } catch (error) {
       res.status(500).json({ message: "Internal server error" });
@@ -1230,21 +1230,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const candidateId = req.session.candidateId!;
       const candidate = await storage.getCandidateByCandidateId(candidateId);
-      
+
       if (!candidate) {
         return res.status(404).json({ message: "Candidate not found" });
       }
-      
+
       // Transform profile data to candidate fields
       const updates: any = {};
-      
+
       // Map profile fields to candidate fields
       if (req.body.firstName || req.body.lastName) {
         const firstName = req.body.firstName || candidate.fullName.split(' ')[0];
         const lastName = req.body.lastName || candidate.fullName.split(' ').slice(1).join(' ');
         updates.fullName = `${firstName} ${lastName}`.trim();
       }
-      
+
       if (req.body.phone !== undefined) updates.phone = req.body.phone;
       if (req.body.title !== undefined) updates.designation = req.body.title;
       if (req.body.location !== undefined) updates.location = req.body.location;
@@ -1260,14 +1260,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.body.portfolioUrl !== undefined) updates.portfolioUrl = req.body.portfolioUrl;
       if (req.body.websiteUrl !== undefined) updates.websiteUrl = req.body.websiteUrl;
       if (req.body.linkedinUrl !== undefined) updates.linkedinUrl = req.body.linkedinUrl;
-      
+
       // Update candidate in storage
       const updatedCandidate = await storage.updateCandidate(candidate.id, updates);
-      
+
       if (!updatedCandidate) {
         return res.status(404).json({ message: "Failed to update candidate" });
       }
-      
+
       // Return data in profile format expected by frontend
       const profile = {
         id: updatedCandidate.id,
@@ -1292,7 +1292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         websiteUrl: updatedCandidate.websiteUrl || '',
         linkedinUrl: updatedCandidate.linkedinUrl || '',
       };
-      
+
       res.json(profile);
     } catch (error) {
       console.error('Update profile error:', error);
@@ -1304,7 +1304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/job-preferences", requireCandidateAuth, async (req, res) => {
     try {
       const candidateId = req.session.candidateId!;
-      
+
       // Return mock job preferences for now
       const jobPreferences = {
         id: 'pref-1',
@@ -1316,7 +1316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         startDate: 'Immediate',
         instructions: ''
       };
-      
+
       res.json(jobPreferences);
     } catch (error) {
       console.error('Get job preferences error:', error);
@@ -1331,12 +1331,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!users) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       const profile = await storage.getProfile(users.id);
       if (!profile) {
         return res.status(404).json({ message: "Profile not found" });
       }
-      
+
       const preferences = await storage.getJobPreferences(profile.id);
       res.json(preferences);
     } catch (error) {
@@ -1351,12 +1351,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!users) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       const profile = await storage.getProfile(users.id);
       if (!profile) {
         return res.status(404).json({ message: "Profile not found" });
       }
-      
+
       const updatedPreferences = await storage.updateJobPreferences(profile.id, req.body);
       res.json(updatedPreferences);
     } catch (error) {
@@ -1369,11 +1369,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const candidateId = req.session.candidateId!;
       const candidate = await storage.getCandidateByCandidateId(candidateId);
-      
+
       if (!candidate || !candidate.skills) {
         return res.json([]);
       }
-      
+
       // Parse skills string into array of skill objects
       const skillsArray = candidate.skills.split(',').map((skill, index) => ({
         id: `skill-${index}`,
@@ -1381,7 +1381,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: skill.trim(),
         category: 'primary'
       }));
-      
+
       res.json(skillsArray);
     } catch (error) {
       console.error('Get skills error:', error);
@@ -1396,12 +1396,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!users) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       const profile = await storage.getProfile(users.id);
       if (!profile) {
         return res.status(404).json({ message: "Profile not found" });
       }
-      
+
       const skills = await storage.getSkillsByProfile(profile.id);
       res.json(skills);
     } catch (error) {
@@ -1416,12 +1416,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!users) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       const profile = await storage.getProfile(users.id);
       if (!profile) {
         return res.status(404).json({ message: "Profile not found" });
       }
-      
+
       const activities = await storage.getActivitiesByProfile(profile.id);
       res.json(activities);
     } catch (error) {
@@ -1436,18 +1436,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!users) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       const profile = await storage.getProfile(users.id);
       if (!profile) {
         return res.status(404).json({ message: "Profile not found" });
       }
-      
+
       const activityData = {
         ...req.body,
         profileId: profile.id,
         date: new Date().toLocaleDateString()
       };
-      
+
       const activity = await storage.createActivity(activityData);
       res.json(activity);
     } catch (error) {
@@ -1460,14 +1460,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const candidateId = req.session.candidateId!;
       const candidate = await storage.getCandidateByCandidateId(candidateId);
-      
+
       if (!candidate) {
         return res.status(404).json({ message: "Candidate not found" });
       }
-      
+
       // Get real job applications from database
       const jobApplications = await storage.getJobApplicationsByProfile(candidate.id);
-      
+
       res.json(jobApplications);
     } catch (error) {
       console.error('Get job applications error:', error);
@@ -1480,7 +1480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const candidateId = req.session.candidateId!;
       const candidate = await storage.getCandidateByCandidateId(candidateId);
-      
+
       if (!candidate) {
         return res.status(404).json({ message: "Candidate not found" });
       }
@@ -1488,9 +1488,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request body using zod
       const validationResult = insertJobApplicationSchema.safeParse(req.body);
       if (!validationResult.success) {
-        return res.status(400).json({ 
-          message: "Invalid input", 
-          errors: validationResult.error.errors 
+        return res.status(400).json({
+          message: "Invalid input",
+          errors: validationResult.error.errors
         });
       }
 
@@ -1499,7 +1499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const isDuplicate = existingApplications.some(
         app => app.jobTitle === validationResult.data.jobTitle && app.company === validationResult.data.company
       );
-      
+
       if (isDuplicate) {
         return res.status(400).json({ message: "You have already applied for this job" });
       }
@@ -1515,7 +1515,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const application = await storage.createJobApplication(applicationData);
-      
+
       res.status(201).json(application);
     } catch (error) {
       console.error('Create job application error:', error);
@@ -1530,12 +1530,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!users) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       const profile = await storage.getProfile(users.id);
       if (!profile) {
         return res.status(404).json({ message: "Profile not found" });
       }
-      
+
       const applications = await storage.getJobApplicationsByProfile(profile.id);
       res.json(applications);
     } catch (error) {
@@ -1549,25 +1549,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
-      
+
       const candidateId = req.session.candidateId!;
       const candidate = await storage.getCandidateByCandidateId(candidateId);
-      
+
       if (!candidate) {
         return res.status(404).json({ message: "Candidate not found" });
       }
-      
+
       // In production, consider using cloud storage like AWS S3, Cloudinary, etc.
       // For now, using local storage with proper URL generation
-      const baseUrl = process.env.NODE_ENV === 'production' 
+      const baseUrl = process.env.NODE_ENV === 'production'
         ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
         : `http://${req.get('host')}`;
-      
+
       const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
-      
+
       // Save banner URL to candidate profile
       await storage.updateCandidate(candidate.id, { bannerImage: fileUrl });
-      
+
       res.json({ url: fileUrl });
     } catch (error) {
       console.error('Upload error:', error);
@@ -1580,23 +1580,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
-      
+
       const candidateId = req.session.candidateId!;
       const candidate = await storage.getCandidateByCandidateId(candidateId);
-      
+
       if (!candidate) {
         return res.status(404).json({ message: "Candidate not found" });
       }
-      
-      const baseUrl = process.env.NODE_ENV === 'production' 
+
+      const baseUrl = process.env.NODE_ENV === 'production'
         ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
         : `http://${req.get('host')}`;
-      
+
       const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
-      
+
       // Save profile picture URL to candidate profile
       await storage.updateCandidate(candidate.id, { profilePicture: fileUrl });
-      
+
       res.json({ url: fileUrl });
     } catch (error) {
       console.error('Upload error:', error);
@@ -1609,23 +1609,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
-      
+
       const candidateId = req.session.candidateId!;
       const candidate = await storage.getCandidateByCandidateId(candidateId);
-      
+
       if (!candidate) {
         return res.status(404).json({ message: "Candidate not found" });
       }
-      
-      const baseUrl = process.env.NODE_ENV === 'production' 
+
+      const baseUrl = process.env.NODE_ENV === 'production'
         ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
         : `http://${req.get('host')}`;
-      
+
       const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
-      
+
       // Save resume URL to candidate profile
       await storage.updateCandidate(candidate.id, { resumeFile: fileUrl });
-      
+
       res.json({ url: fileUrl });
     } catch (error) {
       console.error('Upload error:', error);
@@ -1637,7 +1637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/placeholder/:width/:height', (req, res) => {
     const { width, height } = req.params;
     const size = Math.min(parseInt(width) || 60, parseInt(height) || 60);
-    
+
     // Generate a simple SVG placeholder
     const svg = `
       <svg width="${size}" height="${size}" xmlns="http://www.w3.org/2000/svg">
@@ -1648,7 +1648,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         </text>
       </svg>
     `;
-    
+
     res.setHeader('Content-Type', 'image/svg+xml');
     res.setHeader('Cache-Control', 'public, max-age=86400');
     res.send(svg);
@@ -1662,11 +1662,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const candidateId = req.session.candidateId!;
       const candidate = await storage.getCandidateByCandidateId(candidateId);
-      
+
       if (!candidate) {
         return res.status(404).json({ message: "Candidate not found" });
       }
-      
+
       // Use candidate's UUID as profileId for saved jobs
       const savedJobs = await storage.getSavedJobsByProfile(candidate.id);
       res.json(savedJobs);
@@ -1683,12 +1683,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!users) {
         return res.status(404).json({ message: "User not found" });
       }
-      
+
       const profile = await storage.getProfile(users.id);
       if (!profile) {
         return res.status(404).json({ message: "Profile not found" });
       }
-      
+
       const savedJobs = await storage.getSavedJobsByProfile(profile.id);
       res.json(savedJobs);
     } catch (error) {
@@ -1701,7 +1701,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const candidateId = req.session.candidateId!;
       const candidate = await storage.getCandidateByCandidateId(candidateId);
-      
+
       if (!candidate) {
         return res.status(404).json({ message: "Candidate not found" });
       }
@@ -1711,7 +1711,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         profileId: candidate.id,
         savedDate: new Date().toISOString()
       });
-      
+
       const savedJob = await storage.createSavedJob(validatedData);
       res.json(savedJob);
     } catch (error) {
@@ -1725,12 +1725,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { jobTitle, company } = req.body;
       const candidateId = req.session.candidateId!;
-      
+
       const candidate = await storage.getCandidateByCandidateId(candidateId);
       if (!candidate) {
         return res.status(404).json({ message: "Candidate not found" });
       }
-      
+
       const removed = await storage.removeSavedJob(candidate.id, jobTitle, company);
       if (removed) {
         res.json({ message: "Job removed from saved jobs" });
@@ -1761,7 +1761,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const teamMembers = await Promise.all(recruiters.map(async (rec) => {
         const revenueMappings = await storage.getRevenueMappingsByRecruiterId(rec.id);
         const totalRevenue = revenueMappings.reduce((sum, rm) => sum + (rm.revenue || 0), 0);
-        
+
         let tenure = "0";
         if (rec.joiningDate) {
           try {
@@ -1774,7 +1774,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             tenure = "0";
           }
         }
-        
+
         return {
           id: rec.id,
           name: rec.name,
@@ -1855,7 +1855,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get requirements based on filter - using strict ID-based lookup
       let requirements: any[] = [];
       let filteredRecruiters = teamRecruiters;
-      
+
       if (memberIdFilter && memberIdFilter !== 'overall') {
         // Validate that memberId belongs to this TL's team (ID-based security check)
         if (!teamRecruiterIds.includes(memberIdFilter)) {
@@ -1885,7 +1885,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const recruiterIds = filteredRecruiters.map(r => r.id);
       const allSubmissionsRaw = await db.select().from(resumeSubmissions);
       const teamSubmissionsRaw = allSubmissionsRaw.filter(s => recruiterIds.includes(s.recruiterId));
-      
+
       // Filter submissions cumulatively (up to selected date) for metrics calculation
       const teamSubmissions = teamSubmissionsRaw.filter(sub => {
         if (!sub.submittedAt) return false;
@@ -1903,14 +1903,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get tagged applications (recruiter_tagged) for team recruiters
       const allTaggedApplicationsRaw = await db.select().from(jobApplications)
         .where(eq(jobApplications.source, 'recruiter_tagged'));
-      
+
       // Filter tagged applications by recruiter IDs (through requirement assignments)
       const taggedApplicationsRaw = allTaggedApplicationsRaw.filter(app => {
         if (!app.requirementId) return false;
         // Check if this requirement belongs to any of the filtered recruiters
         return filteredRequirements.some(req => req.id === app.requirementId);
       });
-      
+
       // Filter tagged applications by recruiter and date (cumulative up to selected date)
       const requirementIds = filteredRequirements.map(r => r.id);
       const taggedApplications = taggedApplicationsRaw.filter(app => {
@@ -1925,25 +1925,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const appDate = new Date(app.appliedDate).toISOString().split('T')[0];
         return appDate === today && requirementIds.includes(app.requirementId);
       });
-      
+
       // Calculate metrics for filtered requirements (created on or before selected date)
       let totalResumesRequired = 0;
       let totalResumesDelivered = 0;
       let completedRequirements = 0;
-      
+
       for (const req of filteredRequirements) {
         const target = getResumeTarget(req.criticality, req.toughness);
         totalResumesRequired += target;
-        
+
         // Count resumes submitted for this requirement (cumulative up to selected date)
         const deliveredFromSubmissions = teamSubmissions.filter(s => s.requirementId === req.id).length;
-        
+
         // Count candidates tagged to this requirement (cumulative up to selected date)
         const deliveredFromTagged = taggedApplications.filter(app => app.requirementId === req.id).length;
-        
+
         const deliveredForReq = deliveredFromSubmissions + deliveredFromTagged;
         totalResumesDelivered += deliveredForReq;
-        
+
         // Check if this requirement is fully delivered
         if (deliveredForReq >= target) {
           completedRequirements++;
@@ -1961,13 +1961,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
 
       const totalRequirements = filteredRequirements.length;
-      
+
       // Calculate averages
-      const avgResumesPerRequirement = totalRequirements > 0 
-        ? (totalResumesDelivered / totalRequirements).toFixed(2) 
+      const avgResumesPerRequirement = totalRequirements > 0
+        ? (totalResumesDelivered / totalRequirements).toFixed(2)
         : "0.00";
-      const requirementsPerRecruiter = filteredRecruiters.length > 0 
-        ? (totalRequirements / filteredRecruiters.length).toFixed(2) 
+      const requirementsPerRecruiter = filteredRecruiters.length > 0
+        ? (totalRequirements / filteredRecruiters.length).toFixed(2)
         : "0.00";
 
       // Build delivered items for the selected date
@@ -2019,7 +2019,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const deliveredFromSubmissions = teamSubmissions.filter(s => s.requirementId === req.id).length;
         const deliveredFromTagged = taggedApplications.filter(app => app.requirementId === req.id).length;
         const deliveredForReq = deliveredFromSubmissions + deliveredFromTagged;
-        
+
         if (deliveredForReq < target) {
           defaultedItems.push({
             requirement: req.position,
@@ -2075,21 +2075,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const allMeetings = await db.select().from(meetings).orderBy(desc(meetings.createdAt));
-      const teamLeaderMeetings = allMeetings.filter(m => 
+      const teamLeaderMeetings = allMeetings.filter(m =>
         m.personId === employee.id || m.person === employee.name
       );
 
       const meetingSummary = [];
       const tlMeetings = teamLeaderMeetings.filter(m => m.meetingType === "TL's Meeting");
       const ceoMeetings = teamLeaderMeetings.filter(m => m.meetingType === "CEO's Meeting");
-      
+
       if (tlMeetings.length > 0) {
         meetingSummary.push({ id: "meeting-tl", type: "TL's Meeting", count: String(tlMeetings.length) });
       }
       if (ceoMeetings.length > 0) {
         meetingSummary.push({ id: "meeting-ceo", type: "CEO's Meeting", count: String(ceoMeetings.length) });
       }
-      
+
       res.json(meetingSummary);
     } catch (error) {
       console.error('Get team leader meetings error:', error);
@@ -2111,7 +2111,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const allMeetings = await db.select().from(meetings).orderBy(desc(meetings.createdAt));
-      const teamLeaderMeetings = allMeetings.filter(m => 
+      const teamLeaderMeetings = allMeetings.filter(m =>
         m.personId === employee.id || m.person === employee.name
       );
 
@@ -2124,7 +2124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         agenda: m.agenda,
         status: m.status || 'Pending'
       }));
-      
+
       res.json(formattedMeetings);
     } catch (error) {
       console.error('Get team leader detailed meetings error:', error);
@@ -2147,13 +2147,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const commands = await db.select().from(recruiterCommands)
         .where(eq(recruiterCommands.recruiterId, employee.id))
         .orderBy(desc(recruiterCommands.createdAt));
-      
+
       const comments = commands.map((cmd: any) => ({
         id: cmd.id,
         comment: cmd.command,
         date: cmd.commandDate || new Date(cmd.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-')
       }));
-      
+
       res.json(comments);
     } catch (error) {
       console.error('Get team leader ceo comments error:', error);
@@ -2203,7 +2203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         noticePeriod: candidate.noticePeriod || '-',
         createdAt: candidate.createdAt
       }));
-      
+
       res.json(pipelineData);
     } catch (error) {
       console.error('Get team leader pipeline error:', error);
@@ -2316,7 +2316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fetch requirements for each team member using ID-based lookup
       const allRequirements: any[] = [];
       const addedIds = new Set<string>();
-      
+
       for (const recruiter of teamRecruiters) {
         const recruiterRequirements = await storage.getRequirementsByTalentAdvisorId(recruiter.id);
         for (const req of recruiterRequirements) {
@@ -2330,12 +2330,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Also fetch requirements assigned to this TL but not yet assigned to any recruiter
       // These are "unassigned" requirements where teamLead matches TL's name but talentAdvisorId is null
       const allReqs = await storage.getRequirements();
-      const unassignedTLRequirements = allReqs.filter(req => 
-        req.teamLead === employee.name && 
-        !req.talentAdvisorId && 
+      const unassignedTLRequirements = allReqs.filter(req =>
+        req.teamLead === employee.name &&
+        !req.talentAdvisorId &&
         !req.isArchived
       );
-      
+
       for (const req of unassignedTLRequirements) {
         if (!addedIds.has(req.id)) {
           allRequirements.push(req);
@@ -2382,7 +2382,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the requirement and verify it belongs to this TL's team (ID-based check)
       const requirements = await storage.getRequirements();
       const requirement = requirements.find(r => r.id === id);
-      
+
       if (!requirement) {
         return res.status(404).json({ message: "Requirement not found" });
       }
@@ -2390,17 +2390,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if requirement belongs to this TL's team (ID-based)
       // Requirement must either have talentAdvisorId belonging to this TL's team,
       // OR be unassigned and have teamLead matching this TL's name (legacy fallback)
-      const belongsToTeam = requirement.talentAdvisorId 
+      const belongsToTeam = requirement.talentAdvisorId
         ? teamRecruiterIds.includes(requirement.talentAdvisorId)
         : requirement.teamLead === employee.name;
-      
+
       if (!belongsToTeam) {
         return res.status(403).json({ message: "Access denied. This requirement is not assigned to your team." });
       }
-      
+
       if (!allowedTalentAdvisors.includes(talentAdvisor)) {
-        return res.status(400).json({ 
-          message: allowedTalentAdvisors.length > 0 
+        return res.status(400).json({
+          message: allowedTalentAdvisors.length > 0
             ? "Invalid Talent Advisor. Must be one of your team members: " + allowedTalentAdvisors.join(', ')
             : "No team members available to assign. Please add recruiters to your team first."
         });
@@ -2417,7 +2417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         talentAdvisor,
         talentAdvisorId: recruiter.id
       };
-      
+
       // If jdText is provided, include it in the update (JD file is NOT shared to TA)
       if (jdText !== undefined && jdText !== null) {
         updateData.jdText = jdText;
@@ -2442,11 +2442,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
-      
-      const baseUrl = process.env.NODE_ENV === 'production' 
+
+      const baseUrl = process.env.NODE_ENV === 'production'
         ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
         : `http://${req.get('host')}`;
-      
+
       const url = `${baseUrl}/uploads/${req.file.filename}`;
       res.json({ url });
     } catch (error) {
@@ -2460,11 +2460,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
-      
-      const baseUrl = process.env.NODE_ENV === 'production' 
+
+      const baseUrl = process.env.NODE_ENV === 'production'
         ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
         : `http://${req.get('host')}`;
-      
+
       const url = `${baseUrl}/uploads/${req.file.filename}`;
       res.json({ url });
     } catch (error) {
@@ -2478,7 +2478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const session = req.session as any;
       const employee = await storage.getEmployeeById(session.employeeId);
-      
+
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
       }
@@ -2534,7 +2534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const session = req.session as any;
       const employee = await storage.getEmployeeById(session.employeeId);
-      
+
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
       }
@@ -2544,7 +2544,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updates = req.body;
-      
+
       // Update employee record if needed
       // For now, return the updated profile data
       res.json({ ...updates, id: employee.id });
@@ -2624,7 +2624,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const performanceData = await Promise.all(recruiters.map(async (rec) => {
         const revenueMappings = await storage.getRevenueMappingsByRecruiterId(rec.id);
         const closures = revenueMappings.filter(rm => rm.status === 'closed').length;
-        
+
         let tenure = "0";
         if (rec.joiningDate) {
           try {
@@ -2643,9 +2643,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Count unique quarters with closures
         const closedMappings = revenueMappings.filter(rm => rm.status === 'closed');
         const qtrsAchieved = new Set(closedMappings.map(rm => rm.quarter)).size;
-        
+
         // Find last closure date
-        const lastClosure = closedMappings.length > 0 
+        const lastClosure = closedMappings.length > 0
           ? closedMappings.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())[0]
           : null;
 
@@ -2692,22 +2692,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const quarterlyData: Record<string, { resumesDelivered: number; closures: number }> = {};
 
       // Filter recruiters if memberId is specified
-      const targetRecruiters = memberId && memberId !== 'all' 
+      const targetRecruiters = memberId && memberId !== 'all'
         ? recruiters.filter(rec => rec.id === memberId)
         : recruiters;
 
       for (const rec of targetRecruiters) {
         const revenueMappings = await storage.getRevenueMappingsByRecruiterId(rec.id);
-        
+
         for (const rm of revenueMappings) {
           const quarter = rm.quarter || 'Unknown';
           if (!quarterlyData[quarter]) {
             quarterlyData[quarter] = { resumesDelivered: 0, closures: 0 };
           }
-          
+
           // Count resumes delivered (all mappings count as resumes)
           quarterlyData[quarter].resumesDelivered += 1;
-          
+
           // Count closures (only closed status)
           if (rm.status === 'closed') {
             quarterlyData[quarter].closures += 1;
@@ -2754,7 +2754,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const rec of recruiters) {
         const revenueMappings = await storage.getRevenueMappingsByRecruiterId(rec.id);
         const closedMappings = revenueMappings.filter(rm => rm.status === 'closed');
-        
+
         for (const mapping of closedMappings) {
           closures.push({
             name: mapping.candidateName || 'Unknown',
@@ -2781,7 +2781,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const session = req.session as any;
       const employee = await storage.getEmployeeById(session.employeeId);
-      
+
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
       }
@@ -2820,7 +2820,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const session = req.session as any;
       const employee = await storage.getEmployeeById(session.employeeId);
-      
+
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
       }
@@ -2830,7 +2830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updates = req.body;
-      
+
       // Update the employee record in database
       const updatedEmployee = await storage.updateEmployee(employee.id, {
         phone: updates.phone !== undefined ? updates.phone : employee.phone,
@@ -2875,11 +2875,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
-      
-      const baseUrl = process.env.NODE_ENV === 'production' 
+
+      const baseUrl = process.env.NODE_ENV === 'production'
         ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
         : `http://${req.get('host')}`;
-      
+
       const url = `${baseUrl}/uploads/${req.file.filename}`;
       res.json({ url });
     } catch (error) {
@@ -2893,11 +2893,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
-      
-      const baseUrl = process.env.NODE_ENV === 'production' 
+
+      const baseUrl = process.env.NODE_ENV === 'production'
         ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
         : `http://${req.get('host')}`;
-      
+
       const url = `${baseUrl}/uploads/${req.file.filename}`;
       res.json({ url });
     } catch (error) {
@@ -2912,11 +2912,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
-      
-      const baseUrl = process.env.NODE_ENV === 'production' 
+
+      const baseUrl = process.env.NODE_ENV === 'production'
         ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
         : `http://${req.get('host')}`;
-      
+
       const url = `${baseUrl}/uploads/chat/${req.file.filename}`;
       res.json({ url, filename: req.file.filename });
     } catch (error) {
@@ -2929,17 +2929,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/team-leaders", requireAdminAuth, async (req, res) => {
     try {
       const allEmployees = await storage.getAllEmployees();
-      
+
       // Filter team leaders
       const teamLeaders = allEmployees.filter(emp => emp.role === 'team_leader');
-      
+
       // For each team leader, count their recruiters
       const teamLeadersWithCounts = teamLeaders.map(tl => {
         // Count recruiters reporting to this team leader
         const recruiterCount = allEmployees.filter(
           emp => emp.role === 'recruiter' && emp.reportingTo === tl.employeeId
         ).length;
-        
+
         return {
           id: tl.id,
           employeeId: tl.employeeId,
@@ -2964,7 +2964,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lastClosure: 'not filled'
         };
       });
-      
+
       res.json(teamLeadersWithCounts);
     } catch (error) {
       console.error('Get team leaders error:', error);
@@ -2978,7 +2978,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const session = req.session as any;
       const employee = await storage.getEmployeeById(session.employeeId);
-      
+
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
       }
@@ -3028,7 +3028,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const session = req.session as any;
       const employee = await storage.getEmployeeById(session.employeeId);
-      
+
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
       }
@@ -3038,7 +3038,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const updates = req.body;
-      
+
       // Map profile fields to employee fields for database update
       const employeeUpdates: any = {};
       if (updates.name) employeeUpdates.name = updates.name;
@@ -3047,10 +3047,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (updates.department) employeeUpdates.department = updates.department;
       if (updates.bannerImage !== undefined) employeeUpdates.bannerImage = updates.bannerImage;
       if (updates.profilePicture !== undefined) employeeUpdates.profilePicture = updates.profilePicture;
-      
+
       // Update employee record in database
       const updatedEmployee = await storage.updateEmployee(employee.id, employeeUpdates);
-      
+
       if (!updatedEmployee) {
         return res.status(500).json({ message: "Failed to update profile" });
       }
@@ -3096,14 +3096,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log('GET /api/recruiter/interviews - Request received');
       const session = req.session as any;
-      
+
       if (!session || !session.employeeId) {
         console.log('GET /api/recruiter/interviews - No session found');
         return res.status(401).json({ message: "Unauthorized" });
       }
-      
+
       const employee = await storage.getEmployeeById(session.employeeId);
-      
+
       if (!employee) {
         console.log('GET /api/recruiter/interviews - Employee not found:', session.employeeId);
         return res.status(404).json({ message: "Employee not found" });
@@ -3117,7 +3117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('GET /api/recruiter/interviews - Fetching interviews for:', employee.name);
       const interviews = await storage.getInterviewsByRecruiterName(employee.name);
       console.log('GET /api/recruiter/interviews - Found interviews:', interviews.length);
-      
+
       // Transform to match frontend expected format
       const transformedInterviews = interviews.map(interview => ({
         id: interview.id,
@@ -3143,7 +3143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const session = req.session as any;
       const employee = await storage.getEmployeeById(session.employeeId);
-      
+
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
       }
@@ -3234,56 +3234,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const dateParam = req.query.date as string | undefined;
       const today = dateParam || new Date().toISOString().split('T')[0];
-      
+
       // Import getResumeTarget for calculations
       const { getResumeTarget } = await import("@shared/constants");
-      
+
       // Get requirements assigned to this recruiter directly from requirements table
       const requirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
-      
+
       // Calculate total required resumes and track per-requirement delivery
       let totalResumesRequired = 0;
       let totalResumesDelivered = 0;
       let completedRequirements = 0;
-      
+
       // Get requirements created on or before the selected date (for this recruiter)
       const filteredRequirements = requirements.filter(req => {
         const createdDate = new Date(req.createdAt).toISOString().split('T')[0];
         return createdDate <= today;
       });
-      
+
       // Get all resume submissions by this recruiter for their requirements
       const { resumeSubmissions, jobApplications } = await import("@shared/schema");
       const allSubmissionsRaw = await db.select().from(resumeSubmissions)
         .where(eq(resumeSubmissions.recruiterId, employee.id));
-      
+
       // Get all resume submissions by this recruiter (up to selected date - cumulative)
       const allSubmissions = allSubmissionsRaw.filter(sub => {
         if (!sub.submittedAt) return false;
         const subDate = new Date(sub.submittedAt).toISOString().split('T')[0];
         return subDate <= today;
       });
-      
+
       // Get all job applications tagged by this recruiter (up to selected date - cumulative)
       // These are candidates tagged to requirements (source: 'recruiter_tagged')
       const taggedApplicationsRaw = await db.select().from(jobApplications)
         .where(eq(jobApplications.source, 'recruiter_tagged'));
-      
+
       // Filter applications up to the selected date (cumulative)
       const taggedApplications = taggedApplicationsRaw.filter(app => {
         if (!app.appliedDate) return false;
         const appDate = new Date(app.appliedDate).toISOString().split('T')[0];
         return appDate <= today;
       });
-      
+
       // Get requirement IDs assigned to this recruiter (filtered by date)
       const recruiterRequirementIds = filteredRequirements.map(r => r.id);
-      
+
       // Filter tagged applications to only those for this recruiter's requirements
-      const recruiterTaggedApps = taggedApplications.filter(app => 
+      const recruiterTaggedApps = taggedApplications.filter(app =>
         app.requirementId && recruiterRequirementIds.includes(app.requirementId)
       );
-      
+
       // Get delivered candidates for the specific date (for modal display)
       const deliveredCandidatesForDate: Array<{
         candidate: string;
@@ -3292,27 +3292,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         deliveredDate: string;
         status: string;
       }> = [];
-      
+
       // Get submissions for the specific date
       const submissionsForDate = allSubmissionsRaw.filter(sub => {
         if (!sub.submittedAt) return false;
         const subDate = new Date(sub.submittedAt).toISOString().split('T')[0];
         return subDate === today;
       });
-      
+
       // Get tagged applications for the specific date
       const taggedForDate = taggedApplicationsRaw.filter(app => {
         if (!app.appliedDate) return false;
         const appDate = new Date(app.appliedDate).toISOString().split('T')[0];
         return appDate === today && app.requirementId && recruiterRequirementIds.includes(app.requirementId);
       });
-      
+
       // Also get all tagged applications (not just for today) for delivered candidates count
       // This includes candidates tagged to requirements at any time (cumulative)
-      const allTaggedForRecruiter = taggedApplicationsRaw.filter(app => 
+      const allTaggedForRecruiter = taggedApplicationsRaw.filter(app =>
         app.requirementId && recruiterRequirementIds.includes(app.requirementId)
       );
-      
+
       // Build delivered candidates list for the selected date
       for (const sub of submissionsForDate) {
         const req = filteredRequirements.find(r => r.id === sub.requirementId);
@@ -3326,7 +3326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       for (const app of taggedForDate) {
         const req = filteredRequirements.find(r => r.id === app.requirementId);
         if (req) {
@@ -3339,7 +3339,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       // Build defaulted requirements list (requirements with pending profiles)
       const defaultedRequirements: Array<{
         requirement: string;
@@ -3349,22 +3349,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         delivered: number;
         status: string;
       }> = [];
-      
+
       // Calculate metrics for requirements that existed on or before the selected date
       for (const req of filteredRequirements) {
         const target = getResumeTarget(req.criticality, req.toughness);
         totalResumesRequired += target;
-        
+
         // Count resumes submitted for this requirement (cumulative up to selected date)
         const deliveredFromSubmissions = allSubmissions.filter(s => s.requirementId === req.id).length;
-        
+
         // Count candidates tagged to this requirement (cumulative up to selected date)
         const deliveredFromTagged = recruiterTaggedApps.filter(app => app.requirementId === req.id).length;
-        
+
         // Total delivered = resume submissions + tagged candidates (cumulative)
         const deliveredForReq = deliveredFromSubmissions + deliveredFromTagged;
         totalResumesDelivered += deliveredForReq;
-        
+
         // Check if this requirement is fully delivered
         if (deliveredForReq >= target) {
           completedRequirements++;
@@ -3381,17 +3381,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
       }
-      
+
       // Update totalRequirements to use filtered requirements
       const totalRequirements = filteredRequirements.length;
-      
+
       // Calculate daily delivery count (for the specific date, not cumulative)
       const dailyDeliveryCount = submissionsForDate.length + taggedForDate.length;
-      
+
       // Calculate total delivered candidates count (cumulative - all tagged candidates to requirements)
       // This counts all candidates tagged to recruiter's requirements, not just today's
       const totalDeliveredCandidatesCount = allSubmissions.length + allTaggedForRecruiter.length;
-      
+
       // Build requirements data for graph - group by criticality
       const requirementsByCriticality: Record<string, { delivered: number; required: number }> = {};
       for (const req of filteredRequirements) {
@@ -3399,21 +3399,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const deliveredFromSubmissions = allSubmissions.filter(s => s.requirementId === req.id).length;
         const deliveredFromTagged = recruiterTaggedApps.filter(app => app.requirementId === req.id).length;
         const deliveredForReq = deliveredFromSubmissions + deliveredFromTagged;
-        
+
         if (!requirementsByCriticality[req.criticality]) {
           requirementsByCriticality[req.criticality] = { delivered: 0, required: 0 };
         }
         requirementsByCriticality[req.criticality].delivered += deliveredForReq;
         requirementsByCriticality[req.criticality].required += target;
       }
-      
+
       // Convert to array format for graph
       const requirementsData = Object.entries(requirementsByCriticality).map(([criticality, data]) => ({
         criticality,
         delivered: data.delivered,
         required: data.required
       }));
-      
+
       const dailyMetrics = {
         id: `daily-rec-${employee.id}`,
         date: new Date(today).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
@@ -3458,12 +3458,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const { date } = req.body;
       const targetDate = date || new Date().toISOString().split('T')[0];
-      
+
       const metrics = await storage.calculateRecruiterDailyMetrics(employee.id, targetDate);
-      
+
       // Check if snapshot exists and update, otherwise create
       const existingSnapshot = await storage.getDailyMetricsSnapshot(targetDate, 'recruiter', employee.id);
-      
+
       let snapshot;
       if (existingSnapshot) {
         snapshot = await storage.updateDailyMetricsSnapshot(existingSnapshot.id, {
@@ -3482,7 +3482,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           requirementCount: metrics.requirementCount
         });
       }
-      
+
       res.json({ ...metrics, snapshot });
     } catch (error) {
       console.error('Calculate recruiter daily metrics error:', error);
@@ -3503,7 +3503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const today = new Date().toISOString().split('T')[0];
       const start = (startDate as string) || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const end = (endDate as string) || today;
-      
+
       const snapshots = await storage.getDailyMetricsSnapshotsByDateRange(start, end, 'recruiter', employee.id);
       res.json(snapshots);
     } catch (error) {
@@ -3523,44 +3523,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const dateParam = req.query.date as string | undefined;
       const today = dateParam || new Date().toISOString().split('T')[0];
-      
+
       const { resumeSubmissions, jobApplications, requirements } = await import("@shared/schema");
-      
+
       // Get resume submissions for this date
       const submissionsRaw = await db.select().from(resumeSubmissions)
         .where(eq(resumeSubmissions.recruiterId, employee.id));
-      
+
       const submissions = submissionsRaw.filter(sub => {
         if (!sub.submittedAt) return false;
         const subDate = new Date(sub.submittedAt).toISOString().split('T')[0];
         return subDate === today;
       });
-      
+
       // Get tagged applications for this date
       const taggedAppsRaw = await db.select().from(jobApplications)
         .where(eq(jobApplications.source, 'recruiter_tagged'));
-      
+
       const taggedApps = taggedAppsRaw.filter(app => {
         if (!app.appliedDate) return false;
         const appDate = new Date(app.appliedDate).toISOString().split('T')[0];
         return appDate === today;
       });
-      
+
       // Get recruiter's requirements
       const recruiterRequirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
       const recruiterRequirementIds = recruiterRequirements.map(r => r.id);
-      
+
       // Filter tagged apps to recruiter's requirements
-      const recruiterTaggedApps = taggedApps.filter(app => 
+      const recruiterTaggedApps = taggedApps.filter(app =>
         app.requirementId && recruiterRequirementIds.includes(app.requirementId)
       );
-      
+
       // Get all requirements for company/position lookup
       const allRequirements = await db.select().from(requirements);
-      
+
       // Combine and format delivered candidates
       const deliveredCandidates = [];
-      
+
       // Add resume submissions
       for (const sub of submissions) {
         const requirement = allRequirements.find(r => r.id === sub.requirementId);
@@ -3574,7 +3574,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'Resume Submission'
         });
       }
-      
+
       // Add tagged candidates
       for (const app of recruiterTaggedApps) {
         const requirement = allRequirements.find(r => r.id === app.requirementId);
@@ -3588,7 +3588,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           type: 'Tagged Candidate'
         });
       }
-      
+
       res.json(deliveredCandidates);
     } catch (error) {
       console.error('Get delivered candidates error:', error);
@@ -3607,9 +3607,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const dateParam = req.query.date as string | undefined;
       const today = dateParam || new Date().toISOString().split('T')[0];
-      
+
       const metrics = await storage.calculateTeamDailyMetrics(employee.id, today);
-      
+
       res.json({
         id: `daily-team-${employee.id}`,
         date: new Date(today).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
@@ -3645,7 +3645,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const today = new Date().toISOString().split('T')[0];
       const start = (startDate as string) || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const end = (endDate as string) || today;
-      
+
       const snapshots = await storage.getDailyMetricsSnapshotsByDateRange(start, end, 'team', employee.id);
       res.json(snapshots);
     } catch (error) {
@@ -3665,9 +3665,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const dateParam = req.query.date as string | undefined;
       const today = dateParam || new Date().toISOString().split('T')[0];
-      
+
       const metrics = await storage.calculateOrgDailyMetrics(today);
-      
+
       res.json({
         id: `daily-org-${today}`,
         date: new Date(today).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
@@ -3703,7 +3703,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const today = new Date().toISOString().split('T')[0];
       const start = (startDate as string) || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const end = (endDate as string) || today;
-      
+
       const snapshots = await storage.getDailyMetricsSnapshotsByDateRange(start, end, 'organization');
       res.json(snapshots);
     } catch (error) {
@@ -3722,12 +3722,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Fetch meetings assigned to this recruiter by personId first, fallback to name
       const allMeetings = await db.select().from(meetings).orderBy(desc(meetings.createdAt));
-      
+
       // Filter meetings by personId (primary) or person name (fallback)
-      const recruiterMeetings = allMeetings.filter(m => 
+      const recruiterMeetings = allMeetings.filter(m =>
         m.personId === employee.id || m.person === employee.name
       );
-      
+
       res.json(recruiterMeetings);
     } catch (error) {
       console.error('Get recruiter meetings error:', error);
@@ -3747,7 +3747,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const commands = await db.select().from(recruiterCommands)
         .where(eq(recruiterCommands.recruiterId, employee.id))
         .orderBy(desc(recruiterCommands.createdAt));
-      
+
       res.json(commands);
     } catch (error) {
       console.error('Get recruiter commands error:', error);
@@ -3766,7 +3766,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Fetch requirements assigned to this recruiter/talent advisor (using ID-based lookup)
       const recruiterRequirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
-      
+
       // Also get job applications for each requirement to calculate delivery counts
       const requirementsWithCounts = await Promise.all(
         recruiterRequirements.map(async (req) => {
@@ -3777,7 +3777,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         })
       );
-      
+
       res.json(requirementsWithCounts);
     } catch (error) {
       console.error('Get recruiter requirements error:', error);
@@ -3796,7 +3796,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Fetch revenue mappings where this recruiter is the talent advisor (use employee.id which is the UUID)
       const revenueMappings = await storage.getRevenueMappingsByTalentAdvisorId(employee.id);
-      
+
       // Transform to closure report format for frontend with full data
       const closureReports = revenueMappings.map((mapping) => ({
         id: mapping.id,
@@ -3810,7 +3810,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         incentive: mapping.incentive ? mapping.incentive.toLocaleString('en-IN') : '0',
         revenue: mapping.revenue ? mapping.revenue.toLocaleString('en-IN') : '0'
       }));
-      
+
       res.json(closureReports);
     } catch (error) {
       console.error('Get recruiter closure reports error:', error);
@@ -3857,11 +3857,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
-      
-      const baseUrl = process.env.NODE_ENV === 'production' 
+
+      const baseUrl = process.env.NODE_ENV === 'production'
         ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
         : `http://${req.get('host')}`;
-      
+
       const url = `${baseUrl}/uploads/${req.file.filename}`;
       res.json({ url });
     } catch (error) {
@@ -3878,7 +3878,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const parsed = await parseResumeFile(req.file.path, req.file.mimetype);
-      
+
       res.json({
         success: true,
         data: {
@@ -3909,18 +3909,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
-      
-      const baseUrl = process.env.NODE_ENV === 'production' 
+
+      const baseUrl = process.env.NODE_ENV === 'production'
         ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
         : `http://${req.get('host')}`;
-      
+
       const filePath = `${baseUrl}/uploads/resumes/${req.file.filename}`;
-      
-      res.json({ 
+
+      res.json({
         success: true,
         filePath: filePath,
         url: filePath,
-        filename: req.file.filename 
+        filename: req.file.filename
       });
     } catch (error: any) {
       console.error('Resume upload error:', error);
@@ -3933,11 +3933,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
-      
-      const baseUrl = process.env.NODE_ENV === 'production' 
+
+      const baseUrl = process.env.NODE_ENV === 'production'
         ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
         : `http://${req.get('host')}`;
-      
+
       const url = `${baseUrl}/uploads/${req.file.filename}`;
       res.json({ url });
     } catch (error) {
@@ -3961,19 +3961,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return matches;
       });
       console.log(`Client JDs found: ${clientJDs.length}`);
-      
+
       // Transform to JD table format
       const jdData = await Promise.all(clientJDs.map(async (req: any) => {
         // Find SPOC employee for this requirement
         const spocName = req.spoc || 'N/A';
-        
+
         // Get client code from company name
         const allClients = await storage.getAllClients();
-        const clientRecord = allClients.find((c: any) => 
+        const clientRecord = allClients.find((c: any) =>
           c.brandName === req.company && !c.isLoginOnly
         );
         const clientId = clientRecord?.clientCode || req.company;
-        
+
         return {
           id: req.id, // Role ID (STR format)
           clientId: clientId, // Client code (e.g., STCL001)
@@ -3992,7 +3992,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           } // Full requirement object for JD preview with JD details
         };
       }));
-      
+
       res.json(jdData);
     } catch (error) {
       console.error('Get client JDs error:', error);
@@ -4018,7 +4018,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertRequirementSchema.parse(req.body);
       const requirement = await storage.createRequirement(validatedData);
-      
+
       logRequirementAdded(
         storage,
         'admin',
@@ -4028,15 +4028,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requirement.company,
         requirement.id
       );
-      
+
       // Recalculate and update daily metrics snapshot for today
       try {
         const today = new Date().toISOString().split('T')[0];
         const metrics = await storage.calculateOrgDailyMetrics(today);
-        
+
         // Get or create snapshot for today
         const existingSnapshot = await storage.getDailyMetricsSnapshot(today, 'organization');
-        
+
         if (existingSnapshot) {
           // Update existing snapshot
           await storage.updateDailyMetricsSnapshot(existingSnapshot.id, {
@@ -4062,7 +4062,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Log error but don't fail the requirement creation
         console.error('Error updating daily metrics after requirement creation:', metricsError);
       }
-      
+
       res.status(201).json(requirement);
     } catch (error) {
       res.status(400).json({ message: "Invalid requirement data" });
@@ -4095,7 +4095,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get the requirement
       const requirements = await storage.getRequirements();
       const requirement = requirements.find(r => r.id === id);
-      
+
       if (!requirement) {
         return res.status(404).json({ message: "Requirement not found" });
       }
@@ -4169,12 +4169,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { category } = req.query;
       const allMeetings = await db.select().from(meetings).orderBy(meetings.createdAt);
-      
+
       if (category && (category === 'tl' || category === 'ceo_ta')) {
         const filteredMeetings = allMeetings.filter(m => m.meetingCategory === category);
         return res.json(filteredMeetings);
       }
-      
+
       res.json(allMeetings);
     } catch (error) {
       console.error('Get meetings error:', error);
@@ -4185,7 +4185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/meetings", requireAdminAuth, async (req, res) => {
     try {
       const validatedData = insertMeetingSchema.parse(req.body);
-      
+
       const [meeting] = await db.insert(meetings).values([{
         ...validatedData,
         createdAt: new Date().toISOString(),
@@ -4204,16 +4204,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const updateData = insertMeetingSchema.partial().parse(req.body);
-      
+
       const [updatedMeeting] = await db.update(meetings)
         .set(updateData)
         .where(eq(meetings.id, id))
         .returning();
-      
+
       if (!updatedMeeting) {
         return res.status(404).json({ message: "Meeting not found" });
       }
-      
+
       res.json(updatedMeeting);
     } catch (error: any) {
       console.error('Update meeting error:', error);
@@ -4227,15 +4227,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/admin/meetings/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      
+
       const [deletedMeeting] = await db.delete(meetings)
         .where(eq(meetings.id, id))
         .returning();
-      
+
       if (!deletedMeeting) {
         return res.status(404).json({ message: "Meeting not found" });
       }
-      
+
       res.json({ message: "Meeting deleted successfully" });
     } catch (error) {
       console.error('Delete meeting error:', error);
@@ -4257,7 +4257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/recruiter-commands", requireAdminAuth, async (req, res) => {
     try {
       const validatedData = insertRecruiterCommandSchema.parse(req.body);
-      
+
       const [command] = await db.insert(recruiterCommands).values({
         ...validatedData,
         createdAt: new Date().toISOString(),
@@ -4276,16 +4276,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const updateData = insertRecruiterCommandSchema.partial().parse(req.body);
-      
+
       const [updatedCommand] = await db.update(recruiterCommands)
         .set(updateData)
         .where(eq(recruiterCommands.id, id))
         .returning();
-      
+
       if (!updatedCommand) {
         return res.status(404).json({ message: "Recruiter command not found" });
       }
-      
+
       res.json(updatedCommand);
     } catch (error: any) {
       console.error('Update recruiter command error:', error);
@@ -4299,15 +4299,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/admin/recruiter-commands/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      
+
       const [deletedCommand] = await db.delete(recruiterCommands)
         .where(eq(recruiterCommands.id, id))
         .returning();
-      
+
       if (!deletedCommand) {
         return res.status(404).json({ message: "Recruiter command not found" });
       }
-      
+
       res.json({ message: "Recruiter command deleted successfully" });
     } catch (error) {
       console.error('Delete recruiter command error:', error);
@@ -4343,58 +4343,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get date query parameter (format: yyyy-MM-dd)
       const selectedDate = req.query.date as string || new Date().toISOString().split('T')[0];
       const team = req.query.team as string || 'overall';
-      
+
       // Import getResumeTarget for calculations
       const { getResumeTarget } = await import("@shared/constants");
-      
+
       // Import schema tables
       const { requirements, employees, candidates, resumeSubmissions } = await import("@shared/schema");
-      
+
       // Get all active (non-archived) requirements created on or before the selected date
       const allRequirements = await db.select().from(requirements)
         .where(eq(requirements.isArchived, false));
-      
+
       // Filter by date on created date
       const filteredRequirements = allRequirements.filter(req => {
         const createdDate = new Date(req.createdAt).toISOString().split('T')[0];
         return createdDate <= selectedDate;
       });
-      
+
       const totalRequirements = filteredRequirements.length;
-      
+
       // Get all resume submissions up to the selected date
       const allSubmissions = await db.select().from(resumeSubmissions);
-      
+
       // Filter submissions by date
       const filteredSubmissions = allSubmissions.filter(sub => {
         const submittedDate = new Date(sub.submittedAt).toISOString().split('T')[0];
         return submittedDate <= selectedDate;
       });
-      
+
       // Calculate metrics for all requirements
       let totalResumesRequired = 0;
       let totalResumesDelivered = 0;
       let completedRequirements = 0;
-      
+
       for (const req of filteredRequirements) {
         const target = getResumeTarget(req.criticality, req.toughness);
         totalResumesRequired += target;
-        
+
         // Count resumes submitted for this requirement up to selected date
         const deliveredForReq = filteredSubmissions.filter(s => s.requirementId === req.id).length;
         totalResumesDelivered += deliveredForReq;
-        
+
         // Check if this requirement is fully delivered
         if (deliveredForReq >= target) {
           completedRequirements++;
         }
       }
-      
+
       // Calculate averages
-      const avgResumesPerRequirement = totalRequirements > 0 
+      const avgResumesPerRequirement = totalRequirements > 0
         ? (totalResumesDelivered / totalRequirements).toFixed(2)
         : "0.00";
-      
+
       // Get count of active recruiters for requirements per recruiter calculation
       // Use raw SQL to exclude last_login_at column (which may not exist in production)
       const employeesResult = await db.execute(sql`
@@ -4407,14 +4407,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         FROM employees
       `);
       const allEmployees = employeesResult.rows as any[];
-      const activeRecruiters = allEmployees.filter(emp => 
+      const activeRecruiters = allEmployees.filter(emp =>
         (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.is_active === true
       );
       const recruiterCount = activeRecruiters.length;
       const requirementsPerRecruiter = recruiterCount > 0
         ? (totalRequirements / recruiterCount).toFixed(2)
         : "0.00";
-      
+
       // Return the calculated metrics
       res.json({
         totalRequirements,
@@ -4466,8 +4466,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Master Data Totals API endpoint
   app.get("/api/admin/master-data-totals", requireAdminAuth, async (req, res) => {
     try {
-      const { requirements, employees, candidates, clients } = await import("@shared/schema");
-      
+      const { requirements, employees, candidates, clients, cashOutflows } = await import("@shared/schema");
+
       // Get counts from database
       // Use raw SQL to exclude last_login_at column (which may not exist in production)
       const employeesResult = await db.execute(sql`
@@ -4481,43 +4481,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       `);
       const allEmployees = employeesResult.rows as any[];
       const allCandidates = await db.select().from(candidates);
-      
+
       // Calculate totals
       const resumes = allCandidates.length;
-      
+
       // Direct Uploads: Candidates uploaded via bulk import (addedBy is null/empty or "Admin"/"admin")
-      const directUploads = allCandidates.filter(c => 
-        !c.addedBy || c.addedBy.trim() === '' || 
-        c.addedBy.toLowerCase() === 'admin' || 
+      const directUploads = allCandidates.filter(c =>
+        !c.addedBy || c.addedBy.trim() === '' ||
+        c.addedBy.toLowerCase() === 'admin' ||
         c.addedBy.toLowerCase() === 'bulk upload'
       ).length;
-      
+
       // Recruiter Uploads: Candidates uploaded by recruiters (addedBy has a recruiter name)
-      const recruiterUploads = allCandidates.filter(c => 
-        c.addedBy && 
-        c.addedBy.trim() !== '' && 
-        c.addedBy.toLowerCase() !== 'admin' && 
+      const recruiterUploads = allCandidates.filter(c =>
+        c.addedBy &&
+        c.addedBy.trim() !== '' &&
+        c.addedBy.toLowerCase() !== 'admin' &&
         c.addedBy.toLowerCase() !== 'bulk upload'
       ).length;
-      
-      // Head Count: Candidates who registered directly (have password/googleId but no addedBy)
-      const headCount = allCandidates.filter(c => 
-        (c.password || c.googleId) && (!c.addedBy || c.addedBy.trim() === '')
+
+      // Head Count: Count of employees with role 'team_leader' or 'talent_advisor' (excluding admin, client, candidate)
+      const headCount = allEmployees.filter(e =>
+        e.role &&
+        (e.role.toLowerCase() === 'team_leader' ||
+          e.role.toLowerCase() === 'talent_advisor' ||
+          e.role.toLowerCase() === 'teamlead' ||
+          e.role.toLowerCase() === 'recruiter') &&
+        e.role.toLowerCase() !== 'admin' &&
+        e.role.toLowerCase() !== 'client' &&
+        e.role.toLowerCase() !== 'candidate'
       ).length;
-      
-      // RESUMES count should be the sum of DIRECT UPLOADS + RECRUITER UPLOADS + HEAD COUNT
-      const totalResumes = directUploads + recruiterUploads + headCount;
-      
-      // For now, return 0 for financial data (would come from finance/expense tables)
+
+      // RESUMES count should be the sum of DIRECT UPLOADS + RECRUITER UPLOADS
+      const totalResumes = directUploads + recruiterUploads;
+
+      // Calculate financial totals from cash_outflows table
+      const allCashOutflows = await db.select().from(cashOutflows);
+
+      const salaryPaid = allCashOutflows.reduce((sum, outflow) => sum + (outflow.totalSalary || 0), 0);
+      const otherExpenses = allCashOutflows.reduce((sum, outflow) => sum + (outflow.otherExpenses || 0), 0);
+      const toolsAndDatabases = allCashOutflows.reduce((sum, outflow) => sum + (outflow.toolsCost || 0), 0);
+      const rentPaid = allCashOutflows.reduce((sum, outflow) => sum + (outflow.rent || 0), 0);
+
       res.json({
         directUploads: directUploads,
         recruiterUploads: recruiterUploads,
-        resumes: totalResumes, // Sum of directUploads + recruiterUploads + headCount
+        resumes: totalResumes, // Sum of directUploads + recruiterUploads
         headCount: headCount,
-        salaryPaid: 0,
-        otherExpenses: 0,
-        toolsAndDatabases: 0,
-        rentPaid: 0
+        salaryPaid: salaryPaid,
+        otherExpenses: otherExpenses,
+        toolsAndDatabases: toolsAndDatabases,
+        rentPaid: rentPaid
       });
     } catch (error) {
       console.error('Master data totals error:', error);
@@ -4529,7 +4543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/employer/forgot-password", async (req, res) => {
     try {
       const { email } = req.body;
-      
+
       if (!email) {
         return res.status(400).json({ message: "Email is required" });
       }
@@ -4543,17 +4557,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Simulate sending notification to admin
       console.log(`Password reset request for employer email: ${email}`);
       console.log(`Admin notification: New password reset request from ${email}`);
-      
+
       // In a real implementation, you would:
       // 1. Check if email exists in the employer database
       // 2. Generate a reset token
       // 3. Send email to admin with the request details
       // 4. Store the reset request in database
-      
+
       // Simulate processing delay
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      res.json({ 
+
+      res.json({
         message: "Password reset request sent to admin",
         details: "You will receive an email notification once your request has been processed by the admin team."
       });
@@ -4579,7 +4593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const notifications = await storage.getNotificationsByUserId(userId);
-      
+
       res.json(notifications);
     } catch (error) {
       console.error('Get notifications error:', error);
@@ -4592,11 +4606,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const notification = await storage.markNotificationAsRead(id);
-      
+
       if (!notification) {
         return res.status(404).json({ message: "Notification not found" });
       }
-      
+
       res.json(notification);
     } catch (error) {
       console.error('Mark notification as read error:', error);
@@ -4638,18 +4652,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if any admin already exists
       const allEmployees = await storage.getAllEmployees();
       const existingAdmins = allEmployees.filter(emp => emp.role === 'admin');
-      
+
       if (existingAdmins.length > 0) {
-        return res.status(403).json({ 
+        return res.status(403).json({
           message: "Admin account already exists. Please use the login page.",
-          adminExists: true 
+          adminExists: true
         });
       }
 
       // Validate using Zod schema
-      const bootstrapAdminSchema = insertEmployeeSchema.omit({ 
-        createdAt: true, 
-        employeeId: true 
+      const bootstrapAdminSchema = insertEmployeeSchema.omit({
+        createdAt: true,
+        employeeId: true
       }).extend({
         role: z.literal('admin'),
         name: z.string().min(2, "Name must be at least 2 characters"),
@@ -4665,22 +4679,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Generate admin employee ID
       const employeeId = await storage.generateNextEmployeeId('admin');
-      
+
       const employeeData = {
         ...validatedData,
         employeeId,
         createdAt: new Date().toISOString(),
         isActive: true,
       };
-      
+
       // Password will be hashed by storage layer
       const admin = await storage.createEmployee(employeeData);
-      
+
       // Send welcome email to new admin
-      const loginUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+      const loginUrl = process.env.REPLIT_DEV_DOMAIN
+        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
         : (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'http://localhost:5000');
-      
+
       try {
         await sendEmployeeWelcomeEmail({
           name: admin.name,
@@ -4695,8 +4709,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Failed to send welcome email to admin:', emailError);
         // Continue with success response - email failure shouldn't block admin creation
       }
-      
-      res.status(201).json({ 
+
+      res.status(201).json({
         message: "Admin account created successfully",
         employee: {
           id: admin.id,
@@ -4708,14 +4722,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Bootstrap admin error:', error);
       if (error.name === 'ZodError') {
-        return res.status(400).json({ 
-          message: "Invalid admin data", 
-          errors: error.errors 
+        return res.status(400).json({
+          message: "Invalid admin data",
+          errors: error.errors
         });
       }
       if (error.message?.includes('duplicate') || error.message?.includes('unique')) {
-        return res.status(409).json({ 
-          message: "An account with this email already exists" 
+        return res.status(409).json({
+          message: "An account with this email already exists"
         });
       }
       res.status(500).json({ message: "Failed to create admin account" });
@@ -4727,15 +4741,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const allEmployees = await storage.getAllEmployees();
       const existingAdmins = allEmployees.filter(emp => emp.role === 'admin');
-      
+
       // For testing purposes, return admin email if exists
       const adminInfo = existingAdmins.length > 0 ? {
         email: existingAdmins[0].email,
         name: existingAdmins[0].name,
         note: "Password is encrypted and cannot be displayed for security"
       } : null;
-      
-      res.json({ 
+
+      res.json({
         adminExists: existingAdmins.length > 0,
         setupRequired: existingAdmins.length === 0,
         adminInfo
@@ -4745,7 +4759,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const errorMessage = error instanceof Error ? error.message : String(error);
       const errorStack = error instanceof Error ? error.stack : undefined;
       console.error('Error details:', { errorMessage, errorStack });
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Failed to check admin status",
         error: process.env.NODE_ENV === 'development' ? errorMessage : undefined
       });
@@ -4756,32 +4770,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/bootstrap/admin", async (req, res) => {
     try {
       const { securityKey } = req.body;
-      
+
       // Verify security key
       const ADMIN_RESET_KEY = process.env.ADMIN_RESET_KEY;
-      
+
       if (!ADMIN_RESET_KEY) {
-        return res.status(500).json({ 
-          message: "Admin reset feature is not configured. Please contact system administrator." 
+        return res.status(500).json({
+          message: "Admin reset feature is not configured. Please contact system administrator."
         });
       }
-      
+
       if (!securityKey || securityKey !== ADMIN_RESET_KEY) {
-        return res.status(403).json({ 
-          message: "Invalid security key. Access denied." 
+        return res.status(403).json({
+          message: "Invalid security key. Access denied."
         });
       }
-      
+
       // Get all admin accounts
       const allEmployees = await storage.getAllEmployees();
       const existingAdmins = allEmployees.filter(emp => emp.role === 'admin');
-      
+
       if (existingAdmins.length === 0) {
-        return res.status(404).json({ 
-          message: "No admin account found to delete." 
+        return res.status(404).json({
+          message: "No admin account found to delete."
         });
       }
-      
+
       // Delete all admin accounts
       let deletedCount = 0;
       for (const admin of existingAdmins) {
@@ -4790,8 +4804,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           deletedCount++;
         }
       }
-      
-      res.json({ 
+
+      res.json({
         message: `Successfully deleted ${deletedCount} admin account(s). You can now create a new admin.`,
         deletedCount
       });
@@ -4807,18 +4821,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if any support already exists
       const allEmployees = await storage.getAllEmployees();
       const existingSupport = allEmployees.filter(emp => emp.role === 'support');
-      
+
       if (existingSupport.length > 0) {
-        return res.status(403).json({ 
+        return res.status(403).json({
           message: "Support account already exists. Please use the login page.",
-          supportExists: true 
+          supportExists: true
         });
       }
 
       // Validate using Zod schema
-      const bootstrapSupportSchema = insertEmployeeSchema.omit({ 
-        createdAt: true, 
-        employeeId: true 
+      const bootstrapSupportSchema = insertEmployeeSchema.omit({
+        createdAt: true,
+        employeeId: true
       }).extend({
         role: z.literal('support'),
         name: z.string().min(2, "Name must be at least 2 characters"),
@@ -4831,18 +4845,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Generate support employee ID
       const employeeId = await storage.generateNextEmployeeId('support');
-      
+
       const employeeData = {
         ...validatedData,
         employeeId,
         createdAt: new Date().toISOString(),
         isActive: true,
       };
-      
+
       // Password will be hashed by storage layer
       const support = await storage.createEmployee(employeeData);
-      
-      res.status(201).json({ 
+
+      res.status(201).json({
         message: "Support account created successfully",
         employee: {
           id: support.id,
@@ -4854,14 +4868,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Bootstrap support error:', error);
       if (error.name === 'ZodError') {
-        return res.status(400).json({ 
-          message: "Invalid support data", 
-          errors: error.errors 
+        return res.status(400).json({
+          message: "Invalid support data",
+          errors: error.errors
         });
       }
       if (error.message?.includes('duplicate') || error.message?.includes('unique')) {
-        return res.status(409).json({ 
-          message: "An account with this email already exists" 
+        return res.status(409).json({
+          message: "An account with this email already exists"
         });
       }
       res.status(500).json({ message: "Failed to create support account" });
@@ -4873,15 +4887,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const allEmployees = await storage.getAllEmployees();
       const existingSupport = allEmployees.filter(emp => emp.role === 'support');
-      
+
       // For testing purposes, return support email if exists
       const supportInfo = existingSupport.length > 0 ? {
         email: existingSupport[0].email,
         name: existingSupport[0].name,
         note: "Password is encrypted and cannot be displayed for security"
       } : null;
-      
-      res.json({ 
+
+      res.json({
         supportExists: existingSupport.length > 0,
         setupRequired: existingSupport.length === 0,
         supportInfo
@@ -4896,32 +4910,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/bootstrap/support", async (req, res) => {
     try {
       const { securityKey } = req.body;
-      
+
       // Verify security key - use same key as admin for simplicity
       const SUPPORT_RESET_KEY = process.env.ADMIN_RESET_KEY;
-      
+
       if (!SUPPORT_RESET_KEY) {
-        return res.status(500).json({ 
-          message: "Support reset feature is not configured. Please contact system administrator." 
+        return res.status(500).json({
+          message: "Support reset feature is not configured. Please contact system administrator."
         });
       }
-      
+
       if (!securityKey || securityKey !== SUPPORT_RESET_KEY) {
-        return res.status(403).json({ 
-          message: "Invalid security key. Access denied." 
+        return res.status(403).json({
+          message: "Invalid security key. Access denied."
         });
       }
-      
+
       // Get all support accounts
       const allEmployees = await storage.getAllEmployees();
       const existingSupport = allEmployees.filter(emp => emp.role === 'support');
-      
+
       if (existingSupport.length === 0) {
-        return res.status(404).json({ 
-          message: "No support account found to delete." 
+        return res.status(404).json({
+          message: "No support account found to delete."
         });
       }
-      
+
       // Delete all support accounts
       let deletedCount = 0;
       for (const support of existingSupport) {
@@ -4930,8 +4944,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           deletedCount++;
         }
       }
-      
-      res.json({ 
+
+      res.json({
         message: `Successfully deleted ${deletedCount} support account(s). You can now create a new support account.`,
         deletedCount
       });
@@ -4945,16 +4959,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/active-sessions", requireAdminAuth, async (req, res) => {
     try {
       const { pool } = await import('./db');
-      
+
       // Query the session table to get active sessions
       const result = await pool.query(`
         SELECT sess 
         FROM session 
         WHERE expire > NOW()
       `);
-      
+
       const activeEmployeeIds = new Set<string>();
-      
+
       // Parse session data to extract employeeId
       for (const row of result.rows) {
         try {
@@ -4971,7 +4985,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.error('Error parsing session data:', error);
         }
       }
-      
+
       res.json({ activeEmployeeIds: Array.from(activeEmployeeIds) });
     } catch (error) {
       console.error('Get active sessions error:', error);
@@ -4984,25 +4998,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Always generate employee ID on backend (SCE001, SCE002, etc.)
       const employeeId = await storage.generateNextEmployeeId(req.body.role || 'employee');
-      
+
       const employeeData = insertEmployeeSchema.parse({
         ...req.body,
         employeeId, // Override any client-provided ID
         createdAt: new Date().toISOString(),
       });
-      
+
       // Store raw password for email before it gets hashed
       const rawPassword = employeeData.password || 'StaffOS@123';
-      
+
       // Password will be hashed by storage layer
       const employee = await storage.createEmployee(employeeData);
-      
+
       // Send welcome email to new employee
       if (employee.email && rawPassword) {
-        const loginUrl = process.env.REPLIT_DEV_DOMAIN 
-          ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+        const loginUrl = process.env.REPLIT_DEV_DOMAIN
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
           : 'http://localhost:5000';
-        
+
         await sendEmployeeWelcomeEmail({
           name: employee.name,
           email: employee.email,
@@ -5012,7 +5026,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           loginUrl
         });
       }
-      
+
       res.status(201).json({ message: "Employee created successfully", employee });
     } catch (error: any) {
       console.error('Create employee error:', error);
@@ -5071,11 +5085,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isLoginOnly: false  // This is a Master Database client, not a User Management login-only client
       };
       const client = await storage.createClient(clientDataToInsert);
-      
+
       // NOTE: Master Data "New Client" creates ONLY the company/client record
       // Employee login profiles are created separately via User Management "Add Client"
       // This ensures proper separation: Company (Master Data) vs SPOC Login (User Management)
-      
+
       res.status(201).json({ message: "Client company created successfully", client });
     } catch (error: any) {
       console.error('Create client error:', error);
@@ -5104,28 +5118,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const validatedData = credentialsSchema.parse(req.body);
-      
+
       // Get the selected company from Master Data
       const allClients = await storage.getAllClients();
       const selectedCompany = allClients.find(c => c.id === validatedData.clientId);
-      
+
       if (!selectedCompany) {
-        return res.status(404).json({ 
-          message: "Selected company not found. Please select a valid company from Master Data." 
+        return res.status(404).json({
+          message: "Selected company not found. Please select a valid company from Master Data."
         });
       }
-      
+
       // Generate employee ID for SPOC (e.g., STCL001SPOC01)
       // Format: {clientCode}SPOC{number}
       // IMPORTANT: This endpoint ONLY creates an employee record (SPOC login profile)
       // It does NOT create any client record - client records are only created via Master Data "New Client"
       const existingEmployees = await storage.getAllEmployees();
-      const spocEmployees = existingEmployees.filter(emp => 
+      const spocEmployees = existingEmployees.filter(emp =>
         emp.employeeId?.startsWith(selectedCompany.clientCode + 'SPOC')
       );
       const nextSpocNumber = String(spocEmployees.length + 1).padStart(2, '0');
       const employeeId = `${selectedCompany.clientCode}SPOC${nextSpocNumber}`;
-      
+
       // Create employee profile for SPOC login (linked to company)
       // SECURITY: Always set role to "client" on server-side to prevent privilege escalation
       // NOTE: We do NOT create any client record here - only the employee login profile
@@ -5142,15 +5156,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isActive: true,
         createdAt: new Date().toISOString(),
       };
-      
+
       try {
         // Create ONLY the employee record - no client record should be created
         const createdEmployee = await storage.createEmployee(employeeData);
         console.log('SPOC employee created successfully:', employeeId, 'for company:', selectedCompany.brandName);
         console.log('No client record created - SPOC login profile only');
-        
-        res.status(201).json({ 
-          message: "SPOC login profile created successfully", 
+
+        res.status(201).json({
+          message: "SPOC login profile created successfully",
           employee: createdEmployee,
           company: {
             id: selectedCompany.id,
@@ -5162,8 +5176,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (error: any) {
         console.error('Error creating SPOC employee:', error);
         console.error('Employee data:', { ...employeeData, password: '[REDACTED]' });
-        return res.status(500).json({ 
-          message: "Failed to create SPOC login profile", 
+        return res.status(500).json({
+          message: "Failed to create SPOC login profile",
           error: error.message || String(error),
           details: error.code || error.detail || 'Unknown database error'
         });
@@ -5172,20 +5186,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error('Create client credentials error:', error);
       console.error('Error stack:', error.stack);
       console.error('Request body:', req.body);
-      
+
       if (error.name === 'ZodError') {
-        return res.status(400).json({ 
-          message: "Invalid credentials data", 
-          errors: error.errors 
+        return res.status(400).json({
+          message: "Invalid credentials data",
+          errors: error.errors
         });
       }
       if (error.message?.includes('duplicate') || error.message?.includes('unique') || error.code === '23505') {
-        return res.status(409).json({ 
+        return res.status(409).json({
           message: "Client with this email already exists",
           error: error.message || String(error)
         });
       }
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Failed to create client credentials",
         error: error.message || String(error),
         details: error.code || error.detail || 'Unknown error'
@@ -5198,50 +5212,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Validate only the required fields from client
       const { teamLeadId, teamMemberId, quarter, year, minimumTarget } = req.body;
-      
+
       if (!teamLeadId || !teamMemberId || !quarter || !year || minimumTarget === undefined) {
         return res.status(400).json({ message: "Missing required fields" });
       }
-      
+
       // Validate team lead and member are different
       if (teamLeadId === teamMemberId) {
         return res.status(400).json({ message: "Team lead and team member cannot be the same person" });
       }
-      
+
       // Validate numeric fields parse correctly
       const yearNum = parseInt(year);
       const minimumTargetNum = parseInt(minimumTarget);
-      
+
       if (isNaN(yearNum) || yearNum < 2000 || yearNum > 2100) {
         return res.status(400).json({ message: "Invalid year value" });
       }
-      
+
       if (isNaN(minimumTargetNum) || minimumTargetNum < 0) {
         return res.status(400).json({ message: "Invalid minimum target value" });
       }
-      
+
       // Fetch employee information to verify and get metadata
       const teamLead = await storage.getEmployeeById(teamLeadId);
       const teamMember = await storage.getEmployeeById(teamMemberId);
-      
+
       if (!teamLead) {
         return res.status(400).json({ message: "Team lead not found" });
       }
-      
+
       if (!teamMember) {
         return res.status(400).json({ message: "Team member not found" });
       }
-      
+
       // Validate team lead role
       if (teamLead.role !== "team_leader") {
         return res.status(400).json({ message: "Selected employee is not a team leader" });
       }
-      
+
       // Validate that team member reports to the selected team leader
       if (teamMember.reportingTo !== teamLead.employeeId) {
         return res.status(400).json({ message: "Selected team member does not report to the selected team leader" });
       }
-      
+
       // Server-side derived data - createdAt is handled by database default
       const targetMappingData = insertTargetMappingsSchema.parse({
         teamLeadId,
@@ -5250,9 +5264,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         year: yearNum,
         minimumTarget: minimumTargetNum,
       });
-      
+
       const targetMapping = await storage.createTargetMapping(targetMappingData);
-      
+
       res.status(201).json({ message: "Target mapping created successfully", targetMapping });
     } catch (error: any) {
       console.error('Create target mapping error:', error);
@@ -5267,13 +5281,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/target-mappings", requireAdminAuth, async (req, res) => {
     try {
       const targetMappings = await storage.getAllTargetMappings();
-      
+
       // Enrich with employee data
       const enrichedMappings = await Promise.all(
         targetMappings.map(async (mapping) => {
           const teamLead = await storage.getEmployeeById(mapping.teamLeadId);
           const teamMember = await storage.getEmployeeById(mapping.teamMemberId);
-          
+
           return {
             ...mapping,
             teamLeadName: teamLead?.name || "Unknown",
@@ -5282,7 +5296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         })
       );
-      
+
       res.json(enrichedMappings);
     } catch (error) {
       console.error('Get target mappings error:', error);
@@ -5348,11 +5362,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteTargetMapping(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ message: "Target mapping not found" });
       }
-      
+
       res.json({ message: "Target mapping deleted successfully" });
     } catch (error) {
       console.error('Delete target mapping error:', error);
@@ -5361,7 +5375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Revenue Mappings CRUD operations
-  
+
   // Create revenue mapping
   app.post("/api/admin/revenue-mappings", requireAdminAuth, async (req, res) => {
     try {
@@ -5477,7 +5491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Cash Outflow CRUD operations
-  
+
   // Create cash outflow
   app.post("/api/admin/cash-outflows", requireAdminAuth, async (req, res) => {
     try {
@@ -5497,8 +5511,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const otherExpensesNum = otherExpenses ? parseInt(String(otherExpenses), 10) : 0;
 
       // Validate parsed values
-      if (isNaN(yearNum) || isNaN(employeesCountNum) || isNaN(totalSalaryNum) || 
-          isNaN(incentiveNum) || isNaN(toolsCostNum) || isNaN(rentNum) || isNaN(otherExpensesNum)) {
+      if (isNaN(yearNum) || isNaN(employeesCountNum) || isNaN(totalSalaryNum) ||
+        isNaN(incentiveNum) || isNaN(toolsCostNum) || isNaN(rentNum) || isNaN(otherExpensesNum)) {
         return res.status(400).json({ message: "Invalid numeric values in cash outflow data" });
       }
 
@@ -5528,12 +5542,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(409).json({ message: "Cash outflow entry already exists for this month and year" });
       }
       if (error.message?.includes('relation') && error.message?.includes('does not exist')) {
-        return res.status(500).json({ 
+        return res.status(500).json({
           message: "Database table not found. Please run 'npm run db:push' to create the cash_outflows table.",
-          error: error.message 
+          error: error.message
         });
       }
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Failed to create cash outflow",
         error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
@@ -5556,11 +5570,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteCashOutflow(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ message: "Cash outflow not found" });
       }
-      
+
       res.json({ message: "Cash outflow deleted successfully" });
     } catch (error) {
       console.error("Delete cash outflow error:", error);
@@ -5695,17 +5709,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { teamId, dateFrom, dateTo, period = 'monthly' } = req.query;
       const { employees, deliveries, requirements } = await import("@shared/schema");
-      
+
       // Get all deliveries
       const allDeliveries = await db.select().from(deliveries);
-      
+
       // Get all requirements
       const allRequirements = await db.select().from(requirements);
-      
+
       // Filter by date range if provided
       let filteredDeliveries = allDeliveries;
       let filteredRequirements = allRequirements;
-      
+
       if (dateFrom || dateTo) {
         filteredDeliveries = allDeliveries.filter(delivery => {
           const deliveryDate = new Date(delivery.deliveredAt);
@@ -5713,7 +5727,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (dateTo && new Date(dateTo as string) < deliveryDate) return false;
           return true;
         });
-        
+
         filteredRequirements = allRequirements.filter(req => {
           const reqDate = new Date(req.createdAt);
           if (dateFrom && new Date(dateFrom as string) > reqDate) return false;
@@ -5721,10 +5735,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return true;
         });
       }
-      
+
       // Group data by time period
       const periodData: Record<string, { resumesA: number; resumesB: number }> = {};
-      
+
       // Helper function to get period key
       const getPeriodKey = (date: Date, periodType: string): string => {
         if (periodType === 'monthly') {
@@ -5737,40 +5751,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return date.getFullYear().toString();
         }
       };
-      
+
       // Process deliveries (Delivered - resumesA)
       filteredDeliveries.forEach(delivery => {
         const deliveryDate = new Date(delivery.deliveredAt);
         const periodKey = getPeriodKey(deliveryDate, period as string);
-        
+
         if (!periodData[periodKey]) {
           periodData[periodKey] = { resumesA: 0, resumesB: 0 };
         }
         periodData[periodKey].resumesA += 1;
       });
-      
+
       // Process requirements (Required - resumesB)
       filteredRequirements.forEach(req => {
         const reqDate = new Date(req.createdAt);
         const periodKey = getPeriodKey(reqDate, period as string);
-        
+
         if (!periodData[periodKey]) {
           periodData[periodKey] = { resumesA: 0, resumesB: 0 };
         }
-        
+
         // Calculate expected resumes based on criticality
         if (req.criticality === 'HIGH') periodData[periodKey].resumesB += 1;
         else if (req.criticality === 'MEDIUM') periodData[periodKey].resumesB += 3;
         else periodData[periodKey].resumesB += 5;
       });
-      
+
       // Convert to array and sort by period
       const performanceData = Object.entries(periodData).map(([periodKey, data]) => ({
         period: periodKey,
         resumesA: data.resumesA,
         resumesB: data.resumesB
       }));
-      
+
       // Sort by period
       performanceData.sort((a, b) => {
         if (period === 'monthly') {
@@ -5789,18 +5803,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return parseInt(a.period) - parseInt(b.period);
         }
       });
-      
+
       // Fill in missing periods to ensure complete display
       const now = new Date();
       const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       const completeData: Array<{ period: string; resumesA: number; resumesB: number }> = [];
       const periodMap = new Map(performanceData.map(item => [item.period, item]));
-      
+
       if (period === 'monthly') {
         // Show all 12 months of the current year (or year range if data spans multiple years)
         const years = new Set(performanceData.map(item => item.period.split(' ')[1] || now.getFullYear().toString()));
         const yearList = years.size > 0 ? Array.from(years).map(y => parseInt(y)).sort() : [now.getFullYear()];
-        
+
         // If data spans multiple years, show all months for all years
         if (yearList.length > 1) {
           for (const year of yearList) {
@@ -5834,7 +5848,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return parts.length > 1 ? parts[1] : now.getFullYear().toString();
         }));
         const yearList = years.size > 0 ? Array.from(years).map(y => parseInt(y)).sort() : [now.getFullYear()];
-        
+
         for (const year of yearList) {
           for (let q = 1; q <= 4; q++) {
             const periodKey = `Q${q} ${year}`;
@@ -5850,7 +5864,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Show all years that have data (no need to fill gaps)
         return res.json(performanceData);
       }
-      
+
       res.json(completeData);
     } catch (error) {
       console.error("Performance graph error:", error);
@@ -5864,7 +5878,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { memberId } = req.params;
       const { dateFrom, dateTo } = req.query;
       const { employees, requirements } = await import("@shared/schema");
-      
+
       // Get the member (excluding last_login_at)
       const employeesResult = await db.execute(sql`
         SELECT id, employee_id, name, email, password, role, address, designation, phone, 
@@ -5877,21 +5891,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       `);
       const allEmployees = employeesResult.rows as any[];
       const member = allEmployees.find(emp => emp.id === memberId || emp.name === memberId);
-      
+
       if (!member) {
         return res.json({
           memberName: memberId,
           stats: {}
         });
       }
-      
+
       // Get requirements assigned to this member
       const allRequirements = await db.select().from(requirements);
-      let memberRequirements = allRequirements.filter(req => 
+      let memberRequirements = allRequirements.filter(req =>
         req.talentAdvisor?.toLowerCase() === member.name.toLowerCase() ||
         req.talentAdvisorId === member.id
       );
-      
+
       // Filter by date if provided
       if (dateFrom || dateTo) {
         memberRequirements = memberRequirements.filter(req => {
@@ -5901,7 +5915,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return true;
         });
       }
-      
+
       // Group by criticality and toughness combination
       const criticalityMap: Record<string, { total: number, completed: number }> = {
         'HT': { total: 0, completed: 0 }, // High criticality, Tough
@@ -5909,14 +5923,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'MM': { total: 0, completed: 0 }, // Medium criticality, Medium
         'ME': { total: 0, completed: 0 }  // Medium/Low criticality, Easy
       };
-      
+
       memberRequirements.forEach(req => {
         let key = '';
         if (req.criticality === 'HIGH' && req.toughness === 'Tough') key = 'HT';
         else if (req.criticality === 'HIGH') key = 'HM';
         else if (req.criticality === 'MEDIUM' && req.toughness !== 'Easy') key = 'MM';
         else key = 'ME';
-        
+
         if (criticalityMap[key]) {
           criticalityMap[key].total++;
           if (req.status === 'completed') {
@@ -5924,7 +5938,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       });
-      
+
       res.json({
         memberName: member.name,
         stats: criticalityMap
@@ -5939,7 +5953,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/team-performance", requireAdminAuth, async (req, res) => {
     try {
       const { employees, targetMappings, revenueMappings } = await import("@shared/schema");
-      
+
       // Get all active recruiters/team members (excluding last_login_at)
       const employeesResult = await db.execute(sql`
         SELECT id, employee_id, name, email, password, role, address, designation, phone, 
@@ -5951,29 +5965,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         FROM employees
       `);
       const allEmployees = employeesResult.rows as any[];
-      const teamMembers = allEmployees.filter(emp => 
+      const teamMembers = allEmployees.filter(emp =>
         (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.is_active === true
       );
-      
+
       // Get all target mappings
       const allTargetMappings = await db.select().from(targetMappings);
-      
+
       // Get all revenue mappings for closures
       const allRevenueMappings = await db.select().from(revenueMappings);
-      
+
       // Build team performance data
       const performanceData = teamMembers.map(member => {
         // Get target mappings for this member
-        const memberTargets = allTargetMappings.filter(tm => 
+        const memberTargets = allTargetMappings.filter(tm =>
           tm.teamMemberId === member.id
         );
-        
+
         // Get closures for this member
-        const memberClosures = allRevenueMappings.filter(rm => 
-          rm.talentAdvisorId === member.id || 
+        const memberClosures = allRevenueMappings.filter(rm =>
+          rm.talentAdvisorId === member.id ||
           rm.talentAdvisorName.toLowerCase() === member.name.toLowerCase()
         );
-        
+
         // Calculate tenure
         let tenure = "N/A";
         if (member.joiningDate) {
@@ -5987,7 +6001,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             tenure = `${months} month${months !== 1 ? 's' : ''}`;
           }
         }
-        
+
         // Get last closure date
         let lastClosure = "N/A";
         if (memberClosures.length > 0) {
@@ -6000,12 +6014,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lastClosure = lastClosureRecord.closureDate;
           }
         }
-        
+
         // Count quarters achieved (where target was met)
-        const quartersAchieved = memberTargets.filter(tm => 
+        const quartersAchieved = memberTargets.filter(tm =>
           (tm.targetAchieved ?? 0) >= tm.minimumTarget
         ).length;
-        
+
         return {
           id: member.id,
           talentAdvisor: member.name,
@@ -6016,7 +6030,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           qtrsAchieved: quartersAchieved
         };
       });
-      
+
       res.json(performanceData);
     } catch (error) {
       console.error("Team performance error:", error);
@@ -6028,15 +6042,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/closures-list", requireAdminAuth, async (req, res) => {
     try {
       const { revenueMappings } = await import("@shared/schema");
-      
+
       // Get all revenue mappings (closures)
       const allRevenueMappings = await db.select().from(revenueMappings);
-      
+
       // Transform to closure list format for "All Closure Reports" modal
       const closuresList = allRevenueMappings.map(rm => {
         // Calculate Fixed CTC from revenue and percentage
         const fixedCTC = rm.revenue && rm.percentage ? (rm.revenue / (rm.percentage / 100)) : 0;
-        
+
         // Format dates to DD-MM-YYYY format
         const formatDate = (dateStr: string | null | undefined): string => {
           if (!dateStr) return "N/A";
@@ -6050,10 +6064,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             return dateStr; // Return as-is if parsing fails
           }
         };
-        
+
         // Determine status: if closureDate exists, it's "Joined", otherwise "Pending"
         const status = rm.closureDate ? "Joined" : "Pending";
-        
+
         return {
           id: rm.id,
           candidate: rm.candidateName || "N/A",
@@ -6070,7 +6084,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           revenue: rm.revenue ? rm.revenue.toLocaleString('en-IN') : "0"
         };
       });
-      
+
       res.json(closuresList);
     } catch (error) {
       console.error("Closures list error:", error);
@@ -6083,7 +6097,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { teamId, dateFrom, dateTo, period = 'monthly' } = req.query;
       const { employees, revenueMappings } = await import("@shared/schema");
-      
+
       // Get all active employees (excluding last_login_at)
       const employeesResult = await db.execute(sql`
         SELECT id, employee_id, name, email, password, role, address, designation, phone, 
@@ -6096,13 +6110,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       `);
       const allEmployees = employeesResult.rows as any[];
       const teamLeaders = allEmployees.filter(emp => emp.role === 'team_leader' && emp.is_active === true);
-      const recruiters = allEmployees.filter(emp => 
+      const recruiters = allEmployees.filter(emp =>
         (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.is_active === true
       );
-      
+
       // Get all revenue mappings
       let allRevenueMappings = await db.select().from(revenueMappings);
-      
+
       // Filter by date range if provided
       if (dateFrom || dateTo) {
         allRevenueMappings = allRevenueMappings.filter(rm => {
@@ -6112,19 +6126,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return true;
         });
       }
-      
+
       let targetMembers: typeof recruiters = [];
-      
+
       // Filter by team if specified
       if (teamId && teamId !== 'all') {
         // Find the team leader - try matching by id, name, or employeeId (case-insensitive)
         const teamIdLower = (teamId as string).toLowerCase();
-        const teamLeader = teamLeaders.find(tl => 
+        const teamLeader = teamLeaders.find(tl =>
           tl.id.toLowerCase() === teamIdLower ||
           tl.name.toLowerCase() === teamIdLower ||
           (tl.employeeId && tl.employeeId.toLowerCase() === teamIdLower)
         );
-        
+
         if (teamLeader) {
           // Get only recruiters (TAs) reporting to this team leader (exclude TL)
           targetMembers = allEmployees.filter(rec => {
@@ -6132,11 +6146,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const isActive = rec.is_active !== undefined ? rec.is_active : rec.isActive;
             return rec.role === 'recruiter' &&
               isActive === true &&
-              (reportingTo === teamLeader.employeeId || 
-               reportingTo === teamLeader.name ||
-               reportingTo === teamLeader.id ||
-               (teamLeader.employeeId && reportingTo?.toLowerCase() === teamLeader.employeeId.toLowerCase()) ||
-               (teamLeader.name && reportingTo?.toLowerCase() === teamLeader.name.toLowerCase()));
+              (reportingTo === teamLeader.employeeId ||
+                reportingTo === teamLeader.name ||
+                reportingTo === teamLeader.id ||
+                (teamLeader.employeeId && reportingTo?.toLowerCase() === teamLeader.employeeId.toLowerCase()) ||
+                (teamLeader.name && reportingTo?.toLowerCase() === teamLeader.name.toLowerCase()));
           });
         } else {
           // If team leader not found, return empty data
@@ -6149,26 +6163,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // All teams - show only team leaders (TLs), not all recruiters
         targetMembers = teamLeaders;
       }
-      
+
       // Calculate total revenue per member
       const revenueData = targetMembers.slice(0, 20).map(member => {
         const memberRevenue = allRevenueMappings
-          .filter(rm => 
-            rm.talentAdvisorId === member.id || 
+          .filter(rm =>
+            rm.talentAdvisorId === member.id ||
             rm.talentAdvisorName?.toLowerCase() === member.name.toLowerCase()
           )
           .reduce((sum, rm) => sum + (rm.revenue || 0), 0);
-        
+
         return {
           member: member.name,
           revenue: memberRevenue
         };
       }).filter(item => item.revenue > 0); // Filter out zero values
-      
+
       // Calculate average for benchmark
       const totalRevenue = revenueData.reduce((sum, d) => sum + d.revenue, 0);
       const avgRevenue = revenueData.length > 0 ? totalRevenue / revenueData.length : 0;
-      
+
       res.json({
         data: revenueData,
         benchmark: avgRevenue
@@ -6183,29 +6197,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/performance-metrics", requireAdminAuth, async (req, res) => {
     try {
       const { targetMappings, revenueMappings } = await import("@shared/schema");
-      
+
       const now = new Date();
       const currentYear = now.getFullYear();
       const currentMonth = now.getMonth() + 1;
-      
+
       // Determine current quarter
       let currentQuarter = "Q1";
       if (currentMonth >= 1 && currentMonth <= 3) currentQuarter = "Q1";
       else if (currentMonth >= 4 && currentMonth <= 6) currentQuarter = "Q2";
       else if (currentMonth >= 7 && currentMonth <= 9) currentQuarter = "Q3";
       else currentQuarter = "Q4";
-      
+
       // Get target mappings for current quarter
       const allTargetMappings = await db.select().from(targetMappings);
-      const currentQuarterTargets = allTargetMappings.filter(tm => 
+      const currentQuarterTargets = allTargetMappings.filter(tm =>
         tm.quarter === currentQuarter && tm.year === currentYear
       );
-      
+
       // Calculate totals
       const totalMinTarget = currentQuarterTargets.reduce((sum, tm) => sum + tm.minimumTarget, 0);
       const totalAchieved = currentQuarterTargets.reduce((sum, tm) => sum + (tm.targetAchieved ?? 0), 0);
       const totalIncentives = currentQuarterTargets.reduce((sum, tm) => sum + (tm.incentives ?? 0), 0);
-      
+
       // Get current quarter revenue from revenue mappings
       const allRevenueMappings = await db.select().from(revenueMappings);
       const currentQuarterClosures = allRevenueMappings.filter(rm => {
@@ -6216,13 +6230,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
         return quarterMap[rm.quarter] === currentQuarter && rm.year === currentYear;
       });
-      
+
       const totalRevenue = currentQuarterClosures.reduce((sum, rm) => sum + (rm.revenue || 0), 0);
       const closuresCount = currentQuarterClosures.length;
-      
+
       // Calculate performance percentage for gauge
       const performancePercentage = totalMinTarget > 0 ? Math.min((totalAchieved / totalMinTarget) * 100, 100) : 0;
-      
+
       res.json({
         currentQuarter: `${currentQuarter} ${currentYear}`,
         minimumTarget: totalMinTarget,
@@ -6243,7 +6257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { team } = req.query; // 'all', 'arun', 'anusha', or team lead ID
       const { employees, revenueMappings, targetMappings } = await import("@shared/schema");
-      
+
       // Get all team leaders and members (excluding last_login_at)
       const employeesResult = await db.execute(sql`
         SELECT id, employee_id, name, email, password, role, address, designation, phone, 
@@ -6257,10 +6271,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allEmployees = employeesResult.rows as any[];
       const teamLeaders = allEmployees.filter(emp => emp.role === 'team_leader' && emp.is_active === true);
       const recruiters = allEmployees.filter(emp => emp.role === 'recruiter' && emp.is_active === true);
-      
+
       // Get revenue mappings for closures/revenue data
       const allRevenueMappings = await db.select().from(revenueMappings);
-      
+
       // Generate last 6 months
       const months = [];
       const now = new Date();
@@ -6272,7 +6286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           year: date.getFullYear()
         });
       }
-      
+
       // Calculate monthly data
       const monthlyData = months.map(month => {
         const monthRevenueMappings = allRevenueMappings.filter(rm => {
@@ -6280,11 +6294,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const closureDate = new Date(rm.closureDate);
           return closureDate.getMonth() + 1 === month.monthNum && closureDate.getFullYear() === month.year;
         });
-        
+
         // Group by team leader
         const teamData: Record<string, number> = {};
         const memberData: Record<string, number> = {};
-        
+
         teamLeaders.forEach(tl => {
           // Get recruiters reporting to this TL
           const teamRecruiters = recruiters.filter(r => {
@@ -6294,15 +6308,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           const teamMemberIds = [tl.id, ...teamRecruiters.map(r => r.id)];
           const teamMemberNames = [tl.name.toLowerCase(), ...teamRecruiters.map(r => r.name.toLowerCase())];
-          
+
           // Calculate team revenue
           const teamRevenue = monthRevenueMappings
             .filter(rm => teamMemberIds.includes(rm.talentAdvisorId) || teamMemberNames.includes(rm.talentAdvisorName.toLowerCase()))
             .reduce((sum, rm) => sum + (rm.revenue || 0), 0);
-          
+
           const tlName = tl.name;
           teamData[tlName] = teamRevenue;
-          
+
           // Calculate individual member revenue for team detail view
           teamRecruiters.forEach(recruiter => {
             const memberRevenue = monthRevenueMappings
@@ -6311,23 +6325,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             memberData[recruiter.name.toLowerCase().replace(/\s+/g, '')] = memberRevenue;
           });
         });
-        
+
         return {
           month: month.name,
           ...teamData,
           ...memberData
         };
       });
-      
+
       // Get unique team names from team leaders
       const teamKeys = [...new Set(teamLeaders.map(tl => tl.name))];
-      
+
       const memberNames = recruiters.map(r => ({
         key: r.name.toLowerCase().replace(/\s+/g, ''),
         name: r.name,
         teamLeader: r.reporting_to || r.reportingTo
       }));
-      
+
       res.json({
         data: monthlyData,
         teams: teamKeys,
@@ -6343,14 +6357,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/admin/reset-performance-data", requireAdminAuth, async (req, res) => {
     try {
       const { targetMappings, revenueMappings } = await import("@shared/schema");
-      
+
       // Clear all target mappings
       await db.delete(targetMappings);
-      
+
       // Clear all revenue mappings  
       await db.delete(revenueMappings);
-      
-      res.json({ 
+
+      res.json({
         message: "Performance data reset successfully. All target and revenue mappings have been cleared.",
         success: true
       });
@@ -6364,14 +6378,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/admin/reset-master-data", requireAdminAuth, async (req, res) => {
     try {
       const { candidates, deliveries } = await import("@shared/schema");
-      
+
       // Clear all deliveries first (depends on candidates)
       await db.delete(deliveries);
-      
+
       // Clear all candidates/resumes
       await db.delete(candidates);
-      
-      res.json({ 
+
+      res.json({
         message: "Master data reset successfully. All resumes and candidates have been cleared.",
         success: true
       });
@@ -6385,7 +6399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/team-members-list", requireAdminAuth, async (req, res) => {
     try {
       const { employees } = await import("@shared/schema");
-      
+
       // Get all employees (excluding last_login_at)
       const employeesResult = await db.execute(sql`
         SELECT id, employee_id, name, email, password, role, address, designation, phone, 
@@ -6404,7 +6418,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: emp.name,
           role: emp.role
         }));
-      
+
       res.json(teamMembers);
     } catch (error) {
       console.error("Team members list error:", error);
@@ -6503,7 +6517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const session = req.session as any;
       let jobs;
-      
+
       // If user is authenticated, filter jobs by their ID for multi-tenant support
       if (session?.employeeId) {
         jobs = await storage.getRecruiterJobsByRecruiterId(session.employeeId);
@@ -6511,7 +6525,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Fallback to all jobs for unauthenticated requests (job board view)
         jobs = await storage.getAllRecruiterJobs();
       }
-      
+
       res.json(jobs);
     } catch (error) {
       console.error("Get recruiter jobs error:", error);
@@ -6544,7 +6558,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const session = req.session as any;
       const employee = await storage.getEmployeeById(session.employeeId);
       const recruiterName = employee?.name || 'Recruiter';
-      
+
       const { fullName, email, phone, designation, experience, skills, location, company, education, highestQualification, linkedinUrl, websiteUrl, portfolioUrl, noticePeriod, pedigreeLevel, companyLevel, companyDomain, resumeFile } = req.body;
 
       if (!fullName || !email) {
@@ -6558,7 +6572,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const candidateId = await storage.generateNextCandidateId();
-      
+
       const newCandidate = await storage.createCandidate({
         candidateId,
         fullName,
@@ -6589,10 +6603,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log activity
       await logCandidateSubmitted(recruiterName, newCandidate.candidateId, newCandidate.fullName);
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: "Candidate created successfully",
-        candidate: newCandidate 
+        candidate: newCandidate
       });
     } catch (error: any) {
       console.error('Create candidate error:', error);
@@ -6609,7 +6623,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const candidate = await storage.getCandidateById(id);
-      
+
       if (!candidate) {
         return res.status(404).json({ message: "Candidate not found" });
       }
@@ -6645,19 +6659,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const validatedData = updateSchema.parse(req.body);
-      
+
       // Update candidate in database - this updates the candidates table
       const updatedCandidate = await storage.updateCandidate(id, validatedData);
-      
+
       if (!updatedCandidate) {
         return res.status(404).json({ message: "Failed to update candidate" });
       }
-      
+
       // Also update related records if needed (profiles, jobApplications)
       // This ensures data consistency across all tables
       try {
         const { profiles, jobApplications } = await import("@shared/schema");
-        
+
         // Update profiles table if candidateId exists
         if (candidate.candidateId) {
           const profileRecords = await db.select().from(profiles).where(eq(profiles.userId, candidate.id));
@@ -6673,7 +6687,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (validatedData.location) profileUpdates.location = validatedData.location;
             if (validatedData.skills) profileUpdates.skills = validatedData.skills;
             if (validatedData.resumeFile) profileUpdates.resumeFile = validatedData.resumeFile;
-            
+
             if (Object.keys(profileUpdates).length > 0) {
               await db.update(profiles)
                 .set(profileUpdates)
@@ -6681,7 +6695,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
         }
-        
+
         // Update jobApplications table if candidateEmail matches
         if (validatedData.email || candidate.email) {
           const emailToUpdate = validatedData.email || candidate.email;
@@ -6690,7 +6704,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (validatedData.email) jobAppUpdates.candidateEmail = validatedData.email;
           if (validatedData.phone) jobAppUpdates.candidatePhone = validatedData.phone;
           if (validatedData.resumeFile) jobAppUpdates.resumeFile = validatedData.resumeFile;
-          
+
           if (Object.keys(jobAppUpdates).length > 0) {
             await db.update(jobApplications)
               .set(jobAppUpdates)
@@ -6701,7 +6715,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Error updating related records:', updateError);
         // Don't fail the request if related updates fail, but log it
       }
-      
+
       res.json({ message: "Candidate updated successfully", candidate: updatedCandidate });
     } catch (error: any) {
       console.error('Update candidate error:', error);
@@ -6718,13 +6732,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get this recruiter's jobs
       const jobs = await storage.getRecruiterJobsByRecruiterId(session.employeeId);
       const jobIds = jobs.map(j => j.id);
-      
+
       // Get applications for recruiter's jobs only
       const allApplications = await storage.getAllJobApplications();
-      const recruiterApplications = allApplications.filter(app => 
+      const recruiterApplications = allApplications.filter(app =>
         app.recruiterJobId && jobIds.includes(app.recruiterJobId)
       );
-      
+
       // Count unique candidates from these applications
       const candidateIds = new Set(recruiterApplications.map(app => app.profileId));
       const counts = {
@@ -6765,7 +6779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const session = req.session as any;
       const updates = req.body;
-      
+
       // Verify ownership first
       const existingJob = await storage.getRecruiterJobById(id);
       if (!existingJob) {
@@ -6774,11 +6788,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (existingJob.recruiterId !== session.employeeId) {
         return res.status(403).json({ message: "Access denied. This job does not belong to you." });
       }
-      
+
       if (updates.skills && typeof updates.skills === 'string') {
         updates.skills = updates.skills.split(',').map((s: string) => s.trim());
       }
-      
+
       const job = await storage.updateRecruiterJob(id, updates);
       res.json({ message: "Job updated successfully", job });
     } catch (error) {
@@ -6792,7 +6806,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const session = req.session as any;
-      
+
       // Verify ownership first
       const existingJob = await storage.getRecruiterJobById(id);
       if (!existingJob) {
@@ -6801,7 +6815,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (existingJob.recruiterId !== session.employeeId) {
         return res.status(403).json({ message: "Access denied. This job does not belong to you." });
       }
-      
+
       const deleted = await storage.deleteRecruiterJob(id);
       res.json({ message: "Job deleted successfully" });
     } catch (error) {
@@ -6815,7 +6829,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const session = req.session as any;
-      
+
       // Verify ownership first
       const existingJob = await storage.getRecruiterJobById(id);
       if (!existingJob) {
@@ -6824,8 +6838,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (existingJob.recruiterId !== session.employeeId) {
         return res.status(403).json({ message: "Access denied. This job does not belong to you." });
       }
-      
-      const job = await storage.updateRecruiterJob(id, { 
+
+      const job = await storage.updateRecruiterJob(id, {
         status: "Closed",
         closedDate: new Date()
       });
@@ -6859,24 +6873,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
       }
-      
+
       const { jobId, dateFrom, dateTo, status } = req.query;
-      
+
       // Get this recruiter's jobs (using employee.id for consistency)
       const jobs = await storage.getRecruiterJobsByRecruiterId(employee.id);
       const jobIds = jobs.map(j => j.id);
-      
+
       // Get this recruiter's assigned requirements (using employee.id for consistency)
       const requirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
       const requirementIds = requirements.map(r => r.id);
-      
+
       // Get all applications and filter to those for recruiter's jobs OR tagged requirements
       const allApplications = await storage.getAllJobApplications();
-      let recruiterApplications = allApplications.filter(app => 
+      let recruiterApplications = allApplications.filter(app =>
         (app.recruiterJobId && jobIds.includes(app.recruiterJobId)) ||
         (app.requirementId && requirementIds.includes(app.requirementId))
       );
-      
+
       // Enrich applications with candidate profile data if candidateName is missing
       const enrichedApplications = await Promise.all(recruiterApplications.map(async (app) => {
         // If candidateName is missing or "Unknown", try to fetch from profiles/candidates
@@ -6885,7 +6899,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Try to get from profiles table first
             const { profiles, candidates } = await import("@shared/schema");
             const profileResult = await db.select().from(profiles).where(eq(profiles.id, app.profileId)).limit(1);
-            
+
             if (profileResult.length > 0) {
               const profile = profileResult[0];
               app.candidateName = `${profile.firstName} ${profile.lastName}`.trim();
@@ -6916,18 +6930,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         return app;
       }));
-      
+
       // Apply additional filters
       let filteredApplications = enrichedApplications;
-      
+
       if (jobId && typeof jobId === 'string') {
         filteredApplications = filteredApplications.filter(app => app.recruiterJobId === jobId);
       }
-      
+
       if (status && typeof status === 'string') {
         filteredApplications = filteredApplications.filter(app => app.status === status);
       }
-      
+
       if (dateFrom && typeof dateFrom === 'string') {
         const fromDate = new Date(dateFrom);
         filteredApplications = filteredApplications.filter(app => {
@@ -6935,7 +6949,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return new Date(app.appliedDate) >= fromDate;
         });
       }
-      
+
       if (dateTo && typeof dateTo === 'string') {
         const toDate = new Date(dateTo);
         toDate.setHours(23, 59, 59, 999); // Include entire day
@@ -6944,7 +6958,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return new Date(app.appliedDate) <= toDate;
         });
       }
-      
+
       res.json(filteredApplications);
     } catch (error) {
       console.error("Get applications error:", error);
@@ -6957,7 +6971,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const session = req.session as any;
-      
+
       // Verify job ownership first
       const job = await storage.getRecruiterJobById(id);
       if (!job) {
@@ -6966,7 +6980,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (job.recruiterId !== session.employeeId) {
         return res.status(403).json({ message: "Access denied. This job does not belong to you." });
       }
-      
+
       const applications = await storage.getJobApplicationsByRecruiterJobId(id);
       res.json(applications);
     } catch (error) {
@@ -6978,12 +6992,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a job application (for recruiter tagging candidates to requirements)
   app.post("/api/recruiter/applications", requireEmployeeAuth, async (req, res) => {
     try {
-      const { 
-        candidateName, 
-        candidateEmail, 
-        candidatePhone, 
-        jobTitle, 
-        company, 
+      const {
+        candidateName,
+        candidateEmail,
+        candidatePhone,
+        jobTitle,
+        company,
         requirementId,
         experience,
         skills,
@@ -7027,7 +7041,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const application = await storage.createJobApplication(applicationData);
-      
+
       const employee = await storage.getEmployeeById(req.session.employeeId!);
       logCandidateSubmitted(
         storage,
@@ -7038,7 +7052,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         jobTitle.trim(),
         application.id
       );
-      
+
       res.status(201).json({ message: "Application created successfully", application });
     } catch (error) {
       console.error("Create recruiter application error:", error);
@@ -7051,26 +7065,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { status } = req.body;
-      
+
       if (!status) {
         return res.status(400).json({ message: "Status is required" });
       }
-      
+
       const existingApplication = await storage.getJobApplicationById(id);
       if (!existingApplication) {
         return res.status(404).json({ message: "Application not found" });
       }
-      
+
       const previousStatus = existingApplication.status;
-      
+
       // Update the application status in the database
       const application = await storage.updateJobApplicationStatus(id, status);
       if (!application) {
         return res.status(404).json({ message: "Application not found" });
       }
-      
+
       console.log(`Application ${id} status updated from "${previousStatus}" to "${status}"`);
-      
+
       // Log the pipeline change if status actually changed
       if (previousStatus && previousStatus !== status) {
         const session = req.session as any;
@@ -7085,7 +7099,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           application.id
         ).catch(err => console.error('Failed to log pipeline change:', err));
       }
-      
+
       res.json({ message: "Application status updated", application });
     } catch (error) {
       console.error("Update application status error:", error);
@@ -7162,7 +7176,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const quarterNum = parseInt(quarterMatch[1]);
       const year = parseInt(quarterMatch[2]);
-      
+
       // Map quarter number to quarter text (JFM, AMJ, JAS, OND)
       const quarterMap: Record<number, string> = {
         1: 'JFM',
@@ -7212,8 +7226,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update application status to 'Closure'
       await storage.updateJobApplicationStatus(applicationId, 'Closure');
 
-      res.status(201).json({ 
-        message: "Closure created successfully", 
+      res.status(201).json({
+        message: "Closure created successfully",
         revenueMapping,
         note: "Revenue and incentive values are set to 0. Admin can update these values in Revenue Mapping."
       });
@@ -7312,7 +7326,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const candidate = await storage.getCandidateById(id);
-      
+
       if (!candidate) {
         return res.status(404).json({ message: "Candidate not found" });
       }
@@ -7336,14 +7350,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const validatedData = updateSchema.parse(req.body);
-      
+
       // Update candidate
       const updatedCandidate = await storage.updateCandidate(id, validatedData);
-      
+
       if (!updatedCandidate) {
         return res.status(404).json({ message: "Failed to update candidate" });
       }
-      
+
       res.json({ message: "Candidate updated successfully", candidate: updatedCandidate });
     } catch (error: any) {
       console.error('Update candidate error:', error);
@@ -7357,20 +7371,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/admin/candidates/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      
+
       // Verify candidate exists before deletion
       const candidateToDelete = await storage.getCandidateById(id);
       if (!candidateToDelete) {
         return res.status(404).json({ message: "Candidate not found" });
       }
-      
+
       // Delete the candidate using storage layer (ensures database persistence)
       const deleted = await storage.deleteCandidate(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ message: "Failed to delete candidate" });
       }
-      
+
       console.log(`Candidate ${id} permanently deleted from database`);
       res.json({ message: "Candidate deleted successfully" });
     } catch (error) {
@@ -7387,13 +7401,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const parsed = await parseResumeFile(req.file.path, req.file.mimetype);
-      
+
       // Generate file URL for the uploaded resume
-      const baseUrl = process.env.NODE_ENV === 'production' 
+      const baseUrl = process.env.NODE_ENV === 'production'
         ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
         : `http://${req.get('host')}`;
       const fileUrl = `${baseUrl}/uploads/resumes/${path.basename(req.file.path)}`;
-      
+
       res.json({
         success: true,
         data: {
@@ -7435,12 +7449,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
 
       const results = await parseBulkResumes(fileData);
-      
+
       const successCount = results.filter(r => r.success).length;
       const failedCount = results.filter(r => !r.success).length;
 
       // Generate base URL for file paths
-      const baseUrl = process.env.NODE_ENV === 'production' 
+      const baseUrl = process.env.NODE_ENV === 'production'
         ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
         : `http://${req.get('host')}`;
 
@@ -7503,7 +7517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const candidateId = await storage.generateNextCandidateId();
-      
+
       const newCandidate = await storage.createCandidate({
         candidateId,
         fullName,
@@ -7527,10 +7541,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date().toISOString()
       });
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         message: "Candidate imported successfully",
-        candidate: newCandidate 
+        candidate: newCandidate
       });
     } catch (error: any) {
       console.error('Import candidate error:', error);
@@ -7575,7 +7589,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           const candidateId = await storage.generateNextCandidateId();
-          
+
           await storage.createCandidate({
             candidateId,
             fullName: candidate.fullName,
@@ -7632,22 +7646,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/admin/employees/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      
+
       // Validate update data with partial schema
       const updateSchema = insertEmployeeSchema.partial();
       const validatedData = updateSchema.parse(req.body);
-      
+
       // Hash password if it's being updated
       if (validatedData.password) {
         validatedData.password = await bcrypt.hash(validatedData.password, 10);
       }
-      
+
       const updatedEmployee = await storage.updateEmployee(id, validatedData);
-      
+
       if (!updatedEmployee) {
         return res.status(404).json({ message: "Employee not found" });
       }
-      
+
       res.json({ message: "Employee updated successfully", employee: updatedEmployee });
     } catch (error: any) {
       console.error('Update employee error:', error);
@@ -7699,28 +7713,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/admin/employees/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      
+
       // Verify employee exists before deletion
       const employeeToDelete = await storage.getEmployeeById(id);
       if (!employeeToDelete) {
         return res.status(404).json({ message: "Employee not found" });
       }
-      
+
       // Perform hard delete - completely remove from database
       const deleted = await storage.deleteEmployee(id);
-      
+
       if (!deleted) {
         return res.status(500).json({ message: "Failed to delete employee from database" });
       }
-      
+
       // Verify deletion by checking if employee still exists
       const verifyDelete = await storage.getEmployeeById(id);
       if (verifyDelete) {
         console.error('Employee still exists after deletion attempt:', id);
         return res.status(500).json({ message: "Employee deletion failed - record still exists" });
       }
-      
-      res.json({ 
+
+      res.json({
         message: "Employee deleted successfully",
         deleted: true,
         email: employeeToDelete.email // Return email for confirmation
@@ -7728,8 +7742,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Delete employee error:', error);
       if (error.message?.includes('foreign key') || error.message?.includes('constraint')) {
-        return res.status(409).json({ 
-          message: "Cannot delete employee: record is referenced by other data. Please remove related records first." 
+        return res.status(409).json({
+          message: "Cannot delete employee: record is referenced by other data. Please remove related records first."
         });
       }
       res.status(500).json({ message: "Failed to delete employee", error: error.message });
@@ -7740,7 +7754,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/admin/clients/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      
+
       // Validate update data with partial schema
       const updateSchema = z.object({
         clientCode: z.string().min(1).optional(),
@@ -7762,15 +7776,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         referral: z.string().optional(),
         currentStatus: z.string().optional(),
       });
-      
+
       const validatedData = updateSchema.parse(req.body);
-      
+
       const updatedClient = await storage.updateClient(id, validatedData);
-      
+
       if (!updatedClient) {
         return res.status(404).json({ message: "Client not found" });
       }
-      
+
       res.json({ message: "Client updated successfully", client: updatedClient });
     } catch (error: any) {
       console.error('Update client error:', error);
@@ -7789,11 +7803,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteClient(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ message: "Client not found" });
       }
-      
+
       res.json({ message: "Client deleted successfully" });
     } catch (error) {
       console.error('Delete client error:', error);
@@ -7913,7 +7927,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/impact-metrics", requireAdminAuth, async (req, res) => {
     try {
       const { clientId } = req.query;
-      
+
       if (clientId && typeof clientId === 'string') {
         const metrics = await storage.getImpactMetrics(clientId);
         if (!metrics) {
@@ -7921,7 +7935,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         return res.json(metrics);
       }
-      
+
       const allMetrics = await storage.getAllImpactMetrics();
       res.json(allMetrics);
     } catch (error) {
@@ -7934,7 +7948,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/admin/impact-metrics/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      
+
       const updateSchema = z.object({
         clientId: z.string().optional(),
         speedToHire: z.number().optional(),
@@ -7947,14 +7961,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         fulfillmentRate: z.number().optional(),
         revenueRecovered: z.number().optional(),
       });
-      
+
       const validatedData = updateSchema.parse(req.body);
       const updatedMetrics = await storage.updateImpactMetrics(id, validatedData);
-      
+
       if (!updatedMetrics) {
         return res.status(404).json({ message: "Impact metrics not found" });
       }
-      
+
       res.json({ message: "Impact metrics updated successfully", metrics: updatedMetrics });
     } catch (error: any) {
       console.error('Update impact metrics error:', error);
@@ -7970,11 +7984,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const deleted = await storage.deleteImpactMetrics(id);
-      
+
       if (!deleted) {
         return res.status(404).json({ message: "Impact metrics not found" });
       }
-      
+
       res.json({ message: "Impact metrics deleted successfully" });
     } catch (error) {
       console.error('Delete impact metrics error:', error);
@@ -8030,12 +8044,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Helper function to find company for SPOC employee
   const findCompanyForEmployee = async (employee: any) => {
     const clients = await storage.getAllClients();
-    
+
     if (!employee || !employee.employeeId) {
       console.log('Employee or employeeId is missing');
       return undefined;
     }
-    
+
     // Check if employee is a SPOC (employeeId format: STCL001SPOC01 or legacy STCL001POC01)
     if (employee.employeeId.includes('SPOC') || employee.employeeId.includes('POC')) {
       // Extract company code (e.g., STCL001 from STCL001SPOC01 or STCL001POC01)
@@ -8052,14 +8066,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
     }
-    
+
     // Legacy: Try to find by email match (for old records)
     const legacyCompany = clients.find(c => c.email === employee.email && !c.isLoginOnly);
     if (legacyCompany) {
       console.log(`Found legacy company ${legacyCompany.brandName} for employee ${employee.employeeId} by email match`);
       return legacyCompany;
     }
-    
+
     console.log(`No company found for employee ${employee.employeeId} (email: ${employee.email})`);
     return undefined;
   };
@@ -8071,11 +8085,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!employee) {
         return res.status(404).json({ message: "Client not found" });
       }
-      
+
       // Get client company
       const client = await findCompanyForEmployee(employee);
       const companyName = client?.brandName || employee.name;
-      
+
       const stats = await storage.getClientDashboardStats(companyName);
       res.json(stats);
     } catch (error) {
@@ -8091,15 +8105,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!employee) {
         return res.status(404).json({ message: "Client not found" });
       }
-      
+
       const client = await findCompanyForEmployee(employee);
       const companyName = client?.brandName || employee.name;
-      
+
       console.log('Fetching requirements for client:', companyName, 'Employee ID:', employee.employeeId);
-      
+
       const allRequirements = await storage.getRequirementsByCompany(companyName);
       console.log('All requirements for company:', allRequirements.length);
-      
+
       // Filter only client-submitted JDs (those with STR format Role IDs)
       const clientJDs = allRequirements.filter((req: any) => {
         const isSTR = req.id && /^STR\d{5}$/.test(req.id);
@@ -8108,25 +8122,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         return isSTR;
       });
-      
+
       console.log('Client JDs found:', clientJDs.length);
-      
+
       // Transform requirements for client view
       const rolesData = clientJDs.map(req => ({
         roleId: req.id, // This is already in STR format
         role: req.position,
         team: req.teamLead || 'N/A',
         recruiter: req.talentAdvisor || 'N/A',
-        sharedOn: req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-GB', { 
-          day: '2-digit', month: '2-digit', year: 'numeric' 
+        sharedOn: req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-GB', {
+          day: '2-digit', month: '2-digit', year: 'numeric'
         }).replace(/\//g, '-') : 'N/A',
         status: req.status === 'open' ? 'Active' : req.status === 'in_progress' ? 'Active' : req.status === 'completed' ? 'Closed' : 'Paused',
         profilesShared: 0,
-        lastActive: req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-GB', { 
-          day: '2-digit', month: '2-digit', year: 'numeric' 
+        lastActive: req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-GB', {
+          day: '2-digit', month: '2-digit', year: 'numeric'
         }).replace(/\//g, '-') : 'N/A'
       }));
-      
+
       res.json(rolesData);
     } catch (error) {
       console.error('Get client requirements error:', error);
@@ -8141,12 +8155,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!employee) {
         return res.status(404).json({ message: "Client not found" });
       }
-      
+
       const client = await findCompanyForEmployee(employee);
       const companyName = client?.brandName || employee.name;
-      
+
       const applications = await storage.getJobApplicationsByCompany(companyName);
-      
+
       // Transform applications to pipeline data format
       const pipelineData = applications.map((app, index) => {
         const statusMap: Record<string, string> = {
@@ -8178,12 +8192,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           currentStatus: statusMap[app.status] || 'L1',
           email: app.candidateEmail || 'N/A',
           phone: app.candidatePhone || 'N/A',
-          appliedDate: app.appliedDate ? new Date(app.appliedDate).toLocaleDateString('en-GB', { 
-            day: '2-digit', month: '2-digit', year: 'numeric' 
+          appliedDate: app.appliedDate ? new Date(app.appliedDate).toLocaleDateString('en-GB', {
+            day: '2-digit', month: '2-digit', year: 'numeric'
           }).replace(/\//g, '-') : 'N/A'
         };
       });
-      
+
       res.json(pipelineData);
     } catch (error) {
       console.error('Get client pipeline error:', error);
@@ -8196,16 +8210,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const { status, reason } = req.body;
-      
+
       if (!status) {
         return res.status(400).json({ message: "Status is required" });
       }
-      
+
       const application = await storage.updateJobApplicationStatus(id, status);
       if (!application) {
         return res.status(404).json({ message: "Application not found" });
       }
-      
+
       res.json({ success: true, application });
     } catch (error) {
       console.error('Update application status error:', error);
@@ -8220,12 +8234,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!employee) {
         return res.status(404).json({ message: "Client not found" });
       }
-      
+
       const client = await findCompanyForEmployee(employee);
       const companyName = client?.brandName || employee.name;
-      
+
       const closures = await storage.getRevenueMappingsByClientName(companyName);
-      
+
       // Transform closures for client view
       const closureReports = closures.map(closure => ({
         candidate: closure.candidateName || 'N/A',
@@ -8234,7 +8248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         offered: closure.offeredDate || 'N/A',
         joined: closure.closureDate || 'N/A'
       }));
-      
+
       res.json(closureReports);
     } catch (error) {
       console.error('Get client closures error:', error);
@@ -8249,12 +8263,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!employee) {
         return res.status(404).json({ message: "Client not found" });
       }
-      
+
       const client = await findCompanyForEmployee(employee);
-      
+
       // Check if client profile is linked (admin created a client record in Master Data)
       const profileLinked = !!client;
-      
+
       res.json({
         id: employee.id,
         name: employee.name,
@@ -8293,11 +8307,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
       }
-      
-      const baseUrl = process.env.NODE_ENV === 'production' 
+
+      const baseUrl = process.env.NODE_ENV === 'production'
         ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
         : `http://${req.get('host')}`;
-      
+
       const url = `${baseUrl}/uploads/${req.file.filename}`;
       res.json({ url, filename: req.file.filename });
     } catch (error) {
@@ -8314,29 +8328,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!employee) {
         return res.status(404).json({ message: "Client not found" });
       }
-      
+
       // Verify the requirement belongs to this client (STR format and matching company)
       const client = await findCompanyForEmployee(employee);
       const companyName = client?.brandName || employee.name;
-      
+
       // Only allow deletion of STR format requirements (client-submitted JDs)
       if (!id.match(/^STR\d{5}$/)) {
         return res.status(403).json({ message: "You can only delete client-submitted job descriptions" });
       }
-      
+
       // Get all requirements for the company to verify ownership
       const companyRequirements = await storage.getRequirementsByCompany(companyName);
       const requirement = companyRequirements.find((r: any) => r.id === id);
-      
+
       if (!requirement) {
         return res.status(404).json({ message: "Requirement not found or you don't have permission to delete it" });
       }
-      
+
       const deleted = await storage.deleteRequirement(id);
       if (!deleted) {
         return res.status(404).json({ message: "Requirement not found" });
       }
-      
+
       res.json({ success: true, message: "Requirement deleted successfully" });
     } catch (error) {
       console.error('Delete client requirement error:', error);
@@ -8351,25 +8365,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!employee) {
         return res.status(404).json({ message: "Client not found" });
       }
-      
+
       const client = await findCompanyForEmployee(employee);
       const companyName = client?.brandName || employee.name;
-      
-      const { 
-        jdText, 
-        jdFile, 
-        primarySkills, 
-        secondarySkills, 
-        knowledgeOnly, 
+
+      const {
+        jdText,
+        jdFile,
+        primarySkills,
+        secondarySkills,
+        knowledgeOnly,
         specialInstructions,
         position
       } = req.body;
-      
+
       // Validate that at least JD text or file is provided
       if (!jdText && !jdFile) {
         return res.status(400).json({ message: "Job description (text or file) is required" });
       }
-      
+
       // Extract position from JD text if not provided
       let extractedPosition = position;
       if (!extractedPosition && jdText) {
@@ -8387,12 +8401,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       }
-      
+
       // If still no position, use default
       if (!extractedPosition) {
         extractedPosition = 'Position from JD';
       }
-      
+
       // Generate Role ID in format STR25001 (STR + year + sequential number)
       const currentYear = new Date().getFullYear().toString().slice(-2); // Last 2 digits of year
       const allRequirements = await storage.getRequirements();
@@ -8402,14 +8416,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       const nextNumber = String(yearRequirements.length + 1).padStart(3, '0');
       const roleId = `STR${currentYear}${nextNumber}`;
-      
+
       // Combine all skills
       const allSkills = [
         ...(primarySkills ? primarySkills.split(',').map((s: string) => s.trim()).filter(Boolean) : []),
         ...(secondarySkills ? secondarySkills.split(',').map((s: string) => s.trim()).filter(Boolean) : []),
         ...(knowledgeOnly ? knowledgeOnly.split(',').map((s: string) => s.trim()).filter(Boolean) : [])
       ];
-      
+
       // Store JD details in notes as JSON
       const jdDetails = {
         jdText: jdText || null,
@@ -8422,7 +8436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         submittedBy: employee.email,
         submittedAt: new Date().toISOString()
       };
-      
+
       // Create requirement from JD with Role ID as the requirement ID
       // Note: This creates a requirement that will be assigned to a team lead/talent advisor later
       console.log('Creating requirement with company:', companyName, 'SPOC:', client?.spoc || employee.name);
@@ -8442,13 +8456,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         jdFile: jdFile || null, // Store JD file URL
         jdText: jdText || null, // Store JD text content
       });
-      
+
       console.log('Requirement created successfully:', requirement.id, requirement.company);
-      
-      res.json({ 
-        success: true, 
+
+      res.json({
+        success: true,
         message: "Job description submitted successfully",
-        requirement 
+        requirement
       });
     } catch (error: any) {
       console.error('Submit JD error:', error);
@@ -8459,7 +8473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         detail: error.detail,
         constraint: error.constraint
       });
-      res.status(500).json({ 
+      res.status(500).json({
         message: "Failed to submit job description",
         error: error.message || String(error),
         details: error.detail || error.code || 'Unknown error'
@@ -8472,8 +8486,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { message } = req.body;
 
       if (!message || !message.trim()) {
-        return res.status(400).json({ 
-          error: "Message is required" 
+        return res.status(400).json({
+          error: "Message is required"
         });
       }
 
@@ -8481,13 +8495,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session.supportUserId = `guest-${Date.now()}-${Math.random().toString(36).substring(7)}`;
       }
 
-      const candidateEmail = req.session.candidateId 
-        ? (await storage.getCandidateByCandidateId(req.session.candidateId))?.email 
+      const candidateEmail = req.session.candidateId
+        ? (await storage.getCandidateByCandidateId(req.session.candidateId))?.email
         : null;
-      
+
       const emailToUse = candidateEmail || `${req.session.supportUserId}@guest.staffos.com`;
       const nameToUse = candidateEmail ? 'Candidate' : 'Guest User';
-      
+
       const now = new Date().toISOString();
       let convId = req.session.conversationId;
 
@@ -8515,7 +8529,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }).returning();
           convId = newConv[0].id;
         }
-        
+
         req.session.conversationId = convId;
         await new Promise<void>((resolve, reject) => {
           req.session.save((err) => {
@@ -8537,15 +8551,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: now,
       });
 
-      res.json({ 
-        success: true, 
+      res.json({
+        success: true,
         conversationId: convId,
-        message: "Your message has been sent to our support team. We'll get back to you shortly." 
+        message: "Your message has been sent to our support team. We'll get back to you shortly."
       });
     } catch (error) {
       console.error('Error sending support message:', error);
-      res.status(500).json({ 
-        error: "Failed to send message. Please try again later." 
+      res.status(500).json({
+        error: "Failed to send message. Please try again later."
       });
     }
   });
@@ -8561,9 +8575,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const messages = await db.select()
             .from(supportMessages)
             .where(eq(supportMessages.conversationId, conv.id));
-          
+
           const lastMessage = messages[messages.length - 1];
-          
+
           return {
             ...conv,
             messageCount: messages.length,
@@ -8582,7 +8596,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/support/conversations/:id/messages", requireSupportAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      
+
       const conversation = await db.select()
         .from(supportConversations)
         .where(eq(supportConversations.id, id))
@@ -8636,9 +8650,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       await db.update(supportConversations)
-        .set({ 
+        .set({
           lastMessageAt: now,
-          status: 'in_progress' 
+          status: 'in_progress'
         })
         .where(eq(supportConversations.id, id));
 
@@ -8681,10 +8695,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const candidateEmail = req.session.candidateId 
-        ? (await storage.getCandidateByCandidateId(req.session.candidateId))?.email 
+      const candidateEmail = req.session.candidateId
+        ? (await storage.getCandidateByCandidateId(req.session.candidateId))?.email
         : null;
-      
+
       const emailToUse = candidateEmail || `${req.session.supportUserId}@guest.staffos.com`;
 
       const conversation = await db.select()
@@ -8719,8 +8733,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Validate required fields
       if (!userName || !userRole || !message || !message.trim()) {
-        return res.status(400).json({ 
-          error: "userName, userRole, and message are required" 
+        return res.status(400).json({
+          error: "userName, userRole, and message are required"
         });
       }
 
@@ -8756,19 +8770,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!response.ok) {
         console.error('Google Apps Script response error:', response.status, response.statusText);
-        return res.status(500).json({ 
-          error: "Failed to submit query. Please try again later." 
+        return res.status(500).json({
+          error: "Failed to submit query. Please try again later."
         });
       }
 
-      res.json({ 
+      res.json({
         success: true,
         message: "Your query has been noted. Our production team will reach out to you."
       });
     } catch (error) {
       console.error('Error submitting support query:', error);
-      res.status(500).json({ 
-        error: "Failed to submit query. Please try again later." 
+      res.status(500).json({
+        error: "Failed to submit query. Please try again later."
       });
     }
   });
@@ -8797,19 +8811,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .from(chatParticipants)
           .where(eq(chatParticipants.roomId, room.id));
 
+        // Get unread count for this user in this room
+        const unreadData = await db.select()
+          .from(chatUnreadCounts)
+          .where(and(
+            eq(chatUnreadCounts.roomId, room.id),
+            eq(chatUnreadCounts.participantId, employeeId)
+          ))
+          .limit(1);
+
+        const unreadCount = unreadData.length > 0 ? unreadData[0].unreadCount : 0;
+
         return {
           ...room,
-          participants: participants
+          participants: participants,
+          unreadCount: unreadCount
         };
       }));
 
-      res.json({ rooms: roomsWithParticipants.sort((a, b) => {
-        if (a.isPinned && !b.isPinned) return -1;
-        if (!a.isPinned && b.isPinned) return 1;
-        const aTime = a.lastMessageAt || a.createdAt;
-        const bTime = b.lastMessageAt || b.createdAt;
-        return new Date(bTime).getTime() - new Date(aTime).getTime();
-      }) });
+      res.json({
+        rooms: roomsWithParticipants.sort((a, b) => {
+          if (a.isPinned && !b.isPinned) return -1;
+          if (!a.isPinned && b.isPinned) return 1;
+          const aTime = a.lastMessageAt || a.createdAt;
+          const bTime = b.lastMessageAt || b.createdAt;
+          return new Date(bTime).getTime() - new Date(aTime).getTime();
+        })
+      });
     } catch (error) {
       console.error('Error fetching chat rooms:', error);
       res.status(500).json({ error: "Failed to fetch chat rooms" });
@@ -8819,11 +8847,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/chat/rooms/:roomId/messages", requireEmployeeAuth, async (req, res) => {
     try {
       const { roomId } = req.params;
+      const employeeId = req.session.employeeId!;
 
       const messages = await db.select()
         .from(chatMessages)
         .where(eq(chatMessages.roomId, roomId))
         .orderBy(chatMessages.createdAt);
+
+      // Mark messages as delivered if they weren't sent by current user
+      const now = new Date().toISOString();
+      for (const message of messages) {
+        if (message.senderId !== employeeId && !message.deliveredAt) {
+          await db.update(chatMessages)
+            .set({ deliveredAt: now })
+            .where(eq(chatMessages.id, message.id));
+          message.deliveredAt = now;
+        }
+      }
+
+      // Mark messages as read when user opens the chat
+      await db.update(chatMessages)
+        .set({ readAt: now })
+        .where(and(
+          eq(chatMessages.roomId, roomId),
+          sql`${chatMessages.senderId} != ${employeeId}`,
+          sql`${chatMessages.readAt} IS NULL`
+        ));
+
+      // Reset unread count for this room
+      const existingUnread = await db.select()
+        .from(chatUnreadCounts)
+        .where(and(
+          eq(chatUnreadCounts.roomId, roomId),
+          eq(chatUnreadCounts.participantId, employeeId)
+        ))
+        .limit(1);
+
+      if (existingUnread.length > 0) {
+        await db.update(chatUnreadCounts)
+          .set({ unreadCount: 0, lastReadAt: now, updatedAt: now })
+          .where(and(
+            eq(chatUnreadCounts.roomId, roomId),
+            eq(chatUnreadCounts.participantId, employeeId)
+          ));
+      } else {
+        await db.insert(chatUnreadCounts)
+          .values({
+            roomId,
+            participantId: employeeId,
+            unreadCount: 0,
+            lastReadAt: now,
+            updatedAt: now
+          });
+      }
 
       const messagesWithAttachments = await Promise.all(messages.map(async (message) => {
         const attachments = await db.select()
@@ -8869,6 +8945,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .set({ lastMessageAt: new Date().toISOString() })
         .where(eq(chatRooms.id, roomId));
 
+      // Increment unread count for all other participants
+      const participants = await db.select()
+        .from(chatParticipants)
+        .where(eq(chatParticipants.roomId, roomId));
+
+      const now = new Date().toISOString();
+      for (const participant of participants) {
+        if (participant.participantId !== employeeId) {
+          const existingUnread = await db.select()
+            .from(chatUnreadCounts)
+            .where(and(
+              eq(chatUnreadCounts.roomId, roomId),
+              eq(chatUnreadCounts.participantId, participant.participantId)
+            ))
+            .limit(1);
+
+          if (existingUnread.length > 0) {
+            await db.update(chatUnreadCounts)
+              .set({
+                unreadCount: sql`${chatUnreadCounts.unreadCount} + 1`,
+                updatedAt: now
+              })
+              .where(and(
+                eq(chatUnreadCounts.roomId, roomId),
+                eq(chatUnreadCounts.participantId, participant.participantId)
+              ));
+          } else {
+            await db.insert(chatUnreadCounts)
+              .values({
+                roomId,
+                participantId: participant.participantId,
+                unreadCount: 1,
+                updatedAt: now
+              });
+          }
+        }
+      }
+
       // Server-side broadcast to all participants in the room
       if ((app as any).broadcastToRoom) {
         await (app as any).broadcastToRoom(roomId, {
@@ -8892,7 +9006,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const fileUrl = `/uploads/chat/${req.file.filename}`;
-      
+
       let fileType = 'file';
       if (req.file.mimetype.startsWith('image/')) {
         fileType = 'image';
@@ -8974,7 +9088,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const employees = await storage.getAllEmployees();
       const activeEmployees = employees.filter(emp => emp.isActive);
-      
+
       const employeeList = activeEmployees.map(emp => ({
         id: emp.id,
         name: emp.name,
@@ -9029,6 +9143,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error creating chat room:', error);
       res.status(500).json({ error: "Failed to create chat room" });
+    }
+  });
+
+  // Get or create a direct chat room between two participants (for Admin-TL/TA messaging)
+  app.post("/api/chat/rooms/direct", requireEmployeeAuth, async (req, res) => {
+    try {
+      const { participantId: otherParticipantId } = req.body;
+      const employeeId = req.session.employeeId!;
+      const employee = await storage.getEmployeeById(employeeId);
+
+      if (!employee) {
+        return res.status(404).json({ error: "Employee not found" });
+      }
+
+      if (!otherParticipantId) {
+        return res.status(400).json({ error: "Participant ID is required" });
+      }
+
+      const otherParticipant = await storage.getEmployeeById(otherParticipantId);
+      if (!otherParticipant) {
+        return res.status(404).json({ error: "Recipient not found" });
+      }
+
+      // Check if a direct room already exists between these two participants
+      const existingParticipations = await db.select()
+        .from(chatParticipants)
+        .where(eq(chatParticipants.participantId, employeeId));
+
+      for (const participation of existingParticipations) {
+        const room = await db.select()
+          .from(chatRooms)
+          .where(and(
+            eq(chatRooms.id, participation.roomId),
+            eq(chatRooms.type, 'direct')
+          ))
+          .limit(1);
+
+        if (room.length > 0) {
+          const otherParticipants = await db.select()
+            .from(chatParticipants)
+            .where(eq(chatParticipants.roomId, room[0].id));
+
+          // Check if the other participant is in this room
+          if (otherParticipants.some(p => p.participantId === otherParticipantId)) {
+            // Room already exists, return it
+            const participants = await db.select()
+              .from(chatParticipants)
+              .where(eq(chatParticipants.roomId, room[0].id));
+
+            return res.json({
+              room: {
+                ...room[0],
+                participants: participants
+              }
+            });
+          }
+        }
+      }
+
+      // No existing room found, create a new one
+      const roomName = `${employee.name} & ${otherParticipant.name}`;
+      const newRoom = await db.insert(chatRooms)
+        .values({
+          name: roomName,
+          type: 'direct',
+          isPinned: false,
+          createdBy: employeeId,
+          createdAt: new Date().toISOString()
+        })
+        .returning();
+
+      // Add both participants
+      const allParticipants = [
+        { id: employeeId, name: employee.name, role: employee.role },
+        { id: otherParticipantId, name: otherParticipant.name, role: otherParticipant.role }
+      ];
+
+      for (const participant of allParticipants) {
+        await db.insert(chatParticipants)
+          .values({
+            roomId: newRoom[0].id,
+            participantId: participant.id,
+            participantName: participant.name,
+            participantRole: participant.role,
+            joinedAt: new Date().toISOString()
+          });
+      }
+
+      const participants = await db.select()
+        .from(chatParticipants)
+        .where(eq(chatParticipants.roomId, newRoom[0].id));
+
+      res.json({
+        room: {
+          ...newRoom[0],
+          participants: participants
+        }
+      });
+    } catch (error) {
+      console.error('Error getting/creating direct chat room:', error);
+      res.status(500).json({ error: "Failed to get/create direct chat room" });
     }
   });
 
@@ -9099,10 +9314,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     wss.clients.forEach((client) => {
       const chatClient = client as ChatWebSocket;
-      if (client.readyState === WebSocket.OPEN && 
-          chatClient.employeeId && 
-          participantIds.includes(chatClient.employeeId) &&
-          chatClient.employeeId !== excludeEmployeeId) {
+      if (client.readyState === WebSocket.OPEN &&
+        chatClient.employeeId &&
+        participantIds.includes(chatClient.employeeId) &&
+        chatClient.employeeId !== excludeEmployeeId) {
         client.send(JSON.stringify(message));
       }
     });
@@ -9113,17 +9328,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log(`WebSocket connection established for ${ws.employeeName} (${ws.employeeId})`);
 
     // Send confirmation with server-verified identity
-    ws.send(JSON.stringify({ 
-      type: 'authenticated', 
+    ws.send(JSON.stringify({
+      type: 'authenticated',
       success: true,
       employeeId: ws.employeeId,
-      employeeName: ws.employeeName 
+      employeeName: ws.employeeName
     }));
 
     ws.on('message', async (message) => {
       try {
         const data = JSON.parse(message.toString());
-        
+
         // Only accept typing indicators - identity is already verified
         if (data.type === 'typing' && ws.employeeId) {
           await broadcastToRoom(data.roomId, {

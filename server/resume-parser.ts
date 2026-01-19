@@ -262,23 +262,74 @@ function extractDesignation(text: string): string | null {
 }
 
 function extractExperience(text: string): string | null {
-  // Patterns for experience: "X years", "X-Y years", "X+ years"
+  // Enhanced patterns for experience extraction
+  // Patterns for experience: "X years", "X-Y years", "X+ years", "X months", date-based calculations
   const experiencePatterns = [
-    /(\d+)\s*\+\s*years?/i,
-    /(\d+)\s*-\s*(\d+)\s*years?/i,
-    /(\d+)\s+years?/i,
-    /experience[:\s]+(\d+)\s*years?/i,
-    /(\d+)\s*yr/i
+    /(\d+)\s*\+\s*years?\s*(?:of|experience)?/i,
+    /(\d+)\s*-\s*(\d+)\s*years?\s*(?:of|experience)?/i,
+    /(\d+)\s+(?:years?|yrs?)\s*(?:of|experience)?/i,
+    /experience[:\s]+(\d+)\s*(?:years?|yrs?)/i,
+    /(\d+)\s*yrs?\s*(?:of|experience)?/i,
+    /(\d+(?:\.\d+)?)\s*years?\s*(?:of|experience)?/i, // Decimal years like 2.5 years
+    // Months converted to years
+    /(\d+)\s*(?:months?|mos?)\s*(?:of|experience)?/i
   ];
   
+  // Try standard patterns first
   for (const pattern of experiencePatterns) {
     const match = text.match(pattern);
     if (match) {
       if (match[2]) {
+        // Range format
         return `${match[1]}-${match[2]} years`;
       } else if (match[1]) {
-        return `${match[1]}+ years`;
+        // Check if it's months
+        const months = parseInt(match[1]);
+        if (pattern.source.includes('months?') && months >= 12) {
+          const years = Math.floor(months / 12);
+          return `${years}+ years`;
+        } else if (pattern.source.includes('months?') && months < 12) {
+          // Less than a year, return as months
+          return `${months} months`;
+        } else {
+          return `${match[1]}+ years`;
+        }
       }
+    }
+  }
+  
+  // Try to calculate experience from employment dates
+  // Pattern: "Jan 2020 - Present" or "2020 - 2023" or "January 2020 to June 2022"
+  const datePatterns = [
+    /(\w+\s+\d{4})\s*(?:to|–|-|—)\s*(?:present|current|now|\w+\s+\d{4})/gi,
+    /(\d{4})\s*(?:to|–|-|—)\s*(?:present|current|now|\d{4})/gi
+  ];
+  
+  const employmentDates: Date[] = [];
+  const currentYear = new Date().getFullYear();
+  
+  for (const pattern of datePatterns) {
+    let match;
+    while ((match = pattern.exec(text)) !== null) {
+      const startDateStr = match[1];
+      // Try to parse date
+      const dateMatch = startDateStr.match(/\d{4}/);
+      if (dateMatch) {
+        const year = parseInt(dateMatch[0]);
+        if (year >= 1990 && year <= currentYear) {
+          employmentDates.push(new Date(year, 0, 1));
+        }
+      }
+    }
+  }
+  
+  if (employmentDates.length > 0) {
+    // Calculate total years from earliest date
+    const earliestDate = new Date(Math.min(...employmentDates.map(d => d.getTime())));
+    const yearsDiff = (new Date().getTime() - earliestDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+    if (yearsDiff > 0 && yearsDiff < 50) {
+      const roundedYears = Math.round(yearsDiff * 10) / 10;
+      return `${roundedYears}+ years`;
     }
   }
   
@@ -288,102 +339,230 @@ function extractExperience(text: string): string | null {
 function extractSkills(text: string): string | null {
   const lines = text.split('\n').map(line => line.trim());
   
-  // Common tech skills
+  // Expanded tech skills list with variations and synonyms
   const techSkills = [
-    'javascript', 'typescript', 'python', 'java', 'c++', 'c#', 'php', 'ruby', 'go', 'rust',
-    'react', 'angular', 'vue', 'node.js', 'express', 'django', 'flask', 'spring', 'laravel',
-    'sql', 'mysql', 'postgresql', 'mongodb', 'redis', 'oracle',
-    'aws', 'azure', 'gcp', 'docker', 'kubernetes', 'jenkins', 'git', 'ci/cd',
-    'html', 'css', 'sass', 'bootstrap', 'tailwind', 'material-ui',
-    'machine learning', 'deep learning', 'tensorflow', 'pytorch', 'nlp',
-    'agile', 'scrum', 'jira', 'confluence'
+    // Programming Languages
+    'javascript', 'typescript', 'python', 'java', 'c++', 'c#', 'php', 'ruby', 'go', 'rust', 'kotlin', 'swift', 'dart', 'scala',
+    'perl', 'r language', 'matlab', 'shell script', 'bash', 'powershell',
+    // Frontend Frameworks/Libraries
+    'react', 'angular', 'vue', 'vue.js', 'next.js', 'nuxt.js', 'svelte', 'ember', 'jquery', 'redux', 'mobx',
+    'webpack', 'vite', 'parcel', 'babel', 'eslint', 'prettier',
+    // Backend Frameworks
+    'node.js', 'nodejs', 'express', 'nest.js', 'fastify', 'koa', 'django', 'flask', 'fastapi', 'spring', 'spring boot',
+    'laravel', 'symfony', 'rails', 'ruby on rails', 'asp.net', '.net core', 'gin', 'echo',
+    // Databases
+    'sql', 'mysql', 'postgresql', 'postgres', 'mongodb', 'mongo', 'redis', 'oracle', 'sqlite', 'mariadb',
+    'cassandra', 'elasticsearch', 'dynamodb', 'firebase', 'firestore', 'couchdb',
+    // Cloud & DevOps
+    'aws', 'amazon web services', 'azure', 'gcp', 'google cloud', 'docker', 'kubernetes', 'k8s', 'jenkins',
+    'git', 'ci/cd', 'github actions', 'gitlab ci', 'terraform', 'ansible', 'chef', 'puppet', 'vagrant',
+    'nginx', 'apache', 'linux', 'ubuntu', 'centos', 'debian',
+    // Frontend Styling
+    'html', 'html5', 'css', 'css3', 'sass', 'scss', 'less', 'stylus', 'bootstrap', 'tailwind', 'tailwindcss',
+    'material-ui', 'mui', 'ant design', 'chakra ui', 'styled components', 'emotion',
+    // Testing
+    'jest', 'mocha', 'chai', 'cypress', 'selenium', 'puppeteer', 'playwright', 'junit', 'testng', 'pytest',
+    // Machine Learning & AI
+    'machine learning', 'ml', 'deep learning', 'tensorflow', 'pytorch', 'keras', 'nlp', 'natural language processing',
+    'scikit-learn', 'sklearn', 'opencv', 'pandas', 'numpy', 'matplotlib', 'seaborn',
+    // Mobile Development
+    'react native', 'flutter', 'ionic', 'xamarin', 'native android', 'native ios',
+    // Other Tools & Technologies
+    'agile', 'scrum', 'kanban', 'jira', 'confluence', 'trello', 'asana', 'slack', 'microservices',
+    'rest api', 'graphql', 'websocket', 'grpc', 'rabbitmq', 'kafka', 'apache kafka',
+    'nosql', 'relational database', 'object-oriented', 'oop', 'functional programming',
+    // Version Control & Collaboration
+    'git', 'svn', 'mercurial', 'bitbucket', 'github', 'gitlab',
+    // Monitoring & Logging
+    'prometheus', 'grafana', 'elk stack', 'splunk', 'datadog', 'new relic'
   ];
   
   const foundSkills: string[] = [];
   const lowerText = text.toLowerCase();
   
+  // Remove common false positives
+  const falsePositives = ['experience', 'years', 'skills', 'technical skills', 'core skills', 'key skills'];
+  
+  // Extract skills using word boundaries for better matching
   for (const skill of techSkills) {
-    const regex = new RegExp(`\\b${skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+    // Use word boundary regex for exact matching
+    const escapedSkill = skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    // Match whole word, case insensitive
+    const regex = new RegExp(`\\b${escapedSkill}\\b`, 'i');
     if (regex.test(lowerText)) {
-      foundSkills.push(skill);
+      // Check it's not a false positive
+      if (!falsePositives.some(fp => lowerText.includes(fp + ' ' + skill) || lowerText.includes(skill + ' ' + fp))) {
+        const normalizedSkill = skill.toLowerCase();
+        if (!foundSkills.includes(normalizedSkill)) {
+          foundSkills.push(normalizedSkill);
+        }
+      }
     }
   }
   
-  // Also look for a "Skills:" section
+  // Look for skills section with various patterns
+  const skillsSectionPatterns = ['skills', 'technical skills', 'core skills', 'key skills', 'competencies', 'technologies', 'tech stack'];
   let skillsSectionIndex = -1;
+  
   for (let i = 0; i < lines.length; i++) {
     const lowerLine = lines[i].toLowerCase();
-    if (lowerLine.includes('skills') && (lowerLine.includes(':') || lowerLine.length < 20)) {
+    if (skillsSectionPatterns.some(pattern => {
+      return (lowerLine === pattern || 
+              lowerLine.startsWith(pattern + ':') || 
+              lowerLine.startsWith(pattern + ' -') ||
+              lowerLine.startsWith(pattern + ' |') ||
+              (lowerLine.includes(pattern) && lowerLine.length < 30));
+    })) {
       skillsSectionIndex = i;
       break;
     }
   }
   
   if (skillsSectionIndex !== -1) {
-    // Extract skills from the next few lines
-    const skillsLines = lines.slice(skillsSectionIndex + 1, skillsSectionIndex + 10);
+    // Extract skills from the next 15 lines (more comprehensive)
+    const skillsLines = lines.slice(skillsSectionIndex + 1, skillsSectionIndex + 16);
     const skillsText = skillsLines.join(' ').toLowerCase();
-    const skillsList = skillsText.split(/[,|•\-\n]/).map(s => s.trim()).filter(s => s.length > 0 && s.length < 50);
     
-    // Add unique skills from the section
-    for (const skill of skillsList.slice(0, 15)) {
-      if (!foundSkills.includes(skill) && skill.length > 2) {
-        foundSkills.push(skill);
+    // Split by various delimiters
+    const skillsList = skillsText.split(/[,|•\-–—\/\n\t]/)
+      .map(s => s.trim())
+      .filter(s => s.length > 2 && s.length < 50 && !s.match(/^(\d+|years?|months?)$/));
+    
+    // Add unique skills from the section, excluding common words
+    const commonWords = ['and', 'or', 'the', 'with', 'years', 'experience', 'proficient', 'familiar', 'knowledge'];
+    for (const skill of skillsList.slice(0, 20)) {
+      const normalizedSkill = skill.toLowerCase();
+      if (!foundSkills.includes(normalizedSkill) && 
+          !commonWords.includes(normalizedSkill) &&
+          !/\d{4,}/.test(skill)) { // Exclude year numbers
+        foundSkills.push(normalizedSkill);
       }
     }
   }
   
-  // Return first 10 skills as comma-separated string
+  // Also search for technologies mentioned in experience sections
+  // Look for common patterns like "worked with X", "experience in Y", "proficient in Z"
+  const experiencePatterns = [
+    /(?:worked with|experience in|proficient in|expert in|skilled in|knowledge of|familiar with)\s+([a-z\s]+?)(?:[,.\n]|and|or)/gi,
+    /(?:technologies?|tools?|frameworks?|languages?)[:\s]+([a-z\s,]+?)(?:[.\n]|$)/gi
+  ];
+  
+  for (const pattern of experiencePatterns) {
+    let match;
+    while ((match = pattern.exec(text)) !== null && foundSkills.length < 30) {
+      const techs = match[1].split(/[,\s]+/).map(t => t.trim()).filter(t => t.length > 2 && t.length < 30);
+      for (const tech of techs) {
+        const normalizedTech = tech.toLowerCase();
+        if (!foundSkills.includes(normalizedTech) && !commonWords.includes(normalizedTech)) {
+          foundSkills.push(normalizedTech);
+        }
+      }
+    }
+  }
+  
+  // Return up to 20 skills as comma-separated string (increased from 10)
   if (foundSkills.length > 0) {
-    return foundSkills.slice(0, 10).join(', ');
+    return foundSkills.slice(0, 20).join(', ');
   }
   
   return null;
 }
 
 function extractLocation(text: string): string | null {
-  // Common location patterns
+  // Enhanced location patterns with more variations
   const locationPatterns = [
-    /(?:location|address|city|based in)[:\s]+([A-Z][a-zA-Z\s,]+(?:,\s*[A-Z][a-zA-Z\s]+)?)/i,
-    /([A-Z][a-zA-Z\s]+(?:,\s*[A-Z]{2})?(?:\s+\d{5})?)/g
+    /(?:location|address|city|based in|current location|residence|residing in)[:\s]+([A-Z][a-zA-Z\s,]+(?:,\s*[A-Z][a-zA-Z\s]+)?)/i,
+    /([A-Z][a-zA-Z\s]+(?:,\s*[A-Z]{2})?(?:\s+\d{5,})?)/g
   ];
   
-  const lines = text.split('\n').slice(0, 15); // Check first 15 lines
+  const lines = text.split('\n').slice(0, 25); // Check first 25 lines (increased coverage)
   
-  // Look for location keywords
+  // Look for location keywords with better context
   for (const line of lines) {
     const lowerLine = line.toLowerCase();
-    if (lowerLine.includes('location') || lowerLine.includes('address') || lowerLine.includes('city')) {
-      // Extract text after the keyword
-      const match = line.match(/[:\s]+([A-Z][a-zA-Z\s,]+)/);
-      if (match && match[1]) {
-        const location = match[1].trim();
-        // Validate it looks like a location (not too long, has letters)
-        if (location.length > 3 && location.length < 50 && /^[A-Z]/.test(location)) {
-          return location;
+    const locationKeywords = ['location', 'address', 'city', 'based in', 'current location', 'residence', 'residing in'];
+    
+    for (const keyword of locationKeywords) {
+      if (lowerLine.includes(keyword)) {
+        // Extract text after the keyword
+        const keywordIndex = lowerLine.indexOf(keyword);
+        const afterKeyword = line.substring(keywordIndex + keyword.length);
+        const match = afterKeyword.match(/[:\s]+([A-Z][a-zA-Z\s,]+(?:,\s*[A-Z][a-zA-Z\s]+)?)/);
+        
+        if (match && match[1]) {
+          let location = match[1].trim();
+          // Remove trailing special characters
+          location = location.replace(/[,.]$/, '').trim();
+          
+          // Validate it looks like a location (not too long, has letters)
+          if (location.length > 2 && location.length < 60 && /^[A-Z]/.test(location) &&
+              !location.toLowerCase().includes('email') &&
+              !location.toLowerCase().includes('phone') &&
+              !location.match(/^\d+$/)) {
+            return location;
+          }
         }
       }
     }
   }
   
-  // Try to find common city patterns
+  // Enhanced common cities list with Indian cities prioritized
   const commonCities = [
+    // Indian cities (prioritized)
+    'chennai', 'bangalore', 'bengaluru', 'mumbai', 'delhi', 'hyderabad', 'pune', 'kolkata', 'calcutta',
+    'ahmedabad', 'jaipur', 'surat', 'lucknow', 'kanpur', 'nagpur', 'indore', 'thane', 'bhopal',
+    'visakhapatnam', 'vadodara', 'firozabad', 'ludhiana', 'rajkot', 'agra', 'siliguri', 'nashik',
+    'faridabad', 'patna', 'meerut', 'kalyan', 'vasai-virar', 'varanasi', 'srinagar', 'amritsar',
+    'noida', 'ghaziabad', 'coimbatore', 'madurai', 'trichy', 'salem', 'tirunelveli', 'erode',
+    'vellore', 'dindigul', 'thanjavur', 'tiruppur', 'karur', 'hosur', 'nagercoil', 'kanchipuram',
+    'gurgaon', 'gurugram',
+    // US cities
     'new york', 'los angeles', 'chicago', 'houston', 'phoenix', 'philadelphia',
     'san antonio', 'san diego', 'dallas', 'san jose', 'austin', 'jacksonville',
     'san francisco', 'indianapolis', 'columbus', 'fort worth', 'charlotte',
     'seattle', 'denver', 'washington', 'boston', 'el paso', 'detroit',
     'nashville', 'portland', 'oklahoma city', 'las vegas', 'memphis',
-    'mumbai', 'delhi', 'bangalore', 'hyderabad', 'chennai', 'kolkata',
-    'pune', 'ahmedabad', 'jaipur', 'surat', 'lucknow', 'kanpur',
+    // International cities
     'london', 'paris', 'berlin', 'madrid', 'rome', 'amsterdam',
-    'toronto', 'vancouver', 'sydney', 'melbourne', 'tokyo', 'singapore'
+    'toronto', 'vancouver', 'sydney', 'melbourne', 'tokyo', 'singapore',
+    'dubai', 'abu dhabi', 'hong kong', 'shanghai', 'beijing'
   ];
   
   const lowerText = text.toLowerCase();
+  const foundCities: { city: string; index: number }[] = [];
+  
   for (const city of commonCities) {
-    if (lowerText.includes(city)) {
-      return city.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    const index = lowerText.indexOf(city);
+    if (index !== -1) {
+      // Prioritize cities found in header/contact section (first 500 chars)
+      foundCities.push({ 
+        city: city.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '), 
+        index 
+      });
     }
+  }
+  
+  if (foundCities.length > 0) {
+    // Sort by index (earlier = higher priority) and return the first
+    foundCities.sort((a, b) => a.index - b.index);
+    return foundCities[0].city;
+  }
+  
+  // Try pattern matching for city, state/country format
+  const cityStatePattern = /([A-Z][a-zA-Z\s]+),\s*([A-Z][a-zA-Z\s]+)/g;
+  let match;
+  const locations: string[] = [];
+  while ((match = cityStatePattern.exec(text)) !== null && locations.length < 3) {
+    const location = match[0].trim();
+    // Check it's not an email or other false positive
+    if (!location.includes('@') && location.length > 5 && location.length < 50) {
+      locations.push(location);
+    }
+  }
+  
+  // Return first valid location from header area
+  if (locations.length > 0) {
+    return locations[0];
   }
   
   return null;
@@ -392,37 +571,96 @@ function extractLocation(text: string): string | null {
 function extractCompany(text: string): string | null {
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   
-  // Common company-related keywords
-  const companyKeywords = ['company', 'employer', 'organization', 'corporation', 'works at', 'current company', 'present company'];
+  // Enhanced company-related keywords
+  const companyKeywords = [
+    'company', 'employer', 'organization', 'corporation', 'works at', 'current company', 
+    'present company', 'currently at', 'employed at', 'working at', 'at', 'inc', 'ltd', 'llc'
+  ];
   
-  // Look for company name near experience/employment section
-  for (let i = 0; i < Math.min(30, lines.length); i++) {
+  // Look for employment/experience section first
+  let experienceSectionIndex = -1;
+  for (let i = 0; i < Math.min(50, lines.length); i++) {
+    const lowerLine = lines[i].toLowerCase();
+    if (lowerLine.includes('experience') || lowerLine.includes('employment') || 
+        lowerLine.includes('work history') || lowerLine.includes('career')) {
+      experienceSectionIndex = i;
+      break;
+    }
+  }
+  
+  // Search in experience section and nearby lines (more comprehensive)
+  const searchStart = experienceSectionIndex >= 0 ? Math.max(0, experienceSectionIndex) : 0;
+  const searchEnd = Math.min(searchStart + 40, lines.length);
+  
+  for (let i = searchStart; i < searchEnd; i++) {
     const lowerLine = lines[i].toLowerCase();
     
-    // Skip if it's likely contact info or other metadata
-    if (lowerLine.includes('@') || lowerLine.match(/^\d/) || lowerLine.includes('phone') || lowerLine.includes('email')) {
+    // Skip if it's likely contact info, dates, or other metadata
+    if (lowerLine.includes('@') || 
+        lowerLine.match(/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/) || // Date format
+        lowerLine.match(/^(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}/i) ||
+        lowerLine.match(/^\d{4}\s*[–\-]\s*(present|current|now|\d{4})/i) ||
+        lowerLine.includes('phone') || 
+        lowerLine.includes('email') ||
+        lowerLine.includes('location') && !lowerLine.includes('company')) {
       continue;
     }
     
-    // Check if line contains company keywords
-    for (const keyword of companyKeywords) {
-      if (lowerLine.includes(keyword)) {
-        // Extract company name from the same line or next line
-        const parts = lines[i].split(/[:–-]/);
-        if (parts.length > 1) {
-          const company = parts[parts.length - 1].trim();
-          if (company.length > 2 && company.length < 60) {
-            return company;
-          }
-        }
-        // Try next line
-        if (i + 1 < lines.length) {
-          const nextLine = lines[i + 1].trim();
-          if (nextLine.length > 2 && nextLine.length < 60 && !nextLine.match(/^\d/) && !nextLine.includes('@')) {
-            return nextLine;
+    // Check if line contains company keywords or looks like a company name
+    const hasCompanyKeyword = companyKeywords.some(keyword => lowerLine.includes(keyword));
+    
+    // Pattern for company names: usually capitalized, may have Inc, Ltd, LLC, etc.
+    const companyNamePattern = /^[A-Z][a-zA-Z0-9\s&\-.,]+(?:Inc|Ltd|LLC|Corp|Corporation|Company|Technologies|Tech|Systems|Solutions|Services)?$/;
+    
+    if (hasCompanyKeyword || companyNamePattern.test(lines[i])) {
+      // Extract company name
+      let company = lines[i];
+      
+      // If line contains keywords, extract the company part
+      for (const keyword of companyKeywords) {
+        if (lowerLine.includes(keyword)) {
+          // Try to extract after the keyword
+          const parts = lines[i].split(new RegExp(`\\b${keyword}\\b`, 'i'));
+          if (parts.length > 1) {
+            company = parts[parts.length - 1].trim();
+            // Clean up separators
+            company = company.replace(/^[:–\-|]+\s*/, '').trim();
           }
         }
       }
+      
+      // Clean up common prefixes/suffixes
+      company = company.replace(/^(at|with|of|from)\s+/i, '').trim();
+      
+      // Validate company name
+      if (company.length > 2 && company.length < 80 && 
+          !company.match(/^\d+$/) && // Not just numbers
+          !company.includes('@') && // Not an email
+          !company.match(/^https?:\/\//i)) { // Not a URL
+        return company;
+      }
+    }
+  }
+  
+  // Alternative: Look for company patterns in job descriptions
+  // Pattern: "Senior Developer at CompanyName" or "CompanyName | Role"
+  const jobPatterns = [
+    /(?:at|with)\s+([A-Z][a-zA-Z0-9\s&\-.,]+(?:Inc|Ltd|LLC|Corp|Technologies|Tech|Systems|Solutions)?)/g,
+    /([A-Z][a-zA-Z0-9\s&\-.,]+(?:Inc|Ltd|LLC|Corp))\s*[|–\-]/g
+  ];
+  
+  for (const pattern of jobPatterns) {
+    let match;
+    const companies = new Set<string>();
+    while ((match = pattern.exec(text)) !== null && companies.size < 5) {
+      const company = match[1].trim();
+      if (company.length > 2 && company.length < 80) {
+        companies.add(company);
+      }
+    }
+    // Return the first (usually current) company
+    if (companies.size > 0) {
+      return Array.from(companies)[0];
     }
   }
   

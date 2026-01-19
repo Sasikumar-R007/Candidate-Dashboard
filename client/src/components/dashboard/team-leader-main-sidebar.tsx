@@ -11,9 +11,10 @@ import staffosLogo from "@/assets/staffos logo 2.png";
 interface TeamLeaderMainSidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  chatUnreadCount?: number;
 }
 
-export default function TeamLeaderMainSidebar({ activeTab, onTabChange }: TeamLeaderMainSidebarProps) {
+export default function TeamLeaderMainSidebar({ activeTab, onTabChange, chatUnreadCount = 0 }: TeamLeaderMainSidebarProps) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
@@ -77,16 +78,9 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange }: TeamLe
   };
 
   const handleTabClick = (tabId: string) => {
-    if (tabId === 'chat') {
-      navigate('/chat');
-      if (isExpanded) {
-        setIsExpanded(false);
-      }
-    } else {
-      onTabChange(tabId);
-      if (isExpanded) {
-        setIsExpanded(false);
-      }
+    onTabChange(tabId);
+    if (isExpanded) {
+      setIsExpanded(false);
     }
   };
 
@@ -130,7 +124,12 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange }: TeamLe
                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-cyan-400"></div>
                 )}
                 
-                <IconComponent size={20} />
+                <div className="relative">
+                  <IconComponent size={20} />
+                  {item.id === 'chat' && chatUnreadCount > 0 && (
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-slate-900 animate-pulse"></div>
+                  )}
+                </div>
                 
                 {/* Tooltip */}
                 {hoveredItem === item.id && !isExpanded && (

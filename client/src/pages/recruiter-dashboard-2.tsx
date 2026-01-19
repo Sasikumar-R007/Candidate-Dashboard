@@ -24,6 +24,7 @@ import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { ChatDock } from '@/components/chat/chat-dock';
+import { ChatModal } from '@/components/chat/admin-chat-modal';
 import { HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useEmployeeAuth } from '@/contexts/auth-context';
@@ -31,16 +32,18 @@ import { useEmployeeAuth } from '@/contexts/auth-context';
 export default function RecruiterDashboard2() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  
+
   // Restore sidebarTab from sessionStorage for proper back navigation
   const initialSidebarTab = () => {
     const saved = sessionStorage.getItem('recruiterDashboardSidebarTab');
     sessionStorage.removeItem('recruiterDashboardSidebarTab');
     return saved ? saved : 'dashboard';
   };
-  
+
   const [sidebarTab, setSidebarTab] = useState(initialSidebarTab());
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [selectedChatRoom, setSelectedChatRoom] = useState<string | null>(null);
+  const [isChatModalOpen, setIsChatModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('team');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
@@ -49,7 +52,7 @@ export default function RecruiterDashboard2() {
   const [selectedRequirement, setSelectedRequirement] = useState<any>(null);
   const [selectedJD, setSelectedJD] = useState<any>(null);
   const [isJDDetailsModalOpen, setIsJDDetailsModalOpen] = useState(false);
-  const [assignments, setAssignments] = useState<{[key: string]: string}>({'mobile-app-dev': 'Arun'});
+  const [assignments, setAssignments] = useState<{ [key: string]: string }>({ 'mobile-app-dev': 'Arun' });
   const [isReallocating, setIsReallocating] = useState(false);
   const [selectedAssignee, setSelectedAssignee] = useState<string>('');
   const [isAddRequirementModalOpen, setIsAddRequirementModalOpen] = useState(false);
@@ -81,7 +84,7 @@ export default function RecruiterDashboard2() {
     offeredOn: '',
     joinedOn: ''
   });
-  
+
   // Interview tracker state with initial empty interviews array
   const [interviewTrackerData, setInterviewTrackerData] = useState({
     interviews: [] as Array<{
@@ -96,7 +99,7 @@ export default function RecruiterDashboard2() {
       status: string;
     }>
   });
-  
+
   // Interview form state
   const [interviewForm, setInterviewForm] = useState({
     candidateName: '',
@@ -111,16 +114,16 @@ export default function RecruiterDashboard2() {
   const [selectedCandidate, setSelectedCandidate] = useState<any>(null);
   const [reason, setReason] = useState('');
   const [otherReasonText, setOtherReasonText] = useState('');
-  const [requirementCountModal, setRequirementCountModal] = useState<{isOpen: boolean, requirement: any}>({isOpen: false, requirement: null});
-  
+  const [requirementCountModal, setRequirementCountModal] = useState<{ isOpen: boolean, requirement: any }>({ isOpen: false, requirement: null });
+
   // Calendar modal state for requirements count
-  const [requirementCounts, setRequirementCounts] = useState<{[key: string]: {[date: string]: string}}>({});
+  const [requirementCounts, setRequirementCounts] = useState<{ [key: string]: { [date: string]: string } }>({});
   const [showModal, setShowModal] = useState(false);
   const [calendarStep, setCalendarStep] = useState<'calendar' | 'input'>('calendar');
   const [selectedDateForCount, setSelectedDateForCount] = useState('');
   const [inputCount, setInputCount] = useState('');
   const [openCalendarId, setOpenCalendarId] = useState<string | null>(null);
-  
+
   // Helper functions for calendar modal
   const getTotalCountForReq = (reqId: string) => {
     const counts = requirementCounts[reqId];
@@ -142,7 +145,7 @@ export default function RecruiterDashboard2() {
     const day = String(today.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
   };
-  
+
   // New state variables for Post Jobs and Upload Resume functionality
   const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
   const [isUploadResumeModalOpen, setIsUploadResumeModalOpen] = useState(false);
@@ -206,12 +209,12 @@ export default function RecruiterDashboard2() {
   ]);
 
   // Query for job counts
-  const { data: jobCounts } = useQuery<{total: number, active: number, closed: number, draft: number}>({
+  const { data: jobCounts } = useQuery<{ total: number, active: number, closed: number, draft: number }>({
     queryKey: ['/api/recruiter/jobs/counts']
   });
 
   // Query for candidate counts
-  const { data: candidateCounts } = useQuery<{total: number, active: number, inactive: number}>({
+  const { data: candidateCounts } = useQuery<{ total: number, active: number, inactive: number }>({
     queryKey: ['/api/recruiter/candidates/counts']
   });
 
@@ -251,11 +254,11 @@ export default function RecruiterDashboard2() {
     // These are applications that haven't been reviewed/processed yet
     const newApps = allApplications.filter((app: any) => {
       const isSelfApplied = app.source === 'job_board';
-      const isUnreviewed = !app.status || 
-                          app.status === 'In Process' || 
-                          app.status === 'In-Process' || 
-                          app.status === 'Applied' ||
-                          app.status === '';
+      const isUnreviewed = !app.status ||
+        app.status === 'In Process' ||
+        app.status === 'In-Process' ||
+        app.status === 'Applied' ||
+        app.status === '';
       return isSelfApplied && isUnreviewed;
     }).length;
     return { total, new: newApps };
@@ -326,12 +329,12 @@ export default function RecruiterDashboard2() {
       queryClient.invalidateQueries({ queryKey: ['/api/recruiter/applications'] });
       queryClient.invalidateQueries({ queryKey: ['/api/recruiter/closure-reports'] });
       queryClient.invalidateQueries({ queryKey: ['/api/recruiter/pipeline'] });
-      
+
       toast({
         title: "Closure Created",
         description: "The candidate has been successfully closed and added to Closure Details.",
       });
-      
+
       setIsClosureFormModalOpen(false);
       setSelectedCandidateForClosure(null);
       setClosureFormData({ offeredOn: '', joinedOn: '' });
@@ -349,7 +352,7 @@ export default function RecruiterDashboard2() {
   // Handle closure form submission
   const handleClosureSubmit = () => {
     if (!selectedCandidateForClosure) return;
-    
+
     if (!closureFormData.offeredOn || !closureFormData.joinedOn) {
       toast({
         title: "Missing Information",
@@ -405,7 +408,7 @@ export default function RecruiterDashboard2() {
       'SHORTLISTED': 'View shortlisted candidates. You can move them to next stage.',
       'SOURCED': 'View sourced candidates. You can shortlist them.'
     };
-    
+
     alert(`${stage}\n\n${stageActions[stage] || 'Manage candidates in this stage.'}`);
   };
 
@@ -421,7 +424,7 @@ export default function RecruiterDashboard2() {
       setFormError('Please fill out all required fields');
       return;
     }
-    
+
     setIsPostJobModalOpen(false);
     setSuccessMessage('Job posted successfully!');
     setShowSuccessAlert(true);
@@ -430,7 +433,7 @@ export default function RecruiterDashboard2() {
       setShowSuccessAlert(false);
       setSuccessMessage('');
     }, 3000);
-    
+
     // Reset form
     setJobFormData({
       companyName: '',
@@ -483,7 +486,7 @@ export default function RecruiterDashboard2() {
   }, [fetchedInterviews]);
 
   const getPendingInterviews = useMemo(() => {
-    return (fetchedInterviews || []).filter((interview: any) => 
+    return (fetchedInterviews || []).filter((interview: any) =>
       interview.status === 'scheduled' || interview.status === 'pending'
     );
   }, [fetchedInterviews]);
@@ -503,7 +506,7 @@ export default function RecruiterDashboard2() {
       // Convert date from dd-mm-yyyy or yyyy-mm-dd to YYYYMMDD
       let year: string, month: string, day: string;
       const dateParts = interviewDate.split(/[-\/]/);
-      
+
       // Handle both dd-mm-yyyy and yyyy-mm-dd formats
       if (dateParts.length === 3) {
         if (dateParts[0].length === 4) {
@@ -594,8 +597,8 @@ export default function RecruiterDashboard2() {
 
   // Interview tracker functions
   const handleAddInterview = () => {
-    if (interviewForm.candidateName && interviewForm.position && interviewForm.client && 
-        interviewForm.interviewDate && interviewForm.interviewTime) {
+    if (interviewForm.candidateName && interviewForm.position && interviewForm.client &&
+      interviewForm.interviewDate && interviewForm.interviewTime) {
       // Generate and open Google Calendar URL
       const calendarUrl = generateGoogleCalendarUrl(interviewForm);
       if (calendarUrl) {
@@ -613,7 +616,7 @@ export default function RecruiterDashboard2() {
         interviewRound: interviewForm.interviewRound,
         status: 'scheduled'
       });
-      
+
       // Reset form
       setInterviewForm({
         candidateName: '',
@@ -624,7 +627,7 @@ export default function RecruiterDashboard2() {
         interviewType: 'Video Call',
         interviewRound: 'L1'
       });
-      
+
       setIsInterviewModalOpen(false);
     }
   };
@@ -724,7 +727,7 @@ export default function RecruiterDashboard2() {
   }, [allApplications]);
 
   // Track local changes to applicant statuses
-  const [applicantStatusOverrides, setApplicantStatusOverrides] = useState<{[key: string]: string}>({});
+  const [applicantStatusOverrides, setApplicantStatusOverrides] = useState<{ [key: string]: string }>({});
   // Track which applicant is currently being updated for loading state
   const [updatingApplicantId, setUpdatingApplicantId] = useState<string | null>(null);
 
@@ -733,8 +736,8 @@ export default function RecruiterDashboard2() {
     const effectiveApplicants = applicantData.map(a => ({
       ...a,
       currentStatus: applicantStatusOverrides[a.id] || a.currentStatus
-    })).filter(a => 
-      applicantStatusOverrides[a.id] !== 'Archived' && 
+    })).filter(a =>
+      applicantStatusOverrides[a.id] !== 'Archived' &&
       applicantStatusOverrides[a.id] !== 'Screened Out'
     );
 
@@ -857,22 +860,22 @@ export default function RecruiterDashboard2() {
   const archiveCandidate = () => {
     if (selectedCandidate) {
       // Use otherReasonText if "Other" is selected, otherwise use reason
-      const finalReason = reason === 'Other' && otherReasonText.trim() 
-        ? `Other: ${otherReasonText.trim()}` 
+      const finalReason = reason === 'Other' && otherReasonText.trim()
+        ? `Other: ${otherReasonText.trim()}`
         : reason;
-      
+
       // Store reason in console for now (can be added to API later)
       if (finalReason) {
         console.log('Archive reason:', finalReason);
       }
-      
+
       setApplicantStatusOverrides(prev => ({
         ...prev,
         [selectedCandidate.id]: 'Archived'
       }));
       // Persist the archived status
-      updateStatusMutation.mutate({ 
-        id: selectedCandidate.id, 
+      updateStatusMutation.mutate({
+        id: selectedCandidate.id,
         status: 'Screened Out'
       });
       setIsReasonModalOpen(false);
@@ -888,9 +891,9 @@ export default function RecruiterDashboard2() {
       .filter(a => {
         const effectiveStatus = applicantStatusOverrides[a.id] || a.currentStatus;
         // Filter out Archived, Closure, Screened Out, and Removed statuses - these should not appear in Applicant Overview
-        return effectiveStatus !== 'Archived' 
-          && effectiveStatus !== 'Closure' 
-          && effectiveStatus !== 'Screened Out' 
+        return effectiveStatus !== 'Archived'
+          && effectiveStatus !== 'Closure'
+          && effectiveStatus !== 'Screened Out'
           && effectiveStatus !== 'Removed';
       })
       .map(a => ({
@@ -915,8 +918,8 @@ export default function RecruiterDashboard2() {
 
   const handleConfirmAssignment = (recruiter: string) => {
     if (selectedRequirement) {
-      const updatedRequirements = requirementsData.map(req => 
-        req.id === selectedRequirement.id 
+      const updatedRequirements = requirementsData.map(req =>
+        req.id === selectedRequirement.id
           ? { ...req, recruiter: recruiter }
           : req
       );
@@ -962,6 +965,25 @@ export default function RecruiterDashboard2() {
   const { data: aggregatedTargets } = useQuery({
     queryKey: ['/api/recruiter/aggregated-targets'],
   }) as { data: { currentQuarter: { quarter: string; year: number; minimumTarget: number; targetAchieved: number; incentiveEarned: number; closures: number; }; allQuarters: any[] } | undefined };
+
+  // Fetch chat rooms for TA (direct messages with Admin/TL)
+  const { data: chatRoomsData, isLoading: isLoadingChatRooms, refetch: refetchChatRooms } = useQuery<{ rooms: any[] }>({
+    queryKey: ['/api/chat/rooms'],
+    enabled: !!employee, // Only fetch if logged in
+    refetchInterval: 15000, // Refresh every 15 seconds for real-time updates
+  });
+
+  // Filter chat rooms to show only direct messages (Admin-TL/TA conversations)
+  const taChatRooms = useMemo(() => {
+    if (!chatRoomsData?.rooms) return [];
+    return chatRoomsData.rooms.filter((room: any) => {
+      // Only show direct messages
+      if (room.type !== 'direct') return false;
+      // Check if room has participants (should have Admin or TL)
+      const participants = room.participants || [];
+      return participants.some((p: any) => p.participantId !== employee?.id);
+    });
+  }, [chatRoomsData, employee?.id]);
 
   const formatIndianCurrency = (value: number): string => {
     if (value === 0) return '0';
@@ -1036,7 +1058,7 @@ export default function RecruiterDashboard2() {
     const highPriority = recruiterRequirements.filter((req: any) => req.criticality === 'HIGH').length;
     const mediumPriority = recruiterRequirements.filter((req: any) => req.criticality === 'MEDIUM').length;
     const lowPriority = recruiterRequirements.filter((req: any) => req.criticality === 'LOW').length;
-    
+
     // Robust = requirements with at least 1 delivery
     const robust = recruiterRequirements.filter((req: any) => (req.deliveredCount || 0) > 0).length;
     // Idle = requirements with 0 deliveries
@@ -1045,7 +1067,7 @@ export default function RecruiterDashboard2() {
     const deliveryPending = total - robust;
     // Easy = requirements with toughness 'Easy'
     const easy = recruiterRequirements.filter((req: any) => req.toughness === 'Easy').length;
-    
+
     return { total, highPriority, mediumPriority, lowPriority, robust, idle, deliveryPending, easy };
   }, [recruiterRequirements]);
 
@@ -1106,19 +1128,19 @@ export default function RecruiterDashboard2() {
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h2>
                   <div className="flex gap-2">
-                    <button 
+                    <button
                       onClick={() => setIsPostJobModalOpen(true)}
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
                       data-testid="button-post-jobs">
                       Post Jobs
                     </button>
-                    <button 
+                    <button
                       onClick={() => setIsUploadResumeModalOpen(true)}
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
                       data-testid="button-upload-resume">
                       Upload Resume
                     </button>
-                    <button 
+                    <button
                       onClick={() => window.open('/source-resume', '_blank')}
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
                       data-testid="button-source-resume">
@@ -1134,7 +1156,7 @@ export default function RecruiterDashboard2() {
                 <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4 pt-6">
                   <CardTitle className="text-lg font-semibold text-gray-900">Applicant Overview</CardTitle>
                   <div className="flex items-center gap-2">
-                    <Button 
+                    <Button
                       variant="outline"
                       size="sm"
                       className="text-sm text-red-600 hover:text-red-700 border-red-300 hover:border-red-400"
@@ -1143,15 +1165,15 @@ export default function RecruiterDashboard2() {
                     >
                       Archive
                     </Button>
-                  {getEffectiveApplicantData().length > 5 && (
-                    <Button 
-                      className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded"
-                      onClick={() => setIsApplicantOverviewModalOpen(true)}
-                      data-testid="button-view-all-applicants"
-                    >
-                      View More
-                    </Button>
-                  )}
+                    {getEffectiveApplicantData().length > 5 && (
+                      <Button
+                        className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded"
+                        onClick={() => setIsApplicantOverviewModalOpen(true)}
+                        data-testid="button-view-all-applicants"
+                      >
+                        View More
+                      </Button>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -1165,16 +1187,16 @@ export default function RecruiterDashboard2() {
                         Applications will appear here when candidates apply to your job postings or when you tag candidates to requirements.
                       </p>
                       <div className="flex gap-3">
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => setIsPostJobModalOpen(true)}
                           data-testid="button-post-job-empty"
                         >
                           Post a Job
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => setIsUploadResumeModalOpen(true)}
                           data-testid="button-upload-resume-empty"
@@ -1201,22 +1223,20 @@ export default function RecruiterDashboard2() {
                           {getEffectiveApplicantData().slice(0, 5).map((applicant, index) => {
                             const isUpdating = updatingApplicantId === applicant.id;
                             return (
-                              <tr 
-                                key={applicant.id || index} 
-                                className={`border-b border-gray-100 hover:bg-gray-50 transition-all duration-300 ${
-                                  isUpdating ? 'opacity-70 bg-blue-50' : ''
-                                }`}
+                              <tr
+                                key={applicant.id || index}
+                                className={`border-b border-gray-100 hover:bg-gray-50 transition-all duration-300 ${isUpdating ? 'opacity-70 bg-blue-50' : ''
+                                  }`}
                               >
                                 <td className="py-3 px-6 text-gray-900 transition-colors duration-200">{applicant.appliedOn}</td>
                                 <td className="py-3 px-6 text-gray-900 font-medium transition-colors duration-200">{applicant.candidateName}</td>
                                 <td className="py-3 px-6 text-gray-900 transition-colors duration-200">{applicant.company}</td>
                                 <td className="py-3 px-6 text-gray-900 transition-colors duration-200">{applicant.roleApplied}</td>
                                 <td className="py-3 px-6">
-                                  <span className={`px-3 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
-                                    applicant.submission === 'Inbound' 
-                                      ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                                      : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
-                                  }`}>
+                                  <span className={`px-3 py-1 rounded-full text-xs font-medium transition-all duration-300 ${applicant.submission === 'Inbound'
+                                    ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                                    : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                                    }`}>
                                     {applicant.submission}
                                   </span>
                                 </td>
@@ -1230,14 +1250,13 @@ export default function RecruiterDashboard2() {
                                         </div>
                                       </div>
                                     )}
-                                    <Select 
-                                      value={applicant.currentStatus} 
+                                    <Select
+                                      value={applicant.currentStatus}
                                       onValueChange={(value) => handleStatusChange(applicant, value)}
                                       disabled={isUpdating}
                                     >
-                                      <SelectTrigger className={`w-32 h-8 text-sm transition-all duration-300 ${
-                                        isUpdating ? 'opacity-50 cursor-wait' : 'hover:border-blue-400'
-                                      }`}>
+                                      <SelectTrigger className={`w-32 h-8 text-sm transition-all duration-300 ${isUpdating ? 'opacity-50 cursor-wait' : 'hover:border-blue-400'
+                                        }`}>
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>
@@ -1264,7 +1283,7 @@ export default function RecruiterDashboard2() {
               <Card className="bg-white border border-gray-200">
                 <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4 pt-6">
                   <CardTitle className="text-lg font-semibold text-gray-900">Target</CardTitle>
-                  <Button 
+                  <Button
                     className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2"
                     onClick={() => setIsTargetModalOpen(true)}
                     data-testid="button-view-all-targets"
@@ -1277,32 +1296,32 @@ export default function RecruiterDashboard2() {
                     <div className="text-center py-8 px-4 border-r border-blue-100">
                       <p className="text-sm font-semibold text-gray-700 mb-3" data-testid="text-current-quarter">Current Quarter</p>
                       <p className="text-2xl font-bold text-gray-900">
-                        {aggregatedTargets?.currentQuarter 
-                          ? `${aggregatedTargets.currentQuarter.quarter}-${aggregatedTargets.currentQuarter.year}` 
+                        {aggregatedTargets?.currentQuarter
+                          ? `${aggregatedTargets.currentQuarter.quarter}-${aggregatedTargets.currentQuarter.year}`
                           : `Q${Math.ceil((new Date().getMonth() + 1) / 3)}-${new Date().getFullYear()}`}
                       </p>
                     </div>
                     <div className="text-center py-8 px-4 border-r border-blue-100">
                       <p className="text-sm font-semibold text-gray-700 mb-3" data-testid="text-minimum-target">Minimum Target</p>
                       <p className="text-2xl font-bold text-gray-900">
-                        {aggregatedTargets?.currentQuarter 
-                          ? formatIndianCurrency(aggregatedTargets.currentQuarter.minimumTarget) 
+                        {aggregatedTargets?.currentQuarter
+                          ? formatIndianCurrency(aggregatedTargets.currentQuarter.minimumTarget)
                           : '0'}
                       </p>
                     </div>
                     <div className="text-center py-8 px-4 border-r border-blue-100">
                       <p className="text-sm font-semibold text-gray-700 mb-3" data-testid="text-target-achieved">Target Achieved</p>
                       <p className="text-2xl font-bold text-gray-900">
-                        {aggregatedTargets?.currentQuarter 
-                          ? formatIndianCurrency(aggregatedTargets.currentQuarter.targetAchieved) 
+                        {aggregatedTargets?.currentQuarter
+                          ? formatIndianCurrency(aggregatedTargets.currentQuarter.targetAchieved)
                           : '0'}
                       </p>
                     </div>
                     <div className="text-center py-8 px-4">
                       <p className="text-sm font-semibold text-gray-700 mb-3" data-testid="text-incentive-earned">Incentive Earned</p>
                       <p className="text-2xl font-bold text-gray-900">
-                        {aggregatedTargets?.currentQuarter 
-                          ? formatIndianCurrency(aggregatedTargets.currentQuarter.incentiveEarned) 
+                        {aggregatedTargets?.currentQuarter
+                          ? formatIndianCurrency(aggregatedTargets.currentQuarter.incentiveEarned)
                           : '0'}
                       </p>
                     </div>
@@ -1323,7 +1342,7 @@ export default function RecruiterDashboard2() {
                     />
                   </div>
                 </CardHeader>
-                
+
                 <CardContent className="px-6 pb-6 pt-0">
                   <div className="grid grid-cols-3 gap-6">
                     {/* Left side - Metrics */}
@@ -1377,25 +1396,23 @@ export default function RecruiterDashboard2() {
                     {/* Right section - Performance */}
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
-                        <div className={`w-12 h-12 ${
-                          dailyMetrics?.overallPerformance === 'G' 
-                            ? 'bg-green-100' 
-                            : dailyMetrics?.overallPerformance === 'A'
+                        <div className={`w-12 h-12 ${dailyMetrics?.overallPerformance === 'G'
+                          ? 'bg-green-100'
+                          : dailyMetrics?.overallPerformance === 'A'
                             ? 'bg-yellow-100'
                             : 'bg-red-100'
-                        } rounded-full flex items-center justify-center`} data-testid="indicator-performance">
-                          <span className={`${
-                            dailyMetrics?.overallPerformance === 'G' 
-                              ? 'text-green-700' 
-                              : dailyMetrics?.overallPerformance === 'A'
+                          } rounded-full flex items-center justify-center`} data-testid="indicator-performance">
+                          <span className={`${dailyMetrics?.overallPerformance === 'G'
+                            ? 'text-green-700'
+                            : dailyMetrics?.overallPerformance === 'A'
                               ? 'text-yellow-700'
                               : 'text-red-700'
-                          } font-bold text-lg`}>{dailyMetrics?.overallPerformance ?? 'G'}</span>
+                            } font-bold text-lg`}>{dailyMetrics?.overallPerformance ?? 'G'}</span>
                         </div>
                         <div className="text-right">
-                          <Button 
-                            className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2" 
-                            onClick={() => setIsPerformanceModalOpen(true)} 
+                          <Button
+                            className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2"
+                            onClick={() => setIsPerformanceModalOpen(true)}
                             data-testid="button-view-more-performance"
                           >
                             View More
@@ -1405,7 +1422,7 @@ export default function RecruiterDashboard2() {
                       <div className="h-48 flex items-center justify-center bg-white rounded-lg p-4 border border-gray-200">
                         {dailyMetrics?.requirements && dailyMetrics.requirements.length > 0 ? (
                           <ResponsiveContainer width="100%" height="100%">
-                            <BarChart 
+                            <BarChart
                               data={dailyMetrics.requirements.map((req: any) => ({
                                 criticality: req.criticality,
                                 delivered: req.delivered || 0,
@@ -1416,8 +1433,8 @@ export default function RecruiterDashboard2() {
                               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                               <XAxis dataKey="criticality" stroke="#6b7280" style={{ fontSize: '12px' }} />
                               <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} label={{ value: 'Resumes', angle: -90, position: 'insideLeft', style: { fontSize: '12px' } }} />
-                              <Tooltip 
-                                contentStyle={{ 
+                              <Tooltip
+                                contentStyle={{
                                   backgroundColor: 'rgba(255, 255, 255, 0.95)',
                                   border: '1px solid #e5e7eb',
                                   borderRadius: '0.5rem',
@@ -1447,7 +1464,7 @@ export default function RecruiterDashboard2() {
                   <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4 pt-6">
                     <CardTitle className="text-lg font-semibold text-gray-900">Pending Meetings</CardTitle>
                     {pendingMeetingsData.length > 2 && (
-                      <Button 
+                      <Button
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6"
@@ -1487,7 +1504,7 @@ export default function RecruiterDashboard2() {
                   <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4 pt-6">
                     <CardTitle className="text-lg font-semibold text-gray-900">CEO Commands</CardTitle>
                     {ceoCommandsData.length > 3 && (
-                      <Button 
+                      <Button
                         variant="ghost"
                         size="icon"
                         className="h-6 w-6"
@@ -1521,9 +1538,9 @@ export default function RecruiterDashboard2() {
                   <span className="text-sm text-gray-700">Active Jobs</span>
                   <span className="text-3xl font-bold text-gray-900" data-testid="text-active-jobs-count">{jobCounts?.active ?? 0}</span>
                 </div>
-                
+
                 {/* Total Jobs - Clickable Link with External Icon */}
-                <div 
+                <div
                   className="flex items-center justify-between py-3 border-b border-gray-100 cursor-pointer hover-elevate rounded-md px-2 -mx-2"
                   onClick={() => navigate('/recruiter-active-jobs')}
                   data-testid="link-total-jobs"
@@ -1534,9 +1551,9 @@ export default function RecruiterDashboard2() {
                   </div>
                   <span className="text-3xl font-bold text-gray-900" data-testid="text-total-jobs-count">{jobCounts?.total ?? 0}</span>
                 </div>
-                
+
                 {/* New Applications - Clickable Link with External Icon */}
-                <div 
+                <div
                   className="flex items-center justify-between py-3 border-b border-gray-100 cursor-pointer hover-elevate rounded-md px-2 -mx-2"
                   onClick={() => navigate('/recruiter-new-applications')}
                   data-testid="link-new-applications"
@@ -1547,9 +1564,9 @@ export default function RecruiterDashboard2() {
                   </div>
                   <span className="text-3xl font-bold text-gray-900" data-testid="text-new-applications-count">{applicationStats.new}</span>
                 </div>
-                
+
                 {/* Total Candidates - Clickable Link with External Icon */}
-                <div 
+                <div
                   className="flex items-center justify-between py-3 border-b border-gray-100 cursor-pointer hover-elevate rounded-md px-2 -mx-2"
                   onClick={() => navigate('/recruiter-all-candidates')}
                   data-testid="link-total-candidates"
@@ -1561,11 +1578,11 @@ export default function RecruiterDashboard2() {
                   <span className="text-3xl font-bold text-gray-900" data-testid="text-total-candidates-count">{applicationStats.total}</span>
                 </div>
               </div>
-              
+
               {/* Interview Tracker */}
               <div className="border-t pt-6">
                 <h3 className="text-sm font-semibold text-gray-700 mb-4">Interview Tracker</h3>
-                
+
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Today's Schedule</span>
@@ -1576,7 +1593,7 @@ export default function RecruiterDashboard2() {
                       </Button>
                     </div>
                   </div>
-                  
+
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Pending cases</span>
                     <div className="flex items-center space-x-2">
@@ -1637,7 +1654,7 @@ export default function RecruiterDashboard2() {
             {/* Main Content Area */}
             <div className="flex-1 px-6 py-6 overflow-y-auto">
               <h2 className="text-xl font-semibold text-gray-900 mb-6">Requirements</h2>
-              
+
               {/* 6 Summary Boxes */}
               <div className="grid grid-cols-6 gap-4 mb-6">
                 {summaryBoxes.map((box, index) => (
@@ -1655,9 +1672,9 @@ export default function RecruiterDashboard2() {
                   </Card>
                 ))}
               </div>
-              
+
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Deliverables</h3>
-              
+
               {/* Requirements Table */}
               <Card className="bg-white border border-gray-200">
                 <CardContent className="p-0">
@@ -1693,11 +1710,10 @@ export default function RecruiterDashboard2() {
                             <tr key={req.id || index} className="border-b border-gray-100 hover:bg-gray-50">
                               <td className="py-3 px-4 text-gray-900">{req.position}</td>
                               <td className="py-3 px-4">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  req.criticality === 'HIGH' ? 'bg-red-100 text-red-800' :
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${req.criticality === 'HIGH' ? 'bg-red-100 text-red-800' :
                                   req.criticality === 'MEDIUM' ? 'bg-blue-100 text-blue-800' :
-                                  'bg-green-100 text-green-800'
-                                }`}>
+                                    'bg-green-100 text-green-800'
+                                  }`}>
                                   {req.criticality}-{req.toughness || 'Medium'}
                                 </span>
                               </td>
@@ -1732,11 +1748,11 @@ export default function RecruiterDashboard2() {
                       </tbody>
                     </table>
                   </div>
-                  
+
                   {/* Action Buttons */}
                   <div className="flex justify-center gap-4 p-4 border-t border-gray-100">
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="bg-red-500 hover:bg-red-600 text-white hover:text-white border-red-500 hover:border-red-600 rounded px-6 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => {
                         sessionStorage.setItem('recruiterDashboardSidebarTab', sidebarTab);
@@ -1747,8 +1763,8 @@ export default function RecruiterDashboard2() {
                     >
                       Archives
                     </Button>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="bg-blue-500 hover:bg-blue-600 text-white hover:text-white border-blue-500 hover:border-blue-600 rounded px-6"
                       onClick={() => setIsAllRequirementsModalOpen(true)}
                       disabled={requirementsTableData.length <= 5}
@@ -1789,7 +1805,7 @@ export default function RecruiterDashboard2() {
                         </button>
                       </div>
                     </div>
-                    
+
                     <div className="overflow-auto flex-1 p-6">
                       <table className="w-full border-collapse">
                         <thead>
@@ -1825,11 +1841,10 @@ export default function RecruiterDashboard2() {
                                 <tr key={req.id || index} className="border-b border-gray-100 hover:bg-gray-50">
                                   <td className="py-3 px-4 text-gray-900">{req.position}</td>
                                   <td className="py-3 px-4">
-                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                      req.criticality === 'HIGH' ? 'bg-red-100 text-red-800' :
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${req.criticality === 'HIGH' ? 'bg-red-100 text-red-800' :
                                       req.criticality === 'MEDIUM' ? 'bg-blue-100 text-blue-800' :
-                                      'bg-green-100 text-green-800'
-                                    }`}>
+                                        'bg-green-100 text-green-800'
+                                      }`}>
                                       {req.criticality}-{req.toughness || 'Medium'}
                                     </span>
                                   </td>
@@ -1856,7 +1871,7 @@ export default function RecruiterDashboard2() {
               <div className="space-y-4">
                 {/* Priority Distribution Title */}
                 <h3 className="text-lg font-semibold text-gray-900">Priority Distribution</h3>
-                
+
                 {/* Priority Distribution Table */}
                 <Card className="bg-white border border-gray-200">
                   <CardContent className="p-4">
@@ -1881,7 +1896,7 @@ export default function RecruiterDashboard2() {
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* MED Priority Group */}
                       <div className="space-y-1">
                         <div className="flex items-center justify-between bg-yellow-50 px-3 py-2 rounded">
@@ -1902,7 +1917,7 @@ export default function RecruiterDashboard2() {
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* LOW Priority Group */}
                       <div className="space-y-1">
                         <div className="flex items-center justify-between bg-green-50 px-3 py-2 rounded">
@@ -2331,65 +2346,65 @@ export default function RecruiterDashboard2() {
                         </div>
                       </div>
                     ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={quarterlyPerformanceData} barGap={8}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
-                        <XAxis 
-                          dataKey="quarter" 
-                          stroke="#6b7280" 
-                          style={{ fontSize: '12px' }}
-                          tick={{ fill: '#6b7280' }}
-                        />
-                        <YAxis 
-                          yAxisId="left"
-                          stroke="#6b7280" 
-                          style={{ fontSize: '12px' }}
-                          tick={{ fill: '#6b7280' }}
-                          label={{ value: 'Resumes', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: '#6b7280', fontSize: '11px' } }}
-                        />
-                        <YAxis 
-                          yAxisId="right"
-                          orientation="right"
-                          stroke="#6b7280" 
-                          style={{ fontSize: '12px' }}
-                          tick={{ fill: '#6b7280' }}
-                          label={{ value: 'Closures', angle: 90, position: 'insideRight', style: { textAnchor: 'middle', fill: '#6b7280', fontSize: '11px' } }}
-                        />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: '#ffffff', 
-                            border: '1px solid #e5e7eb',
-                            borderRadius: '8px',
-                            boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                          }}
-                          formatter={(value: any, name: string) => {
-                            const label = name === 'resumesDelivered' ? 'Resumes Delivered' : 'Closures Made';
-                            return [value, label];
-                          }}
-                        />
-                        <Legend 
-                          formatter={(value) => {
-                            if (value === 'resumesDelivered') return 'Resumes Delivered';
-                            if (value === 'closures') return 'Closures Made';
-                            return value;
-                          }}
-                        />
-                        <Bar 
-                          yAxisId="left"
-                          dataKey="resumesDelivered" 
-                          fill="#3b82f6" 
-                          radius={[4, 4, 0, 0]}
-                          name="resumesDelivered"
-                        />
-                        <Bar 
-                          yAxisId="right"
-                          dataKey="closures" 
-                          fill="#22c55e" 
-                          radius={[4, 4, 0, 0]}
-                          name="closures"
-                        />
-                      </BarChart>
-                    </ResponsiveContainer>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={quarterlyPerformanceData} barGap={8}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" opacity={0.5} />
+                          <XAxis
+                            dataKey="quarter"
+                            stroke="#6b7280"
+                            style={{ fontSize: '12px' }}
+                            tick={{ fill: '#6b7280' }}
+                          />
+                          <YAxis
+                            yAxisId="left"
+                            stroke="#6b7280"
+                            style={{ fontSize: '12px' }}
+                            tick={{ fill: '#6b7280' }}
+                            label={{ value: 'Resumes', angle: -90, position: 'insideLeft', style: { textAnchor: 'middle', fill: '#6b7280', fontSize: '11px' } }}
+                          />
+                          <YAxis
+                            yAxisId="right"
+                            orientation="right"
+                            stroke="#6b7280"
+                            style={{ fontSize: '12px' }}
+                            tick={{ fill: '#6b7280' }}
+                            label={{ value: 'Closures', angle: 90, position: 'insideRight', style: { textAnchor: 'middle', fill: '#6b7280', fontSize: '11px' } }}
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: '#ffffff',
+                              border: '1px solid #e5e7eb',
+                              borderRadius: '8px',
+                              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                            }}
+                            formatter={(value: any, name: string) => {
+                              const label = name === 'resumesDelivered' ? 'Resumes Delivered' : 'Closures Made';
+                              return [value, label];
+                            }}
+                          />
+                          <Legend
+                            formatter={(value) => {
+                              if (value === 'resumesDelivered') return 'Resumes Delivered';
+                              if (value === 'closures') return 'Closures Made';
+                              return value;
+                            }}
+                          />
+                          <Bar
+                            yAxisId="left"
+                            dataKey="resumesDelivered"
+                            fill="#3b82f6"
+                            radius={[4, 4, 0, 0]}
+                            name="resumesDelivered"
+                          />
+                          <Bar
+                            yAxisId="right"
+                            dataKey="closures"
+                            fill="#22c55e"
+                            radius={[4, 4, 0, 0]}
+                            name="closures"
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
                     )}
                   </div>
                 </div>
@@ -2401,7 +2416,7 @@ export default function RecruiterDashboard2() {
                 <div className="bg-gray-50 dark:bg-gray-800 px-6 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Closure Details</h3>
                 </div>
-                
+
                 {/* Table Content */}
                 <div className="overflow-x-auto">
                   {isLoadingClosureReports ? (
@@ -2416,41 +2431,41 @@ export default function RecruiterDashboard2() {
                       </div>
                     </div>
                   ) : (
-                  <table className="w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-800">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Candidate</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Position</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Client</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Offered On</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Joined On</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quarter</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Closure Value</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Incentive</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                      {allClosureDetails.slice(0, 5).map((closure, index) => (
-                        <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.candidate}</td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.position}</td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.client}</td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.offeredOn}</td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.joinedOn}</td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.quarter}</td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.closureValue}</td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.incentive}</td>
+                    <table className="w-full">
+                      <thead className="bg-gray-50 dark:bg-gray-800">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Candidate</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Position</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Client</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Offered On</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Joined On</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Quarter</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Closure Value</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Incentive</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                        {allClosureDetails.slice(0, 5).map((closure, index) => (
+                          <tr key={index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.candidate}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.position}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.client}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.offeredOn}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.joinedOn}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.quarter}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.closureValue}</td>
+                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">{closure.incentive}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   )}
                 </div>
-                
+
                 {/* View More Button */}
                 <div className="flex justify-center p-4 border-t border-gray-200 dark:border-gray-700">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="bg-blue-500 hover:bg-blue-600 text-white hover:text-white border-blue-500 hover:border-blue-600 rounded px-6"
                     onClick={() => setIsClosureDetailsModalOpen(true)}
                     data-testid="button-view-more-closures"
@@ -2558,7 +2573,7 @@ export default function RecruiterDashboard2() {
               <div className="text-sm text-gray-500 dark:text-gray-400">
                 Showing {allClosureDetails.length} closures
               </div>
-              <Button 
+              <Button
                 variant="outline"
                 onClick={() => setIsClosureDetailsModalOpen(false)}
                 data-testid="button-close-closure-details-modal"
@@ -2573,41 +2588,89 @@ export default function RecruiterDashboard2() {
   };
 
   const renderChatContent = () => {
+    const totalUnread = taChatRooms.reduce((sum, room) => sum + (room.unreadCount || 0), 0);
+
     return (
       <div className="flex h-screen">
-        <div className="flex-1 ml-16 bg-gray-50">
+        <div className="flex-1 ml-16 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
           <AdminTopHeader companyName="StaffOS" />
           <div className="flex flex-col h-full p-6">
-            <h2 className="text-2xl font-bold mb-4">Team Chat</h2>
-            <div className="flex-1 bg-white rounded-lg border border-gray-200 p-4 mb-4 overflow-y-auto">
-              <div className="space-y-4">
-                {chatMessages.map((msg) => (
-                  <div key={msg.id} className={`flex ${msg.isOwn ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      msg.isOwn 
-                        ? 'bg-blue-600 text-white' 
-                        : 'bg-gray-100 text-gray-900'
-                    }`}>
-                      <p className="text-sm font-medium">{msg.sender}</p>
-                      <p className="text-sm mt-1">{msg.message}</p>
-                      <p className="text-xs mt-1 opacity-75">{msg.time}</p>
-                    </div>
-                  </div>
-                ))}
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Messages</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Communicate with Admin and Team Leaders</p>
               </div>
+              {totalUnread > 0 && (
+                <div className="flex items-center gap-2 bg-green-100 dark:bg-green-900/30 px-4 py-2 rounded-full">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-semibold text-green-700 dark:text-green-400">
+                    {totalUnread} unread message{totalUnread > 1 ? 's' : ''}
+                  </span>
+                </div>
+              )}
             </div>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Type your message..."
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                className="flex-1 placeholder:text-gray-400"
-                data-testid="input-chat-message"
-              />
-              <Button onClick={handleSendMessage} data-testid="button-send-message">
-                Send
-              </Button>
+            <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg p-6 overflow-y-auto">
+              {isLoadingChatRooms ? (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  Loading messages...
+                </div>
+              ) : taChatRooms.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  No messages yet. Wait for Admin or TL to start a conversation.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {taChatRooms.map((room: any) => {
+                    // Get the other participant (not TA)
+                    const otherParticipant = room.participants?.find((p: any) => p.participantId !== employee?.id);
+                    const participantName = otherParticipant?.participantName || 'Unknown';
+                    const participantRole = otherParticipant?.participantRole || '';
+                    const roleLabel = participantRole === 'team_leader' ? 'TL' : participantRole === 'admin' ? 'Admin' : '';
+                    const timeStr = room.lastMessageAt
+                      ? new Date(room.lastMessageAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+                      : new Date(room.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                    const unreadCount = room.unreadCount || 0;
+
+                    return (
+                      <div
+                        key={room.id}
+                        className={`bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all cursor-pointer ${unreadCount > 0 ? 'border-l-4 border-l-green-500 bg-green-50/30 dark:bg-green-900/10' : ''
+                          }`}
+                        onClick={() => {
+                          setSelectedChatRoom(room.id);
+                          setIsChatModalOpen(true);
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="font-semibold text-gray-900 dark:text-white">
+                                {participantName} {roleLabel && <span className="text-xs text-gray-500">({roleLabel})</span>}
+                              </div>
+                              {unreadCount > 0 && (
+                                <span className="bg-green-500 text-white text-xs font-semibold rounded-full px-2 py-0.5 min-w-[20px] text-center">
+                                  {unreadCount}
+                                </span>
+                              )}
+                            </div>
+                            <div className={`text-sm line-clamp-2 ${unreadCount > 0
+                              ? 'text-gray-900 dark:text-white font-medium'
+                              : 'text-gray-600 dark:text-gray-400'
+                              }`}>
+                              {unreadCount > 0 ? `${unreadCount} new message${unreadCount > 1 ? 's' : ''}` : 'Click to view messages'}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {timeStr}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -2615,9 +2678,13 @@ export default function RecruiterDashboard2() {
     );
   };
 
+  const totalUnreadCount = useMemo(() => {
+    return taChatRooms.reduce((sum, room) => sum + (room.unreadCount || 0), 0);
+  }, [taChatRooms]);
+
   return (
     <div className="min-h-screen">
-      <TeamLeaderMainSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
+      <TeamLeaderMainSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} chatUnreadCount={totalUnreadCount} />
       {renderMainContent()}
 
       {/* Target Modal */}
@@ -2649,11 +2716,10 @@ export default function RecruiterDashboard2() {
                         <td className="border border-gray-300 px-4 py-3">{formatIndianCurrency(quarter.targetAchieved)}</td>
                         <td className="border border-gray-300 px-4 py-3">{formatIndianCurrency(quarter.incentiveEarned)}</td>
                         <td className="border border-gray-300 px-4 py-3">
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            quarter.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${quarter.status === 'Completed' ? 'bg-green-100 text-green-800' :
                             quarter.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
+                              'bg-gray-100 text-gray-800'
+                            }`}>
                             {quarter.status}
                           </span>
                         </td>
@@ -2763,60 +2829,60 @@ export default function RecruiterDashboard2() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="candidateName">Candidate Name</Label>
-                <Input 
-                  id="candidateName" 
+                <Input
+                  id="candidateName"
                   value={interviewForm.candidateName}
-                  onChange={(e) => setInterviewForm(prev => ({...prev, candidateName: e.target.value}))}
-                  placeholder="Enter candidate name" 
+                  onChange={(e) => setInterviewForm(prev => ({ ...prev, candidateName: e.target.value }))}
+                  placeholder="Enter candidate name"
                   className="placeholder:text-gray-400"
                   data-testid="input-candidate-name"
                 />
               </div>
               <div>
                 <Label htmlFor="position">Position</Label>
-                <Input 
-                  id="position" 
+                <Input
+                  id="position"
                   value={interviewForm.position}
-                  onChange={(e) => setInterviewForm(prev => ({...prev, position: e.target.value}))}
-                  placeholder="Enter position" 
+                  onChange={(e) => setInterviewForm(prev => ({ ...prev, position: e.target.value }))}
+                  placeholder="Enter position"
                   className="placeholder:text-gray-400"
                   data-testid="input-position"
                 />
               </div>
               <div>
                 <Label htmlFor="client">Client</Label>
-                <Input 
-                  id="client" 
+                <Input
+                  id="client"
                   value={interviewForm.client}
-                  onChange={(e) => setInterviewForm(prev => ({...prev, client: e.target.value}))}
-                  placeholder="Enter client name" 
+                  onChange={(e) => setInterviewForm(prev => ({ ...prev, client: e.target.value }))}
+                  placeholder="Enter client name"
                   className="placeholder:text-gray-400"
                   data-testid="input-client"
                 />
               </div>
               <div>
                 <Label htmlFor="interviewDate">Interview Date</Label>
-                <Input 
-                  id="interviewDate" 
-                  type="date" 
+                <Input
+                  id="interviewDate"
+                  type="date"
                   value={interviewForm.interviewDate}
-                  onChange={(e) => setInterviewForm(prev => ({...prev, interviewDate: e.target.value}))}
+                  onChange={(e) => setInterviewForm(prev => ({ ...prev, interviewDate: e.target.value }))}
                   data-testid="input-interview-date"
                 />
               </div>
               <div>
                 <Label htmlFor="interviewTime">Interview Time</Label>
-                <Input 
-                  id="interviewTime" 
-                  type="time" 
+                <Input
+                  id="interviewTime"
+                  type="time"
                   value={interviewForm.interviewTime}
-                  onChange={(e) => setInterviewForm(prev => ({...prev, interviewTime: e.target.value}))}
+                  onChange={(e) => setInterviewForm(prev => ({ ...prev, interviewTime: e.target.value }))}
                   data-testid="input-interview-time"
                 />
               </div>
               <div>
                 <Label htmlFor="interviewType">Interview Type</Label>
-                <Select value={interviewForm.interviewType} onValueChange={(value) => setInterviewForm(prev => ({...prev, interviewType: value}))}>
+                <Select value={interviewForm.interviewType} onValueChange={(value) => setInterviewForm(prev => ({ ...prev, interviewType: value }))}>
                   <SelectTrigger data-testid="select-interview-type">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
@@ -2874,12 +2940,11 @@ export default function RecruiterDashboard2() {
                       <td className="py-2 px-4" data-testid={`text-type-${interview.id}`}>{interview.interviewType}</td>
                       <td className="py-2 px-4" data-testid={`text-round-${interview.id}`}>{interview.interviewRound}</td>
                       <td className="py-2 px-4">
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          interview.status === 'scheduled' ? 'bg-green-100 text-green-800' :
+                        <span className={`px-2 py-1 rounded text-xs ${interview.status === 'scheduled' ? 'bg-green-100 text-green-800' :
                           interview.status === 'in-progress' ? 'bg-blue-100 text-blue-800' :
-                          interview.status === 'completed' ? 'bg-gray-100 text-gray-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`} data-testid={`status-${interview.id}`}>
+                            interview.status === 'completed' ? 'bg-gray-100 text-gray-800' :
+                              'bg-yellow-100 text-yellow-800'
+                          }`} data-testid={`status-${interview.id}`}>
                           {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
                         </span>
                       </td>
@@ -2936,11 +3001,10 @@ export default function RecruiterDashboard2() {
                       <td className="py-2 px-4" data-testid={`text-type-${interview.id}`}>{interview.interviewType}</td>
                       <td className="py-2 px-4" data-testid={`text-round-${interview.id}`}>{interview.interviewRound}</td>
                       <td className="py-2 px-4">
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          interview.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800' :
+                        <span className={`px-2 py-1 rounded text-xs ${interview.status === 'scheduled' ? 'bg-yellow-100 text-yellow-800' :
                           interview.status === 'pending' ? 'bg-orange-100 text-orange-800' :
-                          'bg-red-100 text-red-800'
-                        }`} data-testid={`status-${interview.id}`}>
+                            'bg-red-100 text-red-800'
+                          }`} data-testid={`status-${interview.id}`}>
                           {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
                         </span>
                       </td>
@@ -2959,7 +3023,7 @@ export default function RecruiterDashboard2() {
       </Dialog>
 
       {/* Requirement Count Modal */}
-      <Dialog open={requirementCountModal.isOpen} onOpenChange={(open) => setRequirementCountModal({isOpen: open, requirement: null})}>
+      <Dialog open={requirementCountModal.isOpen} onOpenChange={(open) => setRequirementCountModal({ isOpen: open, requirement: null })}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Set Requirement Count</DialogTitle>
@@ -2973,8 +3037,8 @@ export default function RecruiterDashboard2() {
               <Input id="count" type="number" placeholder="Enter count" className="placeholder:text-gray-400" />
             </div>
             <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setRequirementCountModal({isOpen: false, requirement: null})}>Cancel</Button>
-              <Button onClick={() => setRequirementCountModal({isOpen: false, requirement: null})}>Save</Button>
+              <Button variant="outline" onClick={() => setRequirementCountModal({ isOpen: false, requirement: null })}>Cancel</Button>
+              <Button onClick={() => setRequirementCountModal({ isOpen: false, requirement: null })}>Save</Button>
             </div>
           </div>
         </DialogContent>
@@ -3033,8 +3097,8 @@ export default function RecruiterDashboard2() {
                 setReason('');
                 setOtherReasonText('');
               }}>Cancel</Button>
-              <Button 
-                onClick={archiveCandidate} 
+              <Button
+                onClick={archiveCandidate}
                 className="bg-red-600 hover:bg-red-700"
                 disabled={reason === 'Other' && !otherReasonText.trim()}
               >
@@ -3055,29 +3119,29 @@ export default function RecruiterDashboard2() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="candidateName">Candidate Name</Label>
-                <Input 
-                  id="candidateName" 
-                  value={selectedCandidateForClosure?.candidateName || ''} 
-                  disabled 
+                <Input
+                  id="candidateName"
+                  value={selectedCandidateForClosure?.candidateName || ''}
+                  disabled
                   className="bg-gray-100 dark:bg-gray-800"
                 />
               </div>
               <div>
                 <Label htmlFor="client">Client (Company)</Label>
-                <Input 
-                  id="client" 
-                  value={selectedCandidateForClosure?.company || ''} 
-                  disabled 
+                <Input
+                  id="client"
+                  value={selectedCandidateForClosure?.company || ''}
+                  disabled
                   className="bg-gray-100 dark:bg-gray-800"
                 />
               </div>
             </div>
             <div>
               <Label htmlFor="position">Position (Role)</Label>
-              <Input 
-                id="position" 
-                value={selectedCandidateForClosure?.roleApplied || ''} 
-                disabled 
+              <Input
+                id="position"
+                value={selectedCandidateForClosure?.roleApplied || ''}
+                disabled
                 className="bg-gray-100 dark:bg-gray-800"
               />
             </div>
@@ -3115,16 +3179,16 @@ export default function RecruiterDashboard2() {
             </div>
             <div>
               <Label htmlFor="quarter">Quarter</Label>
-              <Input 
-                id="quarter" 
-                value={getCurrentQuarter()} 
-                disabled 
+              <Input
+                id="quarter"
+                value={getCurrentQuarter()}
+                disabled
                 className="bg-gray-100 dark:bg-gray-800"
               />
             </div>
             <div className="flex justify-end space-x-2 pt-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   setIsClosureFormModalOpen(false);
                   setSelectedCandidateForClosure(null);
@@ -3133,7 +3197,7 @@ export default function RecruiterDashboard2() {
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleClosureSubmit}
                 disabled={createClosureMutation.isPending}
                 className="bg-blue-600 hover:bg-blue-700"
@@ -3212,7 +3276,7 @@ export default function RecruiterDashboard2() {
                 </button>
               </div>
             </div>
-            
+
             <div className="overflow-auto flex-1 p-6">
               <table className="w-full border-collapse">
                 <thead>
@@ -3241,22 +3305,20 @@ export default function RecruiterDashboard2() {
                     .map((applicant, index) => {
                       const isUpdating = updatingApplicantId === applicant.id;
                       return (
-                        <tr 
-                          key={index} 
-                          className={`border-b border-gray-100 hover:bg-gray-50 transition-all duration-300 ${
-                            isUpdating ? 'opacity-70 bg-blue-50' : ''
-                          }`}
+                        <tr
+                          key={index}
+                          className={`border-b border-gray-100 hover:bg-gray-50 transition-all duration-300 ${isUpdating ? 'opacity-70 bg-blue-50' : ''
+                            }`}
                         >
                           <td className="py-3 px-4 text-gray-900 transition-colors duration-200">{applicant.appliedOn}</td>
                           <td className="py-3 px-4 text-gray-900 font-medium transition-colors duration-200">{applicant.candidateName}</td>
                           <td className="py-3 px-4 text-gray-900 transition-colors duration-200">{applicant.company}</td>
                           <td className="py-3 px-4 text-gray-900 transition-colors duration-200">{applicant.roleApplied}</td>
                           <td className="py-3 px-4">
-                            <span className={`px-3 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
-                              applicant.submission === 'Inbound' 
-                                ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                                : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
-                            }`}>
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium transition-all duration-300 ${applicant.submission === 'Inbound'
+                              ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                              : 'bg-blue-100 text-blue-800 hover:bg-blue-200'
+                              }`}>
                               {applicant.submission}
                             </span>
                           </td>
@@ -3270,14 +3332,13 @@ export default function RecruiterDashboard2() {
                                   </div>
                                 </div>
                               )}
-                              <Select 
-                                value={applicant.currentStatus} 
+                              <Select
+                                value={applicant.currentStatus}
                                 onValueChange={(value) => handleStatusChange(applicant, value)}
                                 disabled={isUpdating}
                               >
-                                <SelectTrigger className={`w-32 h-8 text-sm transition-all duration-300 ${
-                                  isUpdating ? 'opacity-50 cursor-wait' : 'hover:border-blue-400'
-                                }`}>
+                                <SelectTrigger className={`w-32 h-8 text-sm transition-all duration-300 ${isUpdating ? 'opacity-50 cursor-wait' : 'hover:border-blue-400'
+                                  }`}>
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -3316,7 +3377,7 @@ export default function RecruiterDashboard2() {
                 ×
               </button>
             </div>
-            
+
             <div className="overflow-auto flex-1 p-6">
               <table className="w-full border-collapse">
                 <thead>
@@ -3357,7 +3418,7 @@ export default function RecruiterDashboard2() {
                 ×
               </button>
             </div>
-            
+
             <div className="overflow-auto flex-1 p-6">
               <div className="bg-slate-800 text-white rounded-lg p-6 space-y-4">
                 {ceoCommandsData.map((command) => (
@@ -3388,7 +3449,7 @@ export default function RecruiterDashboard2() {
             <DialogHeader>
               <DialogTitle className="text-xl font-semibold text-gray-900">Requirement Details</DialogTitle>
             </DialogHeader>
-            
+
             <div className="space-y-6 mt-4">
               {/* Requirement Details */}
               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
@@ -3442,12 +3503,26 @@ export default function RecruiterDashboard2() {
       )}
 
       {/* Chat Support Modal */}
-      <ChatDock 
-        open={isChatOpen} 
-        onClose={() => setIsChatOpen(false)} 
+      <ChatDock
+        open={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
         userName={userName}
         userRole={userRole}
       />
+
+      {/* Chat Modal for viewing and replying to messages */}
+      {selectedChatRoom && (
+        <ChatModal
+          roomId={selectedChatRoom}
+          isOpen={isChatModalOpen}
+          onClose={() => {
+            setIsChatModalOpen(false);
+            setSelectedChatRoom(null);
+          }}
+          onMessageSent={refetchChatRooms}
+          employeeId={employee?.id}
+        />
+      )}
     </div>
   );
 }

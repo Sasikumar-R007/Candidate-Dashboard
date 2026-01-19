@@ -23,6 +23,7 @@ import { format } from "date-fns";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { ChatDock } from '@/components/chat/chat-dock';
+import { ChatModal } from '@/components/chat/admin-chat-modal';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ComposedChart, BarChart, Bar, Legend } from 'recharts';
 import { SearchBar } from '@/components/ui/search-bar';
 import { useAuth, useEmployeeAuth } from '@/contexts/auth-context';
@@ -108,6 +109,8 @@ export default function TeamLeaderDashboard() {
   };
   
   const [sidebarTab, setSidebarTab] = useState(initialSidebarTab());
+  const [selectedChatRoom, setSelectedChatRoom] = useState<string | null>(null);
+  const [isChatModalOpen, setIsChatModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('team');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
@@ -291,6 +294,25 @@ export default function TeamLeaderDashboard() {
   const { data: meetings = [], isLoading: isLoadingMeetings, isError: isErrorMeetings } = useQuery<any[]>({
     queryKey: ['/api/team-leader/meetings'],
   });
+
+  // Fetch chat rooms for TL (direct messages with Admin/TA)
+  const { data: chatRoomsData, isLoading: isLoadingChatRooms, refetch: refetchChatRooms } = useQuery<{ rooms: any[] }>({
+    queryKey: ['/api/chat/rooms'],
+    enabled: !!employee, // Only fetch if logged in
+    refetchInterval: 15000, // Refresh every 15 seconds for real-time updates
+  });
+
+  // Filter chat rooms to show only direct messages (Admin-TL/TA conversations)
+  const tlChatRooms = useMemo(() => {
+    if (!chatRoomsData?.rooms) return [];
+    return chatRoomsData.rooms.filter((room: any) => {
+      // Only show direct messages
+      if (room.type !== 'direct') return false;
+      // Check if room has participants (should have Admin or TA)
+      const participants = room.participants || [];
+      return participants.some((p: any) => p.participantId !== employee?.id);
+    });
+  }, [chatRoomsData, employee?.id]);
 
   const { data: detailedMeetings = [], isLoading: isLoadingDetailedMeetings } = useQuery<any[]>({
     queryKey: ['/api/team-leader/meetings/details'],
@@ -1704,156 +1726,91 @@ export default function TeamLeaderDashboard() {
   };
 
   const renderChatContent = () => {
-    const currentMessages = getCurrentChatMessages();
-
+    const totalUnread = tlChatRooms.reduce((sum, room) => sum + (room.unreadCount || 0), 0);
+    
     return (
-      <div className="flex min-h-screen">
-        <div className="flex-1 ml-16 bg-gray-50 flex">
-          {/* Main Chat Area */}
-          <div className="flex-1 flex flex-col">
-            <AdminTopHeader 
-              companyName="StaffOS" 
-              onHelpClick={() => setIsHelpChatOpen(true)}
-            />
-            <div className="px-6 py-6 h-full flex flex-col">
-              
-              {/* Chat Header */}
-              <Card className="mb-4">
-                <CardHeader className="pb-3 pt-4">
-                  <CardTitle className="text-lg text-gray-900 flex items-center justify-between">
-                    <div className="flex items-center">
-                      <i className="fas fa-comments mr-2 text-blue-600"></i>
-                      {getCurrentChatTitle()}
-                    </div>
-                    {chatType === 'private' && (
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={handleSwitchToTeamChat}
-                        data-testid="button-back-to-team-chat"
-                      >
-                        Back to Team Chat
-                      </Button>
-                    )}
-                  </CardTitle>
-                  <p className="text-sm text-gray-600">
-                    {chatType === 'team' ? 'Team members online' : 'Private conversation'}
-                  </p>
-                </CardHeader>
-              </Card>
+      <div className="flex h-screen">
+        <div className="flex-1 ml-16 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+          <AdminTopHeader companyName="StaffOS" />
+          <div className="flex flex-col h-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">Messages</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Communicate with Admin and Talent Advisors</p>
+              </div>
+              {totalUnread > 0 && (
+                <div className="flex items-center gap-2 bg-green-100 dark:bg-green-900/30 px-4 py-2 rounded-full">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm font-semibold text-green-700 dark:text-green-400">
+                    {totalUnread} unread message{totalUnread > 1 ? 's' : ''}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="flex-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg p-6 overflow-y-auto">
+              {isLoadingChatRooms ? (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  Loading messages...
+                </div>
+              ) : tlChatRooms.length === 0 ? (
+                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                  No messages yet. Wait for Admin or TA to start a conversation.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {tlChatRooms.map((room: any) => {
+                    // Get the other participant (not TL)
+                    const otherParticipant = room.participants?.find((p: any) => p.participantId !== employee?.id);
+                    const participantName = otherParticipant?.participantName || 'Unknown';
+                    const participantRole = otherParticipant?.participantRole || '';
+                    const roleLabel = participantRole === 'recruiter' ? 'TA' : participantRole === 'admin' ? 'Admin' : '';
+                    const timeStr = room.lastMessageAt
+                      ? new Date(room.lastMessageAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+                      : new Date(room.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                    const unreadCount = room.unreadCount || 0;
 
-              {/* Chat Messages Area */}
-              <Card className="flex-1 flex flex-col">
-                <CardContent className="flex-1 flex flex-col p-0">
-                  {/* Messages Container */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-                    {currentMessages.map((message) => (
-                      <div key={message.id} className={`flex ${message.isOwn ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                          message.isOwn 
-                            ? 'bg-blue-600 text-white' 
-                            : 'bg-white border border-gray-200 text-gray-900'
-                        }`}>
-                          {!message.isOwn && (
-                            <div className="text-xs font-semibold text-blue-600 mb-1">
-                              {message.sender}
+                    return (
+                      <div
+                        key={room.id}
+                        className={`bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all cursor-pointer ${
+                          unreadCount > 0 ? 'border-l-4 border-l-green-500 bg-green-50/30 dark:bg-green-900/10' : ''
+                        }`}
+                        onClick={() => {
+                          setSelectedChatRoom(room.id);
+                          setIsChatModalOpen(true);
+                        }}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="font-semibold text-gray-900 dark:text-white">
+                                {participantName} {roleLabel && <span className="text-xs text-gray-500">({roleLabel})</span>}
+                              </div>
+                              {unreadCount > 0 && (
+                                <span className="bg-green-500 text-white text-xs font-semibold rounded-full px-2 py-0.5 min-w-[20px] text-center">
+                                  {unreadCount}
+                                </span>
+                              )}
                             </div>
-                          )}
-                          <div className="text-sm">{message.message}</div>
-                          <div className={`text-xs mt-1 ${message.isOwn ? 'text-blue-200' : 'text-gray-500'}`}>
-                            {message.time}
+                            <div className={`text-sm line-clamp-2 ${
+                              unreadCount > 0 
+                                ? 'text-gray-900 dark:text-white font-medium' 
+                                : 'text-gray-600 dark:text-gray-400'
+                            }`}>
+                              {unreadCount > 0 ? `${unreadCount} new message${unreadCount > 1 ? 's' : ''}` : 'Click to view messages'}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {timeStr}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-
-                  {/* Message Input Area */}
-                  <div className="border-t border-gray-200 p-4 bg-white">
-                    <div className="flex items-center space-x-3">
-                      <input
-                        type="text"
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder="Type your message..."
-                        className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                        data-testid="input-chat-message"
-                      />
-                      <Button 
-                        onClick={handleSendMessage}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
-                        data-testid="button-send-message"
-                      >
-                        <i className="fas fa-paper-plane mr-2"></i>
-                        Send
-                      </Button>
-                    </div>
-                    
-                    {/* Quick Actions */}
-                    <div className="flex items-center space-x-4 mt-3">
-                      <Button variant="outline" size="sm" className="text-sm">
-                        <i className="fas fa-paperclip mr-2"></i>
-                        Attach File
-                      </Button>
-                      <Button variant="outline" size="sm" className="text-sm">
-                        <i className="fas fa-file-alt mr-2"></i>
-                        Share Resume
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-
-          {/* Right Sidebar - Chat Participants */}
-          <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
-            <div className="p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">Chat Participants</h3>
-            </div>
-            
-            <div className="flex-1">
-              {/* Team Chat Section */}
-              <div className="p-4">
-                <div className="mb-3">
-                  <h4 className="text-sm font-semibold text-gray-700">Team Members</h4>
+                    );
+                  })}
                 </div>
-                <div className="space-y-2">
-                  {chatTeamMembers.map((member) => (
-                    <div 
-                      key={member.id} 
-                      className={`flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-gray-50 ${
-                        chatType === 'team' ? 'bg-blue-50 border border-blue-200' : 'bg-gray-50'
-                      }`}
-                      onClick={() => handleStartPrivateChat(member.id)}
-                      data-testid={`contact-team-${member.id}`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-3 h-3 rounded-full ${
-                          member.status === 'online' ? 'bg-green-500' : 'bg-yellow-500'
-                        }`}></div>
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{member.name}</p>
-                          <p className="text-xs text-gray-500">{member.role}</p>
-                        </div>
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-xs"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStartPrivateChat(member.id);
-                        }}
-                      >
-                        Chat
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
+              )}
             </div>
           </div>
         </div>
@@ -2949,7 +2906,11 @@ export default function TeamLeaderDashboard() {
 
   return (
     <div className="min-h-screen">
-      <TeamLeaderMainSidebar activeTab={sidebarTab} onTabChange={setSidebarTab} />
+      <TeamLeaderMainSidebar 
+        activeTab={sidebarTab} 
+        onTabChange={setSidebarTab} 
+        chatUnreadCount={tlChatRooms.reduce((sum, room) => sum + (room.unreadCount || 0), 0)} 
+      />
       {renderMainContent()}
       
       {/* Closure Details Modal */}
@@ -3333,6 +3294,20 @@ export default function TeamLeaderDashboard() {
       </button>
 
       {/* Chat Support */}
+      {/* Chat Modal for viewing and replying to messages */}
+      {selectedChatRoom && (
+        <ChatModal 
+          roomId={selectedChatRoom} 
+          isOpen={isChatModalOpen} 
+          onClose={() => { 
+            setIsChatModalOpen(false); 
+            setSelectedChatRoom(null); 
+          }} 
+          onMessageSent={refetchChatRooms} 
+          employeeId={employee?.id} 
+        />
+      )}
+
       <ChatDock 
         open={isHelpChatOpen} 
         onClose={() => setIsHelpChatOpen(false)} 
