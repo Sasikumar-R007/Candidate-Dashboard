@@ -1158,6 +1158,19 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async updateCashOutflow(id: string, updates: Partial<CashOutflow>): Promise<CashOutflow | undefined> {
+    try {
+      const [updated] = await db.update(cashOutflows)
+        .set(updates)
+        .where(eq(cashOutflows.id, id))
+        .returning();
+      return updated || undefined;
+    } catch (error) {
+      console.error('Database error in updateCashOutflow:', error);
+      throw error;
+    }
+  }
+
   async deleteCashOutflow(id: string): Promise<boolean> {
     const result = await db.delete(cashOutflows).where(eq(cashOutflows.id, id));
     return (result.rowCount ?? 0) > 0;

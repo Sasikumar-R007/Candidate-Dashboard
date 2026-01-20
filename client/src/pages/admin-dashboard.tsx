@@ -1146,9 +1146,79 @@ export default function AdminDashboard() {
     });
   }, [pipelineApplications]);
 
+  // Pipeline filter period state (must be declared before useMemo that uses them)
+  const [selectedPipelineTeam, setSelectedPipelineTeam] = useState<string>("all");
+  const [pipelinePeriod, setPipelinePeriod] = useState<string>("daily");
+  const [pipelineDate, setPipelineDate] = useState<Date | undefined>(new Date());
+  const [pipelineMonth, setPipelineMonth] = useState<string>(format(new Date(), "MMMM"));
+  const [pipelineYear, setPipelineYear] = useState<string>(new Date().getFullYear().toString());
+  const [pipelineWeekStart, setPipelineWeekStart] = useState<Date | undefined>(new Date());
+  const [pipelineQuarter, setPipelineQuarter] = useState<string>("Q1");
+
+  // Filter pipeline applicants based on period
+  const filteredPipelineApplicants = useMemo(() => {
+    let filtered = [...pipelineApplicantData];
+
+    // Apply period-based date filtering
+    if (pipelinePeriod === "daily" && pipelineDate) {
+      const filterDate = format(pipelineDate, 'yyyy-MM-dd');
+      filtered = filtered.filter((a: any) => {
+        // Parse appliedOn date (format: DD-MM-YYYY)
+        if (!a.appliedOn || a.appliedOn === 'N/A') return false;
+        try {
+          const [day, month, year] = a.appliedOn.split('-');
+          const appliedDate = format(new Date(parseInt(year), parseInt(month) - 1, parseInt(day)), 'yyyy-MM-dd');
+          return appliedDate === filterDate;
+        } catch {
+          return false;
+        }
+      });
+    } else if (pipelinePeriod === "monthly" && pipelineMonth && pipelineYear) {
+      const monthMap: Record<string, number> = {
+        'January': 1, 'February': 2, 'March': 3, 'April': 4,
+        'May': 5, 'June': 6, 'July': 7, 'August': 8,
+        'September': 9, 'October': 10, 'November': 11, 'December': 12
+      };
+      const targetMonth = monthMap[pipelineMonth];
+      const targetYear = parseInt(pipelineYear);
+      filtered = filtered.filter((a: any) => {
+        if (!a.appliedOn || a.appliedOn === 'N/A') return false;
+        try {
+          const [day, month, year] = a.appliedOn.split('-');
+          return parseInt(month) === targetMonth && parseInt(year) === targetYear;
+        } catch {
+          return false;
+        }
+      });
+    } else if (pipelinePeriod === "quarterly" && pipelineQuarter && pipelineYear) {
+      const quarterMap: Record<string, number[]> = {
+        'Q1': [1, 2, 3], 'Q2': [4, 5, 6], 'Q3': [7, 8, 9], 'Q4': [10, 11, 12]
+      };
+      const targetMonths = quarterMap[pipelineQuarter] || [];
+      const targetYear = parseInt(pipelineYear);
+      filtered = filtered.filter((a: any) => {
+        if (!a.appliedOn || a.appliedOn === 'N/A') return false;
+        try {
+          const [day, month, year] = a.appliedOn.split('-');
+          return targetMonths.includes(parseInt(month)) && parseInt(year) === targetYear;
+        } catch {
+          return false;
+        }
+      });
+    }
+
+    // Filter by team if selected
+    if (selectedPipelineTeam !== "all") {
+      // Team filtering would require mapping applications to teams
+      // For now, we'll keep all if team filtering is needed later
+    }
+
+    return filtered;
+  }, [pipelineApplicantData, pipelinePeriod, pipelineDate, pipelineMonth, pipelineYear, pipelineQuarter, selectedPipelineTeam]);
+
   // Map applicant statuses to pipeline stages (each status maps to exactly one stage)
   const getPipelineCandidatesByStage = useMemo(() => {
-    const effectiveApplicants = pipelineApplicantData.filter((a: any) =>
+    const effectiveApplicants = filteredPipelineApplicants.filter((a: any) =>
       a.currentStatus !== 'Archived' &&
       a.currentStatus !== 'Screened Out'
     );
@@ -1189,7 +1259,7 @@ export default function AdminDashboard() {
       offerDrop: getCandidatesForStage('Offer Drop'),
       rejected: getCandidatesForStage('Rejected')
     };
-  }, [pipelineApplicantData]);
+  }, [filteredPipelineApplicants]);
 
   // Revenue mapping state for editing
   const [editingRevenueMapping, setEditingRevenueMapping] = useState<any>(null);
@@ -1222,7 +1292,6 @@ export default function AdminDashboard() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedDailyMetricsTeam, setSelectedDailyMetricsTeam] = useState<string>('overall');
   const [selectedMember, setSelectedMember] = useState<any>(null);
-  const [selectedPipelineTeam, setSelectedPipelineTeam] = useState<string>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [isDeliveredModalOpen, setIsDeliveredModalOpen] = useState(false);
@@ -3246,9 +3315,12 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/cash-outflows'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/key-aspects'] }); // Refresh Key Metrics
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/master-data-totals'] }); // Refresh Master Data Totals
       setCashoutForm({
         month: '', year: '', employees: '', salary: '', incentive: '', tools: '', rent: '', others: ''
       });
+      setEditingCashout(null);
       toast({
         title: "Success",
         description: "Cash outflow added successfully",
@@ -3264,9 +3336,38 @@ export default function AdminDashboard() {
     }
   });
 
+  // Update cash outflow mutation
+  const updateCashOutflowMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await apiRequest('PUT', `/api/admin/cash-outflows/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/cash-outflows'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/key-aspects'] }); // Refresh Key Metrics
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/master-data-totals'] }); // Refresh Master Data Totals
+      setCashoutForm({
+        month: '', year: '', employees: '', salary: '', incentive: '', tools: '', rent: '', others: ''
+      });
+      setEditingCashout(null);
+      toast({
+        title: "Success",
+        description: "Cash outflow updated successfully",
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update cash outflow",
+        variant: "destructive",
+      });
+    }
+  });
+
   const handleAddCashoutData = () => {
     if (cashoutForm.month && cashoutForm.year && cashoutForm.employees && cashoutForm.salary) {
-      createCashOutflowMutation.mutate({
+      const cashoutData = {
         month: cashoutForm.month,
         year: parseInt(cashoutForm.year, 10),
         employeesCount: parseInt(cashoutForm.employees, 10),
@@ -3275,7 +3376,14 @@ export default function AdminDashboard() {
         toolsCost: parseInt(cashoutForm.tools, 10) || 0,
         rent: parseInt(cashoutForm.rent, 10) || 0,
         otherExpenses: parseInt(cashoutForm.others, 10) || 0,
-      });
+      };
+
+      // Check if we're editing an existing record
+      if (editingCashout && editingCashout.id) {
+        updateCashOutflowMutation.mutate({ id: editingCashout.id, data: cashoutData });
+      } else {
+        createCashOutflowMutation.mutate(cashoutData);
+      }
     } else {
       toast({
         title: "Validation Error",
@@ -5852,12 +5960,91 @@ export default function AdminDashboard() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <StandardDatePicker
-                      value={selectedDate}
-                      onChange={(date) => date && setSelectedDate(date)}
-                      placeholder="Select date"
-                      className="w-auto"
-                    />
+
+                    {/* Period-based date filters */}
+                    {pipelinePeriod === "daily" && (
+                      <StandardDatePicker
+                        value={pipelineDate}
+                        onChange={(date) => date && setPipelineDate(date)}
+                        placeholder="Select date"
+                        className="w-auto"
+                      />
+                    )}
+
+                    {pipelinePeriod === "monthly" && (
+                      <div className="flex items-center gap-2">
+                        <Select value={pipelineMonth} onValueChange={setPipelineMonth}>
+                          <SelectTrigger className="w-32">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="January">January</SelectItem>
+                            <SelectItem value="February">February</SelectItem>
+                            <SelectItem value="March">March</SelectItem>
+                            <SelectItem value="April">April</SelectItem>
+                            <SelectItem value="May">May</SelectItem>
+                            <SelectItem value="June">June</SelectItem>
+                            <SelectItem value="July">July</SelectItem>
+                            <SelectItem value="August">August</SelectItem>
+                            <SelectItem value="September">September</SelectItem>
+                            <SelectItem value="October">October</SelectItem>
+                            <SelectItem value="November">November</SelectItem>
+                            <SelectItem value="December">December</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Select value={pipelineYear} onValueChange={setPipelineYear}>
+                          <SelectTrigger className="w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
+                              <SelectItem key={year} value={year.toString()}>
+                                {year}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {pipelinePeriod === "quarterly" && (
+                      <div className="flex items-center gap-2">
+                        <Select value={pipelineQuarter} onValueChange={setPipelineQuarter}>
+                          <SelectTrigger className="w-20">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Q1">Q1</SelectItem>
+                            <SelectItem value="Q2">Q2</SelectItem>
+                            <SelectItem value="Q3">Q3</SelectItem>
+                            <SelectItem value="Q4">Q4</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Select value={pipelineYear} onValueChange={setPipelineYear}>
+                          <SelectTrigger className="w-24">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
+                              <SelectItem key={year} value={year.toString()}>
+                                {year}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    <Select value={pipelinePeriod} onValueChange={setPipelinePeriod}>
+                      <SelectTrigger className="w-24" data-testid="select-pipeline-period">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="daily">Daily</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="quarterly">Quarterly</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
@@ -7270,10 +7457,10 @@ export default function AdminDashboard() {
                       <Button
                         className="bg-cyan-400 hover:bg-cyan-500 text-black px-4 py-2 rounded w-20 disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={handleAddCashoutData}
-                        disabled={!isCashoutFormComplete || createCashOutflowMutation.isPending}
+                        disabled={!isCashoutFormComplete || createCashOutflowMutation.isPending || updateCashOutflowMutation.isPending}
                         data-testid="button-add-cashout"
                       >
-                        Add
+                        {editingCashout ? "Update" : "Add"}
                       </Button>
                     </div>
                   </div>

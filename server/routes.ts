@@ -4444,18 +4444,398 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Key Aspects API endpoint for Key Metrics chart data
   app.get("/api/admin/key-aspects", requireAdminAuth, async (req, res) => {
     try {
-      // For now, return default values of 0 (will be populated from actual data sources later)
-      // These metrics would typically come from financial data, HR data, and business analytics
+      const { revenueMappings, cashOutflows, employees, clients } = await import("@shared/schema");
+
+      // Get all revenue mappings
+      const allRevenueMappings = await db.select().from(revenueMappings);
+
+      // Helper function to safely parse date (handles both Date objects and string formats)
+      const parseDate = (dateValue: string | Date | null | undefined): Date | null => {
+        if (!dateValue) return null;
+        if (dateValue instanceof Date) return dateValue;
+        try {
+          // Handle "yyyy-MM-dd" format
+          const parsed = new Date(dateValue);
+          if (isNaN(parsed.getTime())) return null;
+          return parsed;
+        } catch {
+          return null;
+        }
+      };
+
+      // Get current date
+      const now = new Date();
+      const currentMonth = now.getMonth() + 1; // 1-12
+      const currentYear = now.getFullYear();
+
+      // Calculate revenue for current month
+      const currentMonthRevenue = allRevenueMappings
+        .filter(rm => {
+          if (!rm.closureDate) return false;
+          const closureDate = parseDate(rm.closureDate);
+          if (!closureDate) return false;
+          return closureDate.getMonth() + 1 === currentMonth && closureDate.getFullYear() === currentYear;
+        })
+        .reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+
+      // Calculate revenue for previous month
+      let prevMonth = currentMonth - 1;
+      let prevYear = currentYear;
+      if (prevMonth === 0) {
+        prevMonth = 12;
+        prevYear = currentYear - 1;
+      }
+      const previousMonthRevenue = allRevenueMappings
+        .filter(rm => {
+          if (!rm.closureDate) return false;
+          const closureDate = parseDate(rm.closureDate);
+          if (!closureDate) return false;
+          return closureDate.getMonth() + 1 === prevMonth && closureDate.getFullYear() === prevYear;
+        })
+        .reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+
+      // Calculate revenue for same month last year
+      const sameMonthLastYearRevenue = allRevenueMappings
+        .filter(rm => {
+          if (!rm.closureDate) return false;
+          const closureDate = parseDate(rm.closureDate);
+          if (!closureDate) return false;
+          return closureDate.getMonth() + 1 === currentMonth && closureDate.getFullYear() === currentYear - 1;
+        })
+        .reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+
+      // 1. Growth MoM (Month-over-Month Growth %)
+      // Formula: (Revenue in Current Month - Revenue in Previous Month) / Revenue in Previous Month × 100
+      let growthMoM = 0;
+      if (previousMonthRevenue > 0) {
+        growthMoM = ((currentMonthRevenue - previousMonthRevenue) / previousMonthRevenue) * 100;
+      } else if (currentMonthRevenue > 0) {
+        growthMoM = 100; // 100% growth if previous month had 0 revenue
+      }
+
+      // 2. Growth YoY (Year-over-Year Growth %)
+      // Formula: (Revenue in Current Month (This Year) - Revenue in Same Month (Last Year)) / Revenue in Same Month (Last Year) × 100
+      let growthYoY = 0;
+      if (sameMonthLastYearRevenue > 0) {
+        growthYoY = ((currentMonthRevenue - sameMonthLastYearRevenue) / sameMonthLastYearRevenue) * 100;
+      } else if (currentMonthRevenue > 0) {
+        growthYoY = 100; // 100% growth if same month last year had 0 revenue
+      }
+
+      // Get all revenue for total calculations
+      const totalRevenue = allRevenueMappings.reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+
+      // Get all cash outflows for expenses
+      const allCashOutflows = await db.select().from(cashOutflows);
+      const totalExpenses = allCashOutflows.reduce((sum, outflow) => {
+        return sum + (outflow.totalSalary || 0) + (outflow.rent || 0) + (outflow.toolsCost || 0) + (outflow.otherExpenses || 0) + (outflow.incentive || 0);
+      }, 0);
+
+      // Calculate current month expenses for Burn Rate
+      const monthMap: Record<string, number> = {
+        'january': 1, 'february': 2, 'march': 3, 'april': 4,
+        'may': 5, 'june': 6, 'july': 7, 'august': 8,
+        'september': 9, 'october': 10, 'november': 11, 'december': 12,
+        'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4,
+        'jun': 6, 'jul': 7, 'aug': 8, 'sep': 9,
+        'oct': 10, 'nov': 11, 'dec': 12
+      };
+
+      const currentMonthExpenses = allCashOutflows
+        .filter(cf => {
+          const monthNum = typeof cf.month === 'string'
+            ? (monthMap[cf.month.toLowerCase()] || parseInt(cf.month) || 0)
+            : parseInt(String(cf.month)) || 0;
+          return monthNum === currentMonth && cf.year === currentYear;
+        })
+        .reduce((sum, cf) => {
+          return sum + (cf.totalSalary || 0) + (cf.rent || 0) + (cf.toolsCost || 0) + (cf.otherExpenses || 0) + (cf.incentive || 0);
+        }, 0);
+
+      // 7. Burn Rate (%)
+      // Formula: Burn Rate % = (Total Monthly Expenses / Monthly Revenue) × 100
+      let burnRate = 0;
+      if (currentMonthRevenue > 0) {
+        burnRate = (currentMonthExpenses / currentMonthRevenue) * 100;
+      } else if (currentMonthExpenses > 0) {
+        burnRate = Infinity; // If no revenue but expenses exist, set to a high number (we'll cap it)
+      }
+
+      // 3. Net Profit
+      // Formula: Net Profit = Total Revenue – Total Expenses
+      const netProfit = totalRevenue - totalExpenses;
+
+      // Get head count (active employees - team leaders, talent advisors, recruiters)
+      const employeesResult = await db.execute(sql`
+        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
+               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
+               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
+               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
+               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
+               branch, city, reporting_to, is_active, created_at, profile_picture
+        FROM employees
+      `);
+      const allEmployees = employeesResult.rows as any[];
+      const headCount = allEmployees.filter(e =>
+        e.is_active === true &&
+        e.role &&
+        (e.role.toLowerCase() === 'team_leader' ||
+          e.role.toLowerCase() === 'talent_advisor' ||
+          e.role.toLowerCase() === 'teamlead' ||
+          e.role.toLowerCase() === 'recruiter') &&
+        e.role.toLowerCase() !== 'admin' &&
+        e.role.toLowerCase() !== 'client' &&
+        e.role.toLowerCase() !== 'candidate'
+      ).length;
+
+      // 4. Revenue per Employee
+      // Formula: Revenue per Employee = Total Revenue / Total Number of Employees
+      const revenuePerEmployee = headCount > 0 ? totalRevenue / headCount : 0;
+
+      // 5. Employee Attrition Rate
+      // Formula: Attrition Rate (%) = (Number of Employees Who Left During the Period / Average Number of Employees During the Period) × 100
+      // Average Number of Employees = (Employees at Start + Employees at End) / 2
+      const employeesAtStart = allEmployees.filter(e =>
+        e.role &&
+        (e.role.toLowerCase() === 'team_leader' ||
+          e.role.toLowerCase() === 'talent_advisor' ||
+          e.role.toLowerCase() === 'teamlead' ||
+          e.role.toLowerCase() === 'recruiter') &&
+        e.role.toLowerCase() !== 'admin' &&
+        e.role.toLowerCase() !== 'client' &&
+        e.role.toLowerCase() !== 'candidate'
+      ).length;
+
+      const employeesAtEnd = headCount; // Active employees
+      const averageEmployees = (employeesAtStart + employeesAtEnd) / 2;
+
+      // Employees who left during current month (resigned or inactive)
+      const employeesWhoLeft = allEmployees.filter(e => {
+        const isRelevantRole = e.role &&
+          (e.role.toLowerCase() === 'team_leader' ||
+            e.role.toLowerCase() === 'talent_advisor' ||
+            e.role.toLowerCase() === 'teamlead' ||
+            e.role.toLowerCase() === 'recruiter') &&
+          e.role.toLowerCase() !== 'admin' &&
+          e.role.toLowerCase() !== 'client' &&
+          e.role.toLowerCase() !== 'candidate';
+
+        if (!isRelevantRole) return false;
+
+        // Check if employee left (resigned or inactive)
+        const isResigned = e.employment_status && e.employment_status.toLowerCase() === 'resigned';
+        const isInactive = e.is_active === false;
+
+        // Check if they left during current month
+        if (isResigned || isInactive) {
+          if (e.created_at) {
+            const createdAt = new Date(e.created_at);
+            // Consider employees who left this month (simplified - check if they're not active)
+            return true;
+          }
+        }
+        return false;
+      }).length;
+
+      let attrition = 0;
+      if (averageEmployees > 0) {
+        attrition = (employeesWhoLeft / averageEmployees) * 100;
+      }
+
+      // Get all clients for Churn Rate calculation
+      const allClients = await db.select().from(clients);
+
+      // 8. Churn Rate (Customer Churn Rate %)
+      // Formula: Churn Rate % = (Number of Customers Lost During Period / Total Customers at Start of Period) × 100
+      // Calculate clients at start of month (active clients from previous month)
+      const activeClientsAtStart = allClients.filter(client => {
+        if (client.isLoginOnly) return false;
+        const clientDate = parseDate(client.createdAt || client.startDate);
+        if (!clientDate) return false;
+        // Clients created before current month
+        return (clientDate.getFullYear() < currentYear) ||
+          (clientDate.getFullYear() === currentYear && clientDate.getMonth() + 1 < currentMonth);
+      }).length;
+
+      // Clients lost this month (changed to frozen/churned status or became inactive)
+      const clientsLostThisMonth = allClients.filter(client => {
+        if (client.isLoginOnly) return false;
+        // Check if client status changed to frozen or churned this month
+        if (client.currentStatus === 'frozen' || client.currentStatus === 'churned') {
+          // Simple check: if status is not active, consider them lost
+          // In a more sophisticated implementation, you'd track status change dates
+          return true;
+        }
+        return false;
+      }).length;
+
+      let churnRate = 0;
+      if (activeClientsAtStart > 0) {
+        churnRate = (clientsLostThisMonth / activeClientsAtStart) * 100;
+      }
+
+      // 6. Customer Acquisition Cost (CAC)
+      // Formula: CAC = (Total Sales + Marketing Costs for the Period) / Number of New Customers Acquired in the Period
+      // For this calculation, we'll use current month's data
+      const currentMonthSales = currentMonthRevenue;
+
+      // Marketing costs from current month's cash outflows (using otherExpenses as marketing costs proxy)
+      const currentMonthMarketingCosts = allCashOutflows
+        .filter(cf => {
+          const monthNum = typeof cf.month === 'string'
+            ? (monthMap[cf.month.toLowerCase()] || parseInt(cf.month) || 0)
+            : parseInt(String(cf.month)) || 0;
+          return monthNum === currentMonth && cf.year === currentYear;
+        })
+        .reduce((sum, cf) => sum + (cf.otherExpenses || 0), 0);
+
+      // Get new customers acquired in current month
+      const newCustomersThisMonth = allClients.filter(client => {
+        if (client.isLoginOnly) return false;
+        if (!client.createdAt && !client.startDate) return false;
+        const clientDate = parseDate(client.createdAt || client.startDate);
+        if (!clientDate) return false;
+        return clientDate.getMonth() + 1 === currentMonth &&
+          clientDate.getFullYear() === currentYear;
+      }).length;
+
+      let clientAcquisitionCost = 0;
+      if (newCustomersThisMonth > 0) {
+        clientAcquisitionCost = (currentMonthSales + currentMonthMarketingCosts) / newCustomersThisMonth;
+      }
+
+      // Generate chart data for last 12 months
+      const chartData: Array<{ name: string; growthMoM: number; burnRate: number; churnRate: number; attrition: number }> = [];
+
+      for (let i = 11; i >= 0; i--) {
+        const targetDate = new Date(currentYear, currentMonth - 1 - i, 1);
+        const targetMonth = targetDate.getMonth() + 1;
+        const targetYear = targetDate.getFullYear();
+
+        // Calculate revenue for this month
+        const monthRevenue = allRevenueMappings
+          .filter(rm => {
+            if (!rm.closureDate) return false;
+            const closureDate = parseDate(rm.closureDate);
+            if (!closureDate) return false;
+            return closureDate.getMonth() + 1 === targetMonth && closureDate.getFullYear() === targetYear;
+          })
+          .reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+
+        // Calculate previous month revenue for MoM
+        let prevTargetMonth = targetMonth - 1;
+        let prevTargetYear = targetYear;
+        if (prevTargetMonth === 0) {
+          prevTargetMonth = 12;
+          prevTargetYear = targetYear - 1;
+        }
+        const prevMonthRevenue = allRevenueMappings
+          .filter(rm => {
+            if (!rm.closureDate) return false;
+            const closureDate = parseDate(rm.closureDate);
+            if (!closureDate) return false;
+            return closureDate.getMonth() + 1 === prevTargetMonth && closureDate.getFullYear() === prevTargetYear;
+          })
+          .reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+
+        // Calculate Growth MoM for this month
+        let monthGrowthMoM = 0;
+        if (prevMonthRevenue > 0) {
+          monthGrowthMoM = ((monthRevenue - prevMonthRevenue) / prevMonthRevenue) * 100;
+        } else if (monthRevenue > 0) {
+          monthGrowthMoM = 100;
+        }
+
+        // Calculate expenses for this month (Burn Rate)
+        const monthExpenses = allCashOutflows
+          .filter(cf => {
+            const monthNum = typeof cf.month === 'string'
+              ? (monthMap[cf.month.toLowerCase()] || parseInt(cf.month) || 0)
+              : parseInt(String(cf.month)) || 0;
+            return monthNum === targetMonth && cf.year === targetYear;
+          })
+          .reduce((sum, cf) => {
+            return sum + (cf.totalSalary || 0) + (cf.rent || 0) + (cf.toolsCost || 0) + (cf.otherExpenses || 0) + (cf.incentive || 0);
+          }, 0);
+
+        // Calculate Burn Rate for this month
+        let monthBurnRate = 0;
+        if (monthRevenue > 0) {
+          monthBurnRate = (monthExpenses / monthRevenue) * 100;
+        } else if (monthExpenses > 0) {
+          monthBurnRate = 9999; // High number to indicate issue
+        }
+
+        // Calculate Churn Rate for this month (simplified - using all-time data)
+        // For proper monthly churn, you'd need to track status changes by date
+        let monthChurnRate = 0;
+        const activeClientsAtMonthStart = allClients.filter(client => {
+          if (client.isLoginOnly) return false;
+          const clientDate = parseDate(client.createdAt || client.startDate);
+          if (!clientDate) return false;
+          return (clientDate.getFullYear() < targetYear) ||
+            (clientDate.getFullYear() === targetYear && clientDate.getMonth() + 1 < targetMonth);
+        }).length;
+        if (activeClientsAtMonthStart > 0) {
+          // Simplified: assume same churn rate for all months
+          monthChurnRate = churnRate;
+        }
+
+        const monthName = targetDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        chartData.push({
+          name: monthName,
+          growthMoM: Math.round(monthGrowthMoM * 100) / 100,
+          burnRate: Math.round(monthBurnRate * 100) / 100,
+          churnRate: Math.round(monthChurnRate * 100) / 100,
+          attrition: Math.round(attrition * 100) / 100 // Using overall attrition for all months
+        });
+      }
+
+      // Cap burn rate at 10000% for display purposes
+      const displayBurnRate = burnRate > 10000 ? 10000 : burnRate;
+
+      // Log debug information (can be removed in production or made conditional)
+      console.log('[Key Aspects Debug]', {
+        currentMonth,
+        currentYear,
+        currentMonthRevenue,
+        previousMonthRevenue,
+        sameMonthLastYearRevenue,
+        totalRevenue,
+        totalExpenses,
+        currentMonthExpenses,
+        headCount,
+        activeClientsAtStart,
+        clientsLostThisMonth,
+        newCustomersThisMonth,
+        revenueMappingsCount: allRevenueMappings.length,
+        cashOutflowsCount: allCashOutflows.length,
+        employeesCount: allEmployees.length,
+        clientsCount: allClients.length
+      });
+
       res.json({
-        growthMoM: 0,
-        growthYoY: 0,
-        burnRate: 0,
-        churnRate: 0,
-        attrition: 0,
-        netProfit: 0,
-        revenuePerEmployee: 0,
-        clientAcquisitionCost: 0,
-        chartData: [] // Empty chart data - will be populated from historical records
+        growthMoM: Math.round(growthMoM * 100) / 100,
+        growthYoY: Math.round(growthYoY * 100) / 100,
+        burnRate: Math.round(displayBurnRate * 100) / 100,
+        churnRate: Math.round(churnRate * 100) / 100,
+        attrition: Math.round(attrition * 100) / 100,
+        netProfit: Math.round(netProfit),
+        revenuePerEmployee: Math.round(revenuePerEmployee),
+        clientAcquisitionCost: Math.round(clientAcquisitionCost),
+        chartData: chartData,
+        // Debug information (optional - remove in production if not needed)
+        _debug: {
+          currentMonthRevenue,
+          previousMonthRevenue,
+          sameMonthLastYearRevenue,
+          totalRevenue,
+          totalExpenses,
+          currentMonthExpenses,
+          headCount,
+          revenueMappingsCount: allRevenueMappings.length,
+          cashOutflowsCount: allCashOutflows.length
+        }
       });
     } catch (error) {
       console.error('Key aspects error:', error);
@@ -5562,6 +5942,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get cash outflows error:", error);
       res.status(500).json({ message: "Failed to get cash outflows" });
+    }
+  });
+
+  // Update cash outflow
+  app.put("/api/admin/cash-outflows/:id", requireAdminAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { month, year, employeesCount, totalSalary, incentive, toolsCost, rent, otherExpenses } = req.body;
+
+      if (!month || !year || employeesCount === undefined || totalSalary === undefined) {
+        return res.status(400).json({ message: "Month, year, employees count, and total salary are required" });
+      }
+
+      // Parse and validate numeric values
+      const yearNum = parseInt(String(year), 10);
+      const employeesCountNum = parseInt(String(employeesCount), 10);
+      const totalSalaryNum = parseInt(String(totalSalary), 10);
+      const incentiveNum = incentive ? parseInt(String(incentive), 10) : 0;
+      const toolsCostNum = toolsCost ? parseInt(String(toolsCost), 10) : 0;
+      const rentNum = rent ? parseInt(String(rent), 10) : 0;
+      const otherExpensesNum = otherExpenses ? parseInt(String(otherExpenses), 10) : 0;
+
+      // Validate parsed values
+      if (isNaN(yearNum) || isNaN(employeesCountNum) || isNaN(totalSalaryNum) ||
+        isNaN(incentiveNum) || isNaN(toolsCostNum) || isNaN(rentNum) || isNaN(otherExpensesNum)) {
+        return res.status(400).json({ message: "Invalid numeric values in cash outflow data" });
+      }
+
+      const updateData = {
+        month: String(month),
+        year: yearNum,
+        employeesCount: employeesCountNum,
+        totalSalary: totalSalaryNum,
+        incentive: incentiveNum,
+        toolsCost: toolsCostNum,
+        rent: rentNum,
+        otherExpenses: otherExpensesNum
+      };
+
+      const updated = await storage.updateCashOutflow(id, updateData);
+      if (!updated) {
+        return res.status(404).json({ message: "Cash outflow not found" });
+      }
+
+      res.json({ message: "Cash outflow updated successfully", cashOutflow: updated });
+    } catch (error: any) {
+      console.error("Update cash outflow error:", error);
+      res.status(500).json({
+        message: "Failed to update cash outflow",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   });
 

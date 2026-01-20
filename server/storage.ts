@@ -221,6 +221,7 @@ export interface IStorage {
   // Cash Outflow methods
   createCashOutflow(outflow: InsertCashOutflow): Promise<CashOutflow>;
   getAllCashOutflows(): Promise<CashOutflow[]>;
+  updateCashOutflow(id: string, updates: Partial<CashOutflow>): Promise<CashOutflow | undefined>;
   deleteCashOutflow(id: string): Promise<boolean>;
   
   getClientById(id: string): Promise<Client | undefined>;
@@ -1460,6 +1461,10 @@ export class MemStorage implements IStorage {
   }
 
   async getAllCashOutflows(): Promise<CashOutflow[]> {
+    throw new Error("Cash Outflow methods not implemented in MemStorage. Use DatabaseStorage.");
+  }
+
+  async updateCashOutflow(id: string, updates: Partial<CashOutflow>): Promise<CashOutflow | undefined> {
     throw new Error("Cash Outflow methods not implemented in MemStorage. Use DatabaseStorage.");
   }
 
