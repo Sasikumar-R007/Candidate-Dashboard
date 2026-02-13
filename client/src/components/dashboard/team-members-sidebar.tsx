@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Search, X } from "lucide-react";
+import { Search, X, Star } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { type Employee } from "@shared/schema";
 import TeamMemberProfileModal from "./modals/team-member-profile-modal";
@@ -213,9 +213,10 @@ export default function TeamMembersSidebar() {
   });
 
   // Map employees to team member format, merging with hardcoded data where available
+  // Filter to show only Talent Advisors (Recruiters)
   const teamMembers = useMemo(() => {
     return employees
-      .filter(emp => emp.role !== 'admin') // Exclude admin users
+      .filter(emp => emp.role === 'recruiter' || emp.role === 'talent_advisor') // Only show Talent Advisors (Recruiters)
       .map((emp) => {
         // Try to find matching hardcoded member by name
         const hardcodedMatch = hardcodedTeamMembers.find(
@@ -298,7 +299,7 @@ export default function TeamMembersSidebar() {
       <div className="h-full flex flex-col">
         <div className="p-4 flex-shrink-0">
           <div className="flex items-center justify-between gap-2 mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Users</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Team Members</h3>
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
@@ -316,7 +317,7 @@ export default function TeamMembersSidebar() {
             <div className="mb-4">
               <Input
                 type="text"
-                placeholder="Search users..."
+                placeholder="Search Here"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full"
@@ -329,54 +330,78 @@ export default function TeamMembersSidebar() {
         
         <div className="flex-1 overflow-y-auto px-4 pb-4 scrollbar-hide">
           {isLoading ? (
-            <div className="text-center py-8 text-gray-500">Loading users...</div>
+            <div className="text-center py-8 text-gray-500">Loading team members...</div>
           ) : filteredMembers.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              {searchQuery ? 'No users found' : 'No users available'}
+              {searchQuery ? 'No team members found' : 'No team members available'}
             </div>
           ) : (
-            <div className="space-y-1">
+            <div className="space-y-0">
               {filteredMembers.map((member, index) => {
-              const isEven = index % 2 === 0;
+              const isTeamLeader = member.role && member.role.includes('Leader');
               
               return (
-              <Card 
-                key={index} 
-                className={`p-3 hover:shadow-md transition-shadow duration-200 cursor-pointer ${
-                  isEven 
-                    ? 'bg-blue-50 dark:bg-blue-900/20' 
-                    : 'bg-white dark:bg-gray-800'
+              <div
+                key={index}
+                className={`p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 cursor-pointer border-b border-blue-100 dark:border-blue-900/20 ${
+                  index === filteredMembers.length - 1 ? 'border-b-0' : ''
                 }`}
                 onClick={() => handleMemberClick(member)}
                 data-testid={`card-member-${index}`}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <Avatar className="w-10 h-10 rounded-sm">
-                      <AvatarFallback className="rounded-sm bg-blue-600 text-white">
-                        {member.name.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <h4 className="font-medium text-gray-900 dark:text-gray-100 text-sm">
-                        {member.name}
-                      </h4>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
-                        {member.role}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-500">
-                        {member.email}
-                      </p>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    {/* Square profile picture with rounded corners */}
+                    <div className="relative flex-shrink-0">
+                      {member.image ? (
+                        <img 
+                          src={member.image} 
+                          alt={member.name} 
+                          className="w-12 h-12 rounded-lg object-cover" 
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-yellow-100 dark:bg-yellow-900/20 flex items-center justify-center">
+                          <span className="text-lg font-bold text-gray-700 dark:text-gray-300">
+                            {member.name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                      )}
+                      {/* Star icon for team leaders */}
+                      {isTeamLeader && (
+                        <div className="absolute -bottom-1 -right-1 bg-yellow-400 rounded-full p-0.5">
+                          <Star className="h-3 w-3 text-yellow-900 fill-yellow-900" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">
+                          {member.name}
+                        </h4>
+                        {isTeamLeader && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400">(TL)</span>
+                        )}
+                      </div>
+                      {member.salary && (
+                        <p className="text-xs font-medium text-green-600 dark:text-green-400 mb-0.5">
+                          {member.salary.includes('₹') ? member.salary : member.salary.includes('INR') ? member.salary.replace('INR', '₹') : `₹ ${member.salary}`}
+                        </p>
+                      )}
+                      {member.year && (
+                        <p className="text-xs text-gray-500 dark:text-gray-500">
+                          {member.year}
+                        </p>
+                      )}
                     </div>
                   </div>
                   
-                  <div className="text-right">
+                  <div className="text-right flex-shrink-0">
                     <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                      {member.count}
+                      {String(member.count || 0).padStart(2, '0')}
                     </span>
                   </div>
                 </div>
-              </Card>
+              </div>
               );
             })}
             </div>

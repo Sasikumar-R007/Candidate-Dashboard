@@ -789,17 +789,24 @@ export class DatabaseStorage implements IStorage {
     withdrawnRoles: number;
   }> {
     const reqs = await this.getRequirementsByCompany(companyName);
-    const activeRoles = reqs.filter(r => r.status === 'open' || r.status === 'in_progress').length;
-    const completedRoles = reqs.filter(r => r.status === 'completed').length;
+    // Filter only client-submitted JDs (STR format)
+    const clientReqs = reqs.filter(r => r.id && /^STR\d{5}$/.test(r.id));
+    
+    const activeRoles = clientReqs.filter(r => r.status === 'open' || r.status === 'in_progress').length;
+    const pausedRoles = clientReqs.filter(r => r.status === 'paused').length;
+    const withdrawnRoles = clientReqs.filter(r => r.status === 'withdrawn' || r.status === 'cancelled' || r.status === 'closed').length;
     const closures = await this.getRevenueMappingsByClientName(companyName);
     
+    // Calculate total positions (sum of positions count, or just count of requirements)
+    const totalPositions = clientReqs.length;
+    
     return {
-      rolesAssigned: reqs.length,
-      totalPositions: reqs.length,
+      rolesAssigned: clientReqs.length,
+      totalPositions,
       activeRoles,
       successfulHires: closures.length,
-      pausedRoles: 0,
-      withdrawnRoles: 0
+      pausedRoles,
+      withdrawnRoles
     };
   }
 

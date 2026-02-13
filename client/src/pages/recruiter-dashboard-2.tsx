@@ -32,6 +32,7 @@ import { useEmployeeAuth } from '@/contexts/auth-context';
 export default function RecruiterDashboard2() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const employee = useEmployeeAuth(); // Must be called before any hooks that depend on it
 
   // Restore sidebarTab from sessionStorage for proper back navigation
   const initialSidebarTab = () => {
@@ -950,7 +951,6 @@ export default function RecruiterDashboard2() {
   const { data: recruiterProfile } = useQuery({
     queryKey: ['/api/recruiter/profile'],
   }) as { data: any };
-  const employee = useEmployeeAuth();
   const userName = recruiterProfile?.name || employee?.name || "Recruiter User";
   const userRole = employee?.role || 'recruiter';
 
@@ -984,6 +984,11 @@ export default function RecruiterDashboard2() {
       return participants.some((p: any) => p.participantId !== employee?.id);
     });
   }, [chatRoomsData, employee?.id]);
+
+  // Calculate total unread count - must be defined right after taChatRooms
+  const totalUnreadCount = useMemo(() => {
+    return taChatRooms.reduce((sum, room) => sum + (room.unreadCount || 0), 0);
+  }, [taChatRooms]);
 
   const formatIndianCurrency = (value: number): string => {
     if (value === 0) return '0';
@@ -2677,10 +2682,6 @@ export default function RecruiterDashboard2() {
       </div>
     );
   };
-
-  const totalUnreadCount = useMemo(() => {
-    return taChatRooms.reduce((sum, room) => sum + (room.unreadCount || 0), 0);
-  }, [taChatRooms]);
 
   return (
     <div className="min-h-screen">

@@ -29,7 +29,10 @@ export async function setupVite(app: Express, server: any) {
       server: {
         ...viteConfig.server,
         middlewareMode: true,
-        hmr: { server },
+        hmr: { 
+          server,
+          clientPort: 5000,
+        },
         allowedHosts: true,
       },
       appType: "custom",

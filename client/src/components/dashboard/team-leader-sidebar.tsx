@@ -47,107 +47,91 @@ export default function TeamLeaderSidebar() {
     <>
       <div className="w-80 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700" style={{height: 'calc(100vh - 4rem)'}}>
         <div className="h-full flex flex-col">
-          <div className="p-4 flex-shrink-0">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Team Members</h3>
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="text-xs" data-testid="badge-members-count">
-                  {teamMembersData.length} members
-                </Badge>
-                {!isSearchOpen ? (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => setIsSearchOpen(true)}
-                    className="h-8 w-8"
-                    data-testid="button-search-toggle"
-                  >
-                    <Search className="h-4 w-4" />
-                  </Button>
-                ) : (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => {
-                      setIsSearchOpen(false);
-                      setSearchQuery("");
-                    }}
-                    className="h-8 w-8"
-                    data-testid="button-search-close"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
+          <div className="p-4 flex-shrink-0 border-b border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Team Members</h3>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Search Here"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                data-testid="input-search-members"
+              />
             </div>
-            
-            {isSearchOpen && (
-              <div className="mb-3">
-                <Input
-                  type="text"
-                  placeholder="Search members..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full"
-                  data-testid="input-search-members"
-                  autoFocus
-                />
-              </div>
-            )}
           </div>
           
-          <div className="flex-1 px-4 pb-4 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto px-4 pb-4">
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-blue-600"></div>
               </div>
             ) : (
-              <div className="space-y-3">
-                {filteredMembers.map((member: TeamMember, index: number) => (
-                  <Card 
-                    key={member.id} 
-                    className="p-3 hover-elevate active-elevate-2 cursor-pointer transition-all bg-gray-50 dark:bg-gray-800"
-                    onClick={() => handleMemberClick(member)}
-                    data-testid={`card-team-member-${index}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="relative flex-shrink-0">
-                        {member.profilePicture ? (
-                          <img 
-                            src={member.profilePicture} 
-                            alt={member.name}
-                            className="w-12 h-12 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                            <span className="text-blue-600 dark:text-blue-300 font-semibold text-lg">
-                              {member.name.charAt(0).toUpperCase()}
-                            </span>
+              <div className="space-y-0">
+                {filteredMembers.map((member: TeamMember, index: number) => {
+                  const isTeamLead = member.position?.includes('Leader') || member.position?.includes('TL');
+                  const memberSalary = member.salary || "0";
+                  const memberYear = member.year || `${new Date().getFullYear() - 1}-${new Date().getFullYear()}`;
+                  const memberCount = member.profilesCount || member.closures || 0;
+                  
+                  return (
+                    <div
+                      key={member.id || index}
+                      className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                      onClick={() => handleMemberClick(member)}
+                      data-testid={`card-team-member-${index}`}
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        {/* Square profile picture with rounded corners */}
+                        <div className="relative flex-shrink-0">
+                          {member.profilePicture ? (
+                            <img 
+                              src={member.profilePicture} 
+                              alt={member.name}
+                              className="w-12 h-12 rounded-lg object-cover"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 rounded-lg bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                {member.name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          )}
+                          {/* TL indicator */}
+                          {isTeamLead && (
+                            <div className="absolute -bottom-1 -right-1 bg-yellow-400 rounded-full p-0.5">
+                              <span className="text-[8px] font-bold text-yellow-900">TL</span>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Member Details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">
+                              {member.name}
+                            </h4>
+                            {isTeamLead && (
+                              <span className="text-xs text-gray-500 dark:text-gray-400">(TL)</span>
+                            )}
                           </div>
-                        )}
-                        <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
-                          member.status === 'online' ? 'bg-green-500' : 'bg-gray-400'
-                        }`}></div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate">
-                          {member.name}
-                        </h4>
-                        <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                          {member.position || 'Recruiter'}
-                        </p>
-                        <div className="flex gap-3 mt-1">
-                          <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
-                            <span className="text-green-500">&#9679;</span> {member.profilesCount} profiles
-                          </span>
-                          <span className="text-xs text-gray-600 dark:text-gray-400">
-                            {member.salary}
-                          </span>
+                          <p className="text-xs font-medium text-green-600 dark:text-green-400 mb-0.5">
+                            ₹{memberSalary.toString().replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{memberYear}</p>
                         </div>
                       </div>
+                      
+                      {/* Count */}
+                      <div className="text-right flex-shrink-0 ml-4">
+                        <span className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                          {String(memberCount).padStart(2, '0')}
+                        </span>
+                      </div>
                     </div>
-                  </Card>
-                ))}
+                  );
+                })}
                 
                 {filteredMembers.length === 0 && !isLoading && (
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400">

@@ -4,6 +4,7 @@ import AdminProfileHeader from '@/components/dashboard/admin-profile-header';
 import AdminTopHeader from '@/components/dashboard/admin-top-header';
 import TeamLeaderTeamBoxes from '@/components/dashboard/team-leader-team-boxes';
 import TeamLeaderSidebar from '@/components/dashboard/team-leader-sidebar';
+import TeamLeaderPerformanceGauge from '@/components/dashboard/team-leader-performance-gauge';
 import AddRequirementModal from '@/components/dashboard/modals/add-requirement-modal';
 import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-modal';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +18,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, HelpCircle, ExternalLink, Eye } from "lucide-react";
+import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, HelpCircle, ExternalLink, Eye, Search, ArrowUp, Flag, Trophy } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
@@ -139,6 +140,7 @@ export default function TeamLeaderDashboard() {
   const [targetSearch, setTargetSearch] = useState('');
   const [requirementSearch, setRequirementSearch] = useState('');
   const [selectedPerformanceMember, setSelectedPerformanceMember] = useState<string>('all');
+  const [teamMembersSearch, setTeamMembersSearch] = useState('');
   
   const [teamChatMessages, setTeamChatMessages] = useState([
     { id: 1, sender: "John Mathew", message: "Good morning team! Please review the requirements for today", time: "9:00 AM", isOwn: true },
@@ -258,6 +260,11 @@ export default function TeamLeaderDashboard() {
   });
   const userName = teamLeaderProfile?.name || employee?.name || "Team Leader User";
   const userRole = employee?.role || 'team_leader';
+
+  // Fetch team leader stats for profile metrics
+  const { data: teamLeaderStats } = useQuery({
+    queryKey: ['/api/team-leader/stats'],
+  });
 
   const { data: teamMembers = [] } = useQuery<any[]>({
     queryKey: ['/api/team-leader/team-members'],
@@ -598,6 +605,20 @@ export default function TeamLeaderDashboard() {
   };
 
   const renderTeamContent = () => {
+    // Get team leader stats data
+    const stats = teamLeaderStats || {
+      name: userName,
+      image: teamLeaderProfile?.profilePicture || null,
+      members: Array.isArray(teamMembers) ? teamMembers.length : 0,
+      tenure: "3",
+      qtrsAchieved: 6,
+      nextMilestone: "+3",
+      performanceScore: 85
+    };
+
+    // Calculate tenure in years
+    const tenureYears = stats.tenure || "3";
+
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
@@ -608,16 +629,119 @@ export default function TeamLeaderDashboard() {
           <div className="flex h-screen">
             {/* Main Content - Middle Section (Scrollable) */}
             <div className="px-6 py-6 space-y-6 flex-1 overflow-y-auto h-full">
-              <TeamLeaderTeamBoxes />
+              {/* Top Section - Profile Card and Performance Gauge */}
+              <div className="grid grid-cols-2 gap-6">
+                {/* Left - Profile Card with Metrics */}
+                <Card className="bg-white border border-gray-200">
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4 mb-6">
+                      {/* Profile Picture */}
+                      <div className="relative flex-shrink-0">
+                        {stats.image ? (
+                          <img 
+                            src={stats.image} 
+                            alt={stats.name}
+                            className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
+                          />
+                        ) : (
+                          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center border-2 border-gray-200">
+                            <span className="text-2xl font-bold text-white">
+                              {stats.name?.charAt(0) || 'T'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Name and Role */}
+                      <div className="flex-1">
+                        <h2 className="text-2xl font-bold text-gray-900 mb-1">{stats.name}</h2>
+                        <p className="text-sm font-medium text-gray-600">Senior Team Leader</p>
+                      </div>
+                    </div>
+
+                    {/* Metrics Cards */}
+                    <div className="grid grid-cols-3 gap-3 mb-6">
+                      {/* Qtrs Achieved */}
+                      <div className="bg-green-50 rounded-lg p-4 border border-green-100">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Trophy className="h-4 w-4 text-green-600" />
+                          <span className="text-xs font-medium text-green-700">Qtrs Achieved</span>
+                        </div>
+                        <p className="text-2xl font-bold text-green-600">{stats.qtrsAchieved || 6}</p>
+                      </div>
+
+                      {/* Next Milestone */}
+                      <div className="bg-orange-50 rounded-lg p-4 border border-orange-100">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Flag className="h-4 w-4 text-orange-600" />
+                          <span className="text-xs font-medium text-orange-700">Next Milestone</span>
+                        </div>
+                        <p className="text-2xl font-bold text-orange-600">{stats.nextMilestone || "+3"}</p>
+                      </div>
+
+                      {/* Tenure */}
+                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CalendarIcon className="h-4 w-4 text-blue-600" />
+                          <span className="text-xs font-medium text-blue-700">Tenure</span>
+                        </div>
+                        <p className="text-2xl font-bold text-blue-600">{tenureYears} <span className="text-sm">years</span></p>
+                      </div>
+                    </div>
+
+                    {/* Team Members Section */}
+                    <div className="border-t border-gray-200 pt-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-semibold text-gray-700">Team Members</h3>
+                        {Array.isArray(teamMembers) && teamMembers.length > 3 && (
+                          <span className="text-xs text-gray-500">+{teamMembers.length - 3} more</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {Array.isArray(teamMembers) && teamMembers.slice(0, 3).map((member: any, index: number) => (
+                          <div key={member.id || index} className="relative">
+                            {member.profilePicture ? (
+                              <img 
+                                src={member.profilePicture} 
+                                alt={member.name}
+                                className="w-10 h-10 rounded-full object-cover border-2 border-white"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center border-2 border-white">
+                                <span className="text-xs font-semibold text-gray-600">
+                                  {member.name?.charAt(0) || 'M'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        {Array.isArray(teamMembers) && teamMembers.length > 3 && (
+                          <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center border-2 border-white">
+                            <span className="text-xs font-semibold text-white">+{teamMembers.length - 3}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Right - Performance Gauge */}
+                <Card className="bg-white border border-gray-200">
+                  <CardContent className="p-6 flex items-center justify-center h-full">
+                    <TeamLeaderPerformanceGauge value={stats.performanceScore || 85} size={250} />
+                  </CardContent>
+                </Card>
+              </div>
 
               {/* Target Section */}
-              <Card className="bg-white border border-gray-200">
+              <Card className="bg-white border border-gray-200 shadow-sm">
                 <CardHeader className="pb-3 pt-4 flex flex-row items-center justify-between">
                   <CardTitle className="text-lg font-semibold text-gray-900">Target</CardTitle>
                   <Dialog open={isTargetModalOpen} onOpenChange={setIsTargetModalOpen}>
                     <DialogTrigger asChild>
                       <Button 
-                        className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded font-medium"
+                        variant="link"
+                        className="text-blue-600 hover:text-blue-700 text-sm px-0 font-normal underline"
                         data-testid="button-view-all-targets"
                       >
                         View All
@@ -684,8 +808,8 @@ export default function TeamLeaderDashboard() {
                   </Dialog>
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
-                  <div className="grid grid-cols-4 gap-0 bg-cyan-50 rounded-lg overflow-hidden">
-                    <div className="text-center py-6 px-4 border-r border-cyan-100">
+                  <div className="grid grid-cols-4 gap-0 bg-white rounded-lg overflow-hidden border border-gray-200">
+                    <div className="text-center py-6 px-4 border-r border-gray-200">
                       <p className="text-sm font-semibold text-gray-700 mb-2">Current Quarter</p>
                       <p className="text-xl font-bold text-gray-900">
                         {aggregatedTargets?.currentQuarter 
@@ -693,7 +817,7 @@ export default function TeamLeaderDashboard() {
                           : `Q${Math.ceil((new Date().getMonth() + 1) / 3)}-${new Date().getFullYear()}`}
                       </p>
                     </div>
-                    <div className="text-center py-6 px-4 border-r border-cyan-100">
+                    <div className="text-center py-6 px-4 border-r border-gray-200">
                       <p className="text-sm font-semibold text-gray-700 mb-2">Minimum Target</p>
                       <p className="text-xl font-bold text-gray-900">
                         {aggregatedTargets?.currentQuarter 
@@ -701,7 +825,7 @@ export default function TeamLeaderDashboard() {
                           : '0'}
                       </p>
                     </div>
-                    <div className="text-center py-6 px-4 border-r border-cyan-100">
+                    <div className="text-center py-6 px-4 border-r border-gray-200">
                       <p className="text-sm font-semibold text-gray-700 mb-2">Target Achieved</p>
                       <p className="text-xl font-bold text-gray-900">
                         {aggregatedTargets?.currentQuarter 
@@ -722,7 +846,7 @@ export default function TeamLeaderDashboard() {
               </Card>
 
               {/* Daily Metrics Section */}
-              <Card className="bg-white border border-gray-200">
+              <Card className="bg-white border border-gray-200 shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4">
                   <CardTitle className="text-lg font-semibold text-gray-900">Daily Metrics</CardTitle>
                   <div className="flex items-center space-x-2">
@@ -749,113 +873,80 @@ export default function TeamLeaderDashboard() {
                 <CardContent className="p-4 pt-0">
                   <div className="grid grid-cols-3 gap-6">
                     {/* Left side - Metrics */}
-                    <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
-                      <div className="flex justify-between items-center py-1">
+                    <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4 shadow-sm">
+                      <div className="flex justify-between items-center py-2">
                         <span className="text-sm font-medium text-gray-700">Total Requirements</span>
                         <span className="text-2xl font-bold text-blue-600">{dailyMetrics?.totalRequirements ?? 0}</span>
                       </div>
                       <div className="border-t border-gray-200"></div>
-                      <div className="flex justify-between items-center py-1">
-                        <span className="text-sm font-medium text-gray-700">Total Resumes</span>
-                        <span className="text-2xl font-bold" data-testid="text-total-resumes">
-                          {(dailyMetrics?.totalResumesDelivered ?? 0) === (dailyMetrics?.totalResumesRequired ?? 0) ? (
-                            <span className="text-green-600">
-                              {dailyMetrics?.totalResumesDelivered ?? 0}/{dailyMetrics?.totalResumesRequired ?? 0}
-                            </span>
-                          ) : (
-                            <>
-                              <span className="text-red-600">{dailyMetrics?.totalResumesDelivered ?? 0}</span>
-                              <span className="text-green-600">/{dailyMetrics?.totalResumesRequired ?? 0}</span>
-                            </>
-                          )}
-                        </span>
-                      </div>
-                      <div className="border-t border-gray-200"></div>
-                      <div className="flex justify-between items-center py-1">
+                      <div className="flex justify-between items-center py-2">
                         <span className="text-sm font-medium text-gray-700">Avg. Resumes per Requirement</span>
-                        <span className="text-2xl font-bold text-blue-600">{Number(dailyMetrics?.avgResumesPerRequirement ?? 0).toFixed(2)}</span>
+                        <span className="text-2xl font-bold text-blue-600">{String(Number(dailyMetrics?.avgResumesPerRequirement ?? 0).toFixed(0)).padStart(2, '0')}</span>
                       </div>
                       <div className="border-t border-gray-200"></div>
-                      <div className="flex justify-between items-center py-1">
+                      <div className="flex justify-between items-center py-2">
                         <span className="text-sm font-medium text-gray-700">Requirements per Recruiter</span>
-                        <span className="text-2xl font-bold text-blue-600">{Number(dailyMetrics?.requirementsPerRecruiter ?? 0).toFixed(2)}</span>
+                        <span className="text-2xl font-bold text-blue-600">{String(Number(dailyMetrics?.requirementsPerRecruiter ?? 0).toFixed(0)).padStart(2, '0')}</span>
                       </div>
                       <div className="border-t border-gray-200"></div>
-                      <div className="flex justify-between items-center py-1">
+                      <div className="flex justify-between items-center py-2">
                         <span className="text-sm font-medium text-gray-700">Completed Requirements</span>
                         <span className="text-2xl font-bold text-blue-600">{dailyMetrics?.completedRequirements ?? 0}</span>
                       </div>
                     </div>
 
                     {/* Middle section - Daily Delivery */}
-                    <div className="bg-slate-800 rounded-lg p-6 text-white">
-                      <h4 className="text-lg font-semibold text-white mb-6 text-center">Daily Delivery</h4>
-                      <div className="grid grid-cols-2 gap-6">
-                        <div className="text-center">
-                          <h5 className="text-sm font-medium text-cyan-300 mb-3">Delivered</h5>
-                          <div className="text-4xl font-bold text-white mb-4" data-testid="text-delivered-count">
-                            {dailyMetrics?.dailyDeliveryDelivered ?? 0}
-                          </div>
-                          <Button 
-                            size="sm" 
-                            className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded text-sm font-medium"
-                            onClick={() => setIsDeliveredModalOpen(true)}
-                            data-testid="button-view-delivered"
-                          >
-                            View
-                          </Button>
+                    <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-lg font-semibold text-gray-900">Daily Delivery</h4>
+                        <div className="flex items-center gap-2">
+                          <Select defaultValue="overall">
+                            <SelectTrigger className="w-24 h-8 text-xs">
+                              <SelectValue placeholder="Overall" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="overall">Overall</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <StandardDatePicker
+                            value={selectedDate}
+                            onChange={(date) => date && setSelectedDate(date)}
+                            placeholder="Select date"
+                          />
                         </div>
-                        <div className="text-center">
-                          <h5 className="text-sm font-medium text-cyan-300 mb-3">Defaulted</h5>
-                          <div className="text-4xl font-bold text-white mb-4" data-testid="text-defaulted-count">
-                            {dailyMetrics?.dailyDeliveryDefaulted ?? 0}
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="border-2 border-green-500 rounded-lg p-4 text-center">
+                          <h5 className="text-sm font-medium text-green-700 mb-2">Delivered</h5>
+                          <div className="text-3xl font-bold text-green-600" data-testid="text-delivered-count">
+                            {String(dailyMetrics?.dailyDeliveryDelivered ?? 0).padStart(2, '0')}
                           </div>
-                          <Button 
-                            size="sm" 
-                            className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded text-sm font-medium"
-                            onClick={() => setIsDefaultedModalOpen(true)}
-                            data-testid="button-view-defaulted"
-                          >
-                            View
-                          </Button>
+                        </div>
+                        <div className="border-2 border-red-500 rounded-lg p-4 text-center">
+                          <h5 className="text-sm font-medium text-red-700 mb-2">Defaulted</h5>
+                          <div className="text-3xl font-bold text-red-600" data-testid="text-defaulted-count">
+                            {String(dailyMetrics?.dailyDeliveryDefaulted ?? 0).padStart(2, '0')}
+                          </div>
                         </div>
                       </div>
                     </div>
 
                     {/* Right section - Overall Performance */}
-                    <div className="bg-white border border-gray-200 rounded-lg p-6">
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        <div className="flex items-center gap-2">
-                          <h4 className="text-sm font-medium text-gray-700">Overall Performance</h4>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-6 w-6"
-                            onClick={() => setIsPerformanceGraphModalOpen(true)}
-                            data-testid="button-expand-performance-graph"
-                          >
-                            <ExternalLink className="h-4 w-4 text-gray-600" />
-                          </Button>
+                    <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                          <span className="text-green-600 font-bold text-sm">G</span>
                         </div>
-                        <div className={`text-4xl font-bold ${
-                          dailyMetrics?.overallPerformance === 'G' 
-                            ? 'text-green-600 bg-green-100' 
-                            : dailyMetrics?.overallPerformance === 'A'
-                            ? 'text-yellow-600 bg-yellow-100'
-                            : 'text-red-600 bg-red-100'
-                        } w-16 h-16 rounded-sm flex items-center justify-center`} data-testid="indicator-performance">
-                          {dailyMetrics?.overallPerformance ?? 'G'}
-                        </div>
-                      </div>
-                      <div className="flex justify-start space-x-2 mb-2">
-                        <div className="flex items-center space-x-1">
-                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                          <span className="text-sm text-gray-600">Team Performance</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <div className="w-3 h-0.5 bg-red-500"></div>
-                          <span className="text-sm text-gray-600">Average Benchmark (10)</span>
-                        </div>
+                        <h4 className="text-lg font-semibold text-gray-900">Overall Performance</h4>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6 ml-auto"
+                          onClick={() => setIsPerformanceGraphModalOpen(true)}
+                          data-testid="button-expand-performance-graph"
+                        >
+                          <ExternalLink className="h-4 w-4 text-gray-600" />
+                        </Button>
                       </div>
                       <div className="h-48 mt-2">
                         <PerformanceChart
