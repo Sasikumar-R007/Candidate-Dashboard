@@ -815,6 +815,98 @@ export class DatabaseStorage implements IStorage {
     return applications;
   }
 
+  async getClientDropRates(companyName: string): Promise<{
+    interviewDropRate: number;
+    offerDropRate: number;
+    totalInterviewsScheduled: number;
+    interviewsCompleted: number;
+    interviewsDropped: number;
+    totalOffersExtended: number;
+    offersAccepted: number;
+    offersDeclined: number;
+  }> {
+    // Get all interviews for this client from interviewTracker table (accurate data)
+    const allInterviews = await this.getAllInterviews();
+    const clientInterviews = allInterviews.filter(interview => 
+      interview.client && interview.client.toLowerCase() === companyName.toLowerCase()
+    );
+    
+    // Interview Drop Rate Calculation using actual interview records
+    const totalInterviewsScheduled = clientInterviews.length;
+    
+    // Interviews completed = status is 'completed'
+    const interviewsCompleted = clientInterviews.filter(interview => 
+      interview.status && interview.status.toLowerCase() === 'completed'
+    ).length;
+    
+    // Interviews dropped = status is 'cancelled', 'no-show', or 'rescheduled' (if rescheduled multiple times, count as drop)
+    // Also count interviews that were scheduled but candidate was rejected before completion
+    const interviewsDropped = clientInterviews.filter(interview => {
+      const status = (interview.status || '').toLowerCase();
+      return status === 'cancelled' || 
+             status === 'no-show' || 
+             status === 'no_show' ||
+             status === 'rescheduled'; // Rescheduled interviews are considered drops
+    }).length;
+    
+    // Calculate drop rate: dropped / (scheduled - still pending)
+    const interviewsPending = clientInterviews.filter(interview => {
+      const status = (interview.status || '').toLowerCase();
+      return status === 'scheduled' || status === 'in-progress';
+    }).length;
+    
+    const interviewsProcessed = totalInterviewsScheduled - interviewsPending;
+    const interviewDropRate = interviewsProcessed > 0 
+      ? Math.round((interviewsDropped / interviewsProcessed) * 100) 
+      : 0;
+    
+    // Offer Drop Rate Calculation using application status
+    const applications = await this.getJobApplicationsByCompany(companyName);
+    
+    // Total offers extended = applications that reached Offer Stage, Selected, or Joined
+    const applicationsReachedOffer = applications.filter(app => {
+      const status = (app.status || '').toLowerCase();
+      return status.includes('offer stage') || 
+             status.includes('offer_stage') ||
+             status === 'selected' ||
+             status === 'joined' ||
+             status === 'closure';
+    });
+    
+    const totalOffersExtended = applicationsReachedOffer.length;
+    
+    // Offers declined = applications that were in Offer Stage but then rejected/declined
+    // Check if application was ever in offer stage but now rejected
+    const offersDeclined = applications.filter(app => {
+      const status = (app.status || '').toLowerCase();
+      // If status is explicitly offer drop or rejected after being selected
+      return status.includes('offer drop') || 
+             status.includes('offer_drop') ||
+             (status.includes('rejected') && applicationsReachedOffer.some(offer => offer.id === app.id));
+    }).length;
+    
+    // Offers accepted = those that reached Selected or Joined
+    const offersAccepted = applications.filter(app => {
+      const status = (app.status || '').toLowerCase();
+      return status === 'selected' || status === 'joined' || status === 'closure';
+    }).length;
+    
+    const offerDropRate = totalOffersExtended > 0 
+      ? Math.round((offersDeclined / totalOffersExtended) * 100) 
+      : 0;
+    
+    return {
+      interviewDropRate,
+      offerDropRate,
+      totalInterviewsScheduled,
+      interviewsCompleted,
+      interviewsDropped,
+      totalOffersExtended,
+      offersAccepted,
+      offersDeclined
+    };
+  }
+
   // Impact Metrics methods
   async createImpactMetrics(metrics: InsertImpactMetrics): Promise<ImpactMetrics> {
     const [newMetrics] = await db.insert(impactMetrics).values(metrics).returning();

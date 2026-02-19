@@ -1415,6 +1415,52 @@ export default function TeamLeaderDashboard() {
     );
   };
 
+  // Helper function to get initials from name
+  const getInitials = (name: string): string => {
+    if (!name) return '';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  // Helper function to calculate days ago from a date
+  const calculateDaysAgo = (dateString: string | null | undefined): string => {
+    if (!dateString || dateString === 'N/A') return 'N/A';
+    try {
+      let date: Date;
+      if (typeof dateString === 'string' && dateString.includes('-')) {
+        const [day, month, year] = dateString.split('-');
+        date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      } else {
+        date = new Date(dateString);
+      }
+      
+      const now = new Date();
+      const diffTime = Math.abs(now.getTime() - date.getTime());
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) return '0 days ago';
+      if (diffDays === 1) return '01 day ago';
+      const paddedDays = diffDays < 10 ? `0${diffDays}` : diffDays.toString();
+      return `${paddedDays} days ago`;
+    } catch {
+      return 'N/A';
+    }
+  };
+
+  // Pipeline stages with display names
+  const pipelineStages = [
+    { key: 'L1', display: 'Level 1' },
+    { key: 'L2', display: 'Level 2' },
+    { key: 'L3', display: 'Level 3' },
+    { key: 'Final Round', display: 'Final Round' },
+    { key: 'HR Round', display: 'HR Round' },
+    { key: 'Offer Stage', display: 'Offer Stage' },
+    { key: 'Closure', display: 'Closure' }
+  ];
+
   const renderPipelineContent = () => {
     return (
       <div className="flex h-full">
@@ -1422,9 +1468,9 @@ export default function TeamLeaderDashboard() {
         <div className="flex-1 ml-16 overflow-y-auto admin-scrollbar">
           <div className="p-6 space-y-6">
             {/* Pipeline Header */}
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Pipeline</h2>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 {/* Team member selector - shows all recruiters */}
                 <select 
                   className="w-48 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white text-sm"
@@ -1439,136 +1485,103 @@ export default function TeamLeaderDashboard() {
                   value={selectedDate}
                   onChange={(date) => date && setSelectedDate(date)}
                   placeholder="Select date"
+                  className="h-10 w-40 rounded"
                 />
               </div>
             </div>
 
-            {/* Pipeline Stages - matching admin design */}
-            <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-              <CardContent className="p-0">
-                {isLoadingPipeline ? (
-                  <div className="flex items-center justify-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600"></div>
-                    <span className="ml-3 text-gray-600">Loading pipeline data...</span>
+            {/* Pipeline Stages - Kanban Board Layout */}
+            {isLoadingPipeline ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600"></div>
+                <span className="ml-3 text-gray-600">Loading pipeline data...</span>
+              </div>
+            ) : isErrorPipeline ? (
+              <div className="text-center py-12 text-red-500">
+                Failed to load pipeline data
+              </div>
+            ) : (
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 p-2 flex-1 flex flex-col min-h-0 mb-6" style={{ height: 'calc(100vh - 300px)' }}>
+                <div className="flex-1 overflow-x-hidden overflow-y-hidden min-h-0">
+                  <div className="flex gap-1.5 w-full h-full">
+                    {pipelineStages.map((stage) => {
+                      const candidates = groupedPipelineCandidates[stage.key] || [];
+                      const count = Array.isArray(candidates) ? candidates.length : 0;
+                      return (
+                        <div key={stage.key} className="flex-1 min-w-0 flex flex-col h-full">
+                          {/* Column Header - Fixed */}
+                          <div className="mb-1 flex-shrink-0">
+                            <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-700 rounded-t px-2 py-1 border-b border-gray-200 dark:border-gray-600">
+                              <h3 className="text-[10px] font-medium text-gray-700 dark:text-gray-300 truncate" data-testid={`header-pipeline-${stage.key}`}>{stage.display}</h3>
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                                <span className="text-[10px] font-medium text-gray-700 dark:text-gray-300">{count}</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Column Content - Scrollable Vertically */}
+                          <div className="flex-1 overflow-y-auto overflow-x-hidden bg-white dark:bg-gray-900 rounded-b px-1.5 py-1.5 space-y-1.5 min-h-0" style={{ scrollbarWidth: 'thin' }}>
+                            {count === 0 ? (
+                              <div className="flex items-center justify-center h-full min-h-[100px]">
+                                <p className="text-[10px] text-gray-400 dark:text-gray-500">No candidates</p>
+                              </div>
+                            ) : (
+                              (Array.isArray(candidates) ? candidates : []).map((candidate: any, index: number) => {
+                                const initials = getInitials(candidate.name || '');
+                                const daysAgo = calculateDaysAgo(candidate.createdAt || candidate.updatedAt);
+                                const roleApplied = candidate.position || 'N/A';
+                                const company = candidate.company || 'N/A';
+                                
+                                return (
+                                  <div
+                                    key={candidate.id || index}
+                                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-1.5 cursor-pointer hover:shadow-sm transition-all hover:border-blue-300 dark:hover:border-blue-600 relative"
+                                    data-testid={`pipeline-${stage.key}-candidate-${index}`}
+                                  >
+                                    {/* Card Content */}
+                                    <div className="flex items-start gap-1.5">
+                                      {/* Avatar - Very Small */}
+                                      <div className="flex-shrink-0">
+                                        <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                                          <span className="text-[9px] font-medium text-blue-700 dark:text-blue-300">
+                                            {initials}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Candidate Info - Very Compact */}
+                                      <div className="flex-1 min-w-0">
+                                        <h4 className="font-semibold text-gray-900 dark:text-white text-[10px] mb-0.5 truncate leading-tight">
+                                          {candidate.name || 'N/A'}
+                                        </h4>
+                                        <p className="text-[9px] text-gray-600 dark:text-gray-400 mb-0.5 truncate leading-tight">
+                                          {roleApplied}
+                                        </p>
+                                        <p className="text-[9px] text-gray-600 dark:text-gray-400 truncate leading-tight">
+                                          {company}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Timestamp in bottom right */}
+                                    <div className="absolute bottom-1 right-1.5">
+                                      <p className="text-[8px] text-gray-500 dark:text-gray-400">
+                                        {daysAgo}
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                ) : isErrorPipeline ? (
-                  <div className="text-center py-12 text-red-500">
-                    Failed to load pipeline data
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto admin-scrollbar">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr>
-                          <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Level 1</th>
-                          <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Level 2</th>
-                          <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Level 3</th>
-                          <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Final Round</th>
-                          <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">HR Round</th>
-                          <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Offer Stage</th>
-                          <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Closure</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td className="p-3 align-top">
-                            <div className="flex flex-col gap-2">
-                              {(groupedPipelineCandidates['L1'] || []).length > 0 ? (
-                                groupedPipelineCandidates['L1'].map((candidate: any) => (
-                                  <div key={candidate.id} className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200" data-testid={`pipeline-l1-${candidate.id}`}>
-                                    {candidate.name}
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="text-gray-400 text-sm text-center py-2">No candidates</div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-3 align-top">
-                            <div className="flex flex-col gap-2">
-                              {(groupedPipelineCandidates['L2'] || []).length > 0 ? (
-                                groupedPipelineCandidates['L2'].map((candidate: any) => (
-                                  <div key={candidate.id} className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200" data-testid={`pipeline-l2-${candidate.id}`}>
-                                    {candidate.name}
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="text-gray-400 text-sm text-center py-2">No candidates</div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-3 align-top">
-                            <div className="flex flex-col gap-2">
-                              {(groupedPipelineCandidates['L3'] || []).length > 0 ? (
-                                groupedPipelineCandidates['L3'].map((candidate: any) => (
-                                  <div key={candidate.id} className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200" data-testid={`pipeline-l3-${candidate.id}`}>
-                                    {candidate.name}
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="text-gray-400 text-sm text-center py-2">No candidates</div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-3 align-top">
-                            <div className="flex flex-col gap-2">
-                              {(groupedPipelineCandidates['Final Round'] || []).length > 0 ? (
-                                groupedPipelineCandidates['Final Round'].map((candidate: any) => (
-                                  <div key={candidate.id} className="px-3 py-2 bg-green-500 dark:bg-green-600 rounded text-center text-sm font-medium text-white" data-testid={`pipeline-final-${candidate.id}`}>
-                                    {candidate.name}
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="text-gray-400 text-sm text-center py-2">No candidates</div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-3 align-top">
-                            <div className="flex flex-col gap-2">
-                              {(groupedPipelineCandidates['HR Round'] || []).length > 0 ? (
-                                groupedPipelineCandidates['HR Round'].map((candidate: any) => (
-                                  <div key={candidate.id} className="px-3 py-2 bg-green-600 dark:bg-green-500 rounded text-center text-sm font-medium text-white" data-testid={`pipeline-hr-${candidate.id}`}>
-                                    {candidate.name}
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="text-gray-400 text-sm text-center py-2">No candidates</div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-3 align-top">
-                            <div className="flex flex-col gap-2">
-                              {(groupedPipelineCandidates['Offer Stage'] || []).length > 0 ? (
-                                groupedPipelineCandidates['Offer Stage'].map((candidate: any) => (
-                                  <div key={candidate.id} className="px-3 py-2 bg-green-700 dark:bg-green-500 rounded text-center text-sm font-medium text-white" data-testid={`pipeline-offer-${candidate.id}`}>
-                                    {candidate.name}
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="text-gray-400 text-sm text-center py-2">No candidates</div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="p-3 align-top">
-                            <div className="flex flex-col gap-2">
-                              {(groupedPipelineCandidates['Closure'] || []).length > 0 ? (
-                                groupedPipelineCandidates['Closure'].map((candidate: any) => (
-                                  <div key={candidate.id} className="px-3 py-2 bg-green-800 dark:bg-green-400 rounded text-center text-sm font-medium text-white" data-testid={`pipeline-closure-${candidate.id}`}>
-                                    {candidate.name}
-                                  </div>
-                                ))
-                              ) : (
-                                <div className="text-gray-400 text-sm text-center py-2">No candidates</div>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1612,7 +1625,7 @@ export default function TeamLeaderDashboard() {
               className="w-full flex justify-between items-center py-3 px-4 bg-green-500 dark:bg-green-600 rounded hover:bg-green-600 dark:hover:bg-green-500 transition-colors cursor-pointer"
               data-testid="button-pipeline-l1"
             >
-              <span className="text-sm font-medium text-white">L1</span>
+              <span className="text-sm font-medium text-white">LEVEL 1</span>
               <span className="text-lg font-bold text-white">{pipelineCounts.L1 || 0}</span>
             </button>
             <button 
@@ -1620,7 +1633,7 @@ export default function TeamLeaderDashboard() {
               className="w-full flex justify-between items-center py-3 px-4 bg-green-600 dark:bg-green-500 rounded hover:bg-green-700 dark:hover:bg-green-400 transition-colors cursor-pointer"
               data-testid="button-pipeline-l2"
             >
-              <span className="text-sm font-medium text-white">L2</span>
+              <span className="text-sm font-medium text-white">LEVEL 2</span>
               <span className="text-lg font-bold text-white">{pipelineCounts.L2 || 0}</span>
             </button>
             <button 
@@ -1628,7 +1641,7 @@ export default function TeamLeaderDashboard() {
               className="w-full flex justify-between items-center py-3 px-4 bg-green-700 dark:bg-green-500 rounded hover:bg-green-800 dark:hover:bg-green-400 transition-colors cursor-pointer"
               data-testid="button-pipeline-l3"
             >
-              <span className="text-sm font-medium text-white">L3</span>
+              <span className="text-sm font-medium text-white">LEVEL 3</span>
               <span className="text-lg font-bold text-white">{pipelineCounts.L3 || 0}</span>
             </button>
             <button 

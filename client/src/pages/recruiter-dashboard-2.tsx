@@ -17,7 +17,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, ExternalLink, Phone, Star, Copy, FileText, Eye, Loader2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SearchBar } from '@/components/ui/search-bar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, Upload, X, Building, Tag, BarChart3, Target, FolderOpen, Hash, User, TrendingUp, MapPin, Laptop, Briefcase, DollarSign, ExternalLink, Phone, Star, Copy, FileText, Eye, Loader2, ChevronDown, Check, ChevronUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
@@ -1083,6 +1086,46 @@ export default function RecruiterDashboard2() {
     LOW: { Easy: 4, Medium: 3, Tough: 2 },
   };
 
+  // Function to get expected count based on criticality and toughness from Priority Distribution
+  const getExpectedCount = (criticality: string, toughness: string): number => {
+    const criticalityData = priorityDistribution[criticality as keyof typeof priorityDistribution];
+    return criticalityData?.[toughness as keyof typeof criticalityData] || 0;
+  };
+
+  // Calculate priority counts for sidebar (matching Admin design)
+  const priorityCounts = useMemo(() => {
+    const counts = {
+      HIGH: recruiterRequirements.filter((req: any) => req.criticality === 'HIGH').length,
+      MEDIUM: recruiterRequirements.filter((req: any) => req.criticality === 'MEDIUM').length,
+      LOW: recruiterRequirements.filter((req: any) => req.criticality === 'LOW').length,
+      TOTAL: recruiterRequirements.length
+    };
+
+    const breakdowns = {
+      HIGH: {
+        Easy: recruiterRequirements.filter((req: any) => req.criticality === 'HIGH' && req.toughness === 'Easy').length,
+        Medium: recruiterRequirements.filter((req: any) => req.criticality === 'HIGH' && req.toughness === 'Medium').length,
+        Tough: recruiterRequirements.filter((req: any) => req.criticality === 'HIGH' && req.toughness === 'Tough').length
+      },
+      MEDIUM: {
+        Easy: recruiterRequirements.filter((req: any) => req.criticality === 'MEDIUM' && req.toughness === 'Easy').length,
+        Medium: recruiterRequirements.filter((req: any) => req.criticality === 'MEDIUM' && req.toughness === 'Medium').length,
+        Tough: recruiterRequirements.filter((req: any) => req.criticality === 'MEDIUM' && req.toughness === 'Tough').length
+      },
+      LOW: {
+        Easy: recruiterRequirements.filter((req: any) => req.criticality === 'LOW' && req.toughness === 'Easy').length,
+        Medium: recruiterRequirements.filter((req: any) => req.criticality === 'LOW' && req.toughness === 'Medium').length,
+        Tough: recruiterRequirements.filter((req: any) => req.criticality === 'LOW' && req.toughness === 'Tough').length
+      }
+    };
+
+    // Calculate pending and closed distribution
+    const pendingDistribution = recruiterRequirements.filter((req: any) => (req.deliveredCount || 0) < getExpectedCount(req.criticality, req.toughness)).length;
+    const closedDistribution = recruiterRequirements.filter((req: any) => (req.deliveredCount || 0) >= getExpectedCount(req.criticality, req.toughness) && getExpectedCount(req.criticality, req.toughness) > 0).length;
+
+    return { counts, breakdowns, pendingDistribution, closedDistribution };
+  }, [recruiterRequirements]);
+
   if (!recruiterProfile) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -1128,56 +1171,37 @@ export default function RecruiterDashboard2() {
                 </div>
               )}
 
-              {/* Three Buttons and Feature Boxes Section */}
-              <div className="mb-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h2>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setIsPostJobModalOpen(true)}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
-                      data-testid="button-post-jobs">
-                      Post Jobs
-                    </button>
-                    <button
-                      onClick={() => setIsUploadResumeModalOpen(true)}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
-                      data-testid="button-upload-resume">
-                      Upload Resume
-                    </button>
-                    <button
-                      onClick={() => window.open('/source-resume', '_blank')}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium transition-colors"
-                      data-testid="button-source-resume">
-                      Source Resume
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-
               {/* Applicant Overview Table */}
               <Card className="bg-white border border-gray-200">
                 <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4 pt-6">
                   <CardTitle className="text-lg font-semibold text-gray-900">Applicant Overview</CardTitle>
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-sm text-red-600 hover:text-red-700 border-red-300 hover:border-red-400"
-                      onClick={() => navigate('/archives')}
-                      data-testid="button-archive-applicants"
-                    >
-                      Archive
-                    </Button>
+                    <button
+                      onClick={() => setIsPostJobModalOpen(true)}
+                      className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
+                      data-testid="button-post-jobs">
+                      Post Jobs
+                    </button>
+                    <button
+                      onClick={() => setIsUploadResumeModalOpen(true)}
+                      className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
+                      data-testid="button-upload-resume">
+                      Upload Resume
+                    </button>
+                    <button
+                      onClick={() => window.open('/source-resume', '_blank')}
+                      className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
+                      data-testid="button-source-resume">
+                      Source Resume
+                    </button>
                     {getEffectiveApplicantData().length > 5 && (
-                      <Button
-                        className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded"
+                      <button
                         onClick={() => setIsApplicantOverviewModalOpen(true)}
+                        className="px-3 py-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-xs font-medium transition-colors"
                         data-testid="button-view-all-applicants"
                       >
                         View More
-                      </Button>
+                      </button>
                     )}
                   </div>
                 </CardHeader>
@@ -1288,243 +1312,257 @@ export default function RecruiterDashboard2() {
               <Card className="bg-white border border-gray-200">
                 <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4 pt-6">
                   <CardTitle className="text-lg font-semibold text-gray-900">Target</CardTitle>
-                  <Button
-                    className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2"
+                  <button
                     onClick={() => setIsTargetModalOpen(true)}
+                    className="px-3 py-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-xs font-medium transition-colors"
                     data-testid="button-view-all-targets"
                   >
-                    View All
-                  </Button>
+                    View More
+                  </button>
                 </CardHeader>
                 <CardContent className="p-6 pt-0">
-                  <div className="grid grid-cols-4 gap-0 bg-blue-50 rounded-lg overflow-hidden">
-                    <div className="text-center py-8 px-4 border-r border-blue-100">
-                      <p className="text-sm font-semibold text-gray-700 mb-3" data-testid="text-current-quarter">Current Quarter</p>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {aggregatedTargets?.currentQuarter
-                          ? `${aggregatedTargets.currentQuarter.quarter}-${aggregatedTargets.currentQuarter.year}`
-                          : `Q${Math.ceil((new Date().getMonth() + 1) / 3)}-${new Date().getFullYear()}`}
-                      </p>
-                    </div>
-                    <div className="text-center py-8 px-4 border-r border-blue-100">
-                      <p className="text-sm font-semibold text-gray-700 mb-3" data-testid="text-minimum-target">Minimum Target</p>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {aggregatedTargets?.currentQuarter
-                          ? formatIndianCurrency(aggregatedTargets.currentQuarter.minimumTarget)
-                          : '0'}
-                      </p>
-                    </div>
-                    <div className="text-center py-8 px-4 border-r border-blue-100">
-                      <p className="text-sm font-semibold text-gray-700 mb-3" data-testid="text-target-achieved">Target Achieved</p>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {aggregatedTargets?.currentQuarter
-                          ? formatIndianCurrency(aggregatedTargets.currentQuarter.targetAchieved)
-                          : '0'}
-                      </p>
-                    </div>
-                    <div className="text-center py-8 px-4">
-                      <p className="text-sm font-semibold text-gray-700 mb-3" data-testid="text-incentive-earned">Incentive Earned</p>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {aggregatedTargets?.currentQuarter
-                          ? formatIndianCurrency(aggregatedTargets.currentQuarter.incentiveEarned)
-                          : '0'}
-                      </p>
-                    </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Current Quarter</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Minimum Target</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Target Achieved</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Incentive Earned</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td className="py-3 px-4 text-sm text-gray-900" data-testid="text-current-quarter">
+                            {aggregatedTargets?.currentQuarter
+                              ? `${aggregatedTargets.currentQuarter.quarter}-${aggregatedTargets.currentQuarter.year}`
+                              : `Q${Math.ceil((new Date().getMonth() + 1) / 3)}-${new Date().getFullYear()}`}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-900" data-testid="text-minimum-target">
+                            {aggregatedTargets?.currentQuarter
+                              ? formatIndianCurrency(aggregatedTargets.currentQuarter.minimumTarget)
+                              : '0'}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-900" data-testid="text-target-achieved">
+                            {aggregatedTargets?.currentQuarter
+                              ? formatIndianCurrency(aggregatedTargets.currentQuarter.targetAchieved)
+                              : '0'}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-900" data-testid="text-incentive-earned">
+                            {aggregatedTargets?.currentQuarter
+                              ? formatIndianCurrency(aggregatedTargets.currentQuarter.incentiveEarned)
+                              : '0'}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Daily Metrics Section */}
-              <Card className="bg-white border border-gray-200">
-                <CardHeader className="flex flex-row items-center justify-between pb-4 pt-6">
-                  <CardTitle className="text-lg font-semibold text-gray-900">Daily Metrics</CardTitle>
-                  <div className="flex items-center space-x-2">
-                    <StandardDatePicker
-                      value={selectedDate}
-                      onChange={(date) => date && setSelectedDate(date)}
-                      placeholder="Select date"
-                      className="h-8 w-40"
-                    />
-                  </div>
-                </CardHeader>
-
-                <CardContent className="px-6 pb-6 pt-0">
-                  <div className="grid grid-cols-3 gap-6">
-                    {/* Left side - Metrics */}
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center py-2">
-                        <span className="text-sm font-medium text-gray-600">Total Requirements</span>
-                        <span className="text-4xl font-bold text-blue-600" data-testid="text-total-requirements">{dailyMetrics?.totalRequirements ?? 0}</span>
+              {/* Daily Metrics Section - Redesigned based on image 2 */}
+              <div className="grid grid-cols-3 gap-6">
+                {/* Left - Overall Performance */}
+                <Card className="bg-white border border-gray-200">
+                  <CardHeader className="flex flex-row items-center justify-between pb-4 pt-6">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 ${dailyMetrics?.overallPerformance === 'G'
+                        ? 'bg-green-100'
+                        : dailyMetrics?.overallPerformance === 'A'
+                          ? 'bg-yellow-100'
+                          : 'bg-red-100'
+                        } rounded-full flex items-center justify-center`} data-testid="indicator-performance">
+                        <span className={`${dailyMetrics?.overallPerformance === 'G'
+                          ? 'text-green-700'
+                          : dailyMetrics?.overallPerformance === 'A'
+                            ? 'text-yellow-700'
+                            : 'text-red-700'
+                          } font-bold text-sm`}>{dailyMetrics?.overallPerformance ?? 'G'}</span>
                       </div>
+                      <CardTitle className="text-lg font-semibold text-gray-900">Overall Performance</CardTitle>
+                    </div>
+                    <button
+                      onClick={() => setIsPerformanceModalOpen(true)}
+                      className="px-3 py-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-xs font-medium transition-colors"
+                      data-testid="button-view-more-performance"
+                    >
+                      View More
+                    </button>
+                  </CardHeader>
+                  <CardContent className="px-6 pb-6 pt-0">
+                    <div className="h-64 flex items-center justify-center bg-white rounded-lg p-4 border border-gray-200">
+                      {dailyMetrics?.requirements && dailyMetrics.requirements.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart
+                            data={dailyMetrics.requirements.map((req: any, index: number) => ({
+                              name: `Req ${index + 1}`,
+                              value: req.delivered || 0,
+                              target: req.required || 0
+                            }))}
+                            margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                            <XAxis dataKey="name" stroke="#6b7280" style={{ fontSize: '12px' }} />
+                            <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
+                            <Tooltip
+                              contentStyle={{
+                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                border: '1px solid #e5e7eb',
+                                borderRadius: '0.5rem',
+                                fontSize: '11px'
+                              }}
+                            />
+                            <Legend wrapperStyle={{ fontSize: '10px' }} />
+                            <Line type="monotone" dataKey="value" stroke="#14b8a6" strokeWidth={2} name="Delivered" />
+                            <Line type="monotone" dataKey="target" stroke="#ec4899" strokeWidth={2} name="Target" />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="text-center text-gray-500 text-sm">
+                          No performance data available
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Middle - Daily Metrics */}
+                <Card className="bg-white border border-gray-200">
+                  <CardHeader className="pb-4 pt-6">
+                    <CardTitle className="text-lg font-semibold text-gray-900">Daily Metrics</CardTitle>
+                  </CardHeader>
+                  <CardContent className="px-6 pb-6 pt-0">
+                    <div className="space-y-0">
                       <div className="flex justify-between items-center py-2">
-                        <span className="text-sm font-medium text-gray-600">Total Resumes</span>
-                        <span className="text-2xl font-bold" data-testid="text-total-resumes">
-                          {(dailyMetrics?.totalResumesDelivered ?? 0) === (dailyMetrics?.totalResumesRequired ?? 0) ? (
-                            <span className="text-green-600">
-                              {dailyMetrics?.totalResumesDelivered ?? 0}/{dailyMetrics?.totalResumesRequired ?? 0}
-                            </span>
-                          ) : (
-                            <>
-                              <span className="text-red-600">{dailyMetrics?.totalResumesDelivered ?? 0}</span>
-                              <span className="text-green-600">/{dailyMetrics?.totalResumesRequired ?? 0}</span>
-                            </>
-                          )}
+                        <span className="text-sm font-medium text-gray-700">Total Requirements</span>
+                        <span className="text-2xl font-bold text-blue-600" data-testid="text-total-requirements">{dailyMetrics?.totalRequirements ?? 0}</span>
+                      </div>
+                      <div className="border-t border-gray-200"></div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-sm font-medium text-gray-700">Avg. Resumes per Requirement</span>
+                        <span className="text-2xl font-bold text-blue-600">
+                          {String(Math.round(
+                            dailyMetrics?.totalRequirements > 0 
+                              ? (dailyMetrics?.totalResumesDelivered ?? 0) / dailyMetrics.totalRequirements
+                              : 0
+                          )).padStart(2, '0')}
                         </span>
                       </div>
+                      <div className="border-t border-gray-200"></div>
                       <div className="flex justify-between items-center py-2">
-                        <span className="text-sm font-medium text-gray-600">Completed Requirements</span>
-                        <span className="text-4xl font-bold text-blue-600" data-testid="text-completed-requirements">{dailyMetrics?.completedRequirements ?? 0}</span>
+                        <span className="text-sm font-medium text-gray-700">Requirements per Recruiter</span>
+                        <span className="text-2xl font-bold text-blue-600">
+                          {String(dailyMetrics?.totalRequirements ?? 0).padStart(2, '0')}
+                        </span>
+                      </div>
+                      <div className="border-t border-gray-200"></div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-sm font-medium text-gray-700">Completed Requirements</span>
+                        <span className="text-2xl font-bold text-blue-600" data-testid="text-completed-requirements">{dailyMetrics?.completedRequirements ?? 0}</span>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
 
-                    {/* Middle section - Daily Delivery */}
-                    <div className="bg-slate-800 text-white rounded-lg p-6">
-                      <h3 className="text-lg font-semibold text-white mb-6">Daily Delivery</h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="text-center">
-                          <div className="text-sm text-gray-300 mb-2">Delivered</div>
-                          <div className="text-4xl font-bold text-white mb-3" data-testid="text-delivered-count">{dailyMetrics?.dailyDeliveryDelivered ?? 0}</div>
-                          <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white" onClick={() => setIsDeliveredModalOpen(true)} data-testid="button-view-delivered">
-                            View
-                          </Button>
+                {/* Right - Daily Delivery */}
+                <Card className="bg-white border border-gray-200">
+                  <CardContent className="p-4">
+                    {/* Top Controls */}
+                    <div className="flex items-center justify-between mb-4 gap-2">
+                      <Select value="Overall">
+                        <SelectTrigger className="h-8 w-20 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Overall">Overall</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <StandardDatePicker
+                        value={selectedDate}
+                        onChange={(date) => date && setSelectedDate(date)}
+                        placeholder="Select date"
+                        className="h-8 w-auto text-xs"
+                      />
+                    </div>
+                    {/* Title */}
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Daily Delivery</h3>
+                    {/* Delivery Boxes */}
+                    <div className="space-y-3">
+                      <div className="border-2 border-green-500 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-green-600">Delivered</span>
+                          <span className="text-3xl font-bold text-green-600" data-testid="text-delivered-count">
+                            {String(dailyMetrics?.dailyDeliveryDelivered ?? 0).padStart(2, '0')}
+                          </span>
                         </div>
-                        <div className="text-center">
-                          <div className="text-sm text-gray-300 mb-2">Defaulted</div>
-                          <div className="text-4xl font-bold text-white mb-3" data-testid="text-defaulted-count">{dailyMetrics?.dailyDeliveryDefaulted ?? 0}</div>
-                          <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white" onClick={() => setIsDefaultedModalOpen(true)} data-testid="button-view-defaulted">
-                            View
-                          </Button>
+                      </div>
+                      <div className="border-2 border-red-500 rounded-lg p-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-red-600">Defaulted</span>
+                          <span className="text-3xl font-bold text-red-600" data-testid="text-defaulted-count">
+                            {String(dailyMetrics?.dailyDeliveryDefaulted ?? 0).padStart(2, '0')}
+                          </span>
                         </div>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+              </div>
 
-                    {/* Right section - Performance */}
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className={`w-12 h-12 ${dailyMetrics?.overallPerformance === 'G'
-                          ? 'bg-green-100'
-                          : dailyMetrics?.overallPerformance === 'A'
-                            ? 'bg-yellow-100'
-                            : 'bg-red-100'
-                          } rounded-full flex items-center justify-center`} data-testid="indicator-performance">
-                          <span className={`${dailyMetrics?.overallPerformance === 'G'
-                            ? 'text-green-700'
-                            : dailyMetrics?.overallPerformance === 'A'
-                              ? 'text-yellow-700'
-                              : 'text-red-700'
-                            } font-bold text-lg`}>{dailyMetrics?.overallPerformance ?? 'G'}</span>
-                        </div>
-                        <div className="text-right">
-                          <Button
-                            className="btn-rounded bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2"
-                            onClick={() => setIsPerformanceModalOpen(true)}
-                            data-testid="button-view-more-performance"
-                          >
-                            View More
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="h-48 flex items-center justify-center bg-white rounded-lg p-4 border border-gray-200">
-                        {dailyMetrics?.requirements && dailyMetrics.requirements.length > 0 ? (
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart
-                              data={dailyMetrics.requirements.map((req: any) => ({
-                                criticality: req.criticality,
-                                delivered: req.delivered || 0,
-                                remaining: Math.max(0, (req.required || 0) - (req.delivered || 0))
-                              }))}
-                              margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
-                            >
-                              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                              <XAxis dataKey="criticality" stroke="#6b7280" style={{ fontSize: '12px' }} />
-                              <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} label={{ value: 'Resumes', angle: -90, position: 'insideLeft', style: { fontSize: '12px' } }} />
-                              <Tooltip
-                                contentStyle={{
-                                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                  border: '1px solid #e5e7eb',
-                                  borderRadius: '0.5rem',
-                                  fontSize: '11px'
-                                }}
-                              />
-                              <Legend wrapperStyle={{ fontSize: '10px' }} />
-                              <Bar dataKey="delivered" stackId="a" fill="#22c55e" name="Delivered" />
-                              <Bar dataKey="remaining" stackId="a" fill="#ef4444" name="Remaining" />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        ) : (
-                          <div className="text-center text-gray-500 text-sm">
-                            No requirements data available
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Bottom Row - Pending Meetings and CEO Commands */}
+              {/* Bottom Row - Pending Meetings and Message Status */}
               <div className="grid grid-cols-2 gap-6">
                 {/* Pending Meetings */}
                 <Card className="bg-white border border-gray-200">
                   <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4 pt-6">
                     <CardTitle className="text-lg font-semibold text-gray-900">Pending Meetings</CardTitle>
-                    {pendingMeetingsData.length > 2 && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
+                    {pendingMeetingsData.length > 3 && (
+                      <button
                         onClick={() => setIsPendingMeetingsModalOpen(true)}
+                        className="px-3 py-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-xs font-medium transition-colors"
                         data-testid="button-open-pending-meetings"
                       >
-                        <ExternalLink className="h-4 w-4 text-gray-600" />
-                      </Button>
+                        View More
+                      </button>
                     )}
                   </CardHeader>
                   <CardContent className="px-6 pb-6 pt-0">
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-gray-200">
-                            <th className="text-left py-3 font-medium text-gray-700">Meeting</th>
-                            <th className="text-left py-3 font-medium text-gray-700">Date</th>
-                            <th className="text-left py-3 font-medium text-gray-700">Person</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {pendingMeetingsData.slice(0, 2).map((meeting) => (
-                            <tr key={meeting.id} className="border-b border-gray-100">
-                              <td className="py-3 text-gray-900">{meeting.meeting}</td>
-                              <td className="py-3 text-gray-900">{meeting.date}</td>
-                              <td className="py-3 text-gray-900">{meeting.person}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <div className="space-y-3">
+                      {pendingMeetingsData.slice(0, 3).map((meeting) => (
+                        <div key={meeting.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors cursor-pointer">
+                          <span className="text-sm font-medium text-gray-900">Meeting for {meeting.person || meeting.meeting}</span>
+                          <ChevronDown className="h-4 w-4 text-gray-600" />
+                        </div>
+                      ))}
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* CEO Commands */}
+                {/* Message Status */}
                 <Card className="bg-white border border-gray-200">
                   <CardHeader className="flex flex-row items-center justify-between gap-2 pb-4 pt-6">
-                    <CardTitle className="text-lg font-semibold text-gray-900">CEO Commands</CardTitle>
-                    {ceoCommandsData.length > 3 && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
+                    <CardTitle className="text-lg font-semibold text-gray-900">Message Status</CardTitle>
+                    {ceoCommandsData.length > 2 && (
+                      <button
                         onClick={() => setIsCeoCommandsModalOpen(true)}
+                        className="px-3 py-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-xs font-medium transition-colors"
                         data-testid="button-open-ceo-commands"
                       >
-                        <ExternalLink className="h-4 w-4 text-gray-600" />
-                      </Button>
+                        View More
+                      </button>
                     )}
                   </CardHeader>
                   <CardContent className="px-6 pb-6 pt-0">
-                    <div className="bg-slate-800 text-white rounded-lg p-6 space-y-4">
-                      {ceoCommandsData.slice(0, 3).map((command) => (
-                        <div key={command.id} className="text-sm text-gray-300">
-                          <p>{command.command}</p>
+                    <div className="space-y-3">
+                      {ceoCommandsData.slice(0, 2).map((command, index) => (
+                        <div key={command.id || index} className="p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors">
+                          <div className="flex items-start justify-between mb-2">
+                            <span className="text-sm font-semibold text-gray-900">{command.person || 'Admin'}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500">{command.date || 'Today'}</span>
+                              <Check className="h-3 w-3 text-green-600" />
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-600 line-clamp-2">{command.command || command.message || 'No message content'}</p>
                         </div>
                       ))}
                     </div>
@@ -1546,7 +1584,7 @@ export default function RecruiterDashboard2() {
 
                 {/* Total Jobs - Clickable Link with External Icon */}
                 <div
-                  className="flex items-center justify-between py-3 border-b border-gray-100 cursor-pointer hover-elevate rounded-md px-2 -mx-2"
+                  className="flex items-center justify-between py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 rounded-md px-2 -mx-2 transition-colors"
                   onClick={() => navigate('/recruiter-active-jobs')}
                   data-testid="link-total-jobs"
                 >
@@ -1559,12 +1597,12 @@ export default function RecruiterDashboard2() {
 
                 {/* New Applications - Clickable Link with External Icon */}
                 <div
-                  className="flex items-center justify-between py-3 border-b border-gray-100 cursor-pointer hover-elevate rounded-md px-2 -mx-2"
+                  className="flex items-center justify-between py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 rounded-md px-2 -mx-2 transition-colors"
                   onClick={() => navigate('/recruiter-new-applications')}
                   data-testid="link-new-applications"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-blue-600 font-medium">New Applications</span>
+                    <span className="text-sm text-blue-600 font-medium">New Applicants</span>
                     <ExternalLink className="h-4 w-4 text-blue-600" />
                   </div>
                   <span className="text-3xl font-bold text-gray-900" data-testid="text-new-applications-count">{applicationStats.new}</span>
@@ -1572,7 +1610,7 @@ export default function RecruiterDashboard2() {
 
                 {/* Total Candidates - Clickable Link with External Icon */}
                 <div
-                  className="flex items-center justify-between py-3 border-b border-gray-100 cursor-pointer hover-elevate rounded-md px-2 -mx-2"
+                  className="flex items-center justify-between py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 rounded-md px-2 -mx-2 transition-colors"
                   onClick={() => navigate('/recruiter-all-candidates')}
                   data-testid="link-total-candidates"
                 >
@@ -1593,17 +1631,29 @@ export default function RecruiterDashboard2() {
                     <span className="text-sm text-gray-600">Today's Schedule</span>
                     <div className="flex items-center space-x-2">
                       <span className="text-2xl font-bold text-gray-900" data-testid="text-today-schedule-count">{getTodaysInterviews.length}</span>
-                      <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1 text-xs" onClick={() => setIsInterviewModalOpen(true)} data-testid="button-add-interview">
-                        Add
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-blue-600 hover:text-blue-700 p-0 h-auto font-normal text-xs underline" 
+                        onClick={() => setIsInterviewModalOpen(true)} 
+                        data-testid="button-add-interview"
+                      >
+                        +add
                       </Button>
                     </div>
                   </div>
 
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Pending cases</span>
+                    <span className="text-sm text-gray-600">Pending Cases</span>
                     <div className="flex items-center space-x-2">
                       <span className="text-2xl font-bold text-gray-900" data-testid="text-pending-cases-count">{getPendingInterviews.length}</span>
-                      <Button size="sm" className="bg-teal-500 hover:bg-teal-600 text-white px-3 py-1 text-xs" onClick={handleViewPendingCases} data-testid="button-view-pending-cases">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-blue-600 hover:text-blue-700 p-0 h-auto font-normal text-xs underline" 
+                        onClick={handleViewPendingCases} 
+                        data-testid="button-view-pending-cases"
+                      >
                         View
                       </Button>
                     </div>
@@ -1621,12 +1671,6 @@ export default function RecruiterDashboard2() {
     // Use real requirements data from API - no more sample data
     const requirementsTableData = recruiterRequirements;
 
-    // Function to get expected count based on criticality and toughness from Priority Distribution
-    const getExpectedCount = (criticality: string, toughness: string): number => {
-      const criticalityData = priorityDistribution[criticality as keyof typeof priorityDistribution];
-      return criticalityData?.[toughness as keyof typeof criticalityData] || 0;
-    };
-
     // Function to format count display as "delivered/expected"
     const getCountDisplay = (req: any): string => {
       const delivered = req.deliveredCount || 0;
@@ -1641,15 +1685,17 @@ export default function RecruiterDashboard2() {
       return delivered >= expected && expected > 0;
     };
 
-    // Summary boxes data - dynamically calculated from real data
-    const summaryBoxes = [
-      { title: 'Total', count: requirementsSummary.total.toString(), color: 'text-gray-900' },
-      { title: 'High Priority', count: requirementsSummary.highPriority.toString(), color: 'text-orange-500' },
-      { title: 'Robust', count: requirementsSummary.robust.toString(), color: 'text-green-500' },
-      { title: 'Idle', count: requirementsSummary.idle.toString(), color: 'text-blue-500' },
-      { title: 'Delivery Pending', count: requirementsSummary.deliveryPending.toString(), color: 'text-red-400' },
-      { title: 'Easy', count: requirementsSummary.easy.toString(), color: 'text-green-600' }
-    ];
+    // Filter requirements based on search query
+    const filteredRequirements = (() => {
+      if (!requirementsSearchQuery.trim()) return requirementsTableData;
+      const query = requirementsSearchQuery.toLowerCase();
+      return requirementsTableData.filter((req: any) =>
+        (req.position || '').toLowerCase().includes(query) ||
+        (req.company || '').toLowerCase().includes(query) ||
+        (req.spoc || '').toLowerCase().includes(query) ||
+        (req.criticality || '').toLowerCase().includes(query)
+      );
+    })();
 
     return (
       <div className="flex min-h-screen">
@@ -1657,302 +1703,460 @@ export default function RecruiterDashboard2() {
           <AdminTopHeader companyName="StaffOS" />
           <div className="flex h-screen">
             {/* Main Content Area */}
-            <div className="flex-1 px-6 py-6 overflow-y-auto">
-              <h2 className="text-xl font-semibold text-gray-900 mb-6">Requirements</h2>
-
-              {/* 6 Summary Boxes */}
-              <div className="grid grid-cols-6 gap-4 mb-6">
-                {summaryBoxes.map((box, index) => (
-                  <Card
-                    key={index}
-                    className="bg-white border border-gray-200 shadow-sm rounded-lg p-4 flex flex-col justify-between h-24 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
-                    data-testid={`card-req-${box.title.toLowerCase().replace(' ', '-')}`}
+            <div className="flex-1 flex flex-col overflow-hidden px-6 py-6">
+              {/* Header with Title, Search, and Buttons */}
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-gray-900">Requirements</h2>
+                <div className="flex items-center gap-3">
+                  <SearchBar
+                    value={requirementsSearchQuery}
+                    onChange={setRequirementsSearchQuery}
+                    placeholder="Search here"
+                    testId="input-search-requirements"
+                    className="w-64"
+                  />
+                  <button
+                    onClick={() => {
+                      sessionStorage.setItem('recruiterDashboardSidebarTab', sidebarTab);
+                      navigate('/archives');
+                    }}
+                    className="px-3 py-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-xs font-medium transition-colors"
+                    data-testid="button-archives"
                   >
-                    <h3 className="text-sm font-semibold text-gray-700">
-                      {box.title}
-                    </h3>
-                    <p className={`text-4xl font-bold ${box.color} self-end`}>
-                      {box.count}
-                    </p>
-                  </Card>
-                ))}
-              </div>
-
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Deliverables</h3>
-
-              {/* Requirements Table */}
-              <Card className="bg-white border border-gray-200">
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="bg-gray-50 border-b border-gray-200">
-                          <th className="text-left py-3 px-4 font-medium text-gray-700">Positions</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-700">Criticality</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-700">Company</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-700">SPOC</th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-700">Count</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {isLoadingRequirements ? (
-                          <tr>
-                            <td colSpan={5} className="py-8 text-center text-gray-500">
-                              <div className="flex items-center justify-center gap-2">
-                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600"></div>
-                                <span>Loading requirements...</span>
-                              </div>
-                            </td>
-                          </tr>
-                        ) : requirementsTableData.length === 0 ? (
-                          <tr>
-                            <td colSpan={5} className="py-8 text-center text-gray-500">
-                              No requirements assigned to you yet. Requirements will appear here once your Team Lead assigns them.
-                            </td>
-                          </tr>
-                        ) : (
-                          requirementsTableData.slice(0, 5).map((req: any, index: number) => (
-                            <tr key={req.id || index} className="border-b border-gray-100 hover:bg-gray-50">
-                              <td className="py-3 px-4 text-gray-900">{req.position}</td>
-                              <td className="py-3 px-4">
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${req.criticality === 'HIGH' ? 'bg-red-100 text-red-800' :
-                                  req.criticality === 'MEDIUM' ? 'bg-blue-100 text-blue-800' :
-                                    'bg-green-100 text-green-800'
-                                  }`}>
-                                  {req.criticality}-{req.toughness || 'Medium'}
-                                </span>
-                              </td>
-                              <td className="py-3 px-4 text-gray-900">{req.company}</td>
-                              <td className="py-3 px-4 text-gray-900">{req.spoc}</td>
-                              <td className="py-3 px-4">
-                                {req.jdText ? (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => {
-                                      setSelectedJD(req);
-                                      setIsJDDetailsModalOpen(true);
-                                    }}
-                                    className="p-1 h-8 w-8"
-                                    title="View JD"
-                                  >
-                                    <Eye className="h-4 w-4 text-blue-600 hover:text-blue-800" />
-                                  </Button>
-                                ) : (
-                                  <span className="text-gray-400 text-xs">-</span>
-                                )}
-                              </td>
-                              <td className="py-3 px-4">
-                                <span className={`font-medium ${isCountComplete(req) ? 'text-green-600' : 'text-red-600'}`} data-testid={`text-count-${index}`}>
-                                  {getCountDisplay(req)}
-                                </span>
-                              </td>
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex justify-center gap-4 p-4 border-t border-gray-100">
-                    <Button
-                      variant="outline"
-                      className="bg-red-500 hover:bg-red-600 text-white hover:text-white border-red-500 hover:border-red-600 rounded px-6 disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={() => {
-                        sessionStorage.setItem('recruiterDashboardSidebarTab', sidebarTab);
-                        navigate('/archives');
-                      }}
-                      disabled={false}
-                      data-testid="button-archives"
-                    >
-                      Archives
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="bg-blue-500 hover:bg-blue-600 text-white hover:text-white border-blue-500 hover:border-blue-600 rounded px-6"
+                    Archive
+                  </button>
+                  {filteredRequirements.length > 10 && (
+                    <button
                       onClick={() => setIsAllRequirementsModalOpen(true)}
-                      disabled={requirementsTableData.length <= 5}
+                      className="px-3 py-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-xs font-medium transition-colors"
                       data-testid="button-view-more"
                     >
                       View More
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                    </button>
+                  )}
+                </div>
+              </div>
 
-              {/* All Requirements Modal */}
-              {isAllRequirementsModalOpen && (
-                <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-                  <div className="bg-white rounded-lg max-w-6xl w-full mx-4 max-h-[90vh] flex flex-col">
-                    <div className="flex justify-between items-center p-6 border-b border-gray-200">
-                      <h2 className="text-2xl font-bold text-gray-900">
-                        All Requirements
-                      </h2>
-                      <div className="flex items-center gap-4">
-                        <input
-                          type="text"
-                          value={requirementsSearchQuery}
-                          onChange={(e) => setRequirementsSearchQuery(e.target.value)}
-                          placeholder="Search requirements..."
-                          className="border border-gray-300 px-4 py-2 rounded bg-white text-gray-900 w-64 placeholder:text-gray-400"
-                          data-testid="input-search-requirements"
-                        />
-                        <button
-                          onClick={() => {
-                            setIsAllRequirementsModalOpen(false);
-                            setRequirementsSearchQuery('');
-                          }}
-                          className="text-red-500 hover:text-red-700 font-bold text-2xl"
-                          data-testid="button-close-requirements-modal"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="overflow-auto flex-1 p-6">
+              {/* Requirements Table */}
+              <div className="flex-1 overflow-y-auto">
+                <Card className="bg-white border border-gray-200">
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
                       <table className="w-full border-collapse">
                         <thead>
-                          <tr className="bg-gray-50 border-b border-gray-200 sticky top-0">
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">Positions</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">Criticality</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">Company</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">SPOC</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700">Count</th>
+                          <tr className="bg-gray-50 border-b border-gray-200">
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Positions</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Company</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">SPOC</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Talent Advisor</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Team Lead</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Criticality</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {requirementsTableData.length === 0 ? (
+                          {isLoadingRequirements ? (
                             <tr>
-                              <td colSpan={5} className="py-8 text-center text-gray-500">
-                                No requirements assigned to you yet.
+                              <td colSpan={7} className="py-8 text-center text-gray-500">
+                                <div className="flex items-center justify-center gap-2">
+                                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600"></div>
+                                  <span>Loading requirements...</span>
+                                </div>
+                              </td>
+                            </tr>
+                          ) : filteredRequirements.length === 0 ? (
+                            <tr>
+                              <td colSpan={7} className="py-8 text-center text-gray-500">
+                                {requirementsSearchQuery ? 'No requirements found matching your search.' : 'No requirements assigned to you yet. Requirements will appear here once your Team Lead assigns them.'}
                               </td>
                             </tr>
                           ) : (
-                            requirementsTableData
-                              .filter((req: any) => {
-                                if (!requirementsSearchQuery) return true;
-                                const query = requirementsSearchQuery.toLowerCase();
-                                return (
-                                  (req.position || '').toLowerCase().includes(query) ||
-                                  (req.criticality || '').toLowerCase().includes(query) ||
-                                  (req.toughness || '').toLowerCase().includes(query) ||
-                                  (req.company || '').toLowerCase().includes(query) ||
-                                  (req.spoc || '').toLowerCase().includes(query)
-                                );
-                              })
-                              .map((req: any, index: number) => (
-                                <tr key={req.id || index} className="border-b border-gray-100 hover:bg-gray-50">
-                                  <td className="py-3 px-4 text-gray-900">{req.position}</td>
-                                  <td className="py-3 px-4">
-                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${req.criticality === 'HIGH' ? 'bg-red-100 text-red-800' :
-                                      req.criticality === 'MEDIUM' ? 'bg-blue-100 text-blue-800' :
-                                        'bg-green-100 text-green-800'
-                                      }`}>
-                                      {req.criticality}-{req.toughness || 'Medium'}
-                                    </span>
+                            filteredRequirements.slice(0, 10).map((req: any, index: number) => {
+                              const criticalityColor = req.criticality === 'HIGH' ? 'text-red-600' : req.criticality === 'MEDIUM' ? 'text-blue-600' : 'text-gray-600';
+                              return (
+                                <tr key={req.id || index} className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                                  <td className="py-3 px-4 text-gray-900 font-medium text-sm">{req.position}</td>
+                                  <td className="py-3 px-4 text-gray-600 text-sm">{req.company}</td>
+                                  <td className="py-3 px-4 text-gray-600 text-sm">{req.spoc}</td>
+                                  <td className="py-3 px-4 text-gray-600 text-sm">
+                                    {req.talentAdvisor === "Unassigned" || !req.talentAdvisor ? (
+                                      <span className="text-cyan-500">Unassigned</span>
+                                    ) : (
+                                      req.talentAdvisor
+                                    )}
                                   </td>
-                                  <td className="py-3 px-4 text-gray-900">{req.company}</td>
-                                  <td className="py-3 px-4 text-gray-900">{req.spoc}</td>
+                                  <td className="py-3 px-4 text-gray-600 text-sm">{req.teamLead || 'N/A'}</td>
                                   <td className="py-3 px-4">
-                                    <span className={`font-medium ${isCountComplete(req) ? 'text-green-600' : 'text-red-600'}`}>
-                                      {getCountDisplay(req)}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                      <span className={`w-2 h-2 rounded-full ${req.criticality === 'HIGH' ? 'bg-red-600' : req.criticality === 'MEDIUM' ? 'bg-blue-600' : 'bg-gray-600'}`}></span>
+                                      <span className={`text-sm font-medium ${criticalityColor}`}>
+                                        {req.criticality}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="py-3 px-4">
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                          <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end" className="w-32">
+                                        {req.jdText && (
+                                          <DropdownMenuItem onClick={() => {
+                                            setSelectedJD(req);
+                                            setIsJDDetailsModalOpen(true);
+                                          }}>
+                                            View JD
+                                          </DropdownMenuItem>
+                                        )}
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
                                   </td>
                                 </tr>
-                              ))
+                              );
+                            })
                           )}
                         </tbody>
                       </table>
                     </div>
-                  </div>
-                </div>
-              )}
-            </div>
 
-            {/* Priority Distribution Sidebar */}
-            <div className="w-80 bg-white border-l border-gray-200 px-6 py-6">
-              <div className="space-y-4">
-                {/* Priority Distribution Title */}
-                <h3 className="text-lg font-semibold text-gray-900">Priority Distribution</h3>
-
-                {/* Priority Distribution Table */}
-                <Card className="bg-white border border-gray-200">
-                  <CardContent className="p-4">
-                    <div className="space-y-3">
-                      {/* HIGH Priority Group */}
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between bg-red-50 px-3 py-2 rounded">
-                          <span className="text-sm font-semibold text-red-800">HIGH</span>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
-                            <span className="text-xs text-gray-600">Easy</span>
-                            <span className="text-sm font-semibold text-red-600">{priorityDistribution.HIGH.Easy}</span>
-                          </div>
-                          <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
-                            <span className="text-xs text-gray-600">Med</span>
-                            <span className="text-sm font-semibold text-red-600">{priorityDistribution.HIGH.Medium}</span>
-                          </div>
-                          <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
-                            <span className="text-xs text-gray-600">Tough</span>
-                            <span className="text-sm font-semibold text-red-600">{priorityDistribution.HIGH.Tough}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* MED Priority Group */}
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between bg-yellow-50 px-3 py-2 rounded">
-                          <span className="text-sm font-semibold text-yellow-800">MED</span>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
-                            <span className="text-xs text-gray-600">Easy</span>
-                            <span className="text-sm font-semibold text-yellow-600">{priorityDistribution.MEDIUM.Easy}</span>
-                          </div>
-                          <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
-                            <span className="text-xs text-gray-600">Med</span>
-                            <span className="text-sm font-semibold text-yellow-600">{priorityDistribution.MEDIUM.Medium}</span>
-                          </div>
-                          <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
-                            <span className="text-xs text-gray-600">Tough</span>
-                            <span className="text-sm font-semibold text-yellow-600">{priorityDistribution.MEDIUM.Tough}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* LOW Priority Group */}
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between bg-green-50 px-3 py-2 rounded">
-                          <span className="text-sm font-semibold text-green-800">LOW</span>
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
-                            <span className="text-xs text-gray-600">Easy</span>
-                            <span className="text-sm font-semibold text-green-600">{priorityDistribution.LOW.Easy}</span>
-                          </div>
-                          <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
-                            <span className="text-xs text-gray-600">Med</span>
-                            <span className="text-sm font-semibold text-green-600">{priorityDistribution.LOW.Medium}</span>
-                          </div>
-                          <div className="flex items-center justify-between px-3 py-1.5 hover-elevate rounded">
-                            <span className="text-xs text-gray-600">Tough</span>
-                            <span className="text-sm font-semibold text-green-600">{priorityDistribution.LOW.Tough}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
                   </CardContent>
                 </Card>
               </div>
+
+              {/* All Requirements Modal */}
+              {isAllRequirementsModalOpen && (
+                <Dialog open={isAllRequirementsModalOpen} onOpenChange={setIsAllRequirementsModalOpen}>
+                  <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+                    <DialogHeader>
+                      <div className="flex items-center justify-between">
+                        <DialogTitle className="text-2xl font-bold text-gray-900">All Requirements</DialogTitle>
+                        <SearchBar
+                          value={requirementsSearchQuery}
+                          onChange={setRequirementsSearchQuery}
+                          placeholder="Search here"
+                          testId="input-search-requirements-modal"
+                          className="w-64"
+                        />
+                      </div>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-y-auto">
+                      <table className="w-full border-collapse">
+                        <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
+                          <tr>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Positions</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Company</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">SPOC</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Talent Advisor</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Team Lead</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Criticality</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredRequirements.length === 0 ? (
+                            <tr>
+                              <td colSpan={7} className="py-8 text-center text-gray-500">
+                                {requirementsSearchQuery ? 'No requirements found matching your search.' : 'No requirements assigned to you yet.'}
+                              </td>
+                            </tr>
+                          ) : (
+                            filteredRequirements.map((req: any, index: number) => {
+                              const criticalityColor = req.criticality === 'HIGH' ? 'text-red-600' : req.criticality === 'MEDIUM' ? 'text-blue-600' : 'text-gray-600';
+                              return (
+                                <tr key={req.id || index} className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                                  <td className="py-3 px-4 text-gray-900 font-medium text-sm">{req.position}</td>
+                                  <td className="py-3 px-4 text-gray-600 text-sm">{req.company}</td>
+                                  <td className="py-3 px-4 text-gray-600 text-sm">{req.spoc}</td>
+                                  <td className="py-3 px-4 text-gray-600 text-sm">
+                                    {req.talentAdvisor === "Unassigned" || !req.talentAdvisor ? (
+                                      <span className="text-cyan-500">Unassigned</span>
+                                    ) : (
+                                      req.talentAdvisor
+                                    )}
+                                  </td>
+                                  <td className="py-3 px-4 text-gray-600 text-sm">{req.teamLead || 'N/A'}</td>
+                                  <td className="py-3 px-4">
+                                    <div className="flex items-center gap-2">
+                                      <span className={`w-2 h-2 rounded-full ${req.criticality === 'HIGH' ? 'bg-red-600' : req.criticality === 'MEDIUM' ? 'bg-blue-600' : 'bg-gray-600'}`}></span>
+                                      <span className={`text-sm font-medium ${criticalityColor}`}>
+                                        {req.criticality}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="py-3 px-4">
+                                    {req.jdText && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                          setSelectedJD(req);
+                                          setIsJDDetailsModalOpen(true);
+                                        }}
+                                        className="p-1 h-8 w-8"
+                                        title="View JD"
+                                      >
+                                        <Eye className="h-4 w-4 text-blue-600 hover:text-blue-800" />
+                                      </Button>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
+            </div>
+
+            {/* Right Section - Priority Distribution with Tabs */}
+            <div className="w-80 bg-white border-l border-gray-200 flex flex-col overflow-hidden">
+              <Tabs defaultValue="guideline" className="w-full flex flex-col h-full">
+                <div className="px-6 pt-6 pb-4 flex-shrink-0 border-b border-gray-200">
+                  <TabsList className="flex w-full bg-gray-100 p-1 rounded-lg gap-1">
+                    <TabsTrigger value="guideline" className="text-sm data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm rounded-md transition-all flex-shrink-0">Guideline</TabsTrigger>
+                    <TabsTrigger value="priority" className="text-sm data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm rounded-md transition-all flex-1">Priority Recruitments</TabsTrigger>
+                  </TabsList>
+                </div>
+                <div className="flex-1 overflow-y-auto px-6 pb-6" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                  <style>{`
+                    .overflow-y-auto::-webkit-scrollbar {
+                      display: none;
+                    }
+                  `}</style>
+                  {/* Guideline Tab - Static Values */}
+                  <TabsContent value="guideline" className="space-y-2 mt-4">
+                    {/* HIGH Priority Group */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between bg-blue-50 px-3 py-2 rounded">
+                        <span className="text-sm font-semibold text-gray-800">HIGH</span>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between px-3 py-1.5 hover:bg-gray-50 rounded">
+                          <span className="text-xs text-gray-600">Easy</span>
+                          <span className="text-sm font-semibold text-gray-900">{String(priorityDistribution.HIGH.Easy).padStart(2, '0')}</span>
+                        </div>
+                        <div className="flex items-center justify-between px-3 py-1.5 hover:bg-gray-50 rounded">
+                          <span className="text-xs text-gray-600">Med</span>
+                          <span className="text-sm font-semibold text-gray-900">{String(priorityDistribution.HIGH.Medium).padStart(2, '0')}</span>
+                        </div>
+                        <div className="flex items-center justify-between px-3 py-1.5 hover:bg-gray-50 rounded">
+                          <span className="text-xs text-gray-600">Tough</span>
+                          <span className="text-sm font-semibold text-gray-900">{String(priorityDistribution.HIGH.Tough).padStart(2, '0')}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* MED Priority Group */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between bg-blue-50 px-3 py-2 rounded">
+                        <span className="text-sm font-semibold text-gray-800">MED</span>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between px-3 py-1.5 hover:bg-gray-50 rounded">
+                          <span className="text-xs text-gray-600">Easy</span>
+                          <span className="text-sm font-semibold text-gray-900">{String(priorityDistribution.MEDIUM.Easy).padStart(2, '0')}</span>
+                        </div>
+                        <div className="flex items-center justify-between px-3 py-1.5 hover:bg-gray-50 rounded">
+                          <span className="text-xs text-gray-600">Med</span>
+                          <span className="text-sm font-semibold text-gray-900">{String(priorityDistribution.MEDIUM.Medium).padStart(2, '0')}</span>
+                        </div>
+                        <div className="flex items-center justify-between px-3 py-1.5 hover:bg-gray-50 rounded">
+                          <span className="text-xs text-gray-600">Tough</span>
+                          <span className="text-sm font-semibold text-gray-900">{String(priorityDistribution.MEDIUM.Tough).padStart(2, '0')}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* LOW Priority Group */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between bg-blue-50 px-3 py-2 rounded">
+                        <span className="text-sm font-semibold text-gray-800">LOW</span>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between px-3 py-1.5 hover:bg-gray-50 rounded">
+                          <span className="text-xs text-gray-600">Easy</span>
+                          <span className="text-sm font-semibold text-gray-900">{String(priorityDistribution.LOW.Easy).padStart(2, '0')}</span>
+                        </div>
+                        <div className="flex items-center justify-between px-3 py-1.5 hover:bg-gray-50 rounded">
+                          <span className="text-xs text-gray-600">Med</span>
+                          <span className="text-sm font-semibold text-gray-900">{String(priorityDistribution.LOW.Medium).padStart(2, '0')}</span>
+                        </div>
+                        <div className="flex items-center justify-between px-3 py-1.5 hover:bg-gray-50 rounded">
+                          <span className="text-xs text-gray-600">Tough</span>
+                          <span className="text-sm font-semibold text-gray-900">{String(priorityDistribution.LOW.Tough).padStart(2, '0')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* Priority Recruitments Tab - Calculated Values */}
+                  <TabsContent value="priority" className="space-y-3 mt-4">
+                    {/* High Priority Card */}
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                            <ChevronUp className="h-5 w-5 text-red-600" />
+                          </div>
+                          <span className="text-sm font-medium text-red-600">High priority</span>
+                        </div>
+                        <span className="text-2xl font-bold text-red-600">{String(priorityCounts.counts.HIGH).padStart(2, '0')}</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded">
+                          <span className="text-xs text-gray-600">Easy</span>
+                          <span className="text-sm font-semibold text-gray-900">{String(priorityCounts.breakdowns.HIGH.Easy).padStart(2, '0')}</span>
+                        </div>
+                        <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded">
+                          <span className="text-xs text-gray-600">Medium</span>
+                          <span className="text-sm font-semibold text-gray-900">{String(priorityCounts.breakdowns.HIGH.Medium).padStart(2, '0')}</span>
+                        </div>
+                        <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded">
+                          <span className="text-xs text-gray-600">Tough</span>
+                          <span className="text-sm font-semibold text-gray-900">{String(priorityCounts.breakdowns.HIGH.Tough).padStart(2, '0')}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Medium Priority Card */}
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                            <div className="flex gap-0.5">
+                              <ChevronLeft className="h-4 w-4 text-blue-600" />
+                              <ChevronRight className="h-4 w-4 text-blue-600" />
+                            </div>
+                          </div>
+                          <span className="text-sm font-medium text-blue-600">Medium priority</span>
+                        </div>
+                        <span className="text-2xl font-bold text-blue-600">{String(priorityCounts.counts.MEDIUM).padStart(2, '0')}</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded">
+                          <span className="text-xs text-gray-600">Easy</span>
+                          <span className="text-sm font-semibold text-gray-900">{String(priorityCounts.breakdowns.MEDIUM.Easy).padStart(2, '0')}</span>
+                        </div>
+                        <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded">
+                          <span className="text-xs text-gray-600">Medium</span>
+                          <span className="text-sm font-semibold text-gray-900">{String(priorityCounts.breakdowns.MEDIUM.Medium).padStart(2, '0')}</span>
+                        </div>
+                        <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded">
+                          <span className="text-xs text-gray-600">Tough</span>
+                          <span className="text-sm font-semibold text-gray-900">{String(priorityCounts.breakdowns.MEDIUM.Tough).padStart(2, '0')}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Low Priority Card */}
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                            <ChevronDown className="h-5 w-5 text-gray-600" />
+                          </div>
+                          <span className="text-sm font-medium text-gray-600">Low priority</span>
+                        </div>
+                        <span className="text-2xl font-bold text-gray-600">{String(priorityCounts.counts.LOW).padStart(2, '0')}</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded">
+                          <span className="text-xs text-gray-600">Easy</span>
+                          <span className="text-sm font-semibold text-gray-900">{String(priorityCounts.breakdowns.LOW.Easy).padStart(2, '0')}</span>
+                        </div>
+                        <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded">
+                          <span className="text-xs text-gray-600">Medium</span>
+                          <span className="text-sm font-semibold text-gray-900">{String(priorityCounts.breakdowns.LOW.Medium).padStart(2, '0')}</span>
+                        </div>
+                        <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded">
+                          <span className="text-xs text-gray-600">Tough</span>
+                          <span className="text-sm font-semibold text-gray-900">{String(priorityCounts.breakdowns.LOW.Tough).padStart(2, '0')}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Total Distribution Card */}
+                    <div className="bg-white rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                            <FileText className="h-5 w-5 text-orange-600" />
+                          </div>
+                          <span className="text-sm font-medium text-orange-600">Total Distribution</span>
+                        </div>
+                        <span className="text-2xl font-bold text-orange-600">{String(priorityCounts.counts.TOTAL).padStart(2, '0')}</span>
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded">
+                          <span className="text-xs text-gray-600">Pending Distribution</span>
+                          <span className="text-sm font-semibold text-gray-900">{String(priorityCounts.pendingDistribution).padStart(2, '0')}</span>
+                        </div>
+                        <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded">
+                          <span className="text-xs text-gray-600">Closed Distribution</span>
+                          <span className="text-sm font-semibold text-gray-900">{String(priorityCounts.closedDistribution).padStart(2, '0')}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </div>
+              </Tabs>
             </div>
           </div>
         </div>
       </div>
     );
   };
+
+  // Helper function to get initials from name
+  const getInitials = (name: string): string => {
+    if (!name) return '';
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  // Helper function to calculate days ago from a date
+  const calculateDaysAgo = (dateString: string | null | undefined): string => {
+    if (!dateString || dateString === 'N/A') return 'N/A';
+    try {
+      let date: Date;
+      if (typeof dateString === 'string' && dateString.includes('-')) {
+        const [day, month, year] = dateString.split('-');
+        date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      } else {
+        date = new Date(dateString);
+      }
+      
+      const now = new Date();
+      const diffTime = Math.abs(now.getTime() - date.getTime());
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) return '0 days ago';
+      if (diffDays === 1) return '01 day ago';
+      const paddedDays = diffDays < 10 ? `0${diffDays}` : diffDays.toString();
+      return `${paddedDays} days ago`;
+    } catch {
+      return 'N/A';
+    }
+  };
+
+  // Pipeline stages with display names
+  const pipelineStages = [
+    { key: 'level1', display: 'Level 1' },
+    { key: 'level2', display: 'Level 2' },
+    { key: 'level3', display: 'Level 3' },
+    { key: 'finalRound', display: 'Final Round' },
+    { key: 'hrRound', display: 'HR Round' },
+    { key: 'offerStage', display: 'Offer Stage' },
+    { key: 'closure', display: 'Closure' }
+  ];
 
   const renderPipelineContent = () => {
     // Closure report data fetched from backend (Revenue Mappings provided by Admin)
@@ -1966,165 +2170,99 @@ export default function RecruiterDashboard2() {
             {/* Main Content Area */}
             <div className="flex-1 px-6 py-6 overflow-y-auto">
               {/* Header */}
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex justify-between items-center mb-4">
                 <h2 className="text-xl font-semibold text-gray-900">Pipeline</h2>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                   <StandardDatePicker
                     value={pipelineDate}
                     onChange={(date) => date && setPipelineDate(date)}
-                    placeholder="Pick a date"
-                    className="w-60"
+                    placeholder="Select date"
+                    className="h-10 w-40 rounded"
                     data-testid="button-pipeline-date-picker"
                   />
                 </div>
               </div>
 
-              {/* Pipeline Layout - Matching Admin/TL Design */}
-              <div className="flex gap-6 mb-6">
-                {/* Main Pipeline Content */}
-                <div className="flex-1">
-                  <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                    <CardContent className="p-0">
-                      <div className="overflow-x-auto">
-                        <table className="w-full border-collapse">
-                          <thead>
-                            <tr>
-                              <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]" data-testid="header-pipeline-level1">Level 1</th>
-                              <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]" data-testid="header-pipeline-level2">Level 2</th>
-                              <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]" data-testid="header-pipeline-level3">Level 3</th>
-                              <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]" data-testid="header-pipeline-finalround">Final Round</th>
-                              <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]" data-testid="header-pipeline-hrround">HR Round</th>
-                              <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]" data-testid="header-pipeline-offerstage">Offer Stage</th>
-                              <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]" data-testid="header-pipeline-closure">Closure</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr>
-                              <td className="p-3 align-top" data-testid="column-pipeline-level1">
-                                <div className="flex flex-col gap-2">
-                                  {getPipelineCandidatesByStage.level1.map((candidate, index) => (
-                                    <button
-                                      key={candidate.id}
-                                      onClick={() => handlePipelineCandidateClick(candidate)}
-                                      className="px-3 py-2 bg-green-200 dark:bg-green-800 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200 cursor-pointer hover:bg-green-300 dark:hover:bg-green-700 transition-colors"
-                                      data-testid={`candidate-level1-${index}`}
-                                    >
-                                      {candidate.candidateName}
-                                    </button>
-                                  ))}
-                                  {getPipelineCandidatesByStage.level1.length === 0 && (
-                                    <div className="px-3 py-2 text-gray-400 dark:text-gray-500 text-sm text-center">-</div>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="p-3 align-top" data-testid="column-pipeline-level2">
-                                <div className="flex flex-col gap-2">
-                                  {getPipelineCandidatesByStage.level2.map((candidate, index) => (
-                                    <button
-                                      key={candidate.id}
-                                      onClick={() => handlePipelineCandidateClick(candidate)}
-                                      className="px-3 py-2 bg-green-300 dark:bg-green-700 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200 cursor-pointer hover:bg-green-400 dark:hover:bg-green-600 transition-colors"
-                                      data-testid={`candidate-level2-${index}`}
-                                    >
-                                      {candidate.candidateName}
-                                    </button>
-                                  ))}
-                                  {getPipelineCandidatesByStage.level2.length === 0 && (
-                                    <div className="px-3 py-2 text-gray-400 dark:text-gray-500 text-sm text-center">-</div>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="p-3 align-top" data-testid="column-pipeline-level3">
-                                <div className="flex flex-col gap-2">
-                                  {getPipelineCandidatesByStage.level3.map((candidate, index) => (
-                                    <button
-                                      key={candidate.id}
-                                      onClick={() => handlePipelineCandidateClick(candidate)}
-                                      className="px-3 py-2 bg-green-400 dark:bg-green-600 rounded text-center text-sm font-medium text-gray-800 dark:text-gray-200 cursor-pointer hover:bg-green-500 dark:hover:bg-green-500 transition-colors"
-                                      data-testid={`candidate-level3-${index}`}
-                                    >
-                                      {candidate.candidateName}
-                                    </button>
-                                  ))}
-                                  {getPipelineCandidatesByStage.level3.length === 0 && (
-                                    <div className="px-3 py-2 text-gray-400 dark:text-gray-500 text-sm text-center">-</div>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="p-3 align-top" data-testid="column-pipeline-finalround">
-                                <div className="flex flex-col gap-2">
-                                  {getPipelineCandidatesByStage.finalRound.map((candidate, index) => (
-                                    <button
-                                      key={candidate.id}
-                                      onClick={() => handlePipelineCandidateClick(candidate)}
-                                      className="px-3 py-2 bg-green-500 dark:bg-green-600 rounded text-center text-sm font-medium text-white cursor-pointer hover:bg-green-600 dark:hover:bg-green-500 transition-colors"
-                                      data-testid={`candidate-finalround-${index}`}
-                                    >
-                                      {candidate.candidateName}
-                                    </button>
-                                  ))}
-                                  {getPipelineCandidatesByStage.finalRound.length === 0 && (
-                                    <div className="px-3 py-2 text-gray-400 dark:text-gray-500 text-sm text-center">-</div>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="p-3 align-top" data-testid="column-pipeline-hrround">
-                                <div className="flex flex-col gap-2">
-                                  {getPipelineCandidatesByStage.hrRound.map((candidate, index) => (
-                                    <button
-                                      key={candidate.id}
-                                      onClick={() => handlePipelineCandidateClick(candidate)}
-                                      className="px-3 py-2 bg-green-600 dark:bg-green-500 rounded text-center text-sm font-medium text-white cursor-pointer hover:bg-green-700 dark:hover:bg-green-400 transition-colors"
-                                      data-testid={`candidate-hrround-${index}`}
-                                    >
-                                      {candidate.candidateName}
-                                    </button>
-                                  ))}
-                                  {getPipelineCandidatesByStage.hrRound.length === 0 && (
-                                    <div className="px-3 py-2 text-gray-400 dark:text-gray-500 text-sm text-center">-</div>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="p-3 align-top" data-testid="column-pipeline-offerstage">
-                                <div className="flex flex-col gap-2">
-                                  {getPipelineCandidatesByStage.offerStage.map((candidate, index) => (
-                                    <button
-                                      key={candidate.id}
-                                      onClick={() => handlePipelineCandidateClick(candidate)}
-                                      className="px-3 py-2 bg-green-700 dark:bg-green-500 rounded text-center text-sm font-medium text-white cursor-pointer hover:bg-green-800 dark:hover:bg-green-400 transition-colors"
-                                      data-testid={`candidate-offerstage-${index}`}
-                                    >
-                                      {candidate.candidateName}
-                                    </button>
-                                  ))}
-                                  {getPipelineCandidatesByStage.offerStage.length === 0 && (
-                                    <div className="px-3 py-2 text-gray-400 dark:text-gray-500 text-sm text-center">-</div>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="p-3 align-top" data-testid="column-pipeline-closure">
-                                <div className="flex flex-col gap-2">
-                                  {getPipelineCandidatesByStage.closure.map((candidate, index) => (
-                                    <button
-                                      key={candidate.id}
-                                      onClick={() => handlePipelineCandidateClick(candidate)}
-                                      className="px-3 py-2 bg-green-800 dark:bg-green-400 rounded text-center text-sm font-medium text-white cursor-pointer hover:bg-green-900 dark:hover:bg-green-300 transition-colors"
-                                      data-testid={`candidate-closure-${index}`}
-                                    >
-                                      {candidate.candidateName}
-                                    </button>
-                                  ))}
-                                  {getPipelineCandidatesByStage.closure.length === 0 && (
-                                    <div className="px-3 py-2 text-gray-400 dark:text-gray-500 text-sm text-center">-</div>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </CardContent>
-                  </Card>
+              {/* Pipeline Stages - Kanban Board Layout */}
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 p-2 flex-1 flex flex-col min-h-0 mb-6" style={{ height: 'calc(100vh - 200px)' }}>
+                <div className="flex-1 overflow-x-hidden overflow-y-hidden min-h-0">
+                  <div className="flex gap-1.5 w-full h-full">
+                    {pipelineStages.map((stage) => {
+                      const candidates = getPipelineCandidatesByStage[stage.key as keyof typeof getPipelineCandidatesByStage] || [];
+                      const count = Array.isArray(candidates) ? candidates.length : 0;
+                      return (
+                        <div key={stage.key} className="flex-1 min-w-0 flex flex-col h-full">
+                          {/* Column Header - Fixed */}
+                          <div className="mb-1 flex-shrink-0">
+                            <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-700 rounded-t px-2 py-1 border-b border-gray-200 dark:border-gray-600">
+                              <h3 className="text-[10px] font-medium text-gray-700 dark:text-gray-300 truncate" data-testid={`header-pipeline-${stage.key}`}>{stage.display}</h3>
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                                <span className="text-[10px] font-medium text-gray-700 dark:text-gray-300">{count}</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Column Content - Scrollable Vertically */}
+                          <div className="flex-1 overflow-y-auto overflow-x-hidden bg-white dark:bg-gray-900 rounded-b px-1.5 py-1.5 space-y-1.5 min-h-0" style={{ scrollbarWidth: 'thin' }}>
+                            {count === 0 ? (
+                              <div className="flex items-center justify-center h-full min-h-[100px]">
+                                <p className="text-[10px] text-gray-400 dark:text-gray-500">No candidates</p>
+                              </div>
+                            ) : (
+                              (Array.isArray(candidates) ? candidates : []).map((candidate: any, index: number) => {
+                                const initials = getInitials(candidate.candidateName || '');
+                                const daysAgo = calculateDaysAgo(candidate.appliedDate || candidate.updatedAt || candidate.createdAt);
+                                const roleApplied = candidate.roleApplied || candidate.jobTitle || 'N/A';
+                                const company = candidate.company || 'N/A';
+                                
+                                return (
+                                  <div
+                                    key={candidate.id || index}
+                                    onClick={() => handlePipelineCandidateClick(candidate)}
+                                    className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-1.5 cursor-pointer hover:shadow-sm transition-all hover:border-blue-300 dark:hover:border-blue-600 relative"
+                                    data-testid={`candidate-${stage.key}-${index}`}
+                                  >
+                                    {/* Card Content */}
+                                    <div className="flex items-start gap-1.5">
+                                      {/* Avatar - Very Small */}
+                                      <div className="flex-shrink-0">
+                                        <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                                          <span className="text-[9px] font-medium text-blue-700 dark:text-blue-300">
+                                            {initials}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Candidate Info - Very Compact */}
+                                      <div className="flex-1 min-w-0">
+                                        <h4 className="font-semibold text-gray-900 dark:text-white text-[10px] mb-0.5 truncate leading-tight">
+                                          {candidate.candidateName || 'N/A'}
+                                        </h4>
+                                        <p className="text-[9px] text-gray-600 dark:text-gray-400 mb-0.5 truncate leading-tight">
+                                          {roleApplied}
+                                        </p>
+                                        <p className="text-[9px] text-gray-600 dark:text-gray-400 truncate leading-tight">
+                                          {company}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Timestamp in bottom right */}
+                                    <div className="absolute bottom-1 right-1.5">
+                                      <p className="text-[8px] text-gray-500 dark:text-gray-400">
+                                        {daysAgo}
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
@@ -2267,15 +2405,15 @@ export default function RecruiterDashboard2() {
                   <span className="text-lg font-bold text-gray-800 dark:text-white" data-testid="count-assignment">{getPipelineCandidatesByStage.assignment.length}</span>
                 </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-green-500 dark:bg-green-600 rounded">
-                  <span className="text-sm font-medium text-white">L1</span>
+                  <span className="text-sm font-medium text-white">LEVEL 1</span>
                   <span className="text-lg font-bold text-white" data-testid="count-l1">{getPipelineCandidatesByStage.level1.length}</span>
                 </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-green-600 dark:bg-green-500 rounded">
-                  <span className="text-sm font-medium text-white">L2</span>
+                  <span className="text-sm font-medium text-white">LEVEL 2</span>
                   <span className="text-lg font-bold text-white" data-testid="count-l2">{getPipelineCandidatesByStage.level2.length}</span>
                 </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-green-700 dark:bg-green-500 rounded">
-                  <span className="text-sm font-medium text-white">L3</span>
+                  <span className="text-sm font-medium text-white">LEVEL 3</span>
                   <span className="text-lg font-bold text-white" data-testid="count-l3">{getPipelineCandidatesByStage.level3.length}</span>
                 </div>
                 <div className="flex justify-between items-center py-3 px-4 bg-green-800 dark:bg-green-400 rounded">
@@ -2334,8 +2472,15 @@ export default function RecruiterDashboard2() {
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               {/* Performance Graph Section */}
               <div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <div className="bg-gray-50 dark:bg-gray-800 px-6 py-3 border-b border-gray-200 dark:border-gray-700">
+                <div className="bg-gray-50 dark:bg-gray-800 px-6 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Quarterly Performance</h3>
+                  <button
+                    onClick={() => setIsClosureDetailsModalOpen(true)}
+                    className="px-3 py-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-xs font-medium transition-colors"
+                    data-testid="button-view-more-closures"
+                  >
+                    View More
+                  </button>
                 </div>
                 <div className="p-6">
                   <div className="h-72">
@@ -2467,71 +2612,60 @@ export default function RecruiterDashboard2() {
                   )}
                 </div>
 
-                {/* View More Button */}
-                <div className="flex justify-center p-4 border-t border-gray-200 dark:border-gray-700">
-                  <Button
-                    variant="outline"
-                    className="bg-blue-500 hover:bg-blue-600 text-white hover:text-white border-blue-500 hover:border-blue-600 rounded px-6"
-                    onClick={() => setIsClosureDetailsModalOpen(true)}
-                    data-testid="button-view-more-closures"
-                  >
-                    View More
-                  </Button>
-                </div>
               </div>
             </div>
 
-            {/* Right Sidebar - Separately Scrollable */}
-            <div className="w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 overflow-y-auto p-6 space-y-6">
+            {/* Right Sidebar - More Compact Design */}
+            <div className="w-64 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 overflow-y-auto p-4 space-y-3">
               {/* Tenure Card */}
-              <div className="bg-blue-100 dark:bg-blue-900 rounded-lg p-4">
+              <div className="bg-blue-100 dark:bg-blue-900 rounded-lg p-3">
                 <div className="text-center">
-                  <h4 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">Tenure</h4>
-                  <div className="text-4xl font-bold text-blue-600 dark:text-blue-300 mb-1" data-testid="value-tenure">{performanceSummary?.tenure || 0}</div>
-                  <div className="text-sm text-blue-700 dark:text-blue-200">Quarters</div>
+                  <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-1">Tenure</h4>
+                  <div className="text-3xl font-bold text-blue-600 dark:text-blue-300 mb-1" data-testid="value-tenure">{performanceSummary?.tenure || 0}</div>
+                  <div className="text-xs text-blue-700 dark:text-blue-200">Quarters</div>
                 </div>
               </div>
 
               {/* Total Closures Card */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
                 <div className="text-center">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Total Closures</h4>
-                  <div className="text-4xl font-bold text-gray-800 dark:text-gray-200 mb-1" data-testid="value-total-closures">{performanceSummary?.totalClosures || 0}</div>
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Total Closures</h4>
+                  <div className="text-3xl font-bold text-gray-800 dark:text-gray-200" data-testid="value-total-closures">{performanceSummary?.totalClosures || 0}</div>
                 </div>
               </div>
 
               {/* Recent Closure Card */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
                 <div className="text-center">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Recent Closure</h4>
-                  <div className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-1" data-testid="value-recent-closure">{performanceSummary?.recentClosure || 'N/A'}</div>
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Recent Closure</h4>
+                  <div className="text-base font-medium text-gray-800 dark:text-gray-200" data-testid="value-recent-closure">{performanceSummary?.recentClosure || 'N/A'}</div>
                 </div>
               </div>
 
               {/* Last Closure Card */}
-              <div className="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
                 <div className="text-center">
-                  <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Last Closure</h4>
-                  <div className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-1" data-testid="value-last-closure-months">{performanceSummary?.lastClosureMonths || 0}</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Month{(performanceSummary?.lastClosureMonths || 0) !== 1 ? 's' : ''} {performanceSummary?.lastClosureDays || 0} days</div>
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1">Last Closure</h4>
+                  <div className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-1" data-testid="value-last-closure-months">{performanceSummary?.lastClosureMonths || 0}</div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">Month{(performanceSummary?.lastClosureMonths || 0) !== 1 ? 's' : ''} {performanceSummary?.lastClosureDays || 0} days</div>
                 </div>
               </div>
 
               {/* Performance Summary Card */}
-              <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+              <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 border border-green-200 dark:border-green-800">
                 <div className="text-center">
-                  <h4 className="text-lg font-semibold text-green-900 dark:text-green-100 mb-2">Total Revenue</h4>
-                  <div className="text-2xl font-bold text-green-600 dark:text-green-400 mb-1" data-testid="value-total-revenue">{formatIndianCurrency(performanceSummary?.totalRevenue || 0)}</div>
-                  <div className="text-sm text-green-700 dark:text-green-300">All time closures value</div>
+                  <h4 className="text-sm font-semibold text-green-900 dark:text-green-100 mb-1">Total Revenue</h4>
+                  <div className="text-xl font-bold text-green-600 dark:text-green-400 mb-1" data-testid="value-total-revenue">{formatIndianCurrency(performanceSummary?.totalRevenue || 0)}</div>
+                  <div className="text-xs text-green-700 dark:text-green-300">All time closures value</div>
                 </div>
               </div>
 
               {/* Incentive Summary Card */}
-              <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+              <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
                 <div className="text-center">
-                  <h4 className="text-lg font-semibold text-purple-900 dark:text-purple-100 mb-2">Total Incentives</h4>
-                  <div className="text-2xl font-bold text-purple-600 dark:text-purple-400 mb-1" data-testid="value-total-incentives">{formatIndianCurrency(performanceSummary?.totalIncentives || 0)}</div>
-                  <div className="text-sm text-purple-700 dark:text-purple-300">All time earned</div>
+                  <h4 className="text-sm font-semibold text-purple-900 dark:text-purple-100 mb-1">Total Incentives</h4>
+                  <div className="text-xl font-bold text-purple-600 dark:text-purple-400 mb-1" data-testid="value-total-incentives">{formatIndianCurrency(performanceSummary?.totalIncentives || 0)}</div>
+                  <div className="text-xs text-purple-700 dark:text-purple-300">All time earned</div>
                 </div>
               </div>
             </div>

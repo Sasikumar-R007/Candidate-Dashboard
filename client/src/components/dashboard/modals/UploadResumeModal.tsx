@@ -572,14 +572,14 @@ export default function UploadResumeModal({
               <Input
                 value={formData.firstName}
                 onChange={(e) => handleNameChange('firstName', e.target.value)}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 placeholder="First Name *"
                 data-testid="input-first-name"
               />
               <Input
                 value={formData.lastName}
                 onChange={(e) => handleNameChange('lastName', e.target.value)}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 placeholder="Last Name *"
                 data-testid="input-last-name"
               />
@@ -591,7 +591,7 @@ export default function UploadResumeModal({
                 type="tel"
                 value={formData.mobileNumber}
                 onChange={(e) => handlePhoneChange('mobileNumber', e.target.value)}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 placeholder="Mobile Number *"
                 data-testid="input-mobile-number"
               />
@@ -599,7 +599,7 @@ export default function UploadResumeModal({
                 type="tel"
                 value={formData.whatsappNumber}
                 onChange={(e) => handlePhoneChange('whatsappNumber', e.target.value)}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 placeholder="WhatsApp Number"
                 data-testid="input-whatsapp-number"
               />
@@ -620,7 +620,7 @@ export default function UploadResumeModal({
                     });
                   }
                 }}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                className={`bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 ${formData.primaryEmail ? "text-foreground" : "placeholder:text-gray-400 dark:placeholder:text-gray-500"}`}
                 placeholder="Primary Email *"
                 data-testid="input-primary-email"
               />
@@ -637,7 +637,7 @@ export default function UploadResumeModal({
                     });
                   }
                 }}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                className={`bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 ${formData.secondaryEmail ? "text-foreground" : "placeholder:text-gray-400 dark:placeholder:text-gray-500"}`}
                 placeholder="Secondary Email"
                 data-testid="input-secondary-email"
               />
@@ -646,7 +646,7 @@ export default function UploadResumeModal({
             {/* Row 4: Highest Qualification, College Name */}
             <div className="grid grid-cols-2 gap-4">
               <Select value={formData.highestQualification} onValueChange={(value) => setFormData({...formData, highestQualification: value})}>
-                <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0">
+                <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400 dark:placeholder:text-gray-500">
                   <SelectValue placeholder="Highest Qualification *" />
                 </SelectTrigger>
                 <SelectContent>
@@ -660,7 +660,7 @@ export default function UploadResumeModal({
               <Input
                 value={formData.collegeName}
                 onChange={(e) => setFormData({...formData, collegeName: e.target.value})}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                className={`bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 ${formData.collegeName ? "text-foreground" : "placeholder:text-gray-400 dark:placeholder:text-gray-500"}`}
                 placeholder="College Name *"
                 data-testid="input-college-name"
               />
@@ -680,12 +680,12 @@ export default function UploadResumeModal({
                     });
                   }
                 }}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                className={`bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 ${formData.linkedin ? "text-foreground" : "placeholder:text-gray-400 dark:placeholder:text-gray-500"}`}
                 placeholder="LinkedIn Profile"
                 data-testid="input-linkedin"
               />
               <Select value={formData.pedigreeLevel} onValueChange={(value) => setFormData({...formData, pedigreeLevel: value})}>
-                <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0">
+                <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400 dark:placeholder:text-gray-500">
                   <SelectValue placeholder="Pedigree Level *" />
                 </SelectTrigger>
                 <SelectContent>
@@ -789,7 +789,7 @@ export default function UploadResumeModal({
                 </PopoverContent>
               </Popover>
               <Select value={formData.noticePeriod} onValueChange={(value) => setFormData({...formData, noticePeriod: value})}>
-                <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0">
+                <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400 dark:placeholder:text-gray-500">
                   <SelectValue placeholder="Notice Period" />
                 </SelectTrigger>
                 <SelectContent>
@@ -816,7 +816,7 @@ export default function UploadResumeModal({
                     });
                   }
                 }}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 placeholder="Website URL"
                 data-testid="input-website"
               />
@@ -832,7 +832,7 @@ export default function UploadResumeModal({
                     });
                   }
                 }}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 placeholder="Portfolio 1 URL"
                 data-testid="input-portfolio1"
               />
@@ -843,7 +843,7 @@ export default function UploadResumeModal({
               <Input
                 value={formData.currentCompany}
                 onChange={(e) => setFormData({...formData, currentCompany: e.target.value})}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 placeholder="Current Company"
                 data-testid="input-current-company"
               />
@@ -859,7 +859,7 @@ export default function UploadResumeModal({
                     });
                   }
                 }}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 placeholder="Portfolio 2 URL"
                 data-testid="input-portfolio2"
               />
@@ -870,7 +870,7 @@ export default function UploadResumeModal({
               <Input
                 value={formData.currentRole}
                 onChange={(e) => setFormData({...formData, currentRole: e.target.value})}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 placeholder="Current Role"
                 data-testid="input-current-role"
               />
@@ -886,7 +886,7 @@ export default function UploadResumeModal({
                     });
                   }
                 }}
-                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0"
+                className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 placeholder="Portfolio 3 URL"
                 data-testid="input-portfolio3"
               />
@@ -985,7 +985,7 @@ export default function UploadResumeModal({
                 </PopoverContent>
               </Popover>
               <Select value={formData.companyLevel} onValueChange={(value) => setFormData({...formData, companyLevel: value})}>
-                <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0">
+                <SelectTrigger className="bg-gray-50 rounded focus-visible:ring-1 focus-visible:ring-offset-0 placeholder:text-gray-400 dark:placeholder:text-gray-500">
                   <SelectValue placeholder="Company Level" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1049,7 +1049,7 @@ export default function UploadResumeModal({
             </div>
 
             {/* Deliver to Requirement Section */}
-            <div className="border-t pt-4 bg-gray-50/50 rounded-lg p-4">
+            <div className="border-t pt-4 bg-blue-50 rounded-lg p-4">
               <div className="flex items-center gap-3 mb-3">
                 <Label className="text-sm font-medium text-gray-700">Deliver to Requirement</Label>
                 <Switch

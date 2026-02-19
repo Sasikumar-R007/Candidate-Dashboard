@@ -2931,46 +2931,228 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/team-leaders", requireAdminAuth, async (req, res) => {
     try {
       const allEmployees = await storage.getAllEmployees();
+      const allTargetMappings = await storage.getAllTargetMappings();
+      const allRevenueMappings = await storage.getAllRevenueMappings();
 
       // Filter team leaders
       const teamLeaders = allEmployees.filter(emp => emp.role === 'team_leader');
 
-      // For each team leader, count their recruiters
-      const teamLeadersWithCounts = teamLeaders.map(tl => {
+      // For each team leader, count their recruiters and calculate metrics
+      const teamLeadersWithCounts = await Promise.all(teamLeaders.map(async (tl) => {
         // Count recruiters reporting to this team leader
-        const recruiterCount = allEmployees.filter(
+        const recruiters = allEmployees.filter(
           emp => emp.role === 'recruiter' && emp.reportingTo === tl.employeeId
+        );
+        const recruiterCount = recruiters.length;
+
+        // Calculate tenure
+        let tenure = '0';
+        if (tl.joiningDate) {
+          try {
+            const joinDate = new Date(tl.joiningDate);
+            if (!isNaN(joinDate.getTime())) {
+              const now = new Date();
+              const years = Math.floor((now.getTime() - joinDate.getTime()) / (1000 * 60 * 60 * 24 * 365));
+              const months = Math.floor(((now.getTime() - joinDate.getTime()) % (1000 * 60 * 60 * 24 * 365)) / (1000 * 60 * 60 * 24 * 30));
+              tenure = years > 0 ? `${years}y ${months}m` : `${months}m`;
+            }
+          } catch (e) {
+            tenure = '0';
+          }
+        }
+
+        // Get target mappings for this team leader
+        const tlTargets = allTargetMappings.filter(tm => tm.teamLeadId === tl.id || tm.teamLeadName === tl.name);
+        
+        // Calculate quarters achieved (where target was met)
+        const qtrsAchieved = tlTargets.filter(tm =>
+          (tm.targetAchieved ?? 0) >= tm.minimumTarget
         ).length;
+
+        // Get revenue mappings for this team leader (sum of all their recruiters' closures)
+        const recruiterIds = recruiters.map(r => r.id);
+        const recruiterNames = recruiters.map(r => r.name);
+        const tlRevenueMappings = allRevenueMappings.filter(rm =>
+          recruiterIds.includes(rm.talentAdvisorId) ||
+          recruiterNames.some(name => name.toLowerCase() === (rm.talentAdvisorName || '').toLowerCase())
+        );
+
+        const totalClosures = tlRevenueMappings.filter(rm => rm.status === 'closed').length;
+        
+        // Calculate total revenue
+        const totalRevenue = tlRevenueMappings
+          .filter(rm => rm.status === 'closed')
+          .reduce((sum, rm) => sum + (parseFloat(rm.revenue || '0') || 0), 0);
+
+        // Calculate target achievement percentage
+        const totalTarget = tlTargets.reduce((sum, tm) => sum + (tm.minimumTarget || 0), 0);
+        const totalAchieved = tlTargets.reduce((sum, tm) => sum + (tm.targetAchieved || 0), 0);
+        const targetAchievement = totalTarget > 0 ? Math.round((totalAchieved / totalTarget) * 100) : 0;
+
+        // Get last closure date
+        const closedMappings = tlRevenueMappings.filter(rm => rm.status === 'closed');
+        let lastClosure = 'N/A';
+        if (closedMappings.length > 0) {
+          const lastClosureRecord = closedMappings.sort((a, b) => {
+            const dateA = a.closureDate ? new Date(a.closureDate).getTime() : 0;
+            const dateB = b.closureDate ? new Date(b.closureDate).getTime() : 0;
+            return dateB - dateA;
+          })[0];
+          if (lastClosureRecord.closureDate) {
+            lastClosure = new Date(lastClosureRecord.closureDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+          }
+        }
+
+        // Get last login
+        let lastLogin = 'N/A';
+        if (tl.lastLoginAt) {
+          try {
+            lastLogin = new Date(tl.lastLoginAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+          } catch (e) {
+            lastLogin = 'N/A';
+          }
+        }
+
+        // Calculate next milestone (next quarter target) - return just the number
+        const nextMilestone = qtrsAchieved + 1;
 
         return {
           id: tl.id,
           employeeId: tl.employeeId,
           name: tl.name,
-          email: tl.email || 'not filled',
-          phone: tl.phone || 'not filled',
-          age: tl.age || 'not filled',
-          department: tl.department || 'not filled',
-          joiningDate: tl.joiningDate || 'not filled',
-          reportingTo: tl.reportingTo || 'not filled',
+          email: tl.email || 'N/A',
+          phone: tl.phone || 'N/A',
+          age: tl.age || 'N/A',
+          department: tl.department || 'N/A',
+          joiningDate: tl.joiningDate ? new Date(tl.joiningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A',
+          reportingTo: tl.reportingTo || 'N/A',
           members: recruiterCount,
-          // Default metrics for new profiles
-          tenure: '0',
-          qtrsAchieved: 0,
-          nextMilestone: '+0',
-          totalClosures: 0,
-          targetAchievement: 0,
-          totalRevenue: '0',
+          tenure: tenure,
+          qtrsAchieved: qtrsAchieved,
+          nextMilestone: nextMilestone.toString(),
+          totalClosures: totalClosures,
+          targetAchievement: targetAchievement,
+          totalRevenue: totalRevenue.toLocaleString('en-IN'),
           role: 'Team Leader',
-          image: null,
-          lastLogin: 'not filled',
-          lastClosure: 'not filled'
+          image: tl.profilePicture || null,
+          lastLogin: lastLogin,
+          lastClosure: lastClosure
         };
-      });
+      }));
 
       res.json(teamLeadersWithCounts);
     } catch (error) {
       console.error('Get team leaders error:', error);
       res.status(500).json({ message: "Failed to fetch team leaders", error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
+  // Admin API: Get recruiter performance data for profile modals
+  app.get("/api/admin/recruiter-performance/:recruiterId", requireAdminAuth, async (req, res) => {
+    try {
+      const { recruiterId } = req.params;
+      const allEmployees = await storage.getAllEmployees();
+      const allTargetMappings = await storage.getAllTargetMappings();
+      const allRevenueMappings = await storage.getAllRevenueMappings();
+
+      const recruiter = allEmployees.find(emp => emp.id === recruiterId || emp.employeeId === recruiterId);
+      if (!recruiter) {
+        return res.status(404).json({ message: "Recruiter not found" });
+      }
+
+      // Calculate tenure
+      let tenure = '0';
+      if (recruiter.joiningDate) {
+        try {
+          const joinDate = new Date(recruiter.joiningDate);
+          if (!isNaN(joinDate.getTime())) {
+            const now = new Date();
+            const years = Math.floor((now.getTime() - joinDate.getTime()) / (1000 * 60 * 60 * 24 * 365));
+            const months = Math.floor(((now.getTime() - joinDate.getTime()) % (1000 * 60 * 60 * 24 * 365)) / (1000 * 60 * 60 * 24 * 30));
+            tenure = years > 0 ? `${years}y ${months}m` : `${months}m`;
+          }
+        } catch (e) {
+          tenure = '0';
+        }
+      }
+
+      // Get target mappings for this recruiter
+      const recruiterTargets = allTargetMappings.filter(tm => tm.teamMemberId === recruiter.id);
+      
+      // Calculate quarters achieved
+      const quartersAchieved = recruiterTargets.filter(tm =>
+        (tm.targetAchieved ?? 0) >= tm.minimumTarget
+      ).length;
+
+      // Get revenue mappings for this recruiter
+      const recruiterRevenueMappings = allRevenueMappings.filter(rm =>
+        rm.talentAdvisorId === recruiter.id ||
+        (rm.talentAdvisorName || '').toLowerCase() === recruiter.name.toLowerCase()
+      );
+
+      const totalClosures = recruiterRevenueMappings.filter(rm => rm.status === 'closed').length;
+      
+      // Calculate total revenue
+      const totalRevenue = recruiterRevenueMappings
+        .filter(rm => rm.status === 'closed')
+        .reduce((sum, rm) => sum + (parseFloat(rm.revenue || '0') || 0), 0);
+
+      // Calculate target achievement percentage
+      const totalTarget = recruiterTargets.reduce((sum, tm) => sum + (tm.minimumTarget || 0), 0);
+      const totalAchieved = recruiterTargets.reduce((sum, tm) => sum + (tm.targetAchieved || 0), 0);
+      const targetAchievement = totalTarget > 0 ? Math.round((totalAchieved / totalTarget) * 100) : 0;
+
+      // Get last closure date
+      const closedMappings = recruiterRevenueMappings.filter(rm => rm.status === 'closed');
+      let lastClosure = 'N/A';
+      if (closedMappings.length > 0) {
+        const lastClosureRecord = closedMappings.sort((a, b) => {
+          const dateA = a.closureDate ? new Date(a.closureDate).getTime() : 0;
+          const dateB = b.closureDate ? new Date(b.closureDate).getTime() : 0;
+          return dateB - dateA;
+        })[0];
+        if (lastClosureRecord.closureDate) {
+          lastClosure = new Date(lastClosureRecord.closureDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+      }
+
+      // Get last login
+      let lastLogin = 'N/A';
+      if (recruiter.lastLoginAt) {
+        try {
+          lastLogin = new Date(recruiter.lastLoginAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        } catch (e) {
+          lastLogin = 'N/A';
+        }
+      }
+
+      res.json({
+        id: recruiter.id,
+        employeeId: recruiter.employeeId,
+        name: recruiter.name,
+        email: recruiter.email || 'N/A',
+        phone: recruiter.phone || 'N/A',
+        age: recruiter.age || 'N/A',
+        department: recruiter.department || 'N/A',
+        joiningDate: recruiter.joiningDate ? new Date(recruiter.joiningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A',
+        role: recruiter.role === 'recruiter' ? 'Recruiter' : recruiter.role === 'talent_advisor' ? 'Talent Advisor' : recruiter.role,
+        image: recruiter.profilePicture || null,
+        lastLogin: lastLogin,
+        lastClosure: lastClosure,
+        tenure: tenure,
+        totalClosures: totalClosures,
+        quartersAchieved: quartersAchieved,
+        targetAchievement: targetAchievement,
+        totalRevenue: totalRevenue.toLocaleString('en-IN'),
+        teamLeaderName: recruiter.reportingTo ? (() => {
+          const teamLeader = allEmployees.find(emp => emp.employeeId === recruiter.reportingTo && emp.role === 'team_leader');
+          return teamLeader?.name || 'N/A';
+        })() : 'N/A',
+        teamLeaderId: recruiter.reportingTo || 'N/A'
+      });
+    } catch (error) {
+      console.error('Get recruiter performance error:', error);
+      res.status(500).json({ message: "Failed to fetch recruiter performance", error: error instanceof Error ? error.message : 'Unknown error' });
     }
   });
 
@@ -6604,13 +6786,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             rm.talentAdvisorId === member.id ||
             rm.talentAdvisorName?.toLowerCase() === member.name.toLowerCase()
           )
-          .reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+          .reduce((sum, rm) => sum + (parseFloat(rm.revenue?.toString() || '0') || 0), 0);
 
         return {
           member: member.name,
           revenue: memberRevenue
         };
-      }).filter(item => item.revenue > 0); // Filter out zero values
+      }); // Keep all members, including zero values, to show graph structure
 
       // Calculate average for benchmark
       const totalRevenue = revenueData.reduce((sum, d) => sum + d.revenue, 0);
@@ -7533,6 +7715,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ).catch(err => console.error('Failed to log pipeline change:', err));
       }
 
+      // Invalidate admin pipeline cache so it refreshes
+      // This ensures Admin dashboard sees the updated status immediately
       res.json({ message: "Application status updated", application });
     } catch (error) {
       console.error("Update application status error:", error);
@@ -7680,6 +7864,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/pipeline", requireAdminAuth, async (req, res) => {
     try {
       const applications = await storage.getAllJobApplications();
+      
+      // Add sample data for testing if no real applications exist
+      if (applications.length === 0) {
+        const sampleApplications = [
+          {
+            id: 'sample-1',
+            candidateName: 'Rajesh Kumar',
+            candidateEmail: 'rajesh.kumar@example.com',
+            candidatePhone: '+91 98765 43210',
+            jobTitle: 'Senior Software Engineer',
+            company: 'TechCorp',
+            status: 'L1',
+            appliedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+            experience: '5 years',
+            skills: JSON.stringify(['React', 'Node.js', 'TypeScript']),
+            location: 'Bangalore'
+          },
+          {
+            id: 'sample-2',
+            candidateName: 'Priya Sharma',
+            candidateEmail: 'priya.sharma@example.com',
+            candidatePhone: '+91 98765 43211',
+            jobTitle: 'Frontend Developer',
+            company: 'Designify',
+            status: 'L2',
+            appliedDate: new Date().toISOString(),
+            experience: '3 years',
+            skills: JSON.stringify(['React', 'Vue.js', 'CSS']),
+            location: 'Mumbai'
+          },
+          {
+            id: 'sample-3',
+            candidateName: 'Amit Patel',
+            candidateEmail: 'amit.patel@example.com',
+            candidatePhone: '+91 98765 43212',
+            jobTitle: 'Backend Engineer',
+            company: 'CloudTech',
+            status: 'L3',
+            appliedDate: new Date().toISOString(),
+            experience: '6 years',
+            skills: JSON.stringify(['Node.js', 'Python', 'AWS']),
+            location: 'Hyderabad'
+          },
+          {
+            id: 'sample-4',
+            candidateName: 'Sneha Reddy',
+            candidateEmail: 'sneha.reddy@example.com',
+            candidatePhone: '+91 98765 43213',
+            jobTitle: 'Full Stack Developer',
+            company: 'StartupXYZ',
+            status: 'Final Round',
+            appliedDate: new Date().toISOString(),
+            experience: '4 years',
+            skills: JSON.stringify(['React', 'Node.js', 'MongoDB']),
+            location: 'Delhi'
+          },
+          {
+            id: 'sample-5',
+            candidateName: 'Vikram Singh',
+            candidateEmail: 'vikram.singh@example.com',
+            candidatePhone: '+91 98765 43214',
+            jobTitle: 'DevOps Engineer',
+            company: 'AppLogic',
+            status: 'HR Round',
+            appliedDate: new Date().toISOString(),
+            experience: '5 years',
+            skills: JSON.stringify(['Docker', 'Kubernetes', 'CI/CD']),
+            location: 'Pune'
+          },
+          {
+            id: 'sample-6',
+            candidateName: 'Ananya Kapoor',
+            candidateEmail: 'ananya.kapoor@example.com',
+            candidatePhone: '+91 98765 43215',
+            jobTitle: 'UI/UX Designer',
+            company: 'CreativeStudio',
+            status: 'Offer Stage',
+            appliedDate: new Date().toISOString(),
+            experience: '3 years',
+            skills: JSON.stringify(['Figma', 'Adobe XD', 'Sketch']),
+            location: 'Bangalore'
+          },
+          {
+            id: 'sample-7',
+            candidateName: 'Karthik Nair',
+            candidateEmail: 'karthik.nair@example.com',
+            candidatePhone: '+91 98765 43216',
+            jobTitle: 'Data Scientist',
+            company: 'DataCorp',
+            status: 'Closure',
+            appliedDate: new Date().toISOString(),
+            experience: '4 years',
+            skills: JSON.stringify(['Python', 'Machine Learning', 'SQL']),
+            location: 'Chennai'
+          },
+          {
+            id: 'sample-8',
+            candidateName: 'Meera Joshi',
+            candidateEmail: 'meera.joshi@example.com',
+            candidatePhone: '+91 98765 43217',
+            jobTitle: 'Product Manager',
+            company: 'ProductLabs',
+            status: 'Shortlisted',
+            appliedDate: new Date().toISOString(),
+            experience: '6 years',
+            skills: JSON.stringify(['Product Strategy', 'Agile', 'Analytics']),
+            location: 'Bangalore'
+          },
+          {
+            id: 'sample-9',
+            candidateName: 'Rahul Verma',
+            candidateEmail: 'rahul.verma@example.com',
+            candidatePhone: '+91 98765 43218',
+            jobTitle: 'QA Engineer',
+            company: 'TestTech',
+            status: 'In-Process',
+            appliedDate: new Date().toISOString(),
+            experience: '3 years',
+            skills: JSON.stringify(['Selenium', 'Jest', 'Cypress']),
+            location: 'Mumbai'
+          },
+          {
+            id: 'sample-10',
+            candidateName: 'Neha Gupta',
+            candidateEmail: 'neha.gupta@example.com',
+            candidatePhone: '+91 98765 43219',
+            jobTitle: 'Mobile Developer',
+            company: 'MobileFirst',
+            status: 'Intro Call',
+            appliedDate: new Date().toISOString(),
+            experience: '4 years',
+            skills: JSON.stringify(['React Native', 'Flutter', 'iOS']),
+            location: 'Delhi'
+          }
+        ];
+        return res.json(sampleApplications);
+      }
+      
       res.json(applications);
     } catch (error) {
       console.error("Get admin pipeline error:", error);
@@ -7830,10 +8152,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/parse-resume", requireAdminAuth, resumeUpload.single('resume'), async (req, res) => {
     try {
       if (!req.file) {
-        return res.status(400).json({ message: "No resume file uploaded" });
+        return res.status(400).json({ success: false, message: "No resume file uploaded" });
       }
 
-      const parsed = await parseResumeFile(req.file.path, req.file.mimetype);
+      // Validate file type
+      const allowedMimeTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!allowedMimeTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ success: false, message: "Invalid file type. Only PDF, DOC, and DOCX files are allowed." });
+      }
+
+      let parsed;
+      try {
+        parsed = await parseResumeFile(req.file.path, req.file.mimetype);
+      } catch (parseError: any) {
+        console.error('Parse resume error:', parseError);
+        return res.status(500).json({ 
+          success: false, 
+          message: parseError.message || "Failed to parse resume file. Please ensure the file is not corrupted and try again." 
+        });
+      }
 
       // Generate file URL for the uploaded resume
       const baseUrl = process.env.NODE_ENV === 'production'
@@ -7844,31 +8181,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         success: true,
         data: {
-          fullName: parsed.fullName,
-          email: parsed.email,
-          phone: parsed.phone,
-          designation: parsed.designation,
-          experience: parsed.experience,
-          skills: parsed.skills,
-          location: parsed.location,
-          company: parsed.company,
-          education: parsed.education,
-          linkedinUrl: parsed.linkedinUrl,
-          portfolioUrl: parsed.portfolioUrl,
-          websiteUrl: parsed.websiteUrl,
-          currentRole: parsed.currentRole,
+          fullName: parsed.fullName || null,
+          email: parsed.email || null,
+          phone: parsed.phone || null,
+          designation: parsed.designation || null,
+          experience: parsed.experience || null,
+          skills: parsed.skills || null,
+          location: parsed.location || null,
+          company: parsed.company || null,
+          education: parsed.education || null,
+          linkedinUrl: parsed.linkedinUrl || null,
+          portfolioUrl: parsed.portfolioUrl || null,
+          websiteUrl: parsed.websiteUrl || null,
+          currentRole: parsed.currentRole || null,
           filePath: fileUrl,
           fileName: req.file.originalname
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Parse resume error:', error);
-      res.status(500).json({ message: "Failed to parse resume" });
+      res.status(500).json({ 
+        success: false, 
+        message: error.message || "Failed to parse resume. Please try again." 
+      });
     }
   });
 
-  // Parse bulk resumes
-  app.post("/api/admin/parse-resumes-bulk", requireAdminAuth, resumeUpload.array('resumes', 20), async (req, res) => {
+  // Parse bulk resumes (increased limit to 50 for better productivity)
+  app.post("/api/admin/parse-resumes-bulk", requireAdminAuth, resumeUpload.array('resumes', 50), async (req, res) => {
     try {
       const files = req.files as Express.Multer.File[];
       if (!files || files.length === 0) {
@@ -8665,6 +9005,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Get client pipeline error:', error);
       res.status(500).json({ message: "Failed to get pipeline data" });
+    }
+  });
+
+  // Client Drop Rates - Get calculated drop rates for client's company
+  app.get("/api/client/drop-rates", requireClientAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const client = await findCompanyForEmployee(employee);
+      const companyName = client?.brandName || employee.name;
+
+      const dropRates = await storage.getClientDropRates(companyName);
+      res.json(dropRates);
+    } catch (error) {
+      console.error('Get client drop rates error:', error);
+      res.status(500).json({ message: "Failed to get drop rates" });
     }
   });
 

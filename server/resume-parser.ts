@@ -95,9 +95,9 @@ function extractResumeData(text: string): {
 function extractName(text: string): string | null {
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   
-  // Try multiple strategies to find the name
-  // Strategy 1: Look for name in first few lines (most common location)
-  for (let i = 0; i < Math.min(15, lines.length); i++) {
+  // Enhanced name extraction with multiple strategies
+  // Strategy 1: Look for name in first few lines (most common location) - expanded to 20 lines
+  for (let i = 0; i < Math.min(20, lines.length); i++) {
     const line = lines[i];
     
     // Skip lines that are clearly not names
@@ -108,51 +108,92 @@ function extractName(text: string): string | null {
         line.toLowerCase().includes('email') ||
         line.toLowerCase().includes('mobile') ||
         line.toLowerCase().includes('linkedin') ||
-        line.match(/^https?:\/\//i)) {
+        line.match(/^https?:\/\//i) ||
+        line.match(/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/) || // Date format
+        line.match(/^(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}/i)) {
       continue;
     }
     
-    // Skip common resume headers
-    const commonHeaders = ['resume', 'cv', 'curriculum vitae', 'objective', 'summary', 'experience', 'education', 'skills', 'contact', 'profile', 'address', 'location', 'qualification', 'certification', 'project', 'achievement'];
+    // Skip common resume headers (expanded list)
+    const commonHeaders = ['resume', 'cv', 'curriculum vitae', 'objective', 'summary', 'experience', 'education', 'skills', 'contact', 'profile', 'address', 'location', 'qualification', 'certification', 'project', 'achievement', 'work history', 'employment', 'professional', 'career', 'accomplishments', 'awards', 'publications', 'references'];
     if (commonHeaders.some(header => line.toLowerCase().includes(header))) {
       continue;
     }
     
     // Pattern 1: Standard name format "FirstName LastName" or "FirstName MiddleName LastName"
-    const namePattern1 = /^[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}$/;
-    if (namePattern1.test(line) && line.length >= 4 && line.length <= 60) {
+    // More flexible: allows for mixed case and common name patterns
+    const namePattern1 = /^[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,4}$/;
+    if (namePattern1.test(line) && line.length >= 4 && line.length <= 70) {
       // Additional validation: should not be all caps (likely a header)
       if (line !== line.toUpperCase()) {
-        return line;
+        // Check it's not a common false positive
+        const lowerLine = line.toLowerCase();
+        if (!lowerLine.includes('years') && !lowerLine.includes('experience') && 
+            !lowerLine.includes('developer') && !lowerLine.includes('engineer') &&
+            !lowerLine.includes('manager') && !lowerLine.includes('analyst')) {
+          return line;
+        }
       }
     }
     
-    // Pattern 2: All words capitalized (common in resumes)
+    // Pattern 2: All words capitalized (common in resumes) - more flexible
     const words = line.split(/\s+/);
-    if (words.length >= 2 && words.length <= 5) {
-      const allCapitalized = words.every(word => /^[A-Z]/.test(word) && word.length > 1);
+    if (words.length >= 2 && words.length <= 6) {
+      const allCapitalized = words.every(word => {
+        // Allow single letters (middle initials) or words starting with capital
+        return (word.length === 1 && /^[A-Z]$/.test(word)) || 
+               (/^[A-Z]/.test(word) && word.length > 1);
+      });
       const noNumbers = !/\d/.test(line);
       const noSpecialChars = !/[@#$%^&*()_+=\[\]{}|\\:";'<>?,./]/.test(line);
       const notAllCaps = line !== line.toUpperCase();
       
-      if (allCapitalized && noNumbers && noSpecialChars && notAllCaps && line.length >= 4 && line.length <= 60) {
-        return line;
+      if (allCapitalized && noNumbers && noSpecialChars && notAllCaps && line.length >= 4 && line.length <= 70) {
+        // Additional check: not a job title or common phrase
+        const lowerLine = line.toLowerCase();
+        const jobTitleIndicators = ['years', 'experience', 'developer', 'engineer', 'manager', 'analyst', 'consultant', 'specialist', 'director', 'lead', 'senior', 'junior'];
+        if (!jobTitleIndicators.some(indicator => lowerLine.includes(indicator))) {
+          return line;
+        }
       }
     }
     
-    // Pattern 3: Name with middle initial "John D. Smith"
-    const middleInitialPattern = /^[A-Z][a-z]+\s+[A-Z]\.\s+[A-Z][a-z]+$/;
-    if (middleInitialPattern.test(line) && line.length >= 6 && line.length <= 50) {
+    // Pattern 3: Name with middle initial "John D. Smith" or "John D Smith"
+    const middleInitialPattern = /^[A-Z][a-z]+\s+[A-Z]\.?\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*$/;
+    if (middleInitialPattern.test(line) && line.length >= 6 && line.length <= 60) {
       return line;
     }
     
     // Pattern 4: Name with comma "LastName, FirstName"
-    const commaNamePattern = /^[A-Z][a-z]+,\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?$/;
-    if (commaNamePattern.test(line) && line.length >= 6 && line.length <= 50) {
+    const commaNamePattern = /^[A-Z][a-z]+,\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*$/;
+    if (commaNamePattern.test(line) && line.length >= 6 && line.length <= 60) {
       // Reverse it to "FirstName LastName" format
       const parts = line.split(',').map(p => p.trim());
       if (parts.length === 2) {
         return `${parts[1]} ${parts[0]}`;
+      }
+    }
+    
+    // Pattern 5: Name with hyphen (e.g., "Mary-Jane Smith")
+    const hyphenNamePattern = /^[A-Z][a-z]+(?:-[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+){1,3}$/;
+    if (hyphenNamePattern.test(line) && line.length >= 4 && line.length <= 70 && 
+        line !== line.toUpperCase() && !/\d/.test(line)) {
+      return line;
+    }
+    
+    // Pattern 6: More lenient - just check if it looks like a name (2-4 words, all start with capital, no numbers)
+    if (words.length >= 2 && words.length <= 4 && 
+        words.every(word => /^[A-Z]/.test(word) && word.length > 1) &&
+        !/\d/.test(line) &&
+        !/[@#$%^&*()_+=\[\]{}|\\:";'<>?,./]/.test(line) &&
+        line.length >= 4 && line.length <= 60 &&
+        line !== line.toUpperCase()) {
+      // Final validation: check it's not a common phrase
+      const lowerLine = line.toLowerCase();
+      const invalidPhrases = ['years experience', 'work experience', 'professional experience', 
+                              'current role', 'present position', 'contact information'];
+      if (!invalidPhrases.some(phrase => lowerLine.includes(phrase))) {
+        return line;
       }
     }
   }
@@ -162,22 +203,48 @@ function extractName(text: string): string | null {
   const emailMatch = text.match(emailRegex);
   if (emailMatch && emailMatch.index !== undefined) {
     const emailIndex = emailMatch.index;
-    const textBeforeEmail = text.substring(Math.max(0, emailIndex - 200), emailIndex);
+    const textBeforeEmail = text.substring(Math.max(0, emailIndex - 300), emailIndex);
     const linesBeforeEmail = textBeforeEmail.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     
-    // Check last 3 lines before email
-    for (let i = Math.max(0, linesBeforeEmail.length - 3); i < linesBeforeEmail.length; i++) {
+    // Check last 5 lines before email (increased from 3)
+    for (let i = Math.max(0, linesBeforeEmail.length - 5); i < linesBeforeEmail.length; i++) {
       const line = linesBeforeEmail[i];
-      if (line.length >= 4 && line.length <= 60 && 
+      if (line.length >= 4 && line.length <= 70 && 
           !line.includes('@') && 
           !/\d{5,}/.test(line) &&
           /^[A-Z]/.test(line)) {
         const words = line.split(/\s+/);
         if (words.length >= 2 && words.length <= 5 && 
-            words.every(word => /^[A-Z]/.test(word)) &&
-            !/\d/.test(line)) {
-          return line;
+            words.every(word => /^[A-Z]/.test(word) && word.length > 1) &&
+            !/\d/.test(line) &&
+            !/[@#$%^&*()_+=\[\]{}|\\:";'<>?,./]/.test(line) &&
+            line !== line.toUpperCase()) {
+          // Additional validation
+          const lowerLine = line.toLowerCase();
+          if (!lowerLine.includes('phone') && !lowerLine.includes('email') && 
+              !lowerLine.includes('location') && !lowerLine.includes('address')) {
+            return line;
+          }
         }
+      }
+    }
+  }
+  
+  // Strategy 3: Look for name in the very first line (often the name is at the top)
+  if (lines.length > 0) {
+    const firstLine = lines[0];
+    const words = firstLine.split(/\s+/);
+    if (words.length >= 2 && words.length <= 5 &&
+        words.every(word => /^[A-Z]/.test(word) && word.length > 1) &&
+        !/\d/.test(firstLine) &&
+        !/[@#$%^&*()_+=\[\]{}|\\:";'<>?,./]/.test(firstLine) &&
+        firstLine.length >= 4 && firstLine.length <= 70 &&
+        firstLine !== firstLine.toUpperCase()) {
+      const lowerLine = firstLine.toLowerCase();
+      const invalidPhrases = ['resume', 'cv', 'curriculum vitae', 'objective', 'summary', 
+                              'experience', 'education', 'skills', 'contact', 'phone', 'email'];
+      if (!invalidPhrases.some(phrase => lowerLine.includes(phrase))) {
+        return firstLine;
       }
     }
   }
@@ -188,7 +255,7 @@ function extractName(text: string): string | null {
 function extractDesignation(text: string): string | null {
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   
-  // Common designation patterns - expanded list
+  // Expanded designation keywords list
   const designationKeywords = [
     'software engineer', 'developer', 'engineer', 'manager', 'analyst',
     'consultant', 'architect', 'designer', 'specialist', 'executive',
@@ -201,12 +268,26 @@ function extractDesignation(text: string): string | null {
     'cloud engineer', 'security engineer', 'ml engineer', 'ai engineer',
     'mobile developer', 'ios developer', 'android developer', 'react developer',
     'angular developer', 'vue developer', 'node.js developer', 'python developer',
-    'java developer', '.net developer', 'salesforce developer', 'salesforce admin'
+    'java developer', '.net developer', 'salesforce developer', 'salesforce admin',
+    'tester', 'qa', 'quality assurance', 'test engineer', 'automation engineer',
+    'site reliability', 'solutions architect', 'technical lead', 'team lead',
+    'staff engineer', 'senior staff', 'principal engineer', 'distinguished engineer',
+    'vice president', 'vp', 'chief', 'cto', 'cfo', 'ceo', 'coo',
+    'accountant', 'auditor', 'financial analyst', 'hr', 'human resources',
+    'recruiter', 'talent acquisition', 'marketing', 'sales', 'business development',
+    'operations', 'operations manager', 'supply chain', 'logistics',
+    'researcher', 'scientist', 'research scientist', 'data analyst',
+    'product designer', 'ux designer', 'ui designer', 'graphic designer',
+    'content writer', 'technical writer', 'copywriter', 'editor',
+    'administrator', 'coordinator', 'assistant', 'executive assistant',
+    'customer service', 'support', 'support engineer', 'help desk'
   ];
   
-  // Look for current position/designation (usually near the top after name)
-  for (let i = 0; i < Math.min(30, lines.length); i++) {
+  // Strategy 1: Look for current position/designation (usually near the top after name)
+  // Expanded search to first 40 lines
+  for (let i = 0; i < Math.min(40, lines.length); i++) {
     const lowerLine = lines[i].toLowerCase();
+    const originalLine = lines[i];
     
     // Skip if it's likely a name or contact info
     if (lowerLine.includes('@') || 
@@ -214,13 +295,18 @@ function extractDesignation(text: string): string | null {
         lowerLine.includes('phone') || 
         lowerLine.includes('email') ||
         lowerLine.includes('linkedin') ||
-        lowerLine.match(/^https?:\/\//i)) {
+        lowerLine.match(/^https?:\/\//i) ||
+        lowerLine.match(/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/) || // Date format
+        lowerLine.match(/^(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}/i)) {
       continue;
     }
     
     // Skip common section headers
-    const sectionHeaders = ['experience', 'work experience', 'employment', 'professional experience', 'career', 'objective', 'summary', 'profile'];
-    if (sectionHeaders.some(header => lowerLine === header || lowerLine.startsWith(header + ':'))) {
+    const sectionHeaders = ['experience', 'work experience', 'employment', 'professional experience', 
+                           'career', 'objective', 'summary', 'profile', 'education', 'skills', 
+                           'qualifications', 'certifications', 'projects', 'achievements'];
+    if (sectionHeaders.some(header => lowerLine === header || lowerLine.startsWith(header + ':') || 
+        lowerLine.startsWith(header + ' -') || lowerLine.startsWith(header + ' |'))) {
       continue;
     }
     
@@ -228,33 +314,137 @@ function extractDesignation(text: string): string | null {
     for (const keyword of designationKeywords) {
       if (lowerLine.includes(keyword)) {
         // Extract the full designation phrase - return original line (preserves capitalization)
-        // Try to get a complete phrase (up to 80 chars to allow for longer titles)
-        if (lines[i].length <= 80) {
-          return lines[i];
+        // Try to get a complete phrase (up to 100 chars to allow for longer titles)
+        if (originalLine.length <= 100) {
+          // Additional validation: check it's not just a section header
+          if (!sectionHeaders.some(header => lowerLine === header)) {
+            return originalLine;
+          }
         } else {
           // If too long, try to extract just the relevant part
           const keywordIndex = lowerLine.indexOf(keyword);
-          const start = Math.max(0, keywordIndex - 20);
-          const end = Math.min(lines[i].length, keywordIndex + keyword.length + 30);
-          return lines[i].substring(start, end).trim();
+          const start = Math.max(0, keywordIndex - 25);
+          const end = Math.min(originalLine.length, keywordIndex + keyword.length + 40);
+          const extracted = originalLine.substring(start, end).trim();
+          if (extracted.length > 5 && extracted.length < 100) {
+            return extracted;
+          }
+        }
+      }
+    }
+    
+    // Pattern matching for job titles: "Senior Software Engineer", "Product Manager", etc.
+    // Look for lines that have title-like structure (Title Case or mixed case)
+    if (originalLine.length >= 5 && originalLine.length <= 100 &&
+        !lowerLine.includes('@') && !/\d{5,}/.test(originalLine)) {
+      // Check if it looks like a job title (has common title words)
+      const titleIndicators = ['engineer', 'developer', 'manager', 'analyst', 'designer', 
+                               'architect', 'specialist', 'consultant', 'director', 'lead',
+                               'coordinator', 'administrator', 'executive', 'officer'];
+      const hasTitleIndicator = titleIndicators.some(indicator => lowerLine.includes(indicator));
+      
+      if (hasTitleIndicator) {
+        // Additional check: should have proper capitalization (Title Case or similar)
+        const words = originalLine.split(/\s+/);
+        const capitalizedWords = words.filter(word => /^[A-Z]/.test(word));
+        if (capitalizedWords.length >= 2 || (words.length === 1 && /^[A-Z]/.test(words[0]))) {
+          return originalLine;
         }
       }
     }
   }
   
-  // Also check for patterns like "Current Role:", "Position:", etc.
+  // Strategy 2: Check for patterns like "Current Role:", "Position:", etc. (enhanced)
   const rolePatterns = [
-    /(?:current|present)\s+(?:role|position|designation|title)[:\s]+(.+)/i,
-    /(?:role|position|designation|title)[:\s]+(.+)/i
+    /(?:current|present|current role|present role|current position|present position)[:\s]+(.+?)(?:\n|$)/i,
+    /(?:role|position|designation|title|job title)[:\s]+(.+?)(?:\n|$)/i,
+    /(?:working as|currently working as|employed as)[:\s]+(.+?)(?:\n|$)/i,
+    /(?:at\s+)?([A-Z][a-zA-Z\s&]+)\s+(?:as|–|-|—)\s+(.+)/i, // "Company Name – Job Title"
+    /(.+?)\s+(?:at|@)\s+([A-Z][a-zA-Z\s&]+)/i // "Job Title at Company"
   ];
   
   for (const pattern of rolePatterns) {
     const match = text.match(pattern);
     if (match && match[1]) {
-      const role = match[1].trim().split('\n')[0].trim();
-      if (role.length > 3 && role.length < 80) {
-        return role;
+      let role = match[1].trim();
+      // If pattern captured company name, try to get the role from match[2]
+      if (match[2] && match[2].trim().length > 3) {
+        role = match[2].trim();
       }
+      // Clean up the role
+      role = role.split('\n')[0].trim();
+      role = role.replace(/^[:\-–—\s]+|[:\-–—\s]+$/g, ''); // Remove leading/trailing separators
+      
+      if (role.length > 3 && role.length < 100) {
+        // Validate it's not just a company name or other false positive
+        const lowerRole = role.toLowerCase();
+        if (!lowerRole.includes('@') && !lowerRole.match(/^\d+$/) &&
+            !lowerRole.includes('phone') && !lowerRole.includes('email')) {
+          return role;
+        }
+      }
+    }
+  }
+  
+  // Strategy 3: Look in experience section for the most recent/current role
+  let experienceSectionIndex = -1;
+  for (let i = 0; i < Math.min(50, lines.length); i++) {
+    const lowerLine = lines[i].toLowerCase();
+    if (lowerLine.includes('experience') || lowerLine.includes('employment') || 
+        lowerLine.includes('work history') || lowerLine.includes('career')) {
+      experienceSectionIndex = i;
+      break;
+    }
+  }
+  
+  if (experienceSectionIndex >= 0) {
+    // Look at the first few lines after experience section (usually current role)
+    const searchStart = experienceSectionIndex + 1;
+    const searchEnd = Math.min(searchStart + 10, lines.length);
+    
+    for (let i = searchStart; i < searchEnd; i++) {
+      const line = lines[i];
+      const lowerLine = line.toLowerCase();
+      
+      // Skip dates and contact info
+      if (lowerLine.match(/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/) ||
+          lowerLine.match(/^(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}/i) ||
+          lowerLine.includes('@') || lowerLine.includes('phone')) {
+        continue;
+      }
+      
+      // Check for designation keywords
+      for (const keyword of designationKeywords) {
+        if (lowerLine.includes(keyword) && line.length <= 100) {
+          return line;
+        }
+      }
+    }
+  }
+  
+  // Strategy 4: Look for patterns like "Company | Role" or "Role | Company"
+  const pipePattern = /([A-Z][a-zA-Z\s&]+)\s*[|]\s*([A-Z][a-zA-Z\s&]+)/;
+  const pipeMatch = text.match(pipePattern);
+  if (pipeMatch) {
+    // Usually format is "Company | Role", so take the second part
+    // But sometimes it's "Role | Company", so check which looks more like a role
+    const part1 = pipeMatch[1].trim();
+    const part2 = pipeMatch[2].trim();
+    
+    // Check which part contains designation keywords
+    const part1Lower = part1.toLowerCase();
+    const part2Lower = part2.toLowerCase();
+    
+    const part1HasKeyword = designationKeywords.some(kw => part1Lower.includes(kw));
+    const part2HasKeyword = designationKeywords.some(kw => part2Lower.includes(kw));
+    
+    if (part1HasKeyword && !part2HasKeyword) {
+      return part1;
+    } else if (part2HasKeyword && !part1HasKeyword) {
+      return part2;
+    } else if (part2.length < part1.length && part2.length > 3) {
+      // Usually role is shorter than company name
+      return part2;
     }
   }
   
@@ -400,6 +590,9 @@ function extractSkills(text: string): string | null {
     }
   }
   
+  // Common words to exclude from skills extraction (defined at function scope)
+  const commonWords = ['and', 'or', 'the', 'with', 'years', 'experience', 'proficient', 'familiar', 'knowledge', 'of', 'in', 'on', 'at', 'to', 'for', 'from', 'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 'can', 'cannot', 'work', 'worked', 'working', 'using', 'used', 'use'];
+  
   // Look for skills section with various patterns
   const skillsSectionPatterns = ['skills', 'technical skills', 'core skills', 'key skills', 'competencies', 'technologies', 'tech stack'];
   let skillsSectionIndex = -1;
@@ -429,7 +622,6 @@ function extractSkills(text: string): string | null {
       .filter(s => s.length > 2 && s.length < 50 && !s.match(/^(\d+|years?|months?)$/));
     
     // Add unique skills from the section, excluding common words
-    const commonWords = ['and', 'or', 'the', 'with', 'years', 'experience', 'proficient', 'familiar', 'knowledge'];
     for (const skill of skillsList.slice(0, 20)) {
       const normalizedSkill = skill.toLowerCase();
       if (!foundSkills.includes(normalizedSkill) && 

@@ -76,10 +76,30 @@ export default function TeamBoxes() {
     ).slice(0, 3); // Show max 3 avatars
   };
 
-  // Parse tenure to get years
-  const getTenureYears = (team: TeamLeader) => {
-    const tenureMatch = team.tenure?.match(/(\d+)y/);
-    return tenureMatch ? parseInt(tenureMatch[1]) : 3;
+  // Parse tenure to get years and months
+  const getTenureDisplay = (team: TeamLeader) => {
+    if (!team.tenure || team.tenure === '0' || team.tenure === 'N/A') {
+      return { years: 0, months: 0, display: '0 years' };
+    }
+    const tenureMatch = team.tenure.match(/(\d+)y\s*(\d+)m/);
+    if (tenureMatch) {
+      const years = parseInt(tenureMatch[1]);
+      const months = parseInt(tenureMatch[2]);
+      return { years, months, display: years > 0 ? `${years} year${years > 1 ? 's' : ''}` : `${months} month${months !== 1 ? 's' : ''}` };
+    }
+    // Try to match just years
+    const yearsOnlyMatch = team.tenure.match(/(\d+)y/);
+    if (yearsOnlyMatch) {
+      const years = parseInt(yearsOnlyMatch[1]);
+      return { years, months: 0, display: `${years} year${years > 1 ? 's' : ''}` };
+    }
+    // Try to match just months
+    const monthsOnlyMatch = team.tenure.match(/(\d+)m/);
+    if (monthsOnlyMatch) {
+      const months = parseInt(monthsOnlyMatch[1]);
+      return { years: 0, months, display: `${months} month${months !== 1 ? 's' : ''}` };
+    }
+    return { years: 0, months: 0, display: '0 years' };
   };
 
   // Show loading state
@@ -150,9 +170,11 @@ export default function TeamBoxes() {
           {teamLeaders.map((team, index) => {
             const teamMembers = getTeamMembers(team.employeeId);
             const remainingMembers = Math.max(0, team.members - 3);
-            const qtrsAchieved = team.qtrsAchieved || 6;
-            const nextMilestone = team.nextMilestone?.replace('+', '') || '3';
-            const tenureYears = getTenureYears(team);
+            // Use actual data from API, no fallback values
+            const qtrsAchieved = team.qtrsAchieved ?? 0;
+            // nextMilestone is now just a number from API
+            const nextMilestoneValue = team.nextMilestone || '0';
+            const tenureDisplay = getTenureDisplay(team);
 
             return (
               <Card
@@ -233,7 +255,7 @@ export default function TeamBoxes() {
                     {/* Next Milestone - Light Orange */}
                     <div className="bg-orange-100 rounded-lg px-2.5 py-2.5 flex-1 text-center relative min-w-0">
                       <TrendingUp className="h-4 w-4 text-gray-600 absolute top-1.5 right-2" />
-                      <p className="text-xl font-bold text-gray-900 mt-3 mb-1">{nextMilestone}</p>
+                      <p className="text-xl font-bold text-gray-900 mt-3 mb-1">{nextMilestoneValue}</p>
                       <p className="text-[10px] font-medium text-gray-600">Next Milestone</p>
                     </div>
 
@@ -241,8 +263,7 @@ export default function TeamBoxes() {
                     <div className="bg-blue-100 rounded-lg px-2.5 py-2.5 flex-1 text-center relative min-w-0">
                       <Hourglass className="h-4 w-4 text-gray-600 absolute top-1.5 right-2" />
                       <div className="mt-3 mb-1">
-                        <span className="text-xl font-bold text-gray-900">{tenureYears}</span>
-                        <span className="text-xs text-gray-600 ml-0.5">years</span>
+                        <span className="text-xl font-bold text-gray-900">{tenureDisplay.display}</span>
                       </div>
                       <p className="text-[10px] font-medium text-gray-600">Tenure</p>
                     </div>

@@ -156,6 +156,16 @@ export interface IStorage {
     withdrawnRoles: number;
   }>;
   getClientPipelineData(companyName: string): Promise<any[]>;
+  getClientDropRates(companyName: string): Promise<{
+    interviewDropRate: number;
+    offerDropRate: number;
+    totalInterviewsScheduled: number;
+    interviewsCompleted: number;
+    interviewsDropped: number;
+    totalOffersExtended: number;
+    offersAccepted: number;
+    offersDeclined: number;
+  }>;
   
   // Impact Metrics methods
   createImpactMetrics(metrics: InsertImpactMetrics): Promise<ImpactMetrics>;
@@ -1475,6 +1485,20 @@ export class MemStorage implements IStorage {
   async getClientPipelineData(companyName: string): Promise<any[]> {
     const applications = await this.getJobApplicationsByCompany(companyName);
     return applications;
+  }
+
+  async getClientDropRates(companyName: string): Promise<{
+    interviewDropRate: number;
+    offerDropRate: number;
+    totalInterviewsScheduled: number;
+    interviewsCompleted: number;
+    interviewsDropped: number;
+    totalOffersExtended: number;
+    offersAccepted: number;
+    offersDeclined: number;
+  }> {
+    // Stub implementation for MemStorage - use DatabaseStorage for real calculations
+    throw new Error("Drop rates calculation not implemented in MemStorage. Use DatabaseStorage.");
   }
 
   // Impact Metrics methods (stub - not implemented in MemStorage)

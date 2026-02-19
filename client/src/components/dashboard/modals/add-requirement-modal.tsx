@@ -252,152 +252,169 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px]" data-testid="modal-add-requirement">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+      <DialogContent className="sm:max-w-[600px]" data-testid="modal-add-requirement">
+        <DialogHeader className="relative">
+          <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white pr-8">
             Add New Requirement
           </DialogTitle>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClose}
+            className="absolute right-0 top-0 h-8 w-8 p-0 rounded-full"
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-          <div className="space-y-2">
-            <Label htmlFor="position" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Position *
-            </Label>
-            <Input
-              id="position"
-              type="text"
-              value={formData.position}
-              onChange={(e) => handleInputChange('position', e.target.value)}
-              placeholder="e.g. Frontend Developer"
-              className="input-styled"
-              required
-              data-testid="input-position"
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
+          {/* Two Column Layout - Image 5 Design */}
+          <div className="grid grid-cols-2 gap-6">
+            {/* Left Column */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="position" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Position *
+                </Label>
+                <Input
+                  id="position"
+                  type="text"
+                  value={formData.position}
+                  onChange={(e) => handleInputChange('position', e.target.value)}
+                  placeholder="HR"
+                  className="bg-gray-50 dark:bg-gray-800"
+                  required
+                  data-testid="input-position"
+                />
+              </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="criticality" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Criticality *
-              </Label>
-              <Select 
-                value={formData.criticality} 
-                onValueChange={(value) => handleInputChange('criticality', value)}
-                required
-              >
-                <SelectTrigger className="input-styled" data-testid="select-criticality">
-                  <SelectValue placeholder="Select criticality" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="HIGH">HIGH</SelectItem>
-                  <SelectItem value="MEDIUM">MEDIUM</SelectItem>
-                  <SelectItem value="LOW">LOW</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="toughness" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Toughness *
-              </Label>
-              <Select 
-                value={formData.toughness} 
-                onValueChange={(value) => handleInputChange('toughness', value)}
-                required
-              >
-                <SelectTrigger className="input-styled" data-testid="select-toughness">
-                  <SelectValue placeholder="Select toughness" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Easy">Easy</SelectItem>
-                  <SelectItem value="Medium">Medium</SelectItem>
-                  <SelectItem value="Tough">Tough</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="toughness" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Toughness *
+                </Label>
+                <Select 
+                  value={formData.toughness} 
+                  onValueChange={(value) => handleInputChange('toughness', value)}
+                  required
+                >
+                  <SelectTrigger className="bg-gray-50 dark:bg-gray-800" data-testid="select-toughness">
+                    <SelectValue placeholder="Select toughness" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Easy">Easy</SelectItem>
+                    <SelectItem value="Medium">Medium</SelectItem>
+                    <SelectItem value="Tough">Tough</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="company" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Company *
-              </Label>
-              <Input
-                id="company"
-                type="text"
-                value={formData.company}
-                onChange={(e) => handleInputChange('company', e.target.value)}
-                placeholder="e.g. TechCorp"
-                className="input-styled"
-                required
-                data-testid="input-company"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="spoc" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                SPOC *
-              </Label>
-              <Input
-                id="spoc"
-                type="text"
-                value={formData.spoc}
-                onChange={(e) => handleInputChange('spoc', e.target.value)}
-                placeholder="e.g. John Doe"
-                className="input-styled"
-                required
-                data-testid="input-spoc"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="teamLead" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Team Lead
-            </Label>
-            <Select 
-              value={formData.teamLead} 
-              onValueChange={(value) => handleInputChange('teamLead', value)}
-              disabled={isLoadingEmployees}
-            >
-              <SelectTrigger className="input-styled" data-testid="select-team-lead">
-                <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select team lead"} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Unassigned">Unassigned</SelectItem>
-                {teamLeads.map(lead => (
-                  <SelectItem key={lead.id} value={lead.name}>{lead.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {jdFilePreviewUrl ? (
-            <div className="space-y-2">
-              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                JD File
-              </Label>
-              <div className="border border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800 rounded-lg p-4">
-                <div className="flex items-center gap-3">
-                  <FileText className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-green-800 dark:text-green-300 flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                      JD file will be shared from client submission
-                    </p>
-                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">File is already available and will be included</p>
-                  </div>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="company" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Company *
+                </Label>
+                <Input
+                  id="company"
+                  type="text"
+                  value={formData.company}
+                  onChange={(e) => handleInputChange('company', e.target.value)}
+                  placeholder="Gumlet Marketing Private Limited"
+                  className="bg-gray-50 dark:bg-gray-800"
+                  required
+                  data-testid="input-company"
+                />
               </div>
             </div>
-          ) : (
-            <div className="space-y-2">
-              <Label htmlFor="jdFile" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                JD File (Optional)
-              </Label>
+
+            {/* Right Column */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="criticality" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Criticality *
+                </Label>
+                <Select 
+                  value={formData.criticality} 
+                  onValueChange={(value) => handleInputChange('criticality', value)}
+                  required
+                >
+                  <SelectTrigger className="bg-gray-50 dark:bg-gray-800" data-testid="select-criticality">
+                    <SelectValue placeholder="Select criticality" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="HIGH">HIGH</SelectItem>
+                    <SelectItem value="MEDIUM">MEDIUM</SelectItem>
+                    <SelectItem value="LOW">LOW</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="spoc" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  SPOC *
+                </Label>
+                <Input
+                  id="spoc"
+                  type="text"
+                  value={formData.spoc}
+                  onChange={(e) => handleInputChange('spoc', e.target.value)}
+                  placeholder="Dheena"
+                  className="bg-gray-50 dark:bg-gray-800"
+                  required
+                  data-testid="input-spoc"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="teamLead" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Team Leader
+                </Label>
+                <Select 
+                  value={formData.teamLead} 
+                  onValueChange={(value) => handleInputChange('teamLead', value)}
+                  disabled={isLoadingEmployees}
+                >
+                  <SelectTrigger className="bg-gray-50 dark:bg-gray-800" data-testid="select-team-lead">
+                    <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select team lead"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Unassigned">Unassigned</SelectItem>
+                    {teamLeads.map(lead => (
+                      <SelectItem key={lead.id} value={lead.name}>{lead.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          {/* JD File Section - Image 5 Design */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              JD File(Optional)
+            </Label>
+            {jdFilePreviewUrl ? (
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-12 w-12 text-gray-400" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">JD Files.pdf</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {jdFile ? `${(jdFile.size / 1024).toFixed(0)}KB of 128 KB` : '89KB of 128 KB'}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRemoveJdFile}
+                    className="h-8 w-8 p-0 text-gray-500 hover:text-red-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ) : (
               <div className="relative">
                 <input
                   type="file"
@@ -406,47 +423,25 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
                   onChange={handleJdFileSelect}
                   className="hidden"
                 />
-                {jdFile ? (
-                  <div className="border border-gray-300 rounded-lg p-4 bg-gray-50">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-5 w-5 text-blue-600" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{jdFile.name}</p>
-                          <p className="text-xs text-gray-500">{(jdFile.size / 1024 / 1024).toFixed(2)} MB</p>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleRemoveJdFile}
-                        className="h-8 w-8 p-0"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <label
-                    htmlFor="jdFile"
-                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 transition-colors bg-gray-50"
-                  >
-                    <Upload className="h-8 w-8 text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-600 font-medium">Click to upload JD file</p>
-                    <p className="text-xs text-gray-500 mt-1">PDF, DOC, or DOCX (Max 5MB)</p>
-                  </label>
-                )}
+                <label
+                  htmlFor="jdFile"
+                  className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-gray-400 transition-colors bg-gray-50 dark:bg-gray-800"
+                >
+                  <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-600 dark:text-gray-400 font-medium">Click to upload JD file</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">PDF, DOC, or DOCX (Max 5MB)</p>
+                </label>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          <div className="flex justify-end gap-3 pt-4">
+          {/* Buttons - Image 5 Design */}
+          <div className="flex justify-end gap-3 pt-4 border-t">
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               onClick={handleClose}
-              className="px-6 py-2 rounded"
+              className="text-gray-600 hover:text-gray-900"
               data-testid="button-cancel"
             >
               Cancel
@@ -454,10 +449,10 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
             <Button
               type="submit"
               disabled={createRequirementMutation.isPending || isUploadingJd}
-              className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-6 py-2 rounded"
+              className="bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-2 rounded"
               data-testid="button-add-requirement"
             >
-              {isUploadingJd ? 'Uploading JD...' : createRequirementMutation.isPending ? 'Adding...' : 'Add Requirement'}
+              {isUploadingJd ? 'Uploading JD...' : createRequirementMutation.isPending ? 'Adding...' : 'Submit'}
             </Button>
           </div>
         </form>

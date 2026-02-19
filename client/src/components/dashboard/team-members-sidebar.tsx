@@ -212,15 +212,28 @@ export default function TeamMembersSidebar() {
     queryKey: ['/api/admin/employees']
   });
 
-  // Map employees to team member format, merging with hardcoded data where available
+  // Fetch team performance data for recruiters
+  const { data: teamPerformanceData = [] } = useQuery<Array<{
+    id: string;
+    talentAdvisor: string;
+    joiningDate: string;
+    tenure: string;
+    closures: number;
+    lastClosure: string;
+    qtrsAchieved: number;
+  }>>({
+    queryKey: ['/api/admin/team-performance']
+  });
+
+  // Map employees to team member format, using performance data from API
   // Filter to show only Talent Advisors (Recruiters)
   const teamMembers = useMemo(() => {
     return employees
       .filter(emp => emp.role === 'recruiter' || emp.role === 'talent_advisor') // Only show Talent Advisors (Recruiters)
       .map((emp) => {
-        // Try to find matching hardcoded member by name
-        const hardcodedMatch = hardcodedTeamMembers.find(
-          hm => hm.name.toLowerCase() === emp.name.toLowerCase()
+        // Find performance data for this employee
+        const performanceData = teamPerformanceData.find(
+          perf => perf.id === emp.id || perf.talentAdvisor.toLowerCase() === emp.name.toLowerCase()
         );
         
         // Find Team Leader for Recruiters (only if reportingTo exists and matches a team_leader employee)
@@ -236,31 +249,56 @@ export default function TeamMembersSidebar() {
             teamLeaderId = teamLeader.employeeId;
           }
         }
+
+        // Calculate tenure
+        let tenure = '0 years';
+        if (emp.joiningDate) {
+          try {
+            const joinDate = new Date(emp.joiningDate);
+            if (!isNaN(joinDate.getTime())) {
+              const now = new Date();
+              const years = Math.floor((now.getTime() - joinDate.getTime()) / (1000 * 60 * 60 * 24 * 365));
+              const months = Math.floor(((now.getTime() - joinDate.getTime()) % (1000 * 60 * 60 * 24 * 365)) / (1000 * 60 * 60 * 24 * 30));
+              tenure = years > 0 ? `${years} year${years > 1 ? 's' : ''}, ${months} month${months !== 1 ? 's' : ''}` : `${months} month${months !== 1 ? 's' : ''}`;
+            }
+          } catch (e) {
+            tenure = '0 years';
+          }
+        }
+
+        // Get last login
+        let lastLogin = 'N/A';
+        if (emp.lastLoginAt) {
+          try {
+            lastLogin = new Date(emp.lastLoginAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+          } catch (e) {
+            lastLogin = 'N/A';
+          }
+        }
         
-        // If match found, use hardcoded detailed data; otherwise use defaults
         return {
           name: emp.name,
-          salary: hardcodedMatch?.salary || "0 INR",
-          year: hardcodedMatch?.year || new Date().getFullYear().toString(),
-          count: hardcodedMatch?.count || 0,
-          image: hardcodedMatch?.image || null,
-          role: hardcodedMatch?.role || (emp.role === 'recruiter' ? 'Recruiter' : emp.role === 'team_leader' ? 'Team Leader' : emp.role === 'talent_advisor' ? 'Talent Advisor' : 'Client'),
-          department: hardcodedMatch?.department || emp.department || 'N/A',
+          salary: "0 INR", // Not used in profile modal
+          year: new Date().getFullYear().toString(), // Not used in profile modal
+          count: 0, // Not used in profile modal
+          image: emp.profilePicture || null,
+          role: emp.role === 'recruiter' ? 'Recruiter' : emp.role === 'team_leader' ? 'Team Leader' : emp.role === 'talent_advisor' ? 'Talent Advisor' : 'Client',
+          department: emp.department || 'N/A',
           email: emp.email,
-          age: hardcodedMatch?.age || 0,
-          joiningDate: hardcodedMatch?.joiningDate || emp.joiningDate || 'N/A',
-          lastLogin: hardcodedMatch?.lastLogin || 'N/A',
-          lastClosure: hardcodedMatch?.lastClosure || 'N/A',
-          tenure: hardcodedMatch?.tenure || '0 years',
-          totalClosures: hardcodedMatch?.totalClosures || 0,
-          quartersAchieved: hardcodedMatch?.quartersAchieved || 0,
-          targetAchievement: hardcodedMatch?.targetAchievement || 0,
-          totalRevenue: hardcodedMatch?.totalRevenue || "0",
+          age: emp.age || 0,
+          joiningDate: emp.joiningDate ? new Date(emp.joiningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A',
+          lastLogin: lastLogin,
+          lastClosure: performanceData?.lastClosure || 'N/A',
+          tenure: performanceData?.tenure || tenure,
+          totalClosures: performanceData?.closures || 0,
+          quartersAchieved: performanceData?.qtrsAchieved || 0,
+          targetAchievement: 0, // Will be calculated from API if needed
+          totalRevenue: "0", // Will be calculated from API if needed
           teamLeaderName,
           teamLeaderId
         };
       });
-  }, [employees]);
+  }, [employees, teamPerformanceData]);
 
   // Filter team members based on search query
   const filteredMembers = useMemo(() => {

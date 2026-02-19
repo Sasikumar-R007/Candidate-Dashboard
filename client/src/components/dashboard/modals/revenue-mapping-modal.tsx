@@ -192,10 +192,31 @@ export default function RevenueMappingModal({ isOpen, onClose, editingRevenueMap
     // Validate required fields
     const finalSource = source === "Other" ? otherSource : source;
     
+    // Check basic required fields
     if (!talentAdvisor || !teamLead || !year || !quarter || !position || !client || !clientType || !percentage || !revenue || !incentivePlan || !incentive || !finalSource) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate partnerName if clientType is Partner
+    if (clientType === "Partner" && !partnerName) {
+      toast({
+        title: "Error",
+        description: "Partner Name is required when Client Type is Partner",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate otherSource if source is Other
+    if (source === "Other" && !otherSource) {
+      toast({
+        title: "Error",
+        description: "Please specify the source",
         variant: "destructive",
       });
       return;

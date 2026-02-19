@@ -558,7 +558,9 @@ export default function MasterDatabase() {
 
   const { toast } = useToast();
 
-  const BULK_UPLOAD_LIMIT = 20;
+  // Bulk upload limit: Minimum 10, Maximum 50 (optimal: 20-30 for best performance)
+  // Increased to 50 to allow more files per batch while maintaining reasonable processing time
+  const BULK_UPLOAD_LIMIT = 50;
   
   // Advanced filter state
   const [advancedFilters, setAdvancedFilters] = useState({
@@ -1081,11 +1083,16 @@ export default function MasterDatabase() {
           credentials: 'include'
         });
         
-        if (!response.ok) {
-          throw new Error('Failed to parse resume');
+        const result = await response.json();
+        
+        if (!response.ok || !result.success) {
+          throw new Error(result.message || 'Failed to parse resume');
         }
         
-        const result = await response.json();
+        if (!result.data) {
+          throw new Error('No data received from parsing');
+        }
+        
         setParsedData(result.data);
         setSingleCandidateForm(prev => ({
           ...prev,
@@ -1104,10 +1111,16 @@ export default function MasterDatabase() {
           currentRole: result.data.currentRole || ''
         }));
         setImportStep('confirm');
-      } catch (error) {
+        
+        toast({
+          title: "Success",
+          description: "Resume parsed successfully. Please review and confirm the details.",
+        });
+      } catch (error: any) {
+        console.error('Parse resume error:', error);
         toast({
           title: "Error",
-          description: "Failed to parse resume. Please try again.",
+          description: error.message || "Failed to parse resume. Please ensure the file is a valid PDF, DOC, or DOCX file and try again.",
           variant: "destructive"
         });
       } finally {
@@ -1134,17 +1147,28 @@ export default function MasterDatabase() {
         credentials: 'include'
       });
       
-      if (!response.ok) {
-        throw new Error('Failed to parse resumes');
+      const result = await response.json();
+      
+      if (!response.ok || !result.results) {
+        throw new Error(result.message || 'Failed to parse resumes');
       }
       
-      const result = await response.json();
       setBulkParsedResults(result.results);
       setImportStep('confirm');
-    } catch (error) {
+      
+      const successCount = result.results.filter((r: any) => r.success).length;
+      const failedCount = result.results.filter((r: any) => !r.success).length;
+      
+      toast({
+        title: "Parsing Complete",
+        description: `Successfully parsed ${successCount} of ${result.results.length} resumes. ${failedCount > 0 ? `${failedCount} failed.` : ''}`,
+        variant: failedCount > 0 ? "default" : "default"
+      });
+    } catch (error: any) {
+      console.error('Parse bulk resumes error:', error);
       toast({
         title: "Error",
-        description: "Failed to parse resumes. Please try again.",
+        description: error.message || "Failed to parse resumes. Please ensure all files are valid PDF, DOC, or DOCX files and try again.",
         variant: "destructive"
       });
     } finally {
@@ -2160,6 +2184,7 @@ export default function MasterDatabase() {
                           onChange={(e) => setSingleCandidateForm(prev => ({ ...prev, fullName: e.target.value }))}
                           placeholder="Enter full name"
                           data-testid="input-fullName"
+                          className={singleCandidateForm.fullName ? "text-foreground" : "placeholder:text-gray-400 dark:placeholder:text-gray-500"}
                         />
                       </div>
                       <div className="space-y-2">
@@ -2171,6 +2196,7 @@ export default function MasterDatabase() {
                           onChange={(e) => setSingleCandidateForm(prev => ({ ...prev, email: e.target.value }))}
                           placeholder="Enter email"
                           data-testid="input-email"
+                          className={singleCandidateForm.email ? "text-foreground" : "placeholder:text-gray-400 dark:placeholder:text-gray-500"}
                         />
                       </div>
                       <div className="space-y-2">
@@ -2181,6 +2207,7 @@ export default function MasterDatabase() {
                           onChange={(e) => setSingleCandidateForm(prev => ({ ...prev, phone: e.target.value }))}
                           placeholder="Enter phone number"
                           data-testid="input-phone"
+                          className={singleCandidateForm.phone ? "text-foreground" : "placeholder:text-gray-400 dark:placeholder:text-gray-500"}
                         />
                       </div>
                       <div className="space-y-2">
@@ -2191,6 +2218,7 @@ export default function MasterDatabase() {
                           onChange={(e) => setSingleCandidateForm(prev => ({ ...prev, designation: e.target.value }))}
                           placeholder="e.g. Software Engineer"
                           data-testid="input-designation"
+                          className={singleCandidateForm.designation ? "text-foreground" : "placeholder:text-gray-400 dark:placeholder:text-gray-500"}
                         />
                       </div>
                       <div className="space-y-2">
@@ -2201,6 +2229,7 @@ export default function MasterDatabase() {
                           onChange={(e) => setSingleCandidateForm(prev => ({ ...prev, experience: e.target.value }))}
                           placeholder="e.g. 5 years"
                           data-testid="input-experience"
+                          className={singleCandidateForm.experience ? "text-foreground" : "placeholder:text-gray-400 dark:placeholder:text-gray-500"}
                         />
                       </div>
                       <div className="space-y-2">
@@ -2211,6 +2240,7 @@ export default function MasterDatabase() {
                           onChange={(e) => setSingleCandidateForm(prev => ({ ...prev, location: e.target.value }))}
                           placeholder="e.g. New York, USA"
                           data-testid="input-location"
+                          className={singleCandidateForm.location ? "text-foreground" : "placeholder:text-gray-400 dark:placeholder:text-gray-500"}
                         />
                       </div>
                     </div>
@@ -2222,6 +2252,7 @@ export default function MasterDatabase() {
                         onChange={(e) => setSingleCandidateForm(prev => ({ ...prev, skills: e.target.value }))}
                         placeholder="e.g. JavaScript, React, Node.js"
                         data-testid="input-skills-import"
+                        className={singleCandidateForm.skills ? "text-foreground" : "placeholder:text-gray-400 dark:placeholder:text-gray-500"}
                       />
                     </div>
                   </div>

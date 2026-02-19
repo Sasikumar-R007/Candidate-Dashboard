@@ -40,8 +40,35 @@ export default function Archives() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('candidates');
 
+  // Fetch archived requirements - check if coming from recruiter dashboard
+  const isFromRecruiter = sessionStorage.getItem('recruiterDashboardSidebarTab') === 'requirements';
+  
+  // Fetch recruiter's requirements to filter archived ones
+  const { data: recruiterRequirements = [] } = useQuery({
+    queryKey: ['recruiter', 'requirements'],
+    queryFn: async () => {
+      try {
+        const response = await fetch('/api/recruiter/requirements', {
+          credentials: 'include'
+        });
+        if (!response.ok) {
+          console.warn('Failed to fetch recruiter requirements:', response.status);
+          return [];
+        }
+        const data = await response.json();
+        return Array.isArray(data) ? data : [];
+      } catch (error) {
+        console.error('Error fetching recruiter requirements:', error);
+        return [];
+      }
+    },
+    enabled: isFromRecruiter,
+    retry: 1,
+    refetchOnWindowFocus: false
+  });
+
   // Fetch archived requirements from API
-  const { data: archivedRequirements = [], isLoading: isLoadingRequirements } = useQuery({
+  const { data: allArchivedRequirements = [], isLoading: isLoadingRequirements } = useQuery({
     queryKey: ['admin', 'archived-requirements'],
     queryFn: async () => {
       try {
@@ -62,6 +89,13 @@ export default function Archives() {
     retry: 1,
     refetchOnWindowFocus: false
   });
+
+  // Filter archived requirements by recruiter if coming from recruiter dashboard
+  const archivedRequirements = isFromRecruiter && recruiterRequirements.length > 0
+    ? allArchivedRequirements.filter((archived: any) => 
+        recruiterRequirements.some((req: any) => req.id === archived.originalId)
+      )
+    : allArchivedRequirements;
 
   // Fetch archived candidates (applications with status Screened Out, Rejected, or Archived)
   const { data: archivedCandidates = [], isLoading: isLoadingCandidates } = useQuery({

@@ -207,21 +207,30 @@ export default function ClientMainSidebar({ activeTab, onTabChange, onExpandedCh
             </button>
           </div>
 
-          {/* Navigation Items - Labels Only (Icons hidden when expanded) */}
+          {/* Navigation Items - Icons + Text (when expanded) */}
           <nav className="flex-1 py-4 px-2">
             {menuItems.map((item) => {
+              const IconComponent = item.icon;
               const isActive = activeTab === item.id;
               return (
                 <button
                   key={item.id}
                   onClick={() => handleTabClick(item.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 mb-2 ${
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 mb-2 relative ${
                     isActive
-                      ? 'bg-slate-800'
+                      ? 'bg-slate-800 text-cyan-400'
                       : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                   }`}
                   data-testid={`button-nav-expanded-${item.id}`}
                 >
+                  {/* Active indicator - rounded rectangle on right */}
+                  {isActive && (
+                    <div className="absolute right-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-cyan-400 rounded-l-lg"></div>
+                  )}
+                  <IconComponent 
+                    size={20} 
+                    className={isActive ? 'text-cyan-400' : 'text-slate-300'}
+                  />
                   <span className={`font-medium ${isActive ? 'text-cyan-400' : 'text-slate-300'}`}>
                     {item.label}
                   </span>

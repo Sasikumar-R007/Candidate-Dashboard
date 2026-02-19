@@ -12,13 +12,13 @@ interface SearchBarProps {
 export function SearchBar({ value, onChange, placeholder = "Search...", className = "", testId = "input-search" }: SearchBarProps) {
   return (
     <div className={`relative ${className}`}>
-      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 z-10" />
       <Input
         type="text"
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="pl-9 w-64"
+        className="pl-9 w-64 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
         data-testid={testId}
       />
     </div>
