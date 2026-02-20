@@ -28,6 +28,11 @@ export async function parseResumeFile(filePath: string, mimeType: string): Promi
   let text = '';
 
   try {
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      throw new Error('Resume file not found');
+    }
+
     if (mimeType === 'application/pdf') {
       const dataBuffer = fs.readFileSync(filePath);
       text = await parsePdf(dataBuffer);
@@ -37,12 +42,25 @@ export async function parseResumeFile(filePath: string, mimeType: string): Promi
     ) {
       const result = await mammoth.extractRawText({ path: filePath });
       text = result.value;
+    } else if (mimeType === 'image/jpeg' || mimeType === 'image/jpg' || mimeType === 'image/png') {
+      // For images, we would need OCR - for now, return empty text
+      // TODO: Implement OCR for image-based resumes
+      text = '';
+      console.warn('Image-based resumes require OCR which is not yet implemented. Please upload a PDF or Word document.');
     } else {
-      throw new Error('Unsupported file type');
+      throw new Error(`Unsupported file type: ${mimeType}`);
     }
-  } catch (error) {
+
+    // Validate that we extracted some text
+    if (!text || text.trim().length < 10) {
+      throw new Error('Could not extract sufficient text from resume. The file may be corrupted, password-protected, or in an unsupported format.');
+    }
+  } catch (error: any) {
     console.error('Error parsing resume:', error);
-    throw new Error('Failed to parse resume file');
+    if (error.message) {
+      throw error;
+    }
+    throw new Error('Failed to parse resume file: ' + (error.message || 'Unknown error'));
   }
 
   const extractedData = extractResumeData(text);

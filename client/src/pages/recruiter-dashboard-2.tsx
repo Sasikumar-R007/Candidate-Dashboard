@@ -50,6 +50,7 @@ export default function RecruiterDashboard2() {
   const [isChatModalOpen, setIsChatModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('team');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedRequirementForDelivery, setSelectedRequirementForDelivery] = useState<string>('Overall');
   const [isClosureModalOpen, setIsClosureModalOpen] = useState(false);
   const [isClosureDetailsModalOpen, setIsClosureDetailsModalOpen] = useState(false);
   const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
@@ -737,13 +738,56 @@ export default function RecruiterDashboard2() {
 
   // Map applicant statuses to pipeline stages (each status maps to exactly one stage)
   const getPipelineCandidatesByStage = useMemo(() => {
-    const effectiveApplicants = applicantData.map(a => ({
+    let effectiveApplicants = applicantData.map(a => ({
       ...a,
       currentStatus: applicantStatusOverrides[a.id] || a.currentStatus
     })).filter(a =>
       applicantStatusOverrides[a.id] !== 'Archived' &&
       applicantStatusOverrides[a.id] !== 'Screened Out'
     );
+
+    // Filter by pipelineDate if set
+    if (pipelineDate) {
+      const filterDate = format(pipelineDate, 'yyyy-MM-dd');
+      effectiveApplicants = effectiveApplicants.filter((a: any) => {
+        // Parse appliedDate or appliedOn date
+        let dateToCheck: string | null = null;
+        
+        // Try appliedDate first (ISO format)
+        if (a.appliedDate) {
+          try {
+            const date = new Date(a.appliedDate);
+            dateToCheck = format(date, 'yyyy-MM-dd');
+          } catch {
+            // If parsing fails, try appliedOn format (DD-MM-YYYY)
+            if (a.appliedOn && a.appliedOn !== 'N/A') {
+              try {
+                const [day, month, year] = a.appliedOn.split('-');
+                const parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                dateToCheck = format(parsedDate, 'yyyy-MM-dd');
+              } catch {
+                return false;
+              }
+            }
+          }
+        } else if (a.appliedOn && a.appliedOn !== 'N/A') {
+          // Parse appliedOn date (format: DD-MM-YYYY)
+          try {
+            const [day, month, year] = a.appliedOn.split('-');
+            const parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            dateToCheck = format(parsedDate, 'yyyy-MM-dd');
+          } catch {
+            return false;
+          }
+        }
+        
+        // If no date found, exclude from results
+        if (!dateToCheck) return false;
+        
+        // Check if the date matches the filter date
+        return dateToCheck === filterDate;
+      });
+    }
 
     // Each status maps to exactly one pipeline column to prevent duplicates
     const stageMapping: Record<string, string[]> = {
@@ -780,7 +824,7 @@ export default function RecruiterDashboard2() {
       closure: getCandidatesForStage('Closure'),
       offerDrop: getCandidatesForStage('Offer Drop')
     };
-  }, [applicantData, applicantStatusOverrides]);
+  }, [applicantData, applicantStatusOverrides, pipelineDate]);
 
   // Handle clicking on a pipeline candidate
   const handlePipelineCandidateClick = (candidate: any) => {
@@ -1159,7 +1203,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader companyName="StaffOS" />
+          <AdminTopHeader companyName="StaffOS" hideHelpButton={true} />
           <div className="flex h-screen">
             {/* Main Content - Middle Section (Scrollable) */}
             <div className="px-6 py-6 space-y-6 flex-1 overflow-y-auto h-full">
@@ -1189,7 +1233,10 @@ export default function RecruiterDashboard2() {
                       Upload Resume
                     </button>
                     <button
-                      onClick={() => window.open('/source-resume', '_blank')}
+                      onClick={() => {
+                        sessionStorage.setItem('sourceResumeAccess', 'true');
+                        window.open('/source-resume', '_blank');
+                      }}
                       className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
                       data-testid="button-source-resume">
                       Source Resume
@@ -1325,25 +1372,25 @@ export default function RecruiterDashboard2() {
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="border-b border-gray-200">
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Current Quarter</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Minimum Target</th>
-                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Target Achieved</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 border-r border-gray-200">Current Quarter</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 border-r border-gray-200">Minimum Target</th>
+                          <th className="text-left py-3 px-4 text-sm font-medium text-gray-700 border-r border-gray-200">Target Achieved</th>
                           <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Incentive Earned</th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr>
-                          <td className="py-3 px-4 text-sm text-gray-900" data-testid="text-current-quarter">
+                          <td className="py-3 px-4 text-sm text-gray-900 border-r border-gray-200" data-testid="text-current-quarter">
                             {aggregatedTargets?.currentQuarter
                               ? `${aggregatedTargets.currentQuarter.quarter}-${aggregatedTargets.currentQuarter.year}`
                               : `Q${Math.ceil((new Date().getMonth() + 1) / 3)}-${new Date().getFullYear()}`}
                           </td>
-                          <td className="py-3 px-4 text-sm text-gray-900" data-testid="text-minimum-target">
+                          <td className="py-3 px-4 text-sm text-gray-900 border-r border-gray-200" data-testid="text-minimum-target">
                             {aggregatedTargets?.currentQuarter
                               ? formatIndianCurrency(aggregatedTargets.currentQuarter.minimumTarget)
                               : '0'}
                           </td>
-                          <td className="py-3 px-4 text-sm text-gray-900" data-testid="text-target-achieved">
+                          <td className="py-3 px-4 text-sm text-gray-900 border-r border-gray-200" data-testid="text-target-achieved">
                             {aggregatedTargets?.currentQuarter
                               ? formatIndianCurrency(aggregatedTargets.currentQuarter.targetAchieved)
                               : '0'}
@@ -1380,14 +1427,15 @@ export default function RecruiterDashboard2() {
                           } font-bold text-sm`}>{dailyMetrics?.overallPerformance ?? 'G'}</span>
                       </div>
                       <CardTitle className="text-lg font-semibold text-gray-900">Overall Performance</CardTitle>
+                      <button
+                        onClick={() => setIsPerformanceModalOpen(true)}
+                        className="ml-2 p-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        data-testid="button-external-link-performance"
+                        title="View full graph"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => setIsPerformanceModalOpen(true)}
-                      className="px-3 py-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-xs font-medium transition-colors"
-                      data-testid="button-view-more-performance"
-                    >
-                      View More
-                    </button>
                   </CardHeader>
                   <CardContent className="px-6 pb-6 pt-0">
                     <div className="h-64 flex items-center justify-center bg-white rounded-lg p-4 border border-gray-200">
@@ -1435,7 +1483,9 @@ export default function RecruiterDashboard2() {
                     <div className="space-y-0">
                       <div className="flex justify-between items-center py-2">
                         <span className="text-sm font-medium text-gray-700">Total Requirements</span>
-                        <span className="text-2xl font-bold text-blue-600" data-testid="text-total-requirements">{dailyMetrics?.totalRequirements ?? 0}</span>
+                        <span className="text-2xl font-bold text-blue-600" data-testid="text-total-requirements">
+                          {String(dailyMetrics?.totalRequirements ?? 0).padStart(2, '0')}
+                        </span>
                       </div>
                       <div className="border-t border-gray-200"></div>
                       <div className="flex justify-between items-center py-2">
@@ -1458,7 +1508,13 @@ export default function RecruiterDashboard2() {
                       <div className="border-t border-gray-200"></div>
                       <div className="flex justify-between items-center py-2">
                         <span className="text-sm font-medium text-gray-700">Completed Requirements</span>
-                        <span className="text-2xl font-bold text-blue-600" data-testid="text-completed-requirements">{dailyMetrics?.completedRequirements ?? 0}</span>
+                        <span className={`text-2xl font-bold ${(() => {
+                          const completed = dailyMetrics?.completedRequirements ?? 0;
+                          const total = dailyMetrics?.totalRequirements ?? 0;
+                          return completed === total && total > 0 ? 'text-green-600' : 'text-red-600';
+                        })()}`} data-testid="text-completed-requirements">
+                          {String(dailyMetrics?.completedRequirements ?? 0).padStart(2, '0')}/{String(dailyMetrics?.totalRequirements ?? 0).padStart(2, '0')}
+                        </span>
                       </div>
                     </div>
                   </CardContent>
@@ -1469,12 +1525,17 @@ export default function RecruiterDashboard2() {
                   <CardContent className="p-4">
                     {/* Top Controls */}
                     <div className="flex items-center justify-between mb-4 gap-2">
-                      <Select value="Overall">
-                        <SelectTrigger className="h-8 w-20 text-xs">
+                      <Select value={selectedRequirementForDelivery} onValueChange={setSelectedRequirementForDelivery}>
+                        <SelectTrigger className="h-8 w-40 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="Overall">Overall</SelectItem>
+                          {recruiterRequirements.map((req: any) => (
+                            <SelectItem key={req.id} value={req.id}>
+                              {req.position} ({req.deliveredCount || 0})
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <StandardDatePicker
@@ -1492,7 +1553,13 @@ export default function RecruiterDashboard2() {
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium text-green-600">Delivered</span>
                           <span className="text-3xl font-bold text-green-600" data-testid="text-delivered-count">
-                            {String(dailyMetrics?.dailyDeliveryDelivered ?? 0).padStart(2, '0')}
+                            {(() => {
+                              if (selectedRequirementForDelivery === 'Overall') {
+                                return String(dailyMetrics?.dailyDeliveryDelivered ?? 0).padStart(2, '0');
+                              }
+                              const selectedReq = recruiterRequirements.find((r: any) => r.id === selectedRequirementForDelivery);
+                              return String(selectedReq?.deliveredCount || 0).padStart(2, '0');
+                            })()}
                           </span>
                         </div>
                       </div>
@@ -1500,7 +1567,17 @@ export default function RecruiterDashboard2() {
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium text-red-600">Defaulted</span>
                           <span className="text-3xl font-bold text-red-600" data-testid="text-defaulted-count">
-                            {String(dailyMetrics?.dailyDeliveryDefaulted ?? 0).padStart(2, '0')}
+                            {(() => {
+                              if (selectedRequirementForDelivery === 'Overall') {
+                                return String(dailyMetrics?.dailyDeliveryDefaulted ?? 0).padStart(2, '0');
+                              }
+                              const selectedReq = recruiterRequirements.find((r: any) => r.id === selectedRequirementForDelivery);
+                              if (!selectedReq) return '00';
+                              const expected = getExpectedCount(selectedReq.criticality, selectedReq.toughness);
+                              const delivered = selectedReq.deliveredCount || 0;
+                              const defaulted = Math.max(0, expected - delivered);
+                              return String(defaulted).padStart(2, '0');
+                            })()}
                           </span>
                         </div>
                       </div>
@@ -1631,15 +1708,13 @@ export default function RecruiterDashboard2() {
                     <span className="text-sm text-gray-600">Today's Schedule</span>
                     <div className="flex items-center space-x-2">
                       <span className="text-2xl font-bold text-gray-900" data-testid="text-today-schedule-count">{getTodaysInterviews.length}</span>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-blue-600 hover:text-blue-700 p-0 h-auto font-normal text-xs underline" 
+                      <button 
+                        className="px-3 py-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-xs font-medium transition-colors w-16" 
                         onClick={() => setIsInterviewModalOpen(true)} 
                         data-testid="button-add-interview"
                       >
-                        +add
-                      </Button>
+                        + Add
+                      </button>
                     </div>
                   </div>
 
@@ -1647,15 +1722,13 @@ export default function RecruiterDashboard2() {
                     <span className="text-sm text-gray-600">Pending Cases</span>
                     <div className="flex items-center space-x-2">
                       <span className="text-2xl font-bold text-gray-900" data-testid="text-pending-cases-count">{getPendingInterviews.length}</span>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-blue-600 hover:text-blue-700 p-0 h-auto font-normal text-xs underline" 
+                      <button 
+                        className="px-3 py-1.5 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-xs font-medium transition-colors w-16" 
                         onClick={handleViewPendingCases} 
                         data-testid="button-view-pending-cases"
                       >
                         View
-                      </Button>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -1700,7 +1773,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader companyName="StaffOS" />
+          <AdminTopHeader companyName="StaffOS" hideHelpButton={true} />
           <div className="flex h-screen">
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col overflow-hidden px-6 py-6">
@@ -1751,13 +1824,14 @@ export default function RecruiterDashboard2() {
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Talent Advisor</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Team Lead</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Criticality</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Resume Count</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {isLoadingRequirements ? (
                             <tr>
-                              <td colSpan={7} className="py-8 text-center text-gray-500">
+                              <td colSpan={8} className="py-8 text-center text-gray-500">
                                 <div className="flex items-center justify-center gap-2">
                                   <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600"></div>
                                   <span>Loading requirements...</span>
@@ -1766,13 +1840,16 @@ export default function RecruiterDashboard2() {
                             </tr>
                           ) : filteredRequirements.length === 0 ? (
                             <tr>
-                              <td colSpan={7} className="py-8 text-center text-gray-500">
+                              <td colSpan={8} className="py-8 text-center text-gray-500">
                                 {requirementsSearchQuery ? 'No requirements found matching your search.' : 'No requirements assigned to you yet. Requirements will appear here once your Team Lead assigns them.'}
                               </td>
                             </tr>
                           ) : (
                             filteredRequirements.slice(0, 10).map((req: any, index: number) => {
                               const criticalityColor = req.criticality === 'HIGH' ? 'text-red-600' : req.criticality === 'MEDIUM' ? 'text-blue-600' : 'text-gray-600';
+                              const delivered = req.deliveredCount || 0;
+                              const expected = getExpectedCount(req.criticality, req.toughness);
+                              const isComplete = delivered >= expected && expected > 0;
                               return (
                                 <tr key={req.id || index} className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                                   <td className="py-3 px-4 text-gray-900 font-medium text-sm">{req.position}</td>
@@ -1795,23 +1872,27 @@ export default function RecruiterDashboard2() {
                                     </div>
                                   </td>
                                   <td className="py-3 px-4">
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                          <MoreVertical className="h-4 w-4" />
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end" className="w-32">
-                                        {req.jdText && (
-                                          <DropdownMenuItem onClick={() => {
-                                            setSelectedJD(req);
-                                            setIsJDDetailsModalOpen(true);
-                                          }}>
-                                            View JD
-                                          </DropdownMenuItem>
-                                        )}
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
+                                    <span className={`text-sm font-bold ${isComplete ? 'text-green-600' : 'text-red-600'}`}>
+                                      {String(delivered).padStart(2, '0')}/{String(expected).padStart(2, '0')}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 px-4">
+                                    {req.jdText ? (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => {
+                                          setSelectedJD(req);
+                                          setIsJDDetailsModalOpen(true);
+                                        }}
+                                        className="p-1 h-8 w-8"
+                                        title="View JD"
+                                      >
+                                        <Eye className="h-4 w-4 text-blue-600 hover:text-blue-800" />
+                                      </Button>
+                                    ) : (
+                                      <span className="text-gray-400 text-sm">-</span>
+                                    )}
                                   </td>
                                 </tr>
                               );
@@ -1851,19 +1932,23 @@ export default function RecruiterDashboard2() {
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Talent Advisor</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Team Lead</th>
                             <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Criticality</th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Actions</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">Resume Count</th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-700 text-sm">JD</th>
                           </tr>
                         </thead>
                         <tbody>
                           {filteredRequirements.length === 0 ? (
                             <tr>
-                              <td colSpan={7} className="py-8 text-center text-gray-500">
+                              <td colSpan={8} className="py-8 text-center text-gray-500">
                                 {requirementsSearchQuery ? 'No requirements found matching your search.' : 'No requirements assigned to you yet.'}
                               </td>
                             </tr>
                           ) : (
                             filteredRequirements.map((req: any, index: number) => {
                               const criticalityColor = req.criticality === 'HIGH' ? 'text-red-600' : req.criticality === 'MEDIUM' ? 'text-blue-600' : 'text-gray-600';
+                              const delivered = req.deliveredCount || 0;
+                              const expected = getExpectedCount(req.criticality, req.toughness);
+                              const isComplete = delivered >= expected && expected > 0;
                               return (
                                 <tr key={req.id || index} className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                                   <td className="py-3 px-4 text-gray-900 font-medium text-sm">{req.position}</td>
@@ -1886,7 +1971,12 @@ export default function RecruiterDashboard2() {
                                     </div>
                                   </td>
                                   <td className="py-3 px-4">
-                                    {req.jdText && (
+                                    <span className={`text-sm font-bold ${isComplete ? 'text-green-600' : 'text-red-600'}`}>
+                                      {String(delivered).padStart(2, '0')}/{String(expected).padStart(2, '0')}
+                                    </span>
+                                  </td>
+                                  <td className="py-3 px-4">
+                                    {req.jdText ? (
                                       <Button
                                         variant="ghost"
                                         size="sm"
@@ -1899,6 +1989,8 @@ export default function RecruiterDashboard2() {
                                       >
                                         <Eye className="h-4 w-4 text-blue-600 hover:text-blue-800" />
                                       </Button>
+                                    ) : (
+                                      <span className="text-gray-400 text-sm">-</span>
                                     )}
                                   </td>
                                 </tr>
@@ -2165,7 +2257,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50">
-          <AdminTopHeader companyName="StaffOS" />
+          <AdminTopHeader companyName="StaffOS" hideHelpButton={true} />
           <div className="flex h-screen">
             {/* Main Content Area */}
             <div className="flex-1 px-6 py-6 overflow-y-auto">
@@ -2466,7 +2558,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex min-h-screen">
         <div className="flex-1 ml-16 bg-gray-50 dark:bg-gray-950">
-          <AdminTopHeader companyName="StaffOS" />
+          <AdminTopHeader companyName="StaffOS" hideHelpButton={true} />
           <div className="flex h-[calc(100vh-64px)]">
             {/* Main Content Area - Scrollable */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -2732,7 +2824,7 @@ export default function RecruiterDashboard2() {
     return (
       <div className="flex h-screen">
         <div className="flex-1 ml-16 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-          <AdminTopHeader companyName="StaffOS" />
+          <AdminTopHeader companyName="StaffOS" hideHelpButton={true} />
           <div className="flex flex-col h-full p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -2913,13 +3005,14 @@ export default function RecruiterDashboard2() {
         testIdPrefix="defaulted"
       />
 
-      {/* Performance Modal */}
+      {/* Performance Modal - Full Graph with All Requirements */}
       <Dialog open={isPerformanceModalOpen} onOpenChange={setIsPerformanceModalOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Overall Performance Details</DialogTitle>
+            <DialogTitle className="text-2xl font-bold text-gray-900">Overall Performance - Full Graph</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="flex-1 overflow-y-auto space-y-6 p-4">
+            {/* Summary Stats */}
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center p-4 bg-green-50 rounded">
                 <div className="text-2xl font-bold text-green-600" data-testid="text-success-rate">
@@ -2948,6 +3041,50 @@ export default function RecruiterDashboard2() {
                 </div>
                 <div className="text-sm text-gray-600">Total Incentives</div>
                 <div className="text-xs text-gray-500 mt-1">All time earned</div>
+              </div>
+            </div>
+            {/* Full Graph with All Requirements */}
+            <div className="bg-white rounded-lg p-6 border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance by Requirement</h3>
+              <div className="h-96">
+                {recruiterRequirements && recruiterRequirements.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={recruiterRequirements.map((req: any) => ({
+                        name: req.position || 'Unknown',
+                        value: req.deliveredCount || 0,
+                        target: getExpectedCount(req.criticality, req.toughness)
+                      }))}
+                      margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis 
+                        dataKey="name" 
+                        stroke="#6b7280" 
+                        style={{ fontSize: '12px' }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={100}
+                      />
+                      <YAxis stroke="#6b7280" style={{ fontSize: '12px' }} />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                          border: '1px solid #e5e7eb',
+                          borderRadius: '0.5rem',
+                          fontSize: '12px'
+                        }}
+                      />
+                      <Legend wrapperStyle={{ fontSize: '12px' }} />
+                      <Line type="monotone" dataKey="value" stroke="#14b8a6" strokeWidth={2} name="Delivered" />
+                      <Line type="monotone" dataKey="target" stroke="#ec4899" strokeWidth={2} name="Target" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+                    No performance data available
+                  </div>
+                )}
               </div>
             </div>
           </div>

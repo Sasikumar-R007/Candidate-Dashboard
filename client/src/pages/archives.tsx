@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, User, Briefcase } from "lucide-react";
@@ -39,6 +39,23 @@ export default function Archives() {
   const [visibleCandidateRows, setVisibleCandidateRows] = useState(10);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('candidates');
+
+  // Security check: Prevent direct URL access
+  React.useEffect(() => {
+    const isFromRecruiter = sessionStorage.getItem('recruiterDashboardSidebarTab') === 'requirements';
+    const isFromAdmin = sessionStorage.getItem('adminDashboardSidebarTab') === 'requirements';
+    const referrer = document.referrer;
+    
+    // Check if accessed from recruiter or admin page, or if referrer contains the dashboard path
+    if (!isFromRecruiter && !isFromAdmin && !referrer.includes('/recruiter-login-2') && !referrer.includes('/admin-login')) {
+      // If accessed directly via URL, redirect to appropriate login
+      if (referrer.includes('recruiter') || !referrer) {
+        setLocation('/recruiter-login-2');
+      } else {
+        setLocation('/admin-login');
+      }
+    }
+  }, [setLocation]);
 
   // Fetch archived requirements - check if coming from recruiter dashboard
   const isFromRecruiter = sessionStorage.getItem('recruiterDashboardSidebarTab') === 'requirements';
@@ -173,8 +190,7 @@ export default function Archives() {
             variant="ghost"
             size="sm"
             onClick={() => {
-              sessionStorage.setItem('recruiterDashboardSidebarTab', 'dashboard');
-              setLocation('/recruiter-login-2');
+              window.history.back();
             }}
             className="flex items-center gap-2"
             data-testid="button-back"

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import {
   Briefcase,
   MapPin,
@@ -308,6 +308,495 @@ const extractSearchTerms = (query: string): string[] => {
   return query.trim().split(/\s+/).filter(term => term.length > 0);
 };
 
+// ============================================
+// ENTERPRISE-GRADE BOOLEAN SEARCH ENGINE
+// ============================================
+
+interface SearchToken {
+  type: 'term' | 'phrase' | 'wildcard' | 'must_include' | 'must_exclude' | 'operator' | 'group_start' | 'group_end';
+  value: string;
+  field?: string; // For field-specific searches like "skills:React"
+}
+
+interface SearchResult {
+  matches: boolean;
+  score: number;
+  matchedTerms: string[];
+  fieldMatches: Record<string, number>;
+}
+
+// Field weights for scoring
+const FIELD_WEIGHTS = {
+  skills: 1.0,        // Highest weight
+  title: 0.8,         // High weight
+  name: 0.6,          // Medium-high
+  resumeText: 0.5,    // Medium
+  company: 0.4,       // Medium-low
+  education: 0.3,      // Low
+  location: 0.2,      // Low
+  other: 0.1,         // Lowest
+};
+
+// Tokenize boolean query with full operator support
+const tokenizeBooleanQuery = (query: string): SearchToken[] => {
+  const tokens: SearchToken[] = [];
+  let i = 0;
+  const len = query.length;
+  
+  while (i < len) {
+    // Skip whitespace
+    if (/\s/.test(query[i])) {
+      i++;
+      continue;
+    }
+    
+    // Group start
+    if (query[i] === '(') {
+      tokens.push({ type: 'group_start', value: '(' });
+      i++;
+      continue;
+    }
+    
+    // Group end
+    if (query[i] === ')') {
+      tokens.push({ type: 'group_end', value: ')' });
+      i++;
+      continue;
+    }
+    
+    // Must include operator (+)
+    if (query[i] === '+' && (i === 0 || /\s/.test(query[i - 1]))) {
+      tokens.push({ type: 'must_include', value: '+' });
+      i++;
+      continue;
+    }
+    
+    // Must exclude operator (-)
+    if (query[i] === '-' && (i === 0 || /\s/.test(query[i - 1]))) {
+      tokens.push({ type: 'must_exclude', value: '-' });
+      i++;
+      continue;
+    }
+    
+    // NOT operator
+    if (query.substr(i, 3).toUpperCase() === 'NOT' && (i === 0 || /\s/.test(query[i - 1]))) {
+      tokens.push({ type: 'must_exclude', value: 'NOT' });
+      i += 3;
+      continue;
+    }
+    
+    // AND operator
+    if (query.substr(i, 3).toUpperCase() === 'AND' && (i === 0 || /\s/.test(query[i - 1]))) {
+      tokens.push({ type: 'operator', value: 'AND' });
+      i += 3;
+      continue;
+    }
+    
+    // OR operator
+    if (query.substr(i, 2).toUpperCase() === 'OR' && (i === 0 || /\s/.test(query[i - 1]))) {
+      tokens.push({ type: 'operator', value: 'OR' });
+      i += 2;
+      continue;
+    }
+    
+    // Phrase (quoted string)
+    if (query[i] === '"') {
+      const endQuote = query.indexOf('"', i + 1);
+      if (endQuote !== -1) {
+        const phrase = query.substring(i + 1, endQuote);
+        tokens.push({ type: 'phrase', value: phrase });
+        i = endQuote + 1;
+        continue;
+      }
+    }
+    
+    // Field-specific search (e.g., "skills:React")
+    const fieldMatch = query.substr(i).match(/^(\w+):\s*([^\s]+(?:\s+[^\s]+)*)/);
+    if (fieldMatch) {
+      const field = fieldMatch[1].toLowerCase();
+      let value = fieldMatch[2];
+      
+      // Remove quotes if present
+      if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+      
+      tokens.push({ type: 'term', value: value, field });
+      i += fieldMatch[0].length;
+      continue;
+    }
+    
+    // Extract term (word or wildcard)
+    let term = '';
+    while (i < len && !/\s/.test(query[i]) && query[i] !== '(' && query[i] !== ')' && 
+           query.substr(i, 3).toUpperCase() !== 'AND' && query.substr(i, 2).toUpperCase() !== 'OR' &&
+           query.substr(i, 3).toUpperCase() !== 'NOT') {
+      term += query[i];
+      i++;
+    }
+    
+    if (term) {
+      // Check for wildcard
+      if (term.includes('*')) {
+        tokens.push({ type: 'wildcard', value: term });
+      } else {
+        tokens.push({ type: 'term', value: term });
+      }
+    }
+  }
+  
+  return tokens;
+};
+
+// Get field text from candidate
+const getFieldText = (candidate: CandidateDisplay, field?: string): { text: string; weight: number } => {
+  if (!field) {
+    return { text: getCandidateSearchText(candidate), weight: FIELD_WEIGHTS.other };
+  }
+  
+  const fieldLower = field.toLowerCase();
+  let text = '';
+  let weight = FIELD_WEIGHTS.other;
+  
+  switch (fieldLower) {
+    case 'skill':
+    case 'skills':
+      text = candidate.skills.join(' ').toLowerCase();
+      weight = FIELD_WEIGHTS.skills;
+      break;
+    case 'title':
+    case 'role':
+    case 'designation':
+      text = candidate.title.toLowerCase();
+      weight = FIELD_WEIGHTS.title;
+      break;
+    case 'name':
+      text = candidate.name.toLowerCase();
+      weight = FIELD_WEIGHTS.name;
+      break;
+    case 'company':
+      text = candidate.currentCompany.toLowerCase();
+      weight = FIELD_WEIGHTS.company;
+      break;
+    case 'location':
+      text = candidate.location.toLowerCase();
+      weight = FIELD_WEIGHTS.location;
+      break;
+    case 'education':
+      text = candidate.education.toLowerCase();
+      weight = FIELD_WEIGHTS.education;
+      break;
+    case 'resume':
+    case 'resumetext':
+      text = (candidate.resumeText || '').substring(0, 2000).toLowerCase();
+      weight = FIELD_WEIGHTS.resumeText;
+      break;
+    default:
+      text = getCandidateSearchText(candidate);
+      weight = FIELD_WEIGHTS.other;
+  }
+  
+  return { text, weight };
+};
+
+// Match term with wildcard support
+const matchTerm = (text: string, term: string, isWildcard: boolean = false): { matches: boolean; score: number } => {
+  const lowerText = text.toLowerCase();
+  const lowerTerm = term.toLowerCase();
+  
+  if (isWildcard) {
+    // Convert wildcard pattern to regex
+    const pattern = lowerTerm.replace(/\*/g, '.*').replace(/\?/g, '.');
+    const regex = new RegExp(`^${pattern}$`, 'i');
+    if (regex.test(lowerText)) {
+      return { matches: true, score: 0.8 };
+    }
+    
+    // Also check if pattern matches any word in text
+    const words = lowerText.split(/\s+/);
+    for (const word of words) {
+      if (regex.test(word)) {
+        return { matches: true, score: 0.7 };
+      }
+    }
+    return { matches: false, score: 0 };
+  }
+  
+  // Exact match
+  if (lowerText === lowerTerm) {
+    return { matches: true, score: 1.0 };
+  }
+  
+  // Word boundary match
+  const wordBoundaryRegex = new RegExp(`\\b${lowerTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+  if (wordBoundaryRegex.test(lowerText)) {
+    return { matches: true, score: 0.9 };
+  }
+  
+  // Contains match
+  if (lowerText.includes(lowerTerm)) {
+    return { matches: true, score: 0.7 };
+  }
+  
+  // Fuzzy match
+  const similarity = calculateSimilarity(lowerText, lowerTerm);
+  if (similarity >= 0.75) {
+    return { matches: true, score: similarity * 0.6 };
+  }
+  
+  return { matches: false, score: 0 };
+};
+
+// Match phrase (exact phrase matching)
+const matchPhrase = (text: string, phrase: string): { matches: boolean; score: number } => {
+  const lowerText = text.toLowerCase();
+  const lowerPhrase = phrase.toLowerCase();
+  
+  if (lowerText.includes(lowerPhrase)) {
+    // Calculate score based on position and frequency
+    const positions = [];
+    let index = lowerText.indexOf(lowerPhrase);
+    while (index !== -1) {
+      positions.push(index);
+      index = lowerText.indexOf(lowerPhrase, index + 1);
+    }
+    
+    // Higher score for earlier matches and multiple matches
+    const baseScore = 0.9;
+    const frequencyBonus = Math.min(positions.length * 0.1, 0.2);
+    const positionBonus = positions[0] < 100 ? 0.1 : 0;
+    
+    return { matches: true, score: baseScore + frequencyBonus + positionBonus };
+  }
+  
+  return { matches: false, score: 0 };
+};
+
+// Evaluate boolean expression tree
+const evaluateBooleanExpression = (
+  tokens: SearchToken[],
+  candidate: CandidateDisplay
+): SearchResult => {
+  if (tokens.length === 0) {
+    return { matches: true, score: 0, matchedTerms: [], fieldMatches: {} };
+  }
+  
+  // Handle parentheses by recursively evaluating groups
+  const processGroups = (tokens: SearchToken[]): SearchToken[] => {
+    const result: SearchToken[] = [];
+    let i = 0;
+    
+    while (i < tokens.length) {
+      if (tokens[i].type === 'group_start') {
+        // Find matching closing parenthesis
+        let depth = 1;
+        let j = i + 1;
+        while (j < tokens.length && depth > 0) {
+          if (tokens[j].type === 'group_start') depth++;
+          if (tokens[j].type === 'group_end') depth--;
+          j++;
+        }
+        
+        // Evaluate inner expression
+        const innerTokens = tokens.slice(i + 1, j - 1);
+        const innerResult = evaluateBooleanExpression(innerTokens, candidate);
+        
+        // Replace group with a virtual token representing the result
+        result.push({
+          type: innerResult.matches ? 'term' : 'must_exclude',
+          value: innerResult.matches ? '__TRUE__' : '__FALSE__',
+        });
+        
+        i = j;
+      } else {
+        result.push(tokens[i]);
+        i++;
+      }
+    }
+    
+    return result;
+  };
+  
+  tokens = processGroups(tokens);
+  
+  // Process must-exclude terms first (NOT, -)
+  const mustExcludeTerms: SearchToken[] = [];
+  const remainingTokens: SearchToken[] = [];
+  
+  for (let i = 0; i < tokens.length; i++) {
+    if (tokens[i].type === 'must_exclude') {
+      // Get next term
+      if (i + 1 < tokens.length && (tokens[i + 1].type === 'term' || tokens[i + 1].type === 'phrase' || tokens[i + 1].type === 'wildcard')) {
+        mustExcludeTerms.push(tokens[i + 1]);
+        i++; // Skip the term
+      }
+    } else if (tokens[i].type !== 'must_include') {
+      remainingTokens.push(tokens[i]);
+    } else {
+      // Must include - keep the operator and next term together
+      remainingTokens.push(tokens[i]);
+    }
+  }
+  
+  // Check must-exclude terms
+  for (const token of mustExcludeTerms) {
+    const fieldData = getFieldText(candidate, token.field);
+    let matchResult: { matches: boolean; score: number };
+    
+    if (token.type === 'phrase') {
+      matchResult = matchPhrase(fieldData.text, token.value);
+    } else if (token.type === 'wildcard') {
+      matchResult = matchTerm(fieldData.text, token.value, true);
+    } else {
+      matchResult = matchTerm(fieldData.text, token.value);
+    }
+    
+    if (matchResult.matches) {
+      return { matches: false, score: 0, matchedTerms: [], fieldMatches: {} };
+    }
+  }
+  
+  // Evaluate remaining expression with AND/OR logic
+  let totalScore = 0;
+  let matchedTerms: string[] = [];
+  const fieldMatches: Record<string, number> = {};
+  
+  // Default to OR if no explicit operator
+  const hasExplicitOperator = tokens.some(t => t.type === 'operator');
+  const defaultOperator = hasExplicitOperator ? null : 'OR';
+  
+  // Split by operators
+  const segments: SearchToken[][] = [];
+  let currentSegment: SearchToken[] = [];
+  let currentOperator: string | null = defaultOperator;
+  
+  for (let i = 0; i < remainingTokens.length; i++) {
+    const token = remainingTokens[i];
+    
+    if (token.type === 'operator') {
+      if (currentSegment.length > 0) {
+        segments.push(currentSegment);
+        currentSegment = [];
+      }
+      currentOperator = token.value.toUpperCase();
+    } else if (token.type === 'must_include') {
+      // Must include operator - treat next term as required
+      if (i + 1 < remainingTokens.length) {
+        currentSegment.push({ ...remainingTokens[i + 1], type: 'must_include' as any });
+        i++;
+      }
+    } else {
+      currentSegment.push(token);
+    }
+  }
+  
+  if (currentSegment.length > 0) {
+    segments.push(currentSegment);
+  }
+  
+  // Evaluate segments
+  let allMatch = true;
+  let anyMatch = false;
+  
+  for (const segment of segments) {
+    let segmentMatches = false;
+    let segmentScore = 0;
+    const segmentMatchedTerms: string[] = [];
+    
+    for (const token of segment) {
+      if (token.value === '__TRUE__') {
+        segmentMatches = true;
+        segmentScore = 1.0;
+        continue;
+      }
+      if (token.value === '__FALSE__') {
+        segmentMatches = false;
+        segmentScore = 0;
+        continue;
+      }
+      
+      const isRequired = token.type === 'must_include';
+      const fieldData = getFieldText(candidate, token.field);
+      let matchResult: { matches: boolean; score: number };
+      
+      if (token.type === 'phrase') {
+        matchResult = matchPhrase(fieldData.text, token.value);
+      } else if (token.type === 'wildcard') {
+        matchResult = matchTerm(fieldData.text, token.value, true);
+      } else {
+        matchResult = matchTerm(fieldData.text, token.value);
+      }
+      
+      if (matchResult.matches) {
+        const weightedScore = matchResult.score * fieldData.weight;
+        segmentScore += weightedScore;
+        segmentMatchedTerms.push(token.value);
+        
+        // Track field matches
+        const fieldKey = token.field || 'general';
+        fieldMatches[fieldKey] = (fieldMatches[fieldKey] || 0) + weightedScore;
+        
+        if (isRequired || segment.length === 1) {
+          segmentMatches = true;
+        }
+      } else if (isRequired) {
+        // Required term didn't match
+        segmentMatches = false;
+        break;
+      }
+    }
+    
+    if (segmentMatches) {
+      anyMatch = true;
+      totalScore += segmentScore;
+      matchedTerms.push(...segmentMatchedTerms);
+    } else {
+      allMatch = false;
+    }
+  }
+  
+  // Determine final match based on operator
+  let finalMatch = false;
+  if (currentOperator === 'AND' || (!hasExplicitOperator && segments.length > 1)) {
+    finalMatch = allMatch && segments.length > 0;
+  } else {
+    finalMatch = anyMatch || segments.length === 0;
+  }
+  
+  // Normalize score (0-100)
+  const normalizedScore = Math.min(100, Math.round(totalScore * 100));
+  
+  return {
+    matches: finalMatch,
+    score: normalizedScore,
+    matchedTerms: [...new Set(matchedTerms)],
+    fieldMatches,
+  };
+};
+
+// Main boolean search function with full operator support
+const parseAdvancedBooleanSearch = (query: string, candidate: CandidateDisplay): SearchResult => {
+  if (!query || !query.trim()) {
+    return { matches: true, score: 0, matchedTerms: [], fieldMatches: {} };
+  }
+  
+  try {
+    const tokens = tokenizeBooleanQuery(query.trim());
+    return evaluateBooleanExpression(tokens, candidate);
+  } catch (error) {
+    console.error('Boolean search parsing error:', error);
+    // Fallback to simple search
+    const searchText = getCandidateSearchText(candidate);
+    const simpleMatch = matchTerm(searchText, query);
+    return {
+      matches: simpleMatch.matches,
+      score: simpleMatch.score * 50,
+      matchedTerms: simpleMatch.matches ? [query] : [],
+      fieldMatches: {},
+    };
+  }
+};
+
 interface FilterState {
   keywords: string[];
   excludedKeywords: string[];
@@ -331,6 +820,25 @@ interface FilterState {
   workPermit: string;
   candidateStatus: string;
   showWith: string[];
+  // New filter options
+  skillMatchPercentage: number;
+  filterLogic: 'all' | 'any';
+  selectedRequirementId?: string;
+}
+
+interface CandidateWithScore extends CandidateDisplay {
+  relevanceScore: number;
+  matchPercentage?: number;
+  matchedTerms: string[];
+}
+
+type SortOption = 'relevance' | 'experience-high' | 'experience-low' | 'ctc-high' | 'ctc-low' | 'notice-period' | 'recently-updated' | 'alphabetical';
+
+interface SavedSearchTemplate {
+  id: string;
+  name: string;
+  filters: FilterState;
+  createdAt: number;
 }
 
 interface RecentSearch {
@@ -366,6 +874,9 @@ const initialFilters: FilterState = {
   workPermit: "",
   candidateStatus: "all",
   showWith: [],
+  skillMatchPercentage: 0,
+  filterLogic: 'all',
+  selectedRequirementId: undefined,
 };
 
 // Filterable Dropdown Component
@@ -417,8 +928,12 @@ function FilterableDropdown({ value, onChange, options, placeholder, icon }: Fil
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between bg-white border-gray-200 rounded-lg h-10 font-normal text-gray-700 hover:bg-gray-50"
+          className="w-full justify-between bg-white border-gray-200 rounded-lg h-10 font-normal text-gray-700 hover:bg-gray-50 relative"
           onClick={(e) => {
+            // Don't open if clicking on the X button
+            if ((e.target as HTMLElement).closest('.clear-filter-button')) {
+              return;
+            }
             e.preventDefault();
             setOpen(true);
             setInputValue("");
@@ -430,11 +945,16 @@ function FilterableDropdown({ value, onChange, options, placeholder, icon }: Fil
           </span>
           {value && (
             <X 
-              className="ml-2 h-4 w-4 shrink-0 opacity-50 hover:opacity-100 cursor-pointer" 
+              className="clear-filter-button ml-2 h-4 w-4 shrink-0 opacity-50 hover:opacity-100 cursor-pointer z-10" 
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 onChange("");
                 setOpen(false);
+              }}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
               }}
             />
           )}
@@ -814,6 +1334,20 @@ const SourceResume = () => {
       setLocation('/employer-login');
       return;
     }
+
+    // Security check: Prevent direct URL access - must come from recruiter dashboard
+    const isFromRecruiter = sessionStorage.getItem('sourceResumeAccess') === 'true';
+    const referrer = document.referrer;
+    
+    // Check if accessed from recruiter page or if referrer contains the recruiter dashboard path
+    if (!isFromRecruiter && !referrer.includes('/recruiter-login-2') && !referrer.includes('/source-resume')) {
+      // If accessed directly via URL, redirect to recruiter login
+      setLocation('/recruiter-login-2');
+      return;
+    }
+    
+    // Clear the access flag after use
+    sessionStorage.removeItem('sourceResumeAccess');
   }, [user, authLoading, isVerified, setLocation]);
   
   // Show loading while auth is being verified
@@ -842,6 +1376,21 @@ const SourceResume = () => {
   }
   
   const [view, setView] = useState<'search' | 'results'>('search');
+  
+  // Trigger initial search if we're already in results view (e.g., page refresh)
+  useEffect(() => {
+    // Check if we should be in results view (e.g., from URL or session)
+    // For now, we'll trigger search when component mounts if view is results
+    if (view === 'results' && searchResults === null && !isSearching) {
+      const timer = setTimeout(() => {
+        if (performSearchRef.current) {
+          console.log('Initial search trigger on mount');
+          performSearchRef.current(1);
+        }
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, []); // Only run on mount
   const [filters, setFilters] = useState<FilterState>(initialFilters);
   const [keywordInput, setKeywordInput] = useState("");
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateDisplay | null>(null);
@@ -867,7 +1416,108 @@ const SourceResume = () => {
   const [excludeCompanyInput, setExcludeCompanyInput] = useState("");
   const [addDegreeInput, setAddDegreeInput] = useState("");
   
+  // New state for enhanced features
+  const [sortOption, setSortOption] = useState<SortOption>('relevance');
+  const [selectedCandidates, setSelectedCandidates] = useState<Set<string>>(new Set());
+  const [savedSearchTemplates, setSavedSearchTemplates] = useState<SavedSearchTemplate[]>([]);
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+  const [compareCandidates, setCompareCandidates] = useState<CandidateDisplay[]>([]);
+  const [useInfiniteScroll, setUseInfiniteScroll] = useState(false);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  
   const { toast } = useToast();
+  
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(resultsSearchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [resultsSearchQuery]);
+  
+  // Keyboard shortcut: Ctrl+K to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        // Focus search input in results view
+        if (view === 'results') {
+          const searchInput = document.querySelector('input[placeholder*="skills, company"]') as HTMLInputElement;
+          if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+          }
+        }
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [view]);
+  
+  // Export candidates to CSV
+  const exportToCSV = (candidatesToExport: CandidateWithScore[]) => {
+    const headers = ['Name', 'Email', 'Title', 'Company', 'Location', 'Experience', 'Skills', 'CTC', 'Notice Period', 'Education', 'Relevance Score', 'Match %'];
+    const rows = candidatesToExport.map(c => [
+      c.name,
+      c.email,
+      c.title,
+      c.currentCompany,
+      c.location,
+      `${c.experience} years`,
+      c.skills.join('; '),
+      c.ctc,
+      c.noticePeriod,
+      c.education,
+      c.relevanceScore?.toString() || '0',
+      c.matchPercentage?.toString() || '0',
+    ]);
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `candidates_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({
+      title: "Export Successful",
+      description: `Exported ${candidatesToExport.length} candidates to CSV`,
+    });
+  };
+  
+  // Toggle candidate selection
+  const toggleCandidateSelection = (candidateId: string) => {
+    setSelectedCandidates(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(candidateId)) {
+        newSet.delete(candidateId);
+      } else {
+        newSet.add(candidateId);
+      }
+      return newSet;
+    });
+  };
+  
+  // Load saved search templates
+  useEffect(() => {
+    const stored = localStorage.getItem('sourceResumeSavedTemplates');
+    if (stored) {
+      try {
+        setSavedSearchTemplates(JSON.parse(stored));
+      } catch (e) {
+        console.error('Failed to load saved templates', e);
+      }
+    }
+  }, []);
 
   // Load recent searches from localStorage
   useEffect(() => {
@@ -883,9 +1533,26 @@ const SourceResume = () => {
 
   const queryClient = useQueryClient();
 
-  // Fetch candidates to get unique values
+  // Server-side search state
+  const [searchResults, setSearchResults] = useState<{
+    candidates: CandidateWithScore[];
+    pagination: { page: number; pageSize: number; totalCount: number; totalPages: number };
+    analytics: any;
+  } | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Server-side search query
+  const searchMutation = useMutation({
+    mutationFn: async (searchParams: any) => {
+      const response = await apiRequest('POST', '/api/source-resume/search', searchParams);
+      return await response.json();
+    },
+  });
+
+  // Fetch candidates for initial load (fallback for non-search views)
   const { data: dbCandidates = [], isLoading: isLoadingCandidates } = useQuery<DatabaseCandidate[]>({
     queryKey: ['/api/admin/candidates'],
+    enabled: view === 'search', // Only fetch all candidates in search view
   });
 
   // Fetch recruiter requirements
@@ -1104,197 +1771,7 @@ const SourceResume = () => {
     return searchText.toLowerCase();
   };
 
-  // Advanced boolean search parser with support for:
-  // - AND/OR operators
-  // - NOT operator
-  // - Parentheses for grouping
-  // - Phrase matching with quotes
-  // - Field-specific searches (e.g., "skills:React", "location:Chennai")
-  const parseAdvancedBooleanSearch = (query: string, candidate: CandidateDisplay): boolean => {
-    if (!filters.booleanMode || !query.trim()) return true;
-    
-    const searchText = getCandidateSearchText(candidate);
-    const queryLower = query.toLowerCase().trim();
-    
-    // Extract field-specific searches (e.g., "skills:React", "location:Chennai")
-    const fieldPattern = /(\w+):\s*([^\s]+(?:\s+[^\s]+)*)/gi;
-    let modifiedQuery = query;
-    const fieldSearches: { field: string; value: string }[] = [];
-    
-    let fieldMatch;
-    while ((fieldMatch = fieldPattern.exec(query)) !== null) {
-      const field = fieldMatch[1].toLowerCase();
-      const value = fieldMatch[2];
-      fieldSearches.push({ field, value });
-      // Remove from query for further processing
-      modifiedQuery = modifiedQuery.replace(fieldMatch[0], '');
-    }
-    
-    // Check field-specific searches
-    for (const { field, value } of fieldSearches) {
-      let fieldText = '';
-      switch (field) {
-        case 'skill':
-        case 'skills':
-          fieldText = candidate.skills.join(' ').toLowerCase();
-          break;
-        case 'name':
-          fieldText = candidate.name.toLowerCase();
-          break;
-        case 'title':
-        case 'role':
-          fieldText = candidate.title.toLowerCase();
-          break;
-        case 'company':
-          fieldText = candidate.currentCompany.toLowerCase();
-          break;
-        case 'location':
-          fieldText = candidate.location.toLowerCase();
-          break;
-        case 'education':
-          fieldText = candidate.education.toLowerCase();
-          break;
-        default:
-          fieldText = searchText; // Fallback to full search
-      }
-      
-      // Remove quotes if present for phrase matching
-      const cleanValue = value.replace(/^["']|["']$/g, '');
-      if (!fuzzyMatch(fieldText, cleanValue)) {
-        return false;
-      }
-    }
-    
-    // Extract phrase searches (quoted strings)
-    const phrasePattern = /"([^"]+)"/g;
-    const phrases: string[] = [];
-    let phraseMatch;
-    while ((phraseMatch = phrasePattern.exec(modifiedQuery)) !== null) {
-      phrases.push(phraseMatch[1]);
-      modifiedQuery = modifiedQuery.replace(phraseMatch[0], `__PHRASE_${phrases.length - 1}__`);
-    }
-    
-    // Process NOT operators first
-    const notPattern = /\bNOT\s+([^\s]+(?:\s+(?!(?:AND|OR|NOT))[^\s]+)*)/gi;
-    const notTerms: string[] = [];
-    let notMatch;
-    while ((notMatch = notPattern.exec(modifiedQuery)) !== null) {
-      const notTerm = notMatch[1].trim();
-      // Replace phrase placeholders
-      const cleanNotTerm = notTerm.replace(/__PHRASE_(\d+)__/g, (_, idx) => phrases[parseInt(idx)]);
-      notTerms.push(cleanNotTerm);
-      modifiedQuery = modifiedQuery.replace(notMatch[0], '');
-    }
-    
-    // Check NOT terms - candidate must not contain these
-    for (const notTerm of notTerms) {
-      if (fuzzyMatch(searchText, notTerm)) {
-        return false;
-      }
-    }
-    
-    // Replace remaining phrase placeholders back to original phrases for processing
-    modifiedQuery = modifiedQuery.replace(/__PHRASE_(\d+)__/g, (_, idx) => `"${phrases[parseInt(idx)]}"`);
-    
-    // Handle parentheses for grouping (basic support)
-    // Remove parentheses and process inner expressions first
-    const parenthesesPattern = /\(([^()]+)\)/g;
-    let hasParentheses = false;
-    let processedQuery = modifiedQuery;
-    
-    while (parenthesesPattern.test(processedQuery)) {
-      hasParentheses = true;
-      processedQuery = processedQuery.replace(parenthesesPattern, (match, inner) => {
-        // Evaluate inner expression
-        const innerResult = evaluateBooleanExpression(inner.trim(), searchText, phrases);
-        return innerResult ? '__TRUE__' : '__FALSE__';
-      });
-    }
-    
-    // Now evaluate the main expression
-    if (hasParentheses) {
-      // Replace true/false placeholders
-      processedQuery = processedQuery.replace(/__TRUE__/g, 'true');
-      processedQuery = processedQuery.replace(/__FALSE__/g, 'false');
-      
-      // If only true/false remain, evaluate directly
-      if (/^(true|false)(\s+(?:AND|OR)\s+(true|false))*$/i.test(processedQuery.trim())) {
-        // Simple boolean evaluation
-        let result = true;
-        const parts = processedQuery.split(/\s+(?:AND|OR)\s+/i);
-        const operators = processedQuery.match(/\s+(AND|OR)\s+/gi) || [];
-        
-        if (parts.length > 0) {
-          result = parts[0].toLowerCase() === 'true';
-          for (let i = 0; i < operators.length; i++) {
-            const op = operators[i].trim().toUpperCase();
-            const nextPart = parts[i + 1].toLowerCase() === 'true';
-            result = op === 'AND' ? (result && nextPart) : (result || nextPart);
-          }
-        }
-        return result;
-      }
-    }
-    
-    // Evaluate remaining expression
-    return evaluateBooleanExpression(processedQuery, searchText, phrases);
-  };
-
-  // Helper function to evaluate boolean expression
-  const evaluateBooleanExpression = (expression: string, searchText: string, phrases: string[]): boolean => {
-    if (!expression.trim()) return true;
-    
-    // Handle phrase matches
-    const phrasePlaceholder = /__PHRASE_(\d+)__/g;
-    const phraseInQuotes = /"([^"]+)"/g;
-    
-    // Replace quoted phrases with placeholders first
-    let tempExpression = expression;
-    const tempPhrases: string[] = [];
-    let match;
-    while ((match = phraseInQuotes.exec(expression)) !== null) {
-      const phraseIndex = tempPhrases.length;
-      tempPhrases.push(match[1]);
-      tempExpression = tempExpression.replace(match[0], `__PHRASE_${phraseIndex}__`);
-    }
-    
-    const allPhrases = [...phrases, ...tempPhrases];
-    
-    // Process AND/OR logic
-    const andPattern = /\bAND\b/gi;
-    const orPattern = /\bOR\b/gi;
-    
-    if (andPattern.test(tempExpression)) {
-      const terms = tempExpression.split(/\s+AND\s+/gi).map(t => t.trim()).filter(Boolean);
-      return terms.every(term => {
-        // Check for phrase
-        const phraseMatch = term.match(/__PHRASE_(\d+)__/);
-        if (phraseMatch) {
-          const phrase = allPhrases[parseInt(phraseMatch[1])];
-          return searchText.includes(phrase.toLowerCase());
-        }
-        return fuzzyMatch(searchText, term);
-      });
-    } else if (orPattern.test(tempExpression)) {
-      const terms = tempExpression.split(/\s+OR\s+/gi).map(t => t.trim()).filter(Boolean);
-      return terms.some(term => {
-        const phraseMatch = term.match(/__PHRASE_(\d+)__/);
-        if (phraseMatch) {
-          const phrase = allPhrases[parseInt(phraseMatch[1])];
-          return searchText.includes(phrase.toLowerCase());
-        }
-        return fuzzyMatch(searchText, term);
-      });
-    } else {
-      // Single term or phrase
-      const phraseMatch = tempExpression.match(/__PHRASE_(\d+)__/);
-      if (phraseMatch) {
-        const phrase = allPhrases[parseInt(phraseMatch[1])];
-        return searchText.includes(phrase.toLowerCase());
-      }
-      return fuzzyMatch(searchText, tempExpression);
-    }
-  };
+  // Use the enhanced boolean search parser (defined above as a module-level function)
 
   // Filter candidates based on search criteria
   const filterCandidates = (candidatesList: CandidateDisplay[]): CandidateDisplay[] => {
@@ -1334,13 +1811,19 @@ const SourceResume = () => {
         if (!hasAllSkills) return false;
       }
 
-      // Search query filter - Multiple words use OR logic by default
+      // Search query filter - Enhanced with scoring
+      let searchScore = 0;
+      let matchedTerms: string[] = [];
+      
       if (resultsSearchQuery.trim()) {
         if (filters.booleanMode) {
-          // Use advanced boolean search parser with full capabilities
-          if (!parseAdvancedBooleanSearch(resultsSearchQuery, candidate)) {
+          // Use enhanced boolean search parser with full capabilities
+          const searchResult = parseAdvancedBooleanSearch(resultsSearchQuery, candidate);
+          if (!searchResult.matches) {
             return false;
           }
+          searchScore = searchResult.score;
+          matchedTerms = searchResult.matchedTerms;
         } else {
           // Default behavior: Split multiple words and use OR logic with fuzzy matching
           const searchTerms = extractSearchTerms(resultsSearchQuery);
@@ -1352,6 +1835,16 @@ const SourceResume = () => {
           );
           
           if (!matches) return false;
+          
+          // Calculate simple score for non-boolean mode
+          let matchCount = 0;
+          for (const term of searchTerms) {
+            if (fuzzyMatch(searchText, term, 0.7)) {
+              matchCount++;
+              matchedTerms.push(term);
+            }
+          }
+          searchScore = (matchCount / searchTerms.length) * 50; // Normalize to 0-50
         }
       }
 
@@ -1467,12 +1960,256 @@ const SourceResume = () => {
     });
   };
 
-  const filteredCandidates = filterCandidates(candidates);
+  // Calculate comprehensive relevance score for a candidate
+  const calculateRelevanceScore = (candidate: CandidateDisplay, matchedTerms: string[] = []): number => {
+    let score = 0;
+    
+    // Base search score (from boolean search or simple search)
+    if (debouncedSearchQuery.trim()) {
+      if (filters.booleanMode) {
+        const searchResult = parseAdvancedBooleanSearch(debouncedSearchQuery, candidate);
+        score += searchResult.score * 0.4; // 40% weight
+      } else {
+        const searchTerms = extractSearchTerms(debouncedSearchQuery);
+        const searchText = getCandidateSearchText(candidate);
+        let matchCount = 0;
+        for (const term of searchTerms) {
+          if (fuzzyMatch(searchText, term, 0.7)) matchCount++;
+        }
+        score += (matchCount / searchTerms.length) * 50 * 0.4;
+      }
+    }
+    
+    // Skill match score (highest weight)
+    if (filters.specificSkills.length > 0) {
+      const skillsText = candidate.skills.join(' ').toLowerCase();
+      let skillMatchCount = 0;
+      for (const skill of filters.specificSkills) {
+        if (fuzzyMatch(skillsText, skill.toLowerCase(), 0.75)) {
+          skillMatchCount++;
+        }
+      }
+      score += (skillMatchCount / filters.specificSkills.length) * 100 * 0.3; // 30% weight
+    }
+    
+    // Experience relevance (proximity to filter range)
+    const expMid = (filters.experience[0] + filters.experience[1]) / 2;
+    const expDiff = Math.abs(candidate.experience - expMid);
+    const expRange = filters.experience[1] - filters.experience[0];
+    if (expRange > 0) {
+      const expScore = Math.max(0, 1 - (expDiff / expRange)) * 100;
+      score += expScore * 0.1; // 10% weight
+    }
+    
+    // Recency score (based on last seen/created)
+    if (candidate.createdAt) {
+      const createdDate = new Date(candidate.createdAt);
+      const daysSinceCreation = (currentTime.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
+      const recencyScore = Math.max(0, 100 - (daysSinceCreation / 30) * 10); // Decay over 30 days
+      score += recencyScore * 0.1; // 10% weight
+    }
+    
+    // Title similarity (if role filter is set)
+    if (filters.role && filters.role.trim() !== "") {
+      const titleSimilarity = calculateSimilarity(candidate.title.toLowerCase(), filters.role.toLowerCase());
+      score += titleSimilarity * 100 * 0.1; // 10% weight
+    }
+    
+    return Math.min(100, Math.round(score));
+  };
   
-  // Filter to show only saved candidates if showSavedProfiles is true
-  const displayCandidates = showSavedProfiles 
-    ? filteredCandidates.filter(c => savedCandidates.has(c.id))
-    : filteredCandidates;
+  // Calculate match percentage for requirement (if selected)
+  const calculateRequirementMatch = (candidate: CandidateDisplay, requirement: any): number => {
+    if (!requirement) return 0;
+    
+    let matchScore = 0;
+    let totalWeight = 0;
+    
+    // Skills match
+    if (requirement.skills || requirement.requiredSkills) {
+      const reqSkills = requirement.skills || requirement.requiredSkills || [];
+      const candidateSkills = candidate.skills.map(s => s.toLowerCase());
+      let skillMatches = 0;
+      for (const reqSkill of reqSkills) {
+        if (candidateSkills.some(cs => cs.includes(reqSkill.toLowerCase()) || reqSkill.toLowerCase().includes(cs))) {
+          skillMatches++;
+        }
+      }
+      if (reqSkills.length > 0) {
+        const skillScore = (skillMatches / reqSkills.length) * 100;
+        matchScore += skillScore * 0.4;
+        totalWeight += 0.4;
+      }
+    }
+    
+    // Experience match
+    if (requirement.experience) {
+      const reqExp = parseFloat(requirement.experience) || 0;
+      const expDiff = Math.abs(candidate.experience - reqExp);
+      const expScore = Math.max(0, 100 - (expDiff * 10));
+      matchScore += expScore * 0.2;
+      totalWeight += 0.2;
+    }
+    
+    // Location match
+    if (requirement.location) {
+      const locationMatch = candidate.location.toLowerCase().includes(requirement.location.toLowerCase()) ||
+                           candidate.preferredLocation.toLowerCase().includes(requirement.location.toLowerCase());
+      matchScore += (locationMatch ? 100 : 0) * 0.15;
+      totalWeight += 0.15;
+    }
+    
+    // Title/Role match
+    if (requirement.position || requirement.jobTitle) {
+      const reqTitle = (requirement.position || requirement.jobTitle).toLowerCase();
+      const titleSimilarity = calculateSimilarity(candidate.title.toLowerCase(), reqTitle);
+      matchScore += titleSimilarity * 100 * 0.15;
+      totalWeight += 0.15;
+    }
+    
+    // Education match
+    if (requirement.education) {
+      const eduMatch = candidate.education.toLowerCase().includes(requirement.education.toLowerCase());
+      matchScore += (eduMatch ? 100 : 0) * 0.1;
+      totalWeight += 0.1;
+    }
+    
+    return totalWeight > 0 ? Math.round(matchScore / totalWeight) : 0;
+  };
+  
+  // Sort candidates based on sort option
+  const sortCandidates = (candidates: CandidateWithScore[], sortBy: SortOption): CandidateWithScore[] => {
+    const sorted = [...candidates];
+    
+    switch (sortBy) {
+      case 'relevance':
+        // If requirement is selected, prioritize match percentage, then relevance score
+        if (filters.selectedRequirementId) {
+          return sorted.sort((a, b) => {
+            const aMatch = a.matchPercentage || 0;
+            const bMatch = b.matchPercentage || 0;
+            if (bMatch !== aMatch) return bMatch - aMatch;
+            return b.relevanceScore - a.relevanceScore;
+          });
+        }
+        return sorted.sort((a, b) => b.relevanceScore - a.relevanceScore);
+      
+      case 'experience-high':
+        return sorted.sort((a, b) => b.experience - a.experience);
+      
+      case 'experience-low':
+        return sorted.sort((a, b) => a.experience - b.experience);
+      
+      case 'ctc-high':
+        return sorted.sort((a, b) => {
+          const aCtc = parseFloat(a.ctc.replace(/[^\d.]/g, '')) || 0;
+          const bCtc = parseFloat(b.ctc.replace(/[^\d.]/g, '')) || 0;
+          return bCtc - aCtc;
+        });
+      
+      case 'ctc-low':
+        return sorted.sort((a, b) => {
+          const aCtc = parseFloat(a.ctc.replace(/[^\d.]/g, '')) || 0;
+          const bCtc = parseFloat(b.ctc.replace(/[^\d.]/g, '')) || 0;
+          return aCtc - bCtc;
+        });
+      
+      case 'notice-period':
+        return sorted.sort((a, b) => {
+          const aNotice = parseInt(a.noticePeriod.match(/\d+/)?.[0] || '999');
+          const bNotice = parseInt(b.noticePeriod.match(/\d+/)?.[0] || '999');
+          return aNotice - bNotice;
+        });
+      
+      case 'recently-updated':
+        return sorted.sort((a, b) => {
+          const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bDate - aDate;
+        });
+      
+      case 'alphabetical':
+        return sorted.sort((a, b) => a.name.localeCompare(b.name));
+      
+      default:
+        return sorted;
+    }
+  };
+  
+  // Use server-side search results if available, otherwise fallback to client-side
+  const displayCandidates: CandidateWithScore[] = useMemo(() => {
+    if (view === 'results' && searchResults) {
+      // Use server-side search results
+      let candidates = searchResults.candidates.map(c => ({
+        ...c,
+        // Ensure all required fields are present
+        name: c.fullName || c.name,
+        title: c.designation || c.currentRole || c.title || 'Not Available',
+        currentCompany: c.company || 'Not Available',
+        location: c.location || 'Not Available',
+        preferredLocation: c.preferredLocation || c.location || 'Not Available',
+        experience: parseFloat(c.experience?.replace(/[^\d.]/g, '') || '0'),
+        education: c.education || 'Not Available',
+        skills: c.skills ? (typeof c.skills === 'string' ? c.skills.split(',').map(s => s.trim()) : c.skills) : [],
+        ctc: c.ctc || c.ectc || 'Not Available',
+        noticePeriod: c.noticePeriod || 'Not Available',
+        email: c.email,
+        phone: c.phone || '',
+        profilePic: c.profilePicture || '',
+        university: c.collegeName || 'Not Available',
+        saved: savedCandidates.has(c.id),
+        resumeFile: c.resumeFile,
+        resumeText: c.resumeText,
+        createdAt: c.createdAt,
+        isFromDatabase: !!(c.resumeFile || c.addedBy),
+      } as CandidateWithScore));
+      
+      // Filter saved profiles if needed
+      if (showSavedProfiles) {
+        candidates = candidates.filter(c => savedCandidates.has(c.id));
+      }
+      
+      return candidates;
+    }
+    
+    // Fallback to client-side filtering (for search view or when no server results)
+    const filteredCandidates = filterCandidates(candidates);
+    const scoredCandidates: CandidateWithScore[] = filteredCandidates.map(candidate => {
+      let matchedTerms: string[] = [];
+      if (debouncedSearchQuery.trim()) {
+        if (filters.booleanMode) {
+          const searchResult = parseAdvancedBooleanSearch(debouncedSearchQuery, candidate);
+          matchedTerms = searchResult.matchedTerms;
+        } else {
+          const searchTerms = extractSearchTerms(debouncedSearchQuery);
+          const searchText = getCandidateSearchText(candidate);
+          matchedTerms = searchTerms.filter(term => fuzzyMatch(searchText, term, 0.7));
+        }
+      }
+      
+      const relevanceScore = calculateRelevanceScore(candidate, matchedTerms);
+      
+      let matchPercentage: number | undefined;
+      if (filters.selectedRequirementId) {
+        const requirement = requirements.find((r: any) => r.id === filters.selectedRequirementId);
+        if (requirement) {
+          matchPercentage = calculateRequirementMatch(candidate, requirement);
+        }
+      }
+      
+      return {
+        ...candidate,
+        relevanceScore,
+        matchPercentage,
+        matchedTerms,
+      };
+    });
+    
+    const sortedCandidates = sortCandidates(scoredCandidates, sortOption);
+    return showSavedProfiles 
+      ? sortedCandidates.filter(c => savedCandidates.has(c.id))
+      : sortedCandidates;
+  }, [view, searchResults, showSavedProfiles, savedCandidates, candidates, filters, debouncedSearchQuery, sortOption, requirements]);
 
   // Generate AI suggestions based on candidates data
   const searchSuggestions = useMemo(() => {
@@ -1537,11 +2274,13 @@ const SourceResume = () => {
   }, [resultsSearchQuery, candidates]);
   
   const candidatesPerPage = 10;
-  const totalPages = Math.ceil(displayCandidates.length / candidatesPerPage);
-  const paginatedCandidates = displayCandidates.slice(
-    (currentPage - 1) * candidatesPerPage,
-    currentPage * candidatesPerPage
-  );
+  const totalPages = searchResults?.pagination?.totalPages || Math.ceil(displayCandidates.length / candidatesPerPage);
+  const paginatedCandidates = searchResults 
+    ? displayCandidates // Server-side already paginated
+    : displayCandidates.slice(
+        (currentPage - 1) * candidatesPerPage,
+        currentPage * candidatesPerPage
+      );
 
   // Recommended candidates (other matching candidates when one is selected)
   const recommendedCandidates = selectedCandidate
@@ -1561,18 +2300,199 @@ const SourceResume = () => {
         .slice(0, 5)
     : displayCandidates.slice(0, 5);
 
+  // Store current values in refs to avoid dependency issues
+  const filtersRef = useRef(filters);
+  const sortOptionRef = useRef(sortOption);
+  const debouncedSearchQueryRef = useRef(debouncedSearchQuery);
+  const resultsSearchQueryRef = useRef(resultsSearchQuery);
+  
+  // Update refs when values change
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
+  
+  useEffect(() => {
+    sortOptionRef.current = sortOption;
+  }, [sortOption]);
+  
+  useEffect(() => {
+    debouncedSearchQueryRef.current = debouncedSearchQuery;
+  }, [debouncedSearchQuery]);
+  
+  useEffect(() => {
+    resultsSearchQueryRef.current = resultsSearchQuery;
+  }, [resultsSearchQuery]);
+
+  // Perform server-side search - use refs to avoid recreation
+  const performSearch = useCallback(async (page: number = 1) => {
+    setIsSearching(true);
+    try {
+      const currentFilters = filtersRef.current;
+      const currentSortOption = sortOptionRef.current;
+      const currentSearchQuery = debouncedSearchQueryRef.current || resultsSearchQueryRef.current;
+      
+      const searchParams = {
+        searchQuery: currentSearchQuery,
+        booleanMode: currentFilters.booleanMode,
+        filters: {
+          keywords: currentFilters.keywords,
+          excludedKeywords: currentFilters.excludedKeywords,
+          specificSkills: currentFilters.specificSkills,
+          experience: currentFilters.experience,
+          ctcMin: currentFilters.ctcMin,
+          ctcMax: currentFilters.ctcMax,
+          location: currentFilters.location,
+          role: currentFilters.role,
+          noticePeriod: currentFilters.noticePeriod,
+          preferredLocation: currentFilters.preferredLocation,
+          company: currentFilters.company,
+          excludedCompanies: currentFilters.excludedCompanies,
+          educationUG: currentFilters.educationUG,
+          educationPG: currentFilters.educationPG,
+          additionalDegrees: currentFilters.additionalDegrees,
+          employmentType: currentFilters.employmentType,
+          jobType: currentFilters.jobType,
+          workPermit: currentFilters.workPermit,
+          candidateStatus: currentFilters.candidateStatus,
+          showWith: currentFilters.showWith,
+        },
+        pagination: {
+          page,
+          pageSize: candidatesPerPage,
+        },
+        sortOption: currentSortOption,
+        requirementId: currentFilters.selectedRequirementId || null,
+      };
+
+      const response = await apiRequest('POST', '/api/source-resume/search', searchParams);
+      const data = await response.json();
+      
+      setSearchResults(data);
+      setCurrentPage(page);
+    } catch (error: any) {
+      console.error('Search error:', error);
+      toast({
+        title: "Search failed",
+        description: error.message || "Failed to perform search",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearching(false);
+    }
+  }, [candidatesPerPage, toast]);
+
+  // Create ref for performSearch to avoid dependency issues
+  const performSearchRef = useRef(performSearch);
+  // Update ref whenever performSearch function changes (but don't trigger searches)
+  useEffect(() => {
+    performSearchRef.current = performSearch;
+  }, [performSearch]);
+
+  // Track if we should skip the next filter change (to prevent loops)
+  const skipNextFilterChange = useRef(false);
+
   const handleSourceResume = () => {
     // Save to recent searches
     saveSearchToHistory();
     
     setView('results');
     setCurrentPage(1);
-    setShowSavedProfiles(false); // Reset to show all candidates on new search
-    toast({
-      title: "Search initiated",
-      description: `Found ${filteredCandidates.length} candidates matching your criteria`,
-    });
+    setShowSavedProfiles(false);
+    hasPerformedInitialSearch.current = false; // Reset flag
+    
+    // Perform server-side search (even with empty query to show all candidates)
+    skipNextFilterChange.current = true; // Skip the filter change trigger
+    performSearch(1);
   };
+  
+  // Track if initial search has been performed
+  const hasPerformedInitialSearch = useRef(false);
+
+  // Auto-perform search when switching to results view to show all candidates
+  useEffect(() => {
+    if (view === 'results' && !hasPerformedInitialSearch.current && !isSearching) {
+      // Small delay to ensure ref is initialized
+      const timer = setTimeout(() => {
+        if (performSearchRef.current) {
+          performSearchRef.current(1);
+          hasPerformedInitialSearch.current = true;
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [view, isSearching]);
+
+  // Reset initial search flag when switching away from results view
+  useEffect(() => {
+    if (view !== 'results') {
+      hasPerformedInitialSearch.current = false;
+    }
+  }, [view]);
+
+  // Track previous filter values to detect actual changes
+  const prevFiltersRef = useRef<string>('');
+  const prevSearchQueryRef = useRef<string>('');
+  const prevSortOptionRef = useRef<string>('');
+
+  // Auto-search when filters change in results view (debounced)
+  useEffect(() => {
+    if (view !== 'results' || isSearching || skipNextFilterChange.current) {
+      skipNextFilterChange.current = false;
+      return;
+    }
+
+    // Serialize filters to string for comparison
+    const filtersString = JSON.stringify({
+      keywords: filters.keywords,
+      excludedKeywords: filters.excludedKeywords,
+      specificSkills: filters.specificSkills,
+      experience: filters.experience,
+      ctcMin: filters.ctcMin,
+      ctcMax: filters.ctcMax,
+      location: filters.location,
+      role: filters.role,
+      noticePeriod: filters.noticePeriod,
+      preferredLocation: filters.preferredLocation,
+      company: filters.company,
+      excludedCompanies: filters.excludedCompanies,
+      educationUG: filters.educationUG,
+      educationPG: filters.educationPG,
+      additionalDegrees: filters.additionalDegrees,
+      employmentType: filters.employmentType,
+      jobType: filters.jobType,
+      workPermit: filters.workPermit,
+      candidateStatus: filters.candidateStatus,
+      showWith: filters.showWith,
+      selectedRequirementId: filters.selectedRequirementId,
+      booleanMode: filters.booleanMode,
+    });
+
+    const currentSearchQuery = debouncedSearchQuery || resultsSearchQuery;
+    const currentSortOption = sortOption;
+
+    // Only trigger if something actually changed
+    const filtersChanged = filtersString !== prevFiltersRef.current;
+    const searchQueryChanged = currentSearchQuery !== prevSearchQueryRef.current;
+    const sortOptionChanged = currentSortOption !== prevSortOptionRef.current;
+
+    if (filtersChanged || searchQueryChanged || sortOptionChanged) {
+      // Update refs
+      prevFiltersRef.current = filtersString;
+      prevSearchQueryRef.current = currentSearchQuery;
+      prevSortOptionRef.current = currentSortOption;
+
+      // Only search if we've performed initial search
+      if (hasPerformedInitialSearch.current) {
+        // Debounce filter changes to avoid too many requests
+        const timer = setTimeout(() => {
+          if (performSearchRef.current) {
+            performSearchRef.current(1); // Reset to page 1 on filter change
+          }
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [view, filters, debouncedSearchQuery, resultsSearchQuery, sortOption, isSearching]);
 
   const selectedCandidateRef = useRef<HTMLDivElement>(null);
 
@@ -1687,6 +2607,15 @@ const SourceResume = () => {
     setShowExcludeCompany(false);
     setShowAddDegree(false);
     setCurrentPage(1);
+    
+    // Trigger new search after resetting filters
+    if (view === 'results') {
+      setTimeout(() => {
+        if (performSearchRef.current) {
+          performSearchRef.current(1);
+        }
+      }, 100);
+    }
   };
 
   const suggestedKeywords = allSkills.filter(
@@ -1710,10 +2639,107 @@ const SourceResume = () => {
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {/* Keywords */}
+            {/* AI Match Mode - Requirement Selector */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Keywords
+                AI Match Mode (Optional)
+              </label>
+              <Select
+                value={filters.selectedRequirementId || 'none'}
+                onValueChange={(value) => {
+                  const requirementId = value === 'none' ? undefined : value;
+                  setFilters({ ...filters, selectedRequirementId: requirementId });
+                  if (requirementId) {
+                    toast({
+                      title: "AI Match Mode Enabled",
+                      description: "Candidates will be scored against this requirement",
+                    });
+                  }
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select requirement for AI matching" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None (General Search)</SelectItem>
+                  {requirements.map((req: any) => (
+                    <SelectItem key={req.id} value={req.id}>
+                      {req.position} - {req.company}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {filters.selectedRequirementId && (
+                <div className="mt-2 space-y-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full text-xs"
+                    onClick={() => {
+                      // Sort by match percentage and go to first page
+                      setSortOption('relevance');
+                      setCurrentPage(1);
+                      toast({
+                        title: "Sorted by Best Match",
+                        description: "Candidates sorted by requirement match score",
+                      });
+                    }}
+                  >
+                    <Star className="w-3 h-3 mr-1" />
+                    Sort by Best Match
+                  </Button>
+                  <p className="text-xs text-gray-500">
+                    Top candidates will show match % badge
+                  </p>
+                </div>
+              )}
+            </div>
+            {/* Skills Search */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Skills
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Type skill and press Enter (e.g., Python, Java)"
+                  value={keywordInput}
+                  onChange={(e) => setKeywordInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && keywordInput.trim()) {
+                      e.preventDefault();
+                      handleKeywordAdd(keywordInput.trim());
+                    }
+                  }}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 pr-8 text-sm"
+                />
+                {keywordInput && (
+                  <X
+                    className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+                    onClick={() => setKeywordInput("")}
+                  />
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {filters.keywords.map((keyword) => (
+                  <span
+                    key={keyword}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                  >
+                    {keyword}
+                    <X
+                      className="w-3 h-3 cursor-pointer hover:text-blue-600"
+                      onClick={() => handleKeywordRemove(keyword)}
+                    />
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Keywords (Boolean Search) */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Keywords (Boolean Search)
               </label>
               <div className="flex items-center gap-2 mb-2">
                 <input
@@ -1724,21 +2750,6 @@ const SourceResume = () => {
                 />
                 <span className="text-sm text-gray-600">Boolean search</span>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {filters.keywords.map((keyword) => (
-                  <span
-                    key={keyword}
-                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                      filters.keywords.includes(keyword)
-                        ? "bg-blue-100 text-blue-800"
-                        : "bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    <Star className="w-3 h-3" />
-                    {keyword}
-                  </span>
-                ))}
-              </div>
             </div>
 
             {/* Experience */}
@@ -1747,33 +2758,49 @@ const SourceResume = () => {
                 Experience
               </label>
               <div className="flex gap-2 items-center">
-                <input
-                  type="number"
-                  min={0}
-                  max={filters.experience[1]}
-                  value={filters.experience[0]}
-                  onChange={(e) =>
-                    setFilters({
-                      ...filters,
-                      experience: [parseInt(e.target.value) || 0, filters.experience[1]],
-                    })
-                  }
-                  className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-sm"
-                />
+                <div className="relative flex-1">
+                  <input
+                    type="number"
+                    min={0}
+                    max={filters.experience[1]}
+                    value={filters.experience[0]}
+                    onChange={(e) =>
+                      setFilters({
+                        ...filters,
+                        experience: [parseInt(e.target.value) || 0, filters.experience[1]],
+                      })
+                    }
+                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 pr-7 text-sm"
+                  />
+                  {filters.experience[0] !== 0 && (
+                    <X
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+                      onClick={() => setFilters({ ...filters, experience: [0, filters.experience[1]] })}
+                    />
+                  )}
+                </div>
                 <span className="text-gray-500">-</span>
-                <input
-                  type="number"
-                  min={filters.experience[0]}
-                  max={15}
-                  value={filters.experience[1]}
-                  onChange={(e) =>
-                    setFilters({
-                      ...filters,
-                      experience: [filters.experience[0], parseInt(e.target.value) || 15],
-                    })
-                  }
-                  className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-sm"
-                />
+                <div className="relative flex-1">
+                  <input
+                    type="number"
+                    min={filters.experience[0]}
+                    max={15}
+                    value={filters.experience[1]}
+                    onChange={(e) =>
+                      setFilters({
+                        ...filters,
+                        experience: [filters.experience[0], parseInt(e.target.value) || 15],
+                      })
+                    }
+                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 pr-7 text-sm"
+                  />
+                  {filters.experience[1] !== 15 && (
+                    <X
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+                      onClick={() => setFilters({ ...filters, experience: [filters.experience[0], 15] })}
+                    />
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1783,21 +2810,37 @@ const SourceResume = () => {
                 CTC Range (Lakhs)
               </label>
               <div className="flex gap-2 items-center">
-                <input
-                  type="number"
-                  placeholder="Min"
-                  value={filters.ctcMin}
-                  onChange={(e) => setFilters({ ...filters, ctcMin: e.target.value })}
-                  className="w-20 border border-gray-200 rounded-lg px-2 py-1 text-sm"
-                />
+                <div className="relative flex-1">
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    value={filters.ctcMin}
+                    onChange={(e) => setFilters({ ...filters, ctcMin: e.target.value })}
+                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 pr-7 text-sm"
+                  />
+                  {filters.ctcMin && (
+                    <X
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+                      onClick={() => setFilters({ ...filters, ctcMin: "" })}
+                    />
+                  )}
+                </div>
                 <span className="text-gray-500">-</span>
-                <input
-                  type="number"
-                  placeholder="Max"
-                  value={filters.ctcMax}
-                  onChange={(e) => setFilters({ ...filters, ctcMax: e.target.value })}
-                  className="w-20 border border-gray-200 rounded-lg px-2 py-1 text-sm"
-                />
+                <div className="relative flex-1">
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    value={filters.ctcMax}
+                    onChange={(e) => setFilters({ ...filters, ctcMax: e.target.value })}
+                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 pr-7 text-sm"
+                  />
+                  {filters.ctcMax && (
+                    <X
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+                      onClick={() => setFilters({ ...filters, ctcMax: "" })}
+                    />
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1981,6 +3024,70 @@ const SourceResume = () => {
                 ))}
               </div>
             </div>
+
+            {/* Analytics Panel */}
+            {searchResults?.analytics && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h3 className="text-sm font-bold text-gray-900 mb-3">Search Analytics</h3>
+                
+                {/* Top Skills */}
+                {searchResults.analytics.topSkills && searchResults.analytics.topSkills.length > 0 && (
+                  <div className="mb-4">
+                    <label className="block text-xs font-semibold text-gray-700 mb-2">Top Skills</label>
+                    <div className="flex flex-wrap gap-1">
+                      {searchResults.analytics.topSkills.slice(0, 5).map((item: any, idx: number) => (
+                        <span
+                          key={idx}
+                          className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs font-medium"
+                        >
+                          {item.skill} ({item.count})
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Experience Distribution */}
+                {searchResults.analytics.experienceDistribution && (
+                  <div className="mb-4">
+                    <label className="block text-xs font-semibold text-gray-700 mb-2">Experience Distribution</label>
+                    <div className="space-y-1">
+                      {Object.entries(searchResults.analytics.experienceDistribution).map(([range, count]: [string, any]) => (
+                        <div key={range} className="flex items-center justify-between text-xs">
+                          <span className="text-gray-600">{range} years</span>
+                          <span className="font-medium text-gray-900">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Location Distribution */}
+                {searchResults.analytics.locationDistribution && Object.keys(searchResults.analytics.locationDistribution).length > 0 && (
+                  <div className="mb-4">
+                    <label className="block text-xs font-semibold text-gray-700 mb-2">Top Locations</label>
+                    <div className="space-y-1">
+                      {Object.entries(searchResults.analytics.locationDistribution)
+                        .slice(0, 5)
+                        .map(([location, count]: [string, any]) => (
+                          <div key={location} className="flex items-center justify-between text-xs">
+                            <span className="text-gray-600">{location}</span>
+                            <span className="font-medium text-gray-900">{count}</span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Average CTC */}
+                {searchResults.analytics.avgCTC > 0 && (
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 mb-1">Average CTC</label>
+                    <p className="text-sm font-bold text-blue-600">{searchResults.analytics.avgCTC.toFixed(1)}L</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -2058,9 +3165,62 @@ const SourceResume = () => {
                 {filters.booleanMode && (
                   <span className="text-xs text-blue-600 cursor-pointer">Boolean search</span>
                 )}
-                <span className="text-xs text-gray-600">Total Profiles {displayCandidates.length}</span>
+                <span className="text-xs text-gray-600 font-semibold">
+                  {searchResults?.pagination?.totalCount || displayCandidates.length} {(searchResults?.pagination?.totalCount || displayCandidates.length) === 1 ? 'Candidate' : 'Candidates'} Found
+                </span>
+                {/* Active Filter Chips */}
+                {(filters.keywords.length > 0 || filters.location || filters.role || filters.experience[0] > 0 || filters.experience[1] < 15) && (
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {filters.keywords.slice(0, 3).map((keyword) => (
+                      <span
+                        key={keyword}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                      >
+                        {keyword}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleKeywordRemove(keyword);
+                          }}
+                          className="hover:text-blue-900"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                    {filters.keywords.length > 3 && (
+                      <span className="text-xs text-gray-500">+{filters.keywords.length - 3} more</span>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="flex items-center gap-2">
+                {/* Sort Dropdown */}
+                <Select value={sortOption} onValueChange={(value) => setSortOption(value as SortOption)}>
+                  <SelectTrigger className="w-40 h-8 text-xs">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="relevance">Relevance</SelectItem>
+                    <SelectItem value="experience-high">Experience (High to Low)</SelectItem>
+                    <SelectItem value="experience-low">Experience (Low to High)</SelectItem>
+                    <SelectItem value="ctc-high">CTC (High to Low)</SelectItem>
+                    <SelectItem value="ctc-low">CTC (Low to High)</SelectItem>
+                    <SelectItem value="notice-period">Notice Period</SelectItem>
+                    <SelectItem value="recently-updated">Recently Updated</SelectItem>
+                    <SelectItem value="alphabetical">Alphabetical</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportToCSV(displayCandidates)}
+                  className="text-xs"
+                  title="Export all results to CSV"
+                >
+                  <Download className="w-3 h-3 mr-1" />
+                  Export All
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -2071,8 +3231,12 @@ const SourceResume = () => {
                   Reset Filters
                 </Button>
                 <button
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
+                  onClick={() => {
+                    const newPage = Math.max(1, currentPage - 1);
+                    setCurrentPage(newPage);
+                    performSearch(newPage);
+                  }}
+                  disabled={currentPage === 1 || isSearching}
                   className="p-1 rounded hover:bg-gray-100 disabled:opacity-50"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -2084,7 +3248,11 @@ const SourceResume = () => {
                   return (
                     <button
                       key={page}
-                      onClick={() => setCurrentPage(page)}
+                      onClick={() => {
+                        setCurrentPage(page);
+                        performSearch(page);
+                      }}
+                      disabled={isSearching}
                       className={`px-2 py-0.5 rounded text-xs ${
                         currentPage === page
                           ? "bg-blue-600 text-white"
@@ -2096,8 +3264,12 @@ const SourceResume = () => {
                   );
                 })}
                 <button
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
+                  onClick={() => {
+                    const newPage = Math.min(totalPages, currentPage + 1);
+                    setCurrentPage(newPage);
+                    performSearch(newPage);
+                  }}
+                  disabled={currentPage === totalPages || isSearching}
                   className="p-1 rounded hover:bg-gray-100 disabled:opacity-50"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -2108,9 +3280,10 @@ const SourceResume = () => {
 
           {/* Candidate Cards List - Scrollable */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4" id="candidate-cards-scrollable">
-            {isLoadingCandidates ? (
+            {(isSearching || isLoadingCandidates) ? (
               <div className="flex items-center justify-center h-64">
                 <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+                <span className="ml-3 text-gray-600">Searching candidates...</span>
               </div>
             ) : paginatedCandidates.length === 0 ? (
               <div className="flex items-center justify-center h-64">
@@ -2118,6 +3291,67 @@ const SourceResume = () => {
               </div>
             ) : (
               <>
+                {/* Bulk Actions Bar */}
+                {selectedCandidates.size > 0 && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 flex items-center justify-between">
+                    <span className="text-sm font-medium text-blue-900">
+                      {selectedCandidates.size} candidate{selectedCandidates.size !== 1 ? 's' : ''} selected
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          // Bulk tag to requirement
+                          if (filters.selectedRequirementId) {
+                            selectedCandidates.forEach(candidateId => {
+                              const candidate = displayCandidates.find(c => c.id === candidateId);
+                              if (candidate) {
+                                handleTagToRequirement(candidate, filters.selectedRequirementId!);
+                              }
+                            });
+                            setSelectedCandidates(new Set());
+                            toast({
+                              title: "Success",
+                              description: `${selectedCandidates.size} candidates tagged to requirement`,
+                            });
+                          } else {
+                            toast({
+                              title: "No Requirement Selected",
+                              description: "Please select a requirement first",
+                              variant: "destructive",
+                            });
+                          }
+                        }}
+                        className="text-xs"
+                      >
+                        <Send className="w-3 h-3 mr-1" />
+                        Tag Selected ({selectedCandidates.size})
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          // Export selected to CSV
+                          const selected = displayCandidates.filter(c => selectedCandidates.has(c.id));
+                          exportToCSV(selected);
+                        }}
+                        className="text-xs"
+                      >
+                        <Download className="w-3 h-3 mr-1" />
+                        Export Selected
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setSelectedCandidates(new Set())}
+                        className="text-xs"
+                      >
+                        Clear Selection
+                      </Button>
+                    </div>
+                  </div>
+                )}
                 {paginatedCandidates.map((candidate) => (
                   <div
                     key={candidate.id}
@@ -2126,7 +3360,7 @@ const SourceResume = () => {
                       selectedCandidate?.id === candidate.id
                         ? "border-blue-500 shadow-lg"
                         : "border-gray-200"
-                    }`}
+                    } ${selectedCandidates.has(candidate.id) ? 'ring-2 ring-blue-500' : ''}`}
                     onClick={(e) => {
                       // Don't handle card click if clicking on a button or link
                       const target = e.target as HTMLElement;
@@ -2137,6 +3371,19 @@ const SourceResume = () => {
                     }}
                   >
                     <div className="flex gap-4">
+                      {/* Bulk Selection Checkbox */}
+                      <div className="flex-shrink-0 pt-1">
+                        <input
+                          type="checkbox"
+                          checked={selectedCandidates.has(candidate.id)}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            toggleCandidateSelection(candidate.id);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                      </div>
                       <div className="flex-1">
                         <div className="flex items-start justify-between mb-3 relative">
                           <div className="flex-1">
@@ -2148,6 +3395,30 @@ const SourceResume = () => {
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800" title="From Master Database">
                                   <Database className="w-3 h-3" />
                                   DB
+                                </span>
+                              )}
+                              {/* Relevance Score Badge */}
+                              {'relevanceScore' in candidate && candidate.relevanceScore > 0 && (
+                                <span 
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${
+                                    candidate.relevanceScore >= 80 
+                                      ? 'bg-green-100 text-green-800' 
+                                      : candidate.relevanceScore >= 60 
+                                      ? 'bg-yellow-100 text-yellow-800' 
+                                      : 'bg-gray-100 text-gray-800'
+                                  }`}
+                                  title="Relevance Score"
+                                >
+                                  {candidate.relevanceScore}% Match
+                                </span>
+                              )}
+                              {/* Requirement Match Badge */}
+                              {'matchPercentage' in candidate && candidate.matchPercentage !== undefined && candidate.matchPercentage > 0 && (
+                                <span 
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800`}
+                                  title="Requirement Match Score"
+                                >
+                                  {candidate.matchPercentage}% Fit
                                 </span>
                               )}
                             </div>
@@ -2309,14 +3580,9 @@ const SourceResume = () => {
                             onClick={(e) => {
                               e.stopPropagation();
                               e.preventDefault();
-                              console.log('Edit Profile button clicked', candidate);
                               if (candidate && candidate.id) {
-                                console.log('Setting candidate to edit:', candidate);
                                 setCandidateToEdit(candidate);
                                 setIsEditModalOpen(true);
-                                console.log('Modal should open now');
-                              } else {
-                                console.error('Candidate or candidate.id is missing:', candidate);
                               }
                             }}
                             className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-gray-300 rounded-md hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all duration-200 z-10 relative bg-white"
@@ -2692,12 +3958,9 @@ const SourceResume = () => {
                     onClick={(e) => {
                       e.stopPropagation();
                       e.preventDefault();
-                      console.log('Edit Profile button clicked (recommended)', candidate);
                       if (candidate && candidate.id) {
-                        console.log('Setting candidate to edit (recommended):', candidate);
                         setCandidateToEdit(candidate);
                         setIsEditModalOpen(true);
-                        console.log('Modal should open now (recommended)');
                       } else {
                         console.error('Candidate or candidate.id is missing (recommended):', candidate);
                       }
@@ -2878,18 +4141,26 @@ const SourceResume = () => {
                     </span>
                   ))}
                 </div>
-                <input
-                  type="text"
-                  value={excludeKeywordInput}
-                  onChange={(e) => setExcludeKeywordInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && excludeKeywordInput.trim()) {
-                      handleExcludeKeywordAdd(excludeKeywordInput.trim());
-                    }
-                  }}
-                  className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  placeholder="Enter keywords to exclude..."
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={excludeKeywordInput}
+                    onChange={(e) => setExcludeKeywordInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && excludeKeywordInput.trim()) {
+                        handleExcludeKeywordAdd(excludeKeywordInput.trim());
+                      }
+                    }}
+                    className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    placeholder="Enter keywords to exclude..."
+                  />
+                  {excludeKeywordInput && (
+                    <X
+                      className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+                      onClick={() => setExcludeKeywordInput("")}
+                    />
+                  )}
+                </div>
               </div>
             )}
 
@@ -2912,18 +4183,26 @@ const SourceResume = () => {
                     </span>
                   ))}
                 </div>
-                <input
-                  type="text"
-                  value={specificSkillInput}
-                  onChange={(e) => setSpecificSkillInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && specificSkillInput.trim()) {
-                      handleSpecificSkillAdd(specificSkillInput.trim());
-                    }
-                  }}
-                  className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                  placeholder="Enter specific skills (must have all)..."
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={specificSkillInput}
+                    onChange={(e) => setSpecificSkillInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && specificSkillInput.trim()) {
+                        handleSpecificSkillAdd(specificSkillInput.trim());
+                      }
+                    }}
+                    className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    placeholder="Enter specific skills (must have all)..."
+                  />
+                  {specificSkillInput && (
+                    <X
+                      className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+                      onClick={() => setSpecificSkillInput("")}
+                    />
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -2937,33 +4216,49 @@ const SourceResume = () => {
                 Experience
               </label>
               <div className="flex gap-2 items-center">
-                <input
-                  type="number"
-                  min={0}
-                  max={filters.experience[1]}
-                  value={filters.experience[0]}
-                  onChange={(e) =>
-                    setFilters({
-                      ...filters,
-                      experience: [parseInt(e.target.value) || 0, filters.experience[1]],
-                    })
-                  }
-                  className="w-20 border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    min={0}
+                    max={filters.experience[1]}
+                    value={filters.experience[0]}
+                    onChange={(e) =>
+                      setFilters({
+                        ...filters,
+                        experience: [parseInt(e.target.value) || 0, filters.experience[1]],
+                      })
+                    }
+                    className="w-20 border-2 border-gray-200 rounded-lg px-3 py-2 pr-7 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  />
+                  {filters.experience[0] !== 0 && (
+                    <X
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+                      onClick={() => setFilters({ ...filters, experience: [0, filters.experience[1]] })}
+                    />
+                  )}
+                </div>
                 <span className="text-gray-500">to</span>
-                <input
-                  type="number"
-                  min={filters.experience[0]}
-                  max={15}
-                  value={filters.experience[1]}
-                  onChange={(e) =>
-                    setFilters({
-                      ...filters,
-                      experience: [filters.experience[0], parseInt(e.target.value) || 15],
-                    })
-                  }
-                  className="w-20 border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    min={filters.experience[0]}
+                    max={15}
+                    value={filters.experience[1]}
+                    onChange={(e) =>
+                      setFilters({
+                        ...filters,
+                        experience: [filters.experience[0], parseInt(e.target.value) || 15],
+                      })
+                    }
+                    className="w-20 border-2 border-gray-200 rounded-lg px-3 py-2 pr-7 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  />
+                  {filters.experience[1] !== 15 && (
+                    <X
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+                      onClick={() => setFilters({ ...filters, experience: [filters.experience[0], 15] })}
+                    />
+                  )}
+                </div>
               </div>
             </div>
 
@@ -2974,21 +4269,37 @@ const SourceResume = () => {
                 CTC Range (Lakhs)
               </label>
               <div className="flex gap-2 items-center">
-                <input
-                  type="number"
-                  placeholder="Min"
-                  value={filters.ctcMin}
-                  onChange={(e) => setFilters({ ...filters, ctcMin: e.target.value })}
-                  className="w-20 border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    placeholder="Min"
+                    value={filters.ctcMin}
+                    onChange={(e) => setFilters({ ...filters, ctcMin: e.target.value })}
+                    className="w-20 border-2 border-gray-200 rounded-lg px-3 py-2 pr-7 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  />
+                  {filters.ctcMin && (
+                    <X
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+                      onClick={() => setFilters({ ...filters, ctcMin: "" })}
+                    />
+                  )}
+                </div>
                 <span className="text-gray-500">to</span>
-                <input
-                  type="number"
-                  placeholder="Max"
-                  value={filters.ctcMax}
-                  onChange={(e) => setFilters({ ...filters, ctcMax: e.target.value })}
-                  className="w-20 border-2 border-gray-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    placeholder="Max"
+                    value={filters.ctcMax}
+                    onChange={(e) => setFilters({ ...filters, ctcMax: e.target.value })}
+                    className="w-20 border-2 border-gray-200 rounded-lg px-3 py-2 pr-7 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  />
+                  {filters.ctcMax && (
+                    <X
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+                      onClick={() => setFilters({ ...filters, ctcMax: "" })}
+                    />
+                  )}
+                </div>
               </div>
             </div>
 
@@ -3123,18 +4434,26 @@ const SourceResume = () => {
                       </span>
                     ))}
                   </div>
-                  <input
-                    type="text"
-                    value={excludeCompanyInput}
-                    onChange={(e) => setExcludeCompanyInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && excludeCompanyInput.trim()) {
-                        handleExcludeCompanyAdd(excludeCompanyInput.trim());
-                      }
-                    }}
-                    className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                    placeholder="Enter company names to exclude..."
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={excludeCompanyInput}
+                      onChange={(e) => setExcludeCompanyInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && excludeCompanyInput.trim()) {
+                          handleExcludeCompanyAdd(excludeCompanyInput.trim());
+                        }
+                      }}
+                      className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      placeholder="Enter company names to exclude..."
+                    />
+                    {excludeCompanyInput && (
+                      <X
+                        className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+                        onClick={() => setExcludeCompanyInput("")}
+                      />
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -3198,18 +4517,26 @@ const SourceResume = () => {
                       </span>
                     ))}
                   </div>
-                  <input
-                    type="text"
-                    value={addDegreeInput}
-                    onChange={(e) => setAddDegreeInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && addDegreeInput.trim()) {
-                        handleAddDegree(addDegreeInput.trim());
-                      }
-                    }}
-                    className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                    placeholder="Enter degree or certificate name..."
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={addDegreeInput}
+                      onChange={(e) => setAddDegreeInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && addDegreeInput.trim()) {
+                          handleAddDegree(addDegreeInput.trim());
+                        }
+                      }}
+                      className="w-full border-2 border-gray-200 rounded-lg px-4 py-2.5 pr-10 focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      placeholder="Enter degree or certificate name..."
+                    />
+                    {addDegreeInput && (
+                      <X
+                        className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600 cursor-pointer"
+                        onClick={() => setAddDegreeInput("")}
+                      />
+                    )}
+                  </div>
                 </div>
               )}
             </div>

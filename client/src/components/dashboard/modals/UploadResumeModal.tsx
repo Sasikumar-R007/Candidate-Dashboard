@@ -244,17 +244,37 @@ export default function UploadResumeModal({
     setFormError('');
 
     try {
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'application/msword', 
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'image/jpeg', 'image/jpg', 'image/png'];
+      const allowedExtensions = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png'];
+      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+      
+      if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+        throw new Error('Invalid file type. Please upload a PDF, DOC, DOCX, or image file.');
+      }
+
+      // Validate file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
+        throw new Error('File size exceeds 10MB limit. Please upload a smaller file.');
+      }
+
       const uploadFormData = new FormData();
       uploadFormData.append('resume', file);
 
       const response = await fetch('/api/recruiter/parse-resume', {
         method: 'POST',
         body: uploadFormData,
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          // Don't set Content-Type header - let browser set it with boundary for FormData
+        }
       });
 
       if (!response.ok) {
-        throw new Error('Failed to parse resume');
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error' }));
+        throw new Error(errorData.message || `Failed to parse resume (${response.status})`);
       }
 
       const result = await response.json();

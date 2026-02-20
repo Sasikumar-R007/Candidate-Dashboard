@@ -6,7 +6,7 @@ import fs from "fs";
 import passport from "passport";
 import { randomBytes } from "crypto";
 import { storage } from "./storage";
-import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, chatUnreadCounts, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema, insertRecruiterCommandSchema, recruiterCommands, employees, candidates } from "@shared/schema";
+import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, chatUnreadCounts, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema, insertRecruiterCommandSchema, recruiterCommands, employees, candidates, requirements } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import multer from "multer";
@@ -18,6 +18,13 @@ import { logRequirementAdded, logCandidateSubmitted, logClosureMade, logCandidat
 import { parseResumeFile, parseBulkResumes } from "./resume-parser";
 import { sendEmployeeWelcomeEmail, sendCandidateWelcomeEmail, sendOTPEmail } from "./email-service";
 import { setupGoogleAuth } from "./passport-google";
+import { 
+  buildSearchQuery, 
+  getSortOrder, 
+  calculateRelevanceScore,
+  normalizeSkills,
+  parseAndNormalizeSkills
+} from "./source-resume-search";
 
 // Ensure uploads directory exists
 const uploadsDir = 'uploads';
@@ -4055,13 +4062,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Recruiter parse resume file (extract details)
-  app.post("/api/recruiter/parse-resume", requireEmployeeAuth, resumeUpload.single('resume'), async (req, res) => {
+  app.post("/api/recruiter/parse-resume", requireEmployeeAuth, (req, res, next) => {
+    // Handle multer errors
+    resumeUpload.single('resume')(req, res, (err: any) => {
+      if (err) {
+        console.error('Multer error:', err);
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ message: "File size exceeds 10MB limit" });
+        }
+        if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+          return res.status(400).json({ message: "Unexpected file field. Please use 'resume' as the field name." });
+        }
+        return res.status(400).json({ message: "File upload error: " + (err.message || 'Unknown error') });
+      }
+      next();
+    });
+  }, async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No resume file uploaded" });
       }
 
+      // Validate file type
+      const allowedMimeTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'image/jpeg',
+        'image/jpg',
+        'image/png'
+      ];
+
+      if (!allowedMimeTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ message: "Invalid file type. Please upload a PDF, DOC, DOCX, or image file." });
+      }
+
       const parsed = await parseResumeFile(req.file.path, req.file.mimetype);
+
+      // Clean up uploaded file after parsing
+      try {
+        if (fs.existsSync(req.file.path)) {
+          // Keep file for now, will be used when creating candidate
+          // fs.unlinkSync(req.file.path);
+        }
+      } catch (cleanupError) {
+        console.error('File cleanup error:', cleanupError);
+      }
 
       res.json({
         success: true,
@@ -4083,7 +4129,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error('Parse resume error:', error);
-      res.status(500).json({ message: "Failed to parse resume", error: error.message || 'Unknown error' });
+      // Clean up file on error
+      try {
+        if (req.file && fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+      } catch (cleanupError) {
+        console.error('File cleanup error:', cleanupError);
+      }
+      res.status(500).json({ 
+        message: "Failed to parse resume", 
+        error: error.message || 'Unknown error',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
     }
   });
 
@@ -8060,6 +8118,263 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================
+  // ENTERPRISE SOURCE RESUME SEARCH API
+  // ============================================
+  // POST /api/source-resume/search
+  // Server-side indexed search with pagination, sorting, and advanced scoring
+  
+  app.post("/api/source-resume/search", requireEmployeeAuth, async (req, res) => {
+    try {
+      const {
+        searchQuery = "",
+        booleanMode = false,
+        filters = {},
+        pagination = { page: 1, pageSize: 10 },
+        sortOption = "relevance",
+        requirementId = null,
+      } = req.body;
+
+      // Extract search skills from query or filters
+      const searchSkills: string[] = [];
+      if (filters.specificSkills && Array.isArray(filters.specificSkills)) {
+        searchSkills.push(...normalizeSkills(filters.specificSkills));
+      }
+      if (filters.keywords && Array.isArray(filters.keywords)) {
+        searchSkills.push(...normalizeSkills(filters.keywords));
+      }
+      if (searchQuery && !booleanMode) {
+        // Extract potential skills from search query
+        const queryTerms = searchQuery.split(/\s+/).filter(t => t.length > 2);
+        searchSkills.push(...normalizeSkills(queryTerms));
+      }
+
+      // Build database query conditions
+      const queryConditions = buildSearchQuery({
+        ...filters,
+        searchQuery,
+        booleanMode,
+      });
+
+      // Build where clause
+      // If no query conditions, just filter by isActive
+      // If there are conditions, combine with isActive
+      let whereClause;
+      if (queryConditions) {
+        whereClause = and(eq(candidates.isActive, true), queryConditions);
+      } else {
+        whereClause = eq(candidates.isActive, true);
+      }
+
+      // Debug logging
+      console.log('Source Resume Search - Filters:', JSON.stringify(filters, null, 2));
+      console.log('Source Resume Search - Query conditions:', queryConditions ? 'Has conditions' : 'No conditions (showing all)');
+      
+      // First, check total candidates (regardless of isActive)
+      const totalCandidatesQuery = db.select({ count: sql<number>`count(*)` })
+        .from(candidates);
+      const [totalCandidatesResult] = await totalCandidatesQuery;
+      const totalCandidates = Number(totalCandidatesResult?.count || 0);
+      console.log('Source Resume Search - Total candidates in DB (all):', totalCandidates);
+      
+      // Check total active candidates
+      const totalActiveQuery = db.select({ count: sql<number>`count(*)` })
+        .from(candidates)
+        .where(eq(candidates.isActive, true));
+      const [totalActiveResult] = await totalActiveQuery;
+      const totalActive = Number(totalActiveResult?.count || 0);
+      console.log('Source Resume Search - Total active candidates in DB:', totalActive);
+      
+      // Check candidates with isActive = false or null
+      const inactiveQuery = db.select({ count: sql<number>`count(*)` })
+        .from(candidates)
+        .where(sql`${candidates.isActive} = false OR ${candidates.isActive} IS NULL`);
+      const [inactiveResult] = await inactiveQuery;
+      const inactiveCount = Number(inactiveResult?.count || 0);
+      console.log('Source Resume Search - Inactive/null candidates:', inactiveCount);
+
+      // Base query
+      let query = db.select().from(candidates).where(whereClause);
+
+      // Get total count (for pagination)
+      const countQuery = db.select({ count: sql<number>`count(*)` })
+        .from(candidates)
+        .where(whereClause);
+      
+      const [countResult] = await countQuery;
+      const totalCount = Number(countResult?.count || 0);
+      console.log('Source Resume Search - Candidates matching filters:', totalCount);
+
+      // Apply sorting (except relevance which is done in-memory)
+      if (sortOption !== 'relevance' && sortOption !== 'ctc-high' && sortOption !== 'ctc-low' && sortOption !== 'notice-period') {
+        const sortOrder = getSortOrder(sortOption);
+        query = query.orderBy(sortOrder);
+      }
+
+      // Apply pagination
+      const page = Math.max(1, pagination.page || 1);
+      const pageSize = Math.min(100, Math.max(1, pagination.pageSize || 10));
+      const offset = (page - 1) * pageSize;
+      
+      query = query.limit(pageSize).offset(offset);
+      
+      // Execute query
+      let candidatesList;
+      try {
+        candidatesList = await query;
+        console.log('Source Resume Search - Query returned', candidatesList.length, 'candidates after pagination');
+      } catch (queryError: any) {
+        console.error('Source Resume Search - Query execution error:', queryError);
+        console.error('Source Resume Search - Error details:', queryError.message, queryError.stack);
+        throw queryError;
+      }
+
+      // Get requirement if provided
+      let requirement = null;
+      if (requirementId) {
+        const requirements = await db.select().from(requirements).where(eq(requirements.id, requirementId));
+        requirement = requirements[0] || null;
+      }
+
+      // Calculate scores for each candidate
+      const scoredCandidates = candidatesList.map(candidate => {
+        return calculateRelevanceScore(
+          candidate,
+          searchQuery,
+          searchSkills,
+          requirement
+        );
+      });
+
+      // Sort by relevance if needed (or other in-memory sorts)
+      let sortedCandidates = scoredCandidates;
+      if (sortOption === 'relevance') {
+        sortedCandidates = scoredCandidates.sort((a, b) => {
+          // If requirement match exists, prioritize it
+          if (requirement) {
+            const aMatch = a.matchPercentage || 0;
+            const bMatch = b.matchPercentage || 0;
+            if (bMatch !== aMatch) return bMatch - aMatch;
+          }
+          return b.relevanceScore - a.relevanceScore;
+        });
+      } else if (sortOption === 'ctc-high' || sortOption === 'ctc-low') {
+        sortedCandidates = scoredCandidates.sort((a, b) => {
+          const aCtc = parseFloat((a.candidate.ctc || a.candidate.ectc || '0').replace(/[^\d.]/g, '')) || 0;
+          const bCtc = parseFloat((b.candidate.ctc || b.candidate.ectc || '0').replace(/[^\d.]/g, '')) || 0;
+          return sortOption === 'ctc-high' ? bCtc - aCtc : aCtc - bCtc;
+        });
+      } else if (sortOption === 'notice-period') {
+        sortedCandidates = scoredCandidates.sort((a, b) => {
+          const aNotice = parseInt((a.candidate.noticePeriod || '999').match(/\d+/)?.[0] || '999');
+          const bNotice = parseInt((b.candidate.noticePeriod || '999').match(/\d+/)?.[0] || '999');
+          return aNotice - bNotice;
+        });
+      }
+
+      // Calculate analytics for current result set
+      const analytics = calculateAnalytics(sortedCandidates.map(sc => sc.candidate));
+
+      // Return paginated results with metadata
+      res.json({
+        candidates: sortedCandidates.map(sc => ({
+          ...sc.candidate,
+          relevanceScore: sc.relevanceScore,
+          matchPercentage: sc.matchPercentage,
+          matchedTerms: sc.matchedTerms,
+        })),
+        pagination: {
+          page,
+          pageSize,
+          totalCount,
+          totalPages: Math.ceil(totalCount / pageSize),
+        },
+        analytics,
+      });
+    } catch (error: any) {
+      console.error('Source resume search error:', error);
+      res.status(500).json({ 
+        message: "Search failed", 
+        error: error.message || 'Unknown error' 
+      });
+    }
+  });
+
+  // Helper function to calculate analytics
+  function calculateAnalytics(candidatesList: any[]) {
+    if (candidatesList.length === 0) {
+      return {
+        topSkills: [],
+        experienceDistribution: {},
+        locationDistribution: {},
+        avgCTC: 0,
+        totalCandidates: 0,
+      };
+    }
+
+    // Top skills
+    const skillCounts: Record<string, number> = {};
+    candidatesList.forEach(candidate => {
+      const skills = parseAndNormalizeSkills(candidate.skills || '');
+      skills.forEach(skill => {
+        skillCounts[skill] = (skillCounts[skill] || 0) + 1;
+      });
+    });
+    const topSkills = Object.entries(skillCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .map(([skill, count]) => ({ skill, count }));
+
+    // Experience distribution
+    const expDistribution: Record<string, number> = {
+      '0-2': 0,
+      '3-5': 0,
+      '6-10': 0,
+      '11-15': 0,
+      '15+': 0,
+    };
+    candidatesList.forEach(candidate => {
+      const exp = parseFloat(candidate.experience?.replace(/[^\d.]/g, '') || '0');
+      if (exp <= 2) expDistribution['0-2']++;
+      else if (exp <= 5) expDistribution['3-5']++;
+      else if (exp <= 10) expDistribution['6-10']++;
+      else if (exp <= 15) expDistribution['11-15']++;
+      else expDistribution['15+']++;
+    });
+
+    // Location distribution
+    const locationCounts: Record<string, number> = {};
+    candidatesList.forEach(candidate => {
+      const location = candidate.location || 'Unknown';
+      locationCounts[location] = (locationCounts[location] || 0) + 1;
+    });
+    const locationDistribution = Object.entries(locationCounts)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .reduce((acc, [loc, count]) => {
+        acc[loc] = count;
+        return acc;
+      }, {} as Record<string, number>);
+
+    // Average CTC
+    const ctcValues: number[] = [];
+    candidatesList.forEach(candidate => {
+      const ctc = parseFloat((candidate.ctc || candidate.ectc || '0').replace(/[^\d.]/g, '')) || 0;
+      if (ctc > 0) ctcValues.push(ctc);
+    });
+    const avgCTC = ctcValues.length > 0 
+      ? ctcValues.reduce((sum, val) => sum + val, 0) / ctcValues.length 
+      : 0;
+
+    return {
+      topSkills,
+      experienceDistribution: expDistribution,
+      locationDistribution,
+      avgCTC: Math.round(avgCTC * 100) / 100,
+      totalCandidates: candidatesList.length,
+    };
+  }
+
   // Get candidate by ID (accessible by admin and recruiters)
   app.get("/api/admin/candidates/:id", requireEmployeeAuth, async (req, res) => {
     try {
@@ -8771,23 +9086,258 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Client Metrics Endpoints
   // Speed metrics current values
-  app.get("/api/client/speed-metrics", (req, res) => {
-    res.json({
-      timeToFirstSubmission: 0,
-      timeToInterview: 0,
-      timeToOffer: 0,
-      timeToFill: 0
-    });
+  // Algorithms:
+  // - Time to 1st Submission: Average days from requirement creation to first candidate submission
+  // - Time to Interview: Average days from first submission to first interview scheduled
+  // - Time to Offer: Average days from interview to offer extended
+  // - Time to Fill: Average days from requirement creation to closure/joining
+  app.get("/api/client/speed-metrics", requireClientAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      
+      const client = await findCompanyForEmployee(employee);
+      const companyName = client?.brandName || employee.name;
+      
+      const period = req.query.period as string || 'monthly';
+      const dateStr = req.query.date as string;
+      const roleId = req.query.role as string;
+      
+      // Get all requirements for this client
+      let allRequirements = await storage.getRequirements();
+      allRequirements = allRequirements.filter((req: any) => req.company === companyName);
+      
+      if (roleId && roleId !== 'all') {
+        allRequirements = allRequirements.filter((req: any) => req.id === roleId);
+      }
+      
+      // Get all applications for these requirements
+      const allApplications = await storage.getApplications();
+      const clientApplications = allApplications.filter((app: any) => {
+        return allRequirements.some((req: any) => req.id === app.recruiterJobId);
+      });
+      
+      // Filter by period
+      let filteredApplications = clientApplications;
+      if (dateStr) {
+        const filterDate = new Date(dateStr);
+        if (period === 'daily') {
+          filteredApplications = clientApplications.filter((app: any) => {
+            if (!app.appliedDate) return false;
+            const appDate = new Date(app.appliedDate);
+            return appDate.toDateString() === filterDate.toDateString();
+          });
+        } else if (period === 'weekly') {
+          const weekStart = new Date(filterDate);
+          weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekEnd.getDate() + 6);
+          filteredApplications = clientApplications.filter((app: any) => {
+            if (!app.appliedDate) return false;
+            const appDate = new Date(app.appliedDate);
+            return appDate >= weekStart && appDate <= weekEnd;
+          });
+        } else if (period === 'monthly') {
+          filteredApplications = clientApplications.filter((app: any) => {
+            if (!app.appliedDate) return false;
+            const appDate = new Date(app.appliedDate);
+            return appDate.getMonth() === filterDate.getMonth() && 
+                   appDate.getFullYear() === filterDate.getFullYear();
+          });
+        }
+      }
+      
+      // Calculate Time to 1st Submission
+      let timeToFirstSubmission = 0;
+      const firstSubmissions = allRequirements.map((req: any) => {
+        const firstApp = filteredApplications
+          .filter((app: any) => app.recruiterJobId === req.id)
+          .sort((a: any, b: any) => new Date(a.appliedDate).getTime() - new Date(b.appliedDate).getTime())[0];
+        if (firstApp && req.createdAt) {
+          const reqDate = new Date(req.createdAt);
+          const appDate = new Date(firstApp.appliedDate);
+          return Math.floor((appDate.getTime() - reqDate.getTime()) / (1000 * 60 * 60 * 24));
+        }
+        return null;
+      }).filter((days: any) => days !== null && days >= 0);
+      if (firstSubmissions.length > 0) {
+        timeToFirstSubmission = Math.round(firstSubmissions.reduce((a: number, b: number) => a + b, 0) / firstSubmissions.length);
+      }
+      
+      // Calculate Time to Interview (simplified - using status changes)
+      let timeToInterview = 0;
+      const interviewTimes = filteredApplications
+        .filter((app: any) => ['L1', 'L2', 'L3', 'Final Round', 'HR Round'].includes(app.status))
+        .map((app: any) => {
+          if (app.appliedDate && app.updatedAt) {
+            const appDate = new Date(app.appliedDate);
+            const interviewDate = new Date(app.updatedAt);
+            return Math.floor((interviewDate.getTime() - appDate.getTime()) / (1000 * 60 * 60 * 24));
+          }
+          return null;
+        })
+        .filter((days: any) => days !== null && days >= 0);
+      if (interviewTimes.length > 0) {
+        timeToInterview = Math.round(interviewTimes.reduce((a: number, b: number) => a + b, 0) / interviewTimes.length);
+      }
+      
+      // Calculate Time to Offer
+      let timeToOffer = 0;
+      const offerTimes = filteredApplications
+        .filter((app: any) => ['Offer Stage', 'Selected', 'Closure', 'Joined'].includes(app.status))
+        .map((app: any) => {
+          if (app.appliedDate && app.updatedAt) {
+            const appDate = new Date(app.appliedDate);
+            const offerDate = new Date(app.updatedAt);
+            return Math.floor((offerDate.getTime() - appDate.getTime()) / (1000 * 60 * 60 * 24));
+          }
+          return null;
+        })
+        .filter((days: any) => days !== null && days >= 0);
+      if (offerTimes.length > 0) {
+        timeToOffer = Math.round(offerTimes.reduce((a: number, b: number) => a + b, 0) / offerTimes.length);
+      }
+      
+      // Calculate Time to Fill
+      let timeToFill = 0;
+      const fillTimes = allRequirements
+        .filter((req: any) => req.status === 'closed' || req.status === 'filled')
+        .map((req: any) => {
+          if (req.createdAt && req.updatedAt) {
+            const reqDate = new Date(req.createdAt);
+            const fillDate = new Date(req.updatedAt);
+            return Math.floor((fillDate.getTime() - reqDate.getTime()) / (1000 * 60 * 60 * 24));
+          }
+          return null;
+        })
+        .filter((days: any) => days !== null && days >= 0);
+      if (fillTimes.length > 0) {
+        timeToFill = Math.round(fillTimes.reduce((a: number, b: number) => a + b, 0) / fillTimes.length);
+      }
+      
+      res.json({
+        timeToFirstSubmission: timeToFirstSubmission || 0,
+        timeToInterview: timeToInterview || 0,
+        timeToOffer: timeToOffer || 0,
+        timeToFill: timeToFill || 0
+      });
+    } catch (error: any) {
+      console.error('Speed metrics error:', error);
+      res.status(500).json({ 
+        timeToFirstSubmission: 0,
+        timeToInterview: 0,
+        timeToOffer: 0,
+        timeToFill: 0
+      });
+    }
   });
 
   // Quality metrics current values
-  app.get("/api/client/quality-metrics", (req, res) => {
-    res.json({
-      submissionToShortList: 0,
-      interviewToOffer: 0,
-      offerAcceptance: 0,
-      earlyAttrition: 0
-    });
+  // Algorithms:
+  // - Submission to Short List %: (Shortlisted candidates / Total submissions) * 100
+  // - Interview to Offer %: (Offers extended / Interviews conducted) * 100
+  // - Offer Acceptance %: (Accepted offers / Total offers) * 100
+  // - Early Attrition %: (Candidates who left within 90 days / Total hires) * 100
+  app.get("/api/client/quality-metrics", requireClientAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      
+      const client = await findCompanyForEmployee(employee);
+      const companyName = client?.brandName || employee.name;
+      
+      const period = req.query.period as string || 'monthly';
+      const dateStr = req.query.date as string;
+      const roleId = req.query.role as string;
+      
+      // Get all requirements for this client
+      let allRequirements = await storage.getRequirements();
+      allRequirements = allRequirements.filter((req: any) => req.company === companyName);
+      
+      if (roleId && roleId !== 'all') {
+        allRequirements = allRequirements.filter((req: any) => req.id === roleId);
+      }
+      
+      // Get all applications
+      const allApplications = await storage.getApplications();
+      let clientApplications = allApplications.filter((app: any) => {
+        return allRequirements.some((req: any) => req.id === app.recruiterJobId);
+      });
+      
+      // Filter by period
+      if (dateStr) {
+        const filterDate = new Date(dateStr);
+        if (period === 'daily') {
+          clientApplications = clientApplications.filter((app: any) => {
+            if (!app.appliedDate) return false;
+            const appDate = new Date(app.appliedDate);
+            return appDate.toDateString() === filterDate.toDateString();
+          });
+        } else if (period === 'weekly') {
+          const weekStart = new Date(filterDate);
+          weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+          const weekEnd = new Date(weekStart);
+          weekEnd.setDate(weekEnd.getDate() + 6);
+          clientApplications = clientApplications.filter((app: any) => {
+            if (!app.appliedDate) return false;
+            const appDate = new Date(app.appliedDate);
+            return appDate >= weekStart && appDate <= weekEnd;
+          });
+        } else if (period === 'monthly') {
+          clientApplications = clientApplications.filter((app: any) => {
+            if (!app.appliedDate) return false;
+            const appDate = new Date(app.appliedDate);
+            return appDate.getMonth() === filterDate.getMonth() && 
+                   appDate.getFullYear() === filterDate.getFullYear();
+          });
+        }
+      }
+      
+      // Calculate Submission to Short List %
+      const totalSubmissions = clientApplications.length;
+      const shortlisted = clientApplications.filter((app: any) => 
+        ['Shortlisted', 'L1', 'L2', 'L3', 'Final Round', 'HR Round', 'Offer Stage', 'Selected', 'Closure', 'Joined'].includes(app.status)
+      ).length;
+      const submissionToShortList = totalSubmissions > 0 ? Math.round((shortlisted / totalSubmissions) * 100) : 0;
+      
+      // Calculate Interview to Offer %
+      const interviewed = clientApplications.filter((app: any) => 
+        ['L1', 'L2', 'L3', 'Final Round', 'HR Round', 'Offer Stage', 'Selected', 'Closure', 'Joined'].includes(app.status)
+      ).length;
+      const offersExtended = clientApplications.filter((app: any) => 
+        ['Offer Stage', 'Selected', 'Closure', 'Joined'].includes(app.status)
+      ).length;
+      const interviewToOffer = interviewed > 0 ? Math.round((offersExtended / interviewed) * 100) : 0;
+      
+      // Calculate Offer Acceptance %
+      const totalOffers = offersExtended;
+      const acceptedOffers = clientApplications.filter((app: any) => 
+        ['Closure', 'Joined'].includes(app.status)
+      ).length;
+      const offerAcceptance = totalOffers > 0 ? Math.round((acceptedOffers / totalOffers) * 100) : 0;
+      
+      // Calculate Early Attrition % (simplified - would need hire date and exit date tracking)
+      const earlyAttrition = 0; // TODO: Implement with proper tracking
+      
+      res.json({
+        submissionToShortList: submissionToShortList || 0,
+        interviewToOffer: interviewToOffer || 0,
+        offerAcceptance: offerAcceptance || 0,
+        earlyAttrition: earlyAttrition || 0
+      });
+    } catch (error: any) {
+      console.error('Quality metrics error:', error);
+      res.status(500).json({ 
+        submissionToShortList: 0,
+        interviewToOffer: 0,
+        offerAcceptance: 0,
+        earlyAttrition: 0
+      });
+    }
   });
 
   // Speed metrics chart data
@@ -8812,6 +9362,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
       { month: 'May', submissionToShortList: 0, interviewToOffer: 0, offerAcceptance: 0, earlyAttrition: 0 },
       { month: 'Jun', submissionToShortList: 0, interviewToOffer: 0, offerAcceptance: 0, earlyAttrition: 0 }
     ]);
+  });
+
+  // Client Impact Metrics Endpoint
+  app.get("/api/client/impact-metrics", requireClientAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+      
+      // Get impact metrics (can be global or client-specific)
+      const allMetrics = await storage.getImpactMetrics();
+      
+      // Return first metric or default
+      if (allMetrics && allMetrics.length > 0) {
+        res.json(allMetrics);
+      } else {
+        // Return default metrics if none exist
+        res.json([{
+          speedToHire: 0,
+          revenueImpactOfDelay: 0,
+          clientNps: 0,
+          candidateNps: 0,
+          feedbackTurnAround: 0,
+          firstYearRetentionRate: 0,
+          fulfillmentRate: 0,
+          revenueRecovered: 0
+        }]);
+      }
+    } catch (error: any) {
+      console.error('Client impact metrics error:', error);
+      res.status(500).json([{
+        speedToHire: 0,
+        revenueImpactOfDelay: 0,
+        clientNps: 0,
+        candidateNps: 0,
+        feedbackTurnAround: 0,
+        firstYearRetentionRate: 0,
+        fulfillmentRate: 0,
+        revenueRecovered: 0
+      }]);
+    }
   });
 
   // Helper function to find company for SPOC employee
@@ -9042,6 +9634,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Application not found" });
       }
 
+      // Log pipeline change for recruiter visibility
+      if (status === 'Rejected') {
+        const session = req.session as any;
+        logCandidatePipelineChanged(
+          storage,
+          session.employeeId || 'client',
+          session.employeeName || 'Client',
+          'client',
+          application.candidateName || 'Candidate',
+          application.status || 'Previous',
+          'Rejected',
+          application.id
+        ).catch(err => console.error('Failed to log pipeline change:', err));
+      }
+
       res.json({ success: true, application });
     } catch (error) {
       console.error('Update application status error:', error);
@@ -9223,6 +9830,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Client Parse JD - Extract information from JD file or text
+  // Client Parse JD - Extract information from JD file or text
+  app.post("/api/client/parse-jd", requireClientAuth, (req, res, next) => {
+    // Check if it's a file upload or JSON
+    const contentType = req.headers['content-type'] || '';
+    if (contentType.includes('multipart/form-data')) {
+      upload.single('jdFile')(req, res, (err: any) => {
+        if (err) {
+          console.error('Multer error in parse-jd:', err);
+          return res.status(400).json({ success: false, message: "File upload error: " + (err.message || 'Unknown error') });
+        }
+        next();
+      });
+    } else {
+      // For JSON body, parse it
+      next();
+    }
+  }, async (req, res) => {
+    try {
+      let jdText = '';
+      
+      // If file uploaded, extract text
+      if (req.file) {
+        const filePath = req.file.path;
+        const mimeType = req.file.mimetype;
+        
+        try {
+          // Use resume parser to extract text from JD file
+          const parsed = await parseResumeFile(filePath, mimeType);
+          jdText = parsed.rawText;
+          
+          // Clean up file
+          if (fs.existsSync(filePath)) {
+            fs.unlinkSync(filePath);
+          }
+        } catch (error) {
+          console.error('JD file parsing error:', error);
+          // Continue with empty text
+        }
+      } else if (req.body.jdText) {
+        jdText = req.body.jdText;
+      }
+      
+      if (!jdText || jdText.trim().length < 10) {
+        return res.json({
+          success: true,
+          data: {
+            position: null,
+            primarySkills: null,
+            secondarySkills: null,
+            knowledgeOnly: null
+          }
+        });
+      }
+      
+      // Extract position
+      let position = null;
+      const positionPatterns = [
+        /(?:position|role|job title|title|looking for|seeking|hiring)[\s:]+([A-Za-z\s&/]+)/i,
+        /^([A-Za-z\s&]+?)(?:\s+(?:developer|engineer|manager|analyst|specialist|lead|architect|designer|scientist))/i,
+        /(?:we are|we're|looking for|seeking|hiring)\s+([A-Za-z\s&]+?)(?:developer|engineer|manager|analyst|specialist|lead|architect|designer|scientist)/i
+      ];
+      for (const pattern of positionPatterns) {
+        const match = jdText.match(pattern);
+        if (match && match[1]) {
+          position = match[1].trim();
+          break;
+        }
+      }
+      
+      // Extract skills (common tech skills)
+      const commonSkills = [
+        'JavaScript', 'TypeScript', 'Python', 'Java', 'C++', 'C#', 'React', 'Angular', 'Vue', 'Node.js',
+        'Express', 'Django', 'Flask', 'Spring', 'SQL', 'MongoDB', 'PostgreSQL', 'MySQL', 'Redis',
+        'AWS', 'Azure', 'Docker', 'Kubernetes', 'Git', 'CI/CD', 'Agile', 'Scrum', 'Machine Learning',
+        'Data Science', 'TensorFlow', 'PyTorch', 'HTML', 'CSS', 'SASS', 'LESS', 'GraphQL', 'REST API',
+        'Microservices', 'DevOps', 'Linux', 'Unix', 'Shell Scripting', 'Jenkins', 'GitLab', 'GitHub'
+      ];
+      
+      const foundSkills: string[] = [];
+      const lowerText = jdText.toLowerCase();
+      
+      for (const skill of commonSkills) {
+        if (lowerText.includes(skill.toLowerCase())) {
+          foundSkills.push(skill);
+        }
+      }
+      
+      // Split skills into primary (first 5-8) and secondary (rest)
+      const primarySkills = foundSkills.slice(0, 8).join(', ');
+      const secondarySkills = foundSkills.slice(8, 15).join(', ');
+      
+      res.json({
+        success: true,
+        data: {
+          position: position || null,
+          primarySkills: primarySkills || null,
+          secondarySkills: secondarySkills || null,
+          knowledgeOnly: null // Can be enhanced later
+        }
+      });
+    } catch (error: any) {
+      console.error('Parse JD error:', error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to parse JD", 
+        error: error.message || 'Unknown error' 
+      });
+    }
+  });
+
   // Client Submit JD - Create a requirement from client's job description
   app.post("/api/client/submit-jd", requireClientAuth, async (req, res) => {
     try {
@@ -9279,8 +9997,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Check if requirement ID matches STR + year + 3 digits pattern
         return req.id && /^STR\d{5}$/.test(req.id) && req.id.startsWith(`STR${currentYear}`);
       });
-      const nextNumber = String(yearRequirements.length + 1).padStart(3, '0');
-      const roleId = `STR${currentYear}${nextNumber}`;
+      
+      // Find the maximum number to avoid duplicates
+      let maxNumber = 0;
+      yearRequirements.forEach((req: any) => {
+        const numStr = req.id.substring(5); // Get the 3-digit number part
+        const num = parseInt(numStr, 10);
+        if (!isNaN(num) && num > maxNumber) {
+          maxNumber = num;
+        }
+      });
+      
+      const nextNumber = String(maxNumber + 1).padStart(3, '0');
+      let roleId = `STR${currentYear}${nextNumber}`;
+      
+      // Double-check if ID already exists (race condition protection)
+      let attempts = 0;
+      while (allRequirements.find((r: any) => r.id === roleId) && attempts < 10) {
+        maxNumber++;
+        const nextNum = String(maxNumber + 1).padStart(3, '0');
+        roleId = `STR${currentYear}${nextNum}`;
+        attempts++;
+      }
+      
+      if (attempts >= 10) {
+        return res.status(500).json({ message: "Failed to generate unique role ID. Please try again." });
+      }
 
       // Combine all skills
       const allSkills = [
@@ -9304,40 +10046,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create requirement from JD with Role ID as the requirement ID
       // Note: This creates a requirement that will be assigned to a team lead/talent advisor later
-      console.log('Creating requirement with company:', companyName, 'SPOC:', client?.spoc || employee.name);
-      const requirement = await storage.createRequirement({
-        id: roleId, // Use Role ID as requirement ID (STR25001 format)
-        position: extractedPosition,
-        criticality: 'Medium', // Default, can be updated by admin
-        toughness: 'Medium', // Default, can be updated by admin
-        company: companyName,
-        spoc: client?.spoc || employee.name,
-        talentAdvisor: null, // Will be assigned by team lead
-        talentAdvisorId: null,
-        teamLead: null, // Will be assigned by admin
-        status: 'open',
-        isArchived: false,
-        createdAt: new Date().toISOString(),
-        jdFile: jdFile || null, // Store JD file URL
-        jdText: jdText || null, // Store JD text content
-      });
+      console.log('Creating requirement with company:', companyName, 'SPOC:', client?.spoc || employee.name, 'Role ID:', roleId);
+      
+      try {
+        const requirement = await storage.createRequirement({
+          id: roleId, // Use Role ID as requirement ID (STR25001 format)
+          position: extractedPosition,
+          criticality: 'Medium', // Default, can be updated by admin
+          toughness: 'Medium', // Default, can be updated by admin
+          company: companyName,
+          spoc: client?.spoc || employee.name,
+          talentAdvisor: null, // Will be assigned by team lead
+          talentAdvisorId: null,
+          teamLead: null, // Will be assigned by admin
+          status: 'open',
+          isArchived: false,
+          createdAt: new Date().toISOString(),
+          jdFile: jdFile || null, // Store JD file URL
+          jdText: jdText || null, // Store JD text content
+        });
 
-      console.log('Requirement created successfully:', requirement.id, requirement.company);
+        console.log('Requirement created successfully:', requirement.id, requirement.company);
 
-      res.json({
-        success: true,
-        message: "Job description submitted successfully",
-        requirement
-      });
+        res.json({
+          success: true,
+          message: "Job description submitted successfully",
+          requirement: {
+            id: requirement.id,
+            position: requirement.position,
+            company: requirement.company
+          }
+        });
+      } catch (createError: any) {
+        console.error('Create requirement error:', createError);
+        console.error('Error details:', {
+          message: createError.message,
+          code: createError.code,
+          detail: createError.detail,
+          constraint: createError.constraint
+        });
+        
+        // Check if it's a duplicate key error
+        if (createError.message && createError.message.includes('duplicate key')) {
+          // Try with next available ID
+          maxNumber++;
+          const nextNum = String(maxNumber + 1).padStart(3, '0');
+          const newRoleId = `STR${currentYear}${nextNum}`;
+          
+          try {
+            const requirement = await storage.createRequirement({
+              id: newRoleId,
+              position: extractedPosition,
+              criticality: 'Medium',
+              toughness: 'Medium',
+              company: companyName,
+              spoc: client?.spoc || employee.name,
+              talentAdvisor: null,
+              talentAdvisorId: null,
+              teamLead: null,
+              status: 'open',
+              isArchived: false,
+              createdAt: new Date().toISOString(),
+              jdFile: jdFile || null,
+              jdText: jdText || null,
+            });
+            
+            res.json({
+              success: true,
+              message: "Job description submitted successfully",
+              requirement: {
+                id: requirement.id,
+                position: requirement.position,
+                company: requirement.company
+              }
+            });
+          } catch (retryError: any) {
+            console.error('Retry create requirement error:', retryError);
+            res.status(500).json({
+              message: "Failed to submit job description",
+              error: retryError.message || String(retryError),
+              details: retryError.detail || retryError.code || 'Unknown error'
+            });
+          }
+        } else {
+          res.status(500).json({
+            message: "Failed to submit job description",
+            error: createError.message || String(createError),
+            details: createError.detail || createError.code || 'Unknown error'
+          });
+        }
+      }
     } catch (error: any) {
       console.error('Submit JD error:', error);
-      console.error('Error stack:', error.stack);
-      console.error('Error details:', {
-        message: error.message,
-        code: error.code,
-        detail: error.detail,
-        constraint: error.constraint
-      });
       res.status(500).json({
         message: "Failed to submit job description",
         error: error.message || String(error),

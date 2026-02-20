@@ -66,6 +66,8 @@ export default function ClientDashboard() {
   const [pipelineMonth, setPipelineMonth] = useState<string>(format(new Date(), "MMMM"));
   const [pipelineYear, setPipelineYear] = useState<string>(new Date().getFullYear().toString());
   const [pipelineQuarter, setPipelineQuarter] = useState<string>("Q1");
+  const [metricsPeriod, setMetricsPeriod] = useState<string>("monthly");
+  const [metricsRoleFilter, setMetricsRoleFilter] = useState<string>("all");
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [selectedRole, setSelectedRole] = useState<string>('all'); // Single select for dropdown
   
@@ -173,63 +175,81 @@ export default function ClientDashboard() {
   const [editJdPosition, setEditJdPosition] = useState('');
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
 
-  // Fetch metrics data from API - hooks must be at top level (with sample data for testing)
+  // Fetch metrics data from API - with filters
   const { data: speedMetricsData } = useQuery({
-    queryKey: ['/api/client/speed-metrics'],
-    initialData: {
-      timeToFirstSubmission: 3,
-      timeToInterview: 7,
-      timeToOffer: 12,
-      timeToFill: 18
+    queryKey: ['/api/client/speed-metrics', metricsPeriod, metricsDate, metricsRoleFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.append('period', metricsPeriod);
+      params.append('date', format(metricsDate, 'yyyy-MM-dd'));
+      if (metricsRoleFilter !== 'all') {
+        params.append('role', metricsRoleFilter);
+      }
+      const response = await apiRequest('GET', `/api/client/speed-metrics?${params.toString()}`);
+      return response.json();
     }
   });
 
   const { data: qualityMetricsData } = useQuery({
-    queryKey: ['/api/client/quality-metrics'],
-    initialData: {
-      submissionToShortList: 65,
-      interviewToOffer: 45,
-      offerAcceptance: 80,
-      earlyAttrition: 5
+    queryKey: ['/api/client/quality-metrics', metricsPeriod, metricsDate, metricsRoleFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.append('period', metricsPeriod);
+      params.append('date', format(metricsDate, 'yyyy-MM-dd'));
+      if (metricsRoleFilter !== 'all') {
+        params.append('role', metricsRoleFilter);
+      }
+      const response = await apiRequest('GET', `/api/client/quality-metrics?${params.toString()}`);
+      return response.json();
     }
   });
 
-  const { data: impactMetrics } = useQuery({
-    queryKey: ['/api/admin/impact-metrics'],
-    initialData: [{
-      speedToHire: 15,
-      revenueImpactOfDelay: 250000,
-      clientNps: 72,
-      candidateNps: 68,
-      feedbackTurnAround: 2,
-      firstYearRetentionRate: 92,
-      fulfillmentRate: 88,
-      revenueRecovered: 1800000
-    }]
+  const { data: impactMetrics = [] } = useQuery({
+    queryKey: ['/api/client/impact-metrics', metricsPeriod, metricsDate, metricsRoleFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.append('period', metricsPeriod);
+      params.append('date', format(metricsDate, 'yyyy-MM-dd'));
+      if (metricsRoleFilter !== 'all') {
+        params.append('role', metricsRoleFilter);
+      }
+      try {
+        const response = await apiRequest('GET', `/api/client/impact-metrics?${params.toString()}`);
+        const data = await response.json();
+        return Array.isArray(data) ? data : (data ? [data] : []);
+      } catch (error) {
+        console.error('Error fetching impact metrics:', error);
+        return [];
+      }
+    }
   });
 
   const { data: speedChartData } = useQuery({
-    queryKey: ['/api/client/speed-metrics-chart'],
-    initialData: [
-      { month: 'Jan', timeToFirstSubmission: 5, timeToInterview: 10, timeToOffer: 15, timeToFill: 22 },
-      { month: 'Feb', timeToFirstSubmission: 4, timeToInterview: 9, timeToOffer: 14, timeToFill: 20 },
-      { month: 'Mar', timeToFirstSubmission: 3, timeToInterview: 8, timeToOffer: 13, timeToFill: 19 },
-      { month: 'Apr', timeToFirstSubmission: 3, timeToInterview: 7, timeToOffer: 12, timeToFill: 18 },
-      { month: 'May', timeToFirstSubmission: 2, timeToInterview: 6, timeToOffer: 11, timeToFill: 17 },
-      { month: 'Jun', timeToFirstSubmission: 3, timeToInterview: 7, timeToOffer: 12, timeToFill: 18 }
-    ]
+    queryKey: ['/api/client/speed-metrics-chart', metricsPeriod, metricsDate, metricsRoleFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.append('period', metricsPeriod);
+      params.append('date', format(metricsDate, 'yyyy-MM-dd'));
+      if (metricsRoleFilter !== 'all') {
+        params.append('role', metricsRoleFilter);
+      }
+      const response = await apiRequest('GET', `/api/client/speed-metrics-chart?${params.toString()}`);
+      return response.json();
+    }
   });
 
   const { data: qualityChartData } = useQuery({
-    queryKey: ['/api/client/quality-metrics-chart'],
-    initialData: [
-      { month: 'Jan', submissionToShortList: 60, interviewToOffer: 40, offerAcceptance: 75, earlyAttrition: 8 },
-      { month: 'Feb', submissionToShortList: 62, interviewToOffer: 42, offerAcceptance: 78, earlyAttrition: 7 },
-      { month: 'Mar', submissionToShortList: 64, interviewToOffer: 43, offerAcceptance: 79, earlyAttrition: 6 },
-      { month: 'Apr', submissionToShortList: 65, interviewToOffer: 44, offerAcceptance: 80, earlyAttrition: 5 },
-      { month: 'May', submissionToShortList: 66, interviewToOffer: 45, offerAcceptance: 81, earlyAttrition: 5 },
-      { month: 'Jun', submissionToShortList: 65, interviewToOffer: 45, offerAcceptance: 80, earlyAttrition: 5 }
-    ]
+    queryKey: ['/api/client/quality-metrics-chart', metricsPeriod, metricsDate, metricsRoleFilter],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.append('period', metricsPeriod);
+      params.append('date', format(metricsDate, 'yyyy-MM-dd'));
+      if (metricsRoleFilter !== 'all') {
+        params.append('role', metricsRoleFilter);
+      }
+      const response = await apiRequest('GET', `/api/client/quality-metrics-chart?${params.toString()}`);
+      return response.json();
+    }
   });
 
   // Fetch dashboard stats from API
@@ -257,48 +277,11 @@ export default function ClientDashboard() {
     initialData: []
   });
 
-  // Sample candidates for testing (distributed across different stages) - Expanded list
-  const sampleCandidates = useMemo(() => [
-    // L1 Stage
-    { id: 'sample-1', candidateName: 'Meera Joshi', roleApplied: 'Data Scientist', company: 'Intel', currentStatus: 'L1', appliedDate: format(new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), 'dd-MM-yyyy') },
-    { id: 'sample-2', candidateName: 'Sonal Agarwal', roleApplied: 'Software Engineer', company: 'TechCorp', currentStatus: 'L1', appliedDate: format(new Date(Date.now() - 11 * 24 * 60 * 60 * 1000), 'dd-MM-yyyy') },
-    { id: 'sample-8', candidateName: 'Priya Patel', roleApplied: 'Frontend Developer', company: 'Microsoft', currentStatus: 'L1', appliedDate: format(new Date(Date.now() - 9 * 24 * 60 * 60 * 1000), 'dd-MM-yyyy') },
-    { id: 'sample-9', candidateName: 'Rahul Verma', roleApplied: 'Product Manager', company: 'Amazon', currentStatus: 'L1', appliedDate: format(new Date(Date.now() - 8 * 24 * 60 * 60 * 1000), 'dd-MM-yyyy') },
-    
-    // L2 Stage
-    { id: 'sample-3', candidateName: 'Ananya Kapoor', roleApplied: 'UI/UX Designer', company: 'Designify', currentStatus: 'L2', appliedDate: format(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), 'dd-MM-yyyy') },
-    { id: 'sample-4', candidateName: 'Vikram Sharma', roleApplied: 'Backend Engineer', company: 'Tesco', currentStatus: 'L2', appliedDate: format(new Date(Date.now() - 6 * 24 * 60 * 60 * 1000), 'dd-MM-yyyy') },
-    { id: 'sample-10', candidateName: 'Neha Singh', roleApplied: 'QA Engineer', company: 'Google', currentStatus: 'L2', appliedDate: format(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), 'dd-MM-yyyy') },
-    
-    // L3 Stage
-    { id: 'sample-5', candidateName: 'Karthik Reddy', roleApplied: 'DevOps Engineer', company: 'AppLogic', currentStatus: 'L3', appliedDate: format(new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), 'dd-MM-yyyy') },
-    { id: 'sample-11', candidateName: 'Aditya Kumar', roleApplied: 'Cloud Architect', company: 'IBM', currentStatus: 'L3', appliedDate: format(new Date(Date.now() - 4 * 24 * 60 * 60 * 1000), 'dd-MM-yyyy') },
-    { id: 'sample-12', candidateName: 'Sneha Desai', roleApplied: 'Machine Learning Engineer', company: 'Meta', currentStatus: 'L3', appliedDate: format(new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), 'dd-MM-yyyy') },
-    
-    // Final Round
-    { id: 'sample-6', candidateName: 'Amitabh Sinha', roleApplied: 'Full-Stack Developer', company: 'Tesco', currentStatus: 'Final Round', appliedDate: format(new Date(Date.now() - 4 * 24 * 60 * 60 * 1000), 'dd-MM-yyyy') },
-    { id: 'sample-13', candidateName: 'Ravi Iyer', roleApplied: 'Senior Software Engineer', company: 'Netflix', currentStatus: 'Final Round', appliedDate: format(new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), 'dd-MM-yyyy') },
-    
-    // HR Round
-    { id: 'sample-7', candidateName: 'Arjun Malhotra', roleApplied: 'Data Scientist', company: 'AppLogic', currentStatus: 'HR Round', appliedDate: format(new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), 'dd-MM-yyyy') },
-    { id: 'sample-14', candidateName: 'Divya Nair', roleApplied: 'Technical Lead', company: 'Oracle', currentStatus: 'HR Round', appliedDate: format(new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), 'dd-MM-yyyy') },
-    
-    // Offer Stage
-    { id: 'sample-15', candidateName: 'Mohit Gupta', roleApplied: 'Engineering Manager', company: 'Salesforce', currentStatus: 'Offer Stage', appliedDate: format(new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), 'dd-MM-yyyy') },
-    { id: 'sample-16', candidateName: 'Kavya Menon', roleApplied: 'Solutions Architect', company: 'Adobe', currentStatus: 'Offer Stage', appliedDate: format(new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), 'dd-MM-yyyy') },
-    
-    // Closure
-    { id: 'sample-17', candidateName: 'Rajesh Kumar', roleApplied: 'Senior Data Engineer', company: 'Uber', currentStatus: 'Closure', appliedDate: format(new Date(Date.now() - 0 * 24 * 60 * 60 * 1000), 'dd-MM-yyyy') },
-  ], []);
-
-  // Merge sample data with real pipeline data for testing
+  // Use only real pipeline data - no sample data
   const mergedPipelineData = useMemo(() => {
     const realData = (pipelineData as any[]) || [];
-    // Always include sample candidates for testing (avoid duplicates)
-    const existingIds = new Set(realData.map((c: any) => c.id));
-    const newSamples = sampleCandidates.filter(s => !existingIds.has(s.id));
-    return [...realData, ...newSamples];
-  }, [pipelineData, sampleCandidates]);
+    return realData;
+  }, [pipelineData]);
 
   // Fetch closure reports from API
   const { data: allClosureReports, isLoading: isLoadingClosures } = useQuery({
@@ -317,6 +300,10 @@ export default function ClientDashboard() {
   // Mutation for rejecting a candidate
   const rejectCandidateMutation = useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      // Prevent rejecting sample candidates (they don't exist in database)
+      if (id && id.startsWith('sample-')) {
+        throw new Error('Cannot reject sample candidates. Please reject real candidates only.');
+      }
       const response = await apiRequest('PATCH', `/api/client/applications/${id}/status`, {
         status: 'Rejected',
         reason
@@ -343,32 +330,6 @@ export default function ClientDashboard() {
     }
   });
 
-  // Mutation for selecting/shortlisting a candidate
-  const selectCandidateMutation = useMutation({
-    mutationFn: async ({ id }: { id: string }) => {
-      const response = await apiRequest('PATCH', `/api/client/applications/${id}/status`, {
-        status: 'Selected'
-      });
-      return response;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/client/pipeline'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/client/dashboard-stats'] });
-      toast({
-        title: "Candidate Selected",
-        description: "The candidate has been selected successfully.",
-      });
-      setSelectedCandidate(null);
-      setCandidatePopupPosition(null);
-    },
-    onError: () => {
-      toast({
-        title: "Error",
-        description: "Failed to select candidate. Please try again.",
-        variant: "destructive"
-      });
-    }
-  });
 
   // Mutation for deleting a requirement/role
   const deleteRoleMutation = useMutation({
@@ -398,20 +359,52 @@ export default function ClientDashboard() {
   const filteredPipelineData = useMemo(() => {
     let filtered = [...mergedPipelineData];
 
-    // Apply period-based date filtering (skip for sample candidates to always show them)
+    // Apply period-based date filtering
     if (pipelinePeriod === "daily" && pipelineDate) {
       const filterDate = format(pipelineDate, 'yyyy-MM-dd');
       filtered = filtered.filter((c: any) => {
-        // Always show sample candidates
-        if (c.id && c.id.startsWith('sample-')) return true;
-        if (!c.appliedDate || c.appliedDate === 'N/A') return false;
-        try {
-          const [day, month, year] = c.appliedDate.split('-');
-          const appliedDate = format(new Date(parseInt(year), parseInt(month) - 1, parseInt(day)), 'yyyy-MM-dd');
-          return appliedDate === filterDate;
-        } catch {
-          return false;
+        // Skip sample candidates - only show real data
+        if (c.id && c.id.startsWith('sample-')) return false;
+        
+        // Check appliedDate (can be in DD-MM-YYYY or ISO format)
+        let dateToCheck: string | null = null;
+        if (c.appliedDate) {
+          try {
+            // Try parsing as DD-MM-YYYY first
+            if (c.appliedDate.includes('-') && c.appliedDate.split('-').length === 3) {
+              const [day, month, year] = c.appliedDate.split('-');
+              if (day.length <= 2 && month.length <= 2) {
+                // DD-MM-YYYY format
+                const parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                dateToCheck = format(parsedDate, 'yyyy-MM-dd');
+              } else {
+                // ISO format
+                const parsedDate = new Date(c.appliedDate);
+                dateToCheck = format(parsedDate, 'yyyy-MM-dd');
+              }
+            } else {
+              // ISO format
+              const parsedDate = new Date(c.appliedDate);
+              dateToCheck = format(parsedDate, 'yyyy-MM-dd');
+            }
+          } catch {
+            return false;
+          }
         }
+        
+        // Also check updatedAt or createdAt if appliedDate is not available
+        if (!dateToCheck && (c.updatedAt || c.createdAt)) {
+          try {
+            const dateStr = c.updatedAt || c.createdAt;
+            const parsedDate = new Date(dateStr);
+            dateToCheck = format(parsedDate, 'yyyy-MM-dd');
+          } catch {
+            return false;
+          }
+        }
+        
+        if (!dateToCheck) return false;
+        return dateToCheck === filterDate;
       });
     } else if (pipelinePeriod === "monthly" && pipelineMonth && pipelineYear) {
       const monthMap: Record<string, number> = {
@@ -422,8 +415,8 @@ export default function ClientDashboard() {
       const targetMonth = monthMap[pipelineMonth];
       const targetYear = parseInt(pipelineYear);
       filtered = filtered.filter((c: any) => {
-        // Always show sample candidates
-        if (c.id && c.id.startsWith('sample-')) return true;
+        // Skip sample candidates - only show real data
+        if (c.id && c.id.startsWith('sample-')) return false;
         if (!c.appliedDate || c.appliedDate === 'N/A') return false;
         try {
           const [day, month, year] = c.appliedDate.split('-');
@@ -439,8 +432,8 @@ export default function ClientDashboard() {
       const targetMonths = quarterMap[pipelineQuarter] || [];
       const targetYear = parseInt(pipelineYear);
       filtered = filtered.filter((c: any) => {
-        // Always show sample candidates
-        if (c.id && c.id.startsWith('sample-')) return true;
+        // Skip sample candidates - only show real data
+        if (c.id && c.id.startsWith('sample-')) return false;
         if (!c.appliedDate || c.appliedDate === 'N/A') return false;
         try {
           const [day, month, year] = c.appliedDate.split('-');
@@ -519,7 +512,21 @@ export default function ClientDashboard() {
     }
   };
 
-  const firstImpactMetrics = impactMetrics[0] || impactMetrics;
+  // Safely get first impact metrics with default values
+  const firstImpactMetrics = (impactMetrics && Array.isArray(impactMetrics) && impactMetrics.length > 0) 
+    ? impactMetrics[0] 
+    : (impactMetrics && !Array.isArray(impactMetrics))
+    ? impactMetrics
+    : {
+        speedToHire: 0,
+        revenueImpactOfDelay: 0,
+        clientNps: 0,
+        candidateNps: 0,
+        feedbackTurnAround: 0,
+        firstYearRetentionRate: 0,
+        fulfillmentRate: 0,
+        revenueRecovered: 0
+      };
 
   // Show all roles in dashboard (user requested to show all, not just 2)
   const rolesData = (allRolesData as any[]) || [];
@@ -772,12 +779,47 @@ export default function ClientDashboard() {
                       <input
                         type="file"
                         accept=".pdf,.docx,.doc"
-                        onChange={(e) => {
+                        onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (file) {
                             setUploadedFile(file);
                             const fileUrl = URL.createObjectURL(file);
                             setJdFilePreviewUrl(fileUrl);
+                            
+                            // Parse JD file to auto-fill fields
+                            try {
+                              const formData = new FormData();
+                              formData.append('jdFile', file);
+                              const response = await fetch('/api/client/parse-jd', {
+                                method: 'POST',
+                                body: formData,
+                                credentials: 'include'
+                              });
+                              if (response.ok) {
+                                const parsed = await response.json();
+                                if (parsed.data) {
+                                  if (parsed.data.position && !jdPosition) {
+                                    setJdPosition(parsed.data.position);
+                                  }
+                                  if (parsed.data.primarySkills && !primarySkills) {
+                                    setPrimarySkills(parsed.data.primarySkills);
+                                  }
+                                  if (parsed.data.secondarySkills && !secondarySkills) {
+                                    setSecondarySkills(parsed.data.secondarySkills);
+                                  }
+                                  if (parsed.data.knowledgeOnly && !knowledgeOnly) {
+                                    setKnowledgeOnly(parsed.data.knowledgeOnly);
+                                  }
+                                  toast({
+                                    title: "JD Parsed",
+                                    description: "Fields have been auto-filled from the JD file.",
+                                  });
+                                }
+                              }
+                            } catch (error) {
+                              console.error('JD parsing error:', error);
+                              // Continue without parsing - user can fill manually
+                            }
                           }
                         }}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
@@ -952,13 +994,76 @@ export default function ClientDashboard() {
                         </SelectContent>
                       </Select>
 
-                      {/* Date Picker */}
-                      <StandardDatePicker
-                        value={pipelineDate}
-                        onChange={(date) => date && setPipelineDate(date)}
-                        placeholder="Select date"
-                        className="h-10 w-40 rounded"
-                      />
+                      {/* Period Selector */}
+                      <Select value={pipelinePeriod} onValueChange={setPipelinePeriod}>
+                        <SelectTrigger className="h-10 w-32 rounded">
+                          <SelectValue placeholder="Period" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="daily">Daily</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="quarterly">Quarterly</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      {/* Date Picker - Show based on period */}
+                      {pipelinePeriod === "daily" && (
+                        <StandardDatePicker
+                          value={pipelineDate}
+                          onChange={(date) => date && setPipelineDate(date)}
+                          placeholder="Select date"
+                          className="h-10 w-40 rounded"
+                        />
+                      )}
+                      {pipelinePeriod === "monthly" && (
+                        <div className="flex gap-2">
+                          <Select value={pipelineMonth} onValueChange={setPipelineMonth}>
+                            <SelectTrigger className="h-10 w-32 rounded">
+                              <SelectValue placeholder="Month" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(month => (
+                                <SelectItem key={month} value={month}>{month}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select value={pipelineYear} onValueChange={setPipelineYear}>
+                            <SelectTrigger className="h-10 w-24 rounded">
+                              <SelectValue placeholder="Year" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                      {pipelinePeriod === "quarterly" && (
+                        <div className="flex gap-2">
+                          <Select value={pipelineQuarter} onValueChange={setPipelineQuarter}>
+                            <SelectTrigger className="h-10 w-24 rounded">
+                              <SelectValue placeholder="Quarter" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Q1">Q1</SelectItem>
+                              <SelectItem value="Q2">Q2</SelectItem>
+                              <SelectItem value="Q3">Q3</SelectItem>
+                              <SelectItem value="Q4">Q4</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Select value={pipelineYear} onValueChange={setPipelineYear}>
+                            <SelectTrigger className="h-10 w-24 rounded">
+                              <SelectValue placeholder="Year" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -990,16 +1095,26 @@ export default function ClientDashboard() {
                                   </div>
                                 ) : (
                                   candidates.map((candidate: any) => {
+                                    // Skip sample candidates - only show real data
+                                    if (candidate.id && candidate.id.startsWith('sample-')) {
+                                      return null;
+                                    }
+                                    
                                     const initials = getInitials(candidate.candidateName || '');
                                     const daysAgo = calculateDaysAgo(candidate.appliedDate || candidate.updatedAt);
                                     const roleApplied = candidate.roleApplied || 'N/A';
                                     const company = candidate.company || 'N/A';
+                                    const isRejected = candidate.currentStatus === 'Rejected' || candidate.status === 'Rejected';
                                     
                                     return (
                                       <div
                                         key={candidate.id}
-                                        onClick={(e) => handleCandidateClick(e, candidate, stage)}
-                                        className="bg-white border border-gray-200 rounded p-1.5 cursor-pointer hover:shadow-sm transition-all hover:border-blue-300 relative"
+                                        onClick={(e) => handleCandidateClick(e, candidate, stage.key)}
+                                        className={`border rounded p-1.5 cursor-pointer hover:shadow-sm transition-all hover:border-blue-300 relative ${
+                                          isRejected 
+                                            ? 'bg-red-50 border-red-200' 
+                                            : 'bg-white border-gray-200'
+                                        }`}
                                         data-testid={`candidate-card-${candidate.id}`}
                                       >
                                         {/* Card Content */}
@@ -1132,29 +1247,82 @@ export default function ClientDashboard() {
                 <div className="flex justify-between items-center print:mb-8">
                   <h2 className="text-xl font-semibold text-gray-900 print:text-2xl">Speed Metrics</h2>
                   <div className="flex items-center space-x-4 print:hidden">
-                    <Select>
+                    <Select value={metricsRoleFilter} onValueChange={setMetricsRoleFilter}>
                       <SelectTrigger className="w-32">
-                        <SelectValue defaultValue="All Roles" placeholder="All Roles" />
+                        <SelectValue placeholder="All Roles" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Roles</SelectItem>
-                        <SelectItem value="active">Active Roles</SelectItem>
+                        {allRolesData && Array.isArray(allRolesData) && allRolesData.length > 0 ? (
+                          allRolesData.map((role: any) => (
+                            <SelectItem key={role.id || role.roleId} value={role.id || role.roleId}>{role.position || role.role || role.roleId}</SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="active">Active Roles</SelectItem>
+                        )}
                       </SelectContent>
                     </Select>
-                    <StandardDatePicker
-                      value={metricsDate}
-                      onChange={(date) => date && setMetricsDate(date)}
-                      placeholder="Select date"
-                      className="w-60"
-                    />
-                    <Select>
+                    {metricsPeriod === 'daily' && (
+                      <StandardDatePicker
+                        value={metricsDate}
+                        onChange={(date) => date && setMetricsDate(date)}
+                        placeholder="Select date"
+                        className="w-60"
+                      />
+                    )}
+                    {metricsPeriod === 'monthly' && (
+                      <div className="flex gap-2">
+                        <Select value={format(metricsDate, 'MMMM')} onValueChange={(month) => {
+                          const monthMap: Record<string, number> = {
+                            'January': 0, 'February': 1, 'March': 2, 'April': 3,
+                            'May': 4, 'June': 5, 'July': 6, 'August': 7,
+                            'September': 8, 'October': 9, 'November': 10, 'December': 11
+                          };
+                          const newDate = new Date(metricsDate);
+                          newDate.setMonth(monthMap[month]);
+                          setMetricsDate(newDate);
+                        }}>
+                          <SelectTrigger className="w-32">
+                            <SelectValue placeholder="Month" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(month => (
+                              <SelectItem key={month} value={month}>{month}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Select value={metricsDate.getFullYear().toString()} onValueChange={(year) => {
+                          const newDate = new Date(metricsDate);
+                          newDate.setFullYear(parseInt(year));
+                          setMetricsDate(newDate);
+                        }}>
+                          <SelectTrigger className="w-24">
+                            <SelectValue placeholder="Year" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                              <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    {metricsPeriod === 'weekly' && (
+                      <StandardDatePicker
+                        value={metricsDate}
+                        onChange={(date) => date && setMetricsDate(date)}
+                        placeholder="Select week start date"
+                        className="w-60"
+                      />
+                    )}
+                    <Select value={metricsPeriod} onValueChange={setMetricsPeriod}>
                       <SelectTrigger className="w-24">
-                        <SelectValue defaultValue="Monthly" placeholder="Monthly" />
+                        <SelectValue placeholder="Period" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                        <SelectItem value="weekly">Weekly</SelectItem>
                         <SelectItem value="daily">Daily</SelectItem>
+                        <SelectItem value="weekly">Weekly</SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1527,6 +1695,16 @@ export default function ClientDashboard() {
   };
 
   const handleCandidateClick = (e: React.MouseEvent, candidate: any, stage: string) => {
+    // Prevent clicking on sample candidates (they don't exist in database)
+    if (candidate.id && candidate.id.startsWith('sample-')) {
+      toast({
+        title: "Sample Candidate",
+        description: "This is a sample candidate. Only real candidates can be rejected.",
+        variant: "default"
+      });
+      return;
+    }
+    
     e.stopPropagation();
     const rect = (e.target as HTMLElement).getBoundingClientRect();
     setCandidatePopupPosition({
@@ -1769,7 +1947,40 @@ export default function ClientDashboard() {
               <label className="block text-sm font-medium text-gray-700 mb-2">Job Description Content</label>
               <textarea
                 value={tempJdText}
-                onChange={(e) => setTempJdText(e.target.value)}
+                onChange={async (e) => {
+                  const text = e.target.value;
+                  setTempJdText(text);
+                  
+                  // Parse JD text to auto-fill fields (debounced)
+                  if (text.length > 100) {
+                    try {
+                      const response = await apiRequest('POST', '/api/client/parse-jd', { jdText: text }, {
+                        headers: {
+                          'Content-Type': 'application/json'
+                        }
+                      });
+                      if (response.ok) {
+                        const parsed = await response.json();
+                        if (parsed.data) {
+                          if (parsed.data.position && !jdPosition) {
+                            setJdPosition(parsed.data.position);
+                          }
+                          if (parsed.data.primarySkills && !primarySkills) {
+                            setPrimarySkills(parsed.data.primarySkills);
+                          }
+                          if (parsed.data.secondarySkills && !secondarySkills) {
+                            setSecondarySkills(parsed.data.secondarySkills);
+                          }
+                          if (parsed.data.knowledgeOnly && !knowledgeOnly) {
+                            setKnowledgeOnly(parsed.data.knowledgeOnly);
+                          }
+                        }
+                      }
+                    } catch (error) {
+                      // Silent fail - parsing is optional
+                    }
+                  }
+                }}
                 placeholder="Enter your job description here..."
                 className="w-full h-64 border border-gray-300 rounded p-3 resize-none text-sm"
               />
@@ -2603,22 +2814,7 @@ export default function ClientDashboard() {
             </div>
 
             <div className="space-y-3">
-              <Button
-                variant="default"
-                className="w-full justify-start bg-green-600 hover:bg-green-700 text-white"
-                onClick={() => {
-                  if (selectedCandidate?.id) {
-                    selectCandidateMutation.mutate({ id: selectedCandidate.id });
-                  }
-                }}
-                disabled={selectCandidateMutation.isPending}
-                data-testid="button-select-candidate"
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                {selectCandidateMutation.isPending ? 'Selecting...' : 'Select Candidate'}
-              </Button>
-
-              <div className="border-t border-gray-200 pt-3">
+              <div>
                 <label className="block text-xs text-gray-600 mb-1">Reject with reason:</label>
                 <Textarea
                   value={rejectReason}
@@ -2638,8 +2834,8 @@ export default function ClientDashboard() {
                       });
                     }
                   }}
-                  disabled={rejectCandidateMutation.isPending}
-                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-1 text-sm rounded"
+                  disabled={rejectCandidateMutation.isPending || !rejectReason.trim()}
+                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-1 text-sm rounded disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="button-reject-popup"
                 >
                   {rejectCandidateMutation.isPending ? 'Rejecting...' : 'Reject'}

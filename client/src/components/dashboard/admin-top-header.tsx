@@ -12,6 +12,7 @@ import type { UserActivity } from "@shared/schema";
 interface AdminTopHeaderProps {
   companyName?: string;
   onHelpClick?: () => void;
+  hideHelpButton?: boolean;
 }
 
 function getActivityIcon(type: string) {
@@ -46,7 +47,7 @@ function getRelativeTime(dateString: string): string {
   return date.toLocaleDateString();
 }
 
-export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpClick }: AdminTopHeaderProps) {
+export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpClick, hideHelpButton = false }: AdminTopHeaderProps) {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
@@ -196,14 +197,16 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
       </div>
 
       <div className="flex items-center gap-4">
-        <button 
-          onClick={onHelpClick}
-          className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-          data-testid="button-header-help"
-        >
-          <HelpCircle size={16} />
-          <span className="text-sm">Help</span>
-        </button>
+        {!hideHelpButton && (
+          <button 
+            onClick={onHelpClick}
+            className="flex items-center gap-1 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+            data-testid="button-header-help"
+          >
+            <HelpCircle size={16} />
+            <span className="text-sm">Help</span>
+          </button>
+        )}
 
         <div className="relative user-dropdown-container">
           <button
