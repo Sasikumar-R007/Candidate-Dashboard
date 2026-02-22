@@ -975,12 +975,12 @@ export default function TeamLeaderDashboard() {
                       <div className="border-t border-gray-200"></div>
                       <div className="flex justify-between items-center py-2">
                         <span className="text-sm font-medium text-gray-700">Avg. Resumes per Requirement</span>
-                        <span className="text-2xl font-bold text-blue-600">{String(Number(dailyMetrics?.avgResumesPerRequirement ?? 0).toFixed(0)).padStart(2, '0')}</span>
+                        <span className="text-2xl font-bold text-blue-600">{String(Math.round(dailyMetrics?.avgResumesPerRequirement ?? 0)).padStart(2, '0')}</span>
                       </div>
                       <div className="border-t border-gray-200"></div>
                       <div className="flex justify-between items-center py-2">
                         <span className="text-sm font-medium text-gray-700">Requirements per Recruiter</span>
-                        <span className="text-2xl font-bold text-blue-600">{String(Number(dailyMetrics?.requirementsPerRecruiter ?? 0).toFixed(0)).padStart(2, '0')}</span>
+                        <span className="text-2xl font-bold text-blue-600">{String(Math.round(dailyMetrics?.requirementsPerRecruiter ?? 0)).padStart(2, '0')}</span>
                       </div>
                       <div className="border-t border-gray-200"></div>
                       <div className="flex justify-between items-center py-2">
@@ -1516,11 +1516,38 @@ export default function TeamLeaderDashboard() {
     if (!dateString || dateString === 'N/A') return 'N/A';
     try {
       let date: Date;
-      if (typeof dateString === 'string' && dateString.includes('-')) {
-        const [day, month, year] = dateString.split('-');
-        date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      
+      // First, try to parse as ISO date string (most common format from backend)
+      if (typeof dateString === 'string') {
+        // Check if it's an ISO date string (contains 'T' or ends with 'Z')
+        if (dateString.includes('T') || dateString.endsWith('Z')) {
+          date = new Date(dateString);
+        } 
+        // Check if it's in DD-MM-YYYY format (exactly 10 characters, 2 dashes)
+        else if (dateString.length === 10 && dateString.split('-').length === 3) {
+          const parts = dateString.split('-');
+          // If first part is > 12, it's likely DD-MM-YYYY, otherwise try YYYY-MM-DD
+          if (parseInt(parts[0]) > 12) {
+            // DD-MM-YYYY format
+            const [day, month, year] = parts;
+            date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+          } else {
+            // YYYY-MM-DD format
+            const [year, month, day] = parts;
+            date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+          }
+        } 
+        // Try standard Date parsing as fallback
+        else {
+          date = new Date(dateString);
+        }
       } else {
         date = new Date(dateString);
+      }
+      
+      // Validate the date
+      if (isNaN(date.getTime())) {
+        return 'N/A';
       }
       
       const now = new Date();
@@ -1636,7 +1663,8 @@ export default function TeamLeaderDashboard() {
                             ) : (
                               (Array.isArray(candidates) ? candidates : []).map((candidate: any, index: number) => {
                                 const initials = getInitials(candidate.name || '');
-                                const daysAgo = calculateDaysAgo(candidate.createdAt || candidate.updatedAt);
+                                // Use appliedDate first (most accurate), then appliedOn, then createdAt/updatedAt
+                                const daysAgo = calculateDaysAgo(candidate.appliedDate || candidate.appliedOn || candidate.createdAt || candidate.updatedAt);
                                 const roleApplied = candidate.position || 'N/A';
                                 const company = candidate.company || 'N/A';
                                 

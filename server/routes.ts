@@ -1901,6 +1901,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .map(a => a.requirementId)
       );
       
+      // Also include requirements assigned via talentAdvisorId (even if no assignment record exists)
+      allRequirements.forEach(req => {
+        if (req.talentAdvisorId) {
+          const recruiter = filteredRecruiters.find(r => r.id === req.talentAdvisorId);
+          if (recruiter) {
+            activeRequirementIds.add(req.id);
+          }
+        }
+      });
+      
       // Filter requirements by date and exclude reassigned - only count requirements created on or before the selected date
       const filteredRequirements = allRequirements.filter(req => {
         const createdDate = new Date(req.createdAt).toISOString().split('T')[0];
@@ -1989,13 +1999,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const totalRequirements = filteredRequirements.length;
 
-      // Calculate averages
+      // Calculate averages (return as numbers, frontend will format)
       const avgResumesPerRequirement = totalRequirements > 0
-        ? (totalResumesDelivered / totalRequirements).toFixed(2)
-        : "0.00";
+        ? Math.round((totalResumesDelivered / totalRequirements) * 100) / 100
+        : 0;
       const requirementsPerRecruiter = filteredRecruiters.length > 0
-        ? (totalRequirements / filteredRecruiters.length).toFixed(2)
-        : "0.00";
+        ? Math.round((totalRequirements / filteredRecruiters.length) * 100) / 100
+        : 0;
 
       // Build delivered items for the selected date
       const deliveredItems: Array<{
@@ -3821,6 +3831,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
 
+      // CRITICAL: Verify we're using the correct employee ID
+      console.log('[RECRUITER DAILY METRICS] Employee ID:', employee.id, 'Employee Name:', employee.name, 'Email:', employee.email);
+
       const dateParam = req.query.date as string | undefined;
       const today = dateParam || new Date().toISOString().split('T')[0];
 
@@ -3829,7 +3842,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get requirements assigned to this recruiter directly from requirements table
       // Filter out reassigned requirements for counts
+      // IMPORTANT: Use employee.id (database ID), not employee.employeeId
       const allRequirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
+      console.log('[RECRUITER DAILY METRICS] Found requirements for', employee.name, ':', allRequirements.length);
       
       // Get assignment status to filter out reassigned requirements
       const { requirementAssignments } = await import("@shared/schema");
@@ -3846,7 +3861,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .map(a => a.requirementId)
       );
       
-      const requirements = allRequirements.filter(req => activeRequirementIds.has(req.id));
+      // Also include requirements assigned via talentAdvisorId (even if no assignment record exists)
+      allRequirements.forEach(req => {
+        if (req.talentAdvisorId === employee.id) {
+          activeRequirementIds.add(req.id);
+        }
+      });
+      
+      // Filter requirements - include if assigned via talentAdvisorId OR has active assignment
+      // Exclude if reassigned to another recruiter
+      const requirements = allRequirements.filter(req => {
+        // If assigned via talentAdvisorId to this recruiter
+        if (req.talentAdvisorId === employee.id) {
+          // Check if it's been reassigned to another recruiter via assignment
+          const hasActiveAssignmentForOtherRecruiter = allAssignments.some(a =>
+            a.requirementId === req.id &&
+            a.recruiterId !== employee.id &&
+            a.status === "active"
+          );
+          // If not reassigned, include it
+          return !hasActiveAssignmentForOtherRecruiter;
+        }
+        
+        // If has active assignment for this recruiter, include it
+        return activeRequirementIds.has(req.id);
+      });
 
       // Calculate total required resumes and track per-requirement delivery
       let totalResumesRequired = 0;
@@ -4134,12 +4173,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
 
+      // CRITICAL: Verify we're using the correct employee ID
+      console.log('[RECRUITER DAILY DELIVERY] Employee ID:', employee.id, 'Employee Name:', employee.name, 'Email:', employee.email);
+
       const dateParam = req.query.date as string | undefined;
       const today = dateParam || new Date().toISOString().split('T')[0];
 
       const { resumeSubmissions, jobApplications, requirements } = await import("@shared/schema");
 
-      // Get resume submissions for this date
+      // Get recruiter's requirements first (CRITICAL for data isolation)
+      const recruiterRequirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
+      const recruiterRequirementIds = recruiterRequirements.map(r => r.id);
+      console.log('[RECRUITER DAILY DELIVERY] Found requirements for', employee.name, ':', recruiterRequirementIds.length);
+
+      // Get resume submissions for this date (filtered by recruiter ID)
       const submissionsRaw = await db.select().from(resumeSubmissions)
         .where(eq(resumeSubmissions.recruiterId, employee.id));
 
@@ -4149,24 +4196,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return subDate === today;
       });
 
-      // Get tagged applications for this date
+      // CRITICAL: Get recruiter's requirements FIRST for proper data isolation
+      const recruiterRequirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
+      const recruiterRequirementIds = recruiterRequirements.map(r => r.id);
+      console.log('[RECRUITER DELIVERED CANDIDATES] Employee ID:', employee.id, 'Employee Name:', employee.name, 'Requirements:', recruiterRequirementIds.length);
+
+      // Get tagged applications for this date (CRITICAL: filter by recruiter's requirements only)
       const taggedAppsRaw = await db.select().from(jobApplications)
         .where(eq(jobApplications.source, 'recruiter_tagged'));
 
-      const taggedApps = taggedAppsRaw.filter(app => {
+      const recruiterTaggedApps = taggedAppsRaw.filter(app => {
         if (!app.appliedDate) return false;
         const appDate = new Date(app.appliedDate).toISOString().split('T')[0];
-        return appDate === today;
+        // CRITICAL: Only include if it's for this recruiter's requirements
+        return appDate === today && app.requirementId && recruiterRequirementIds.includes(app.requirementId);
       });
-
-      // Get recruiter's requirements
-      const recruiterRequirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
-      const recruiterRequirementIds = recruiterRequirements.map(r => r.id);
-
-      // Filter tagged apps to recruiter's requirements
-      const recruiterTaggedApps = taggedApps.filter(app =>
-        app.requirementId && recruiterRequirementIds.includes(app.requirementId)
-      );
 
       // Get all requirements for company/position lookup
       const allRequirements = await db.select().from(requirements);
@@ -4377,8 +4421,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
 
+      // CRITICAL: Verify we're using the correct employee ID
+      console.log('[RECRUITER REQUIREMENTS] Employee ID:', employee.id, 'Employee Name:', employee.name, 'Email:', employee.email);
+
       // Fetch requirements assigned to this recruiter/talent advisor (using ID-based lookup)
+      // IMPORTANT: Use employee.id (database ID), not employee.employeeId
       const recruiterRequirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
+      console.log('[RECRUITER REQUIREMENTS] Found requirements for', employee.name, ':', recruiterRequirements.length);
 
       // Get assignment status for each requirement
       const { requirementAssignments } = await import("@shared/schema");
@@ -4388,9 +4437,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .where(inArray(requirementAssignments.requirementId, requirementIds))
         : [];
 
+      // Filter out reassigned requirements - only show active assignments
+      // First, get requirements that are actively assigned to this recruiter
+      const activeRequirementIds = new Set(
+        allAssignments
+          .filter(a => a.recruiterId === employee.id && a.status === "active")
+          .map(a => a.requirementId)
+      );
+      
+      // Also include requirements assigned via talentAdvisorId (even if no assignment record exists)
+      recruiterRequirements.forEach(req => {
+        if (req.talentAdvisorId === employee.id) {
+          activeRequirementIds.add(req.id);
+        }
+      });
+      
+      // Filter to only active requirements (exclude reassigned)
+      const activeRequirements = recruiterRequirements.filter(req => {
+        // If requirement is assigned via talentAdvisorId to this recruiter, include it
+        if (req.talentAdvisorId === employee.id) {
+          // But check if it's been reassigned to another recruiter via assignment
+          const hasActiveAssignmentForOtherRecruiter = allAssignments.some(a =>
+            a.requirementId === req.id &&
+            a.recruiterId !== employee.id &&
+            a.status === "active"
+          );
+          // If reassigned, exclude it
+          return !hasActiveAssignmentForOtherRecruiter;
+        }
+        
+        // If requirement has an active assignment for this recruiter, include it
+        return activeRequirementIds.has(req.id);
+      });
+      
       // Also get job applications for each requirement to calculate delivery counts
       const requirementsWithCounts = await Promise.all(
-        recruiterRequirements.map(async (req) => {
+        activeRequirements.map(async (req) => {
           const applications = await storage.getJobApplicationsByRequirementId(req.id);
           
           // Find assignment status for this requirement and recruiter
@@ -4398,15 +4480,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             a.requirementId === req.id && a.recruiterId === employee.id
           );
           
-          // Check if there's a newer active assignment for this requirement (reassigned)
-          const hasActiveAssignmentForOtherRecruiter = allAssignments.some(a =>
-            a.requirementId === req.id &&
-            a.recruiterId !== employee.id &&
-            a.status === "active"
-          );
-          
-          const isReassigned = assignment?.status === "reassigned" || 
-                               (assignment && hasActiveAssignmentForOtherRecruiter);
+          const isReassigned = assignment?.status === "reassigned";
 
           return {
             ...req,
@@ -8057,15 +8131,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
 
+      // CRITICAL: Verify we're using the correct employee ID
+      console.log('[RECRUITER APPLICATIONS] Employee ID:', employee.id, 'Employee Name:', employee.name, 'Email:', employee.email);
+
       const { jobId, dateFrom, dateTo, status } = req.query;
 
       // Get this recruiter's jobs (using employee.id for consistency)
       const jobs = await storage.getRecruiterJobsByRecruiterId(employee.id);
       const jobIds = jobs.map(j => j.id);
+      console.log('[RECRUITER APPLICATIONS] Found jobs for', employee.name, ':', jobIds.length);
 
       // Get this recruiter's assigned requirements (using employee.id for consistency)
       const requirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
       const requirementIds = requirements.map(r => r.id);
+      console.log('[RECRUITER APPLICATIONS] Found requirements for', employee.name, ':', requirementIds.length);
 
       // Get all applications and filter to those for recruiter's jobs OR tagged requirements
       const allApplications = await storage.getAllJobApplications();

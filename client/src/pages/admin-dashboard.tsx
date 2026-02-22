@@ -1092,8 +1092,9 @@ export default function AdminDashboard() {
   });
 
   // Fetch pipeline data from API (all applications from all recruiters)
-  // Supports filtering by TL (team leader)
+  // Supports filtering by TL (team leader) and TA (team member)
   const [selectedPipelineTL, setSelectedPipelineTL] = useState<string>("all");
+  const [selectedPipelineTeamMember, setSelectedPipelineTeamMember] = useState<string>("all");
   const { data: pipelineApplications = [], isLoading: isLoadingPipeline, refetch: refetchPipeline } = useQuery<any[]>({
     queryKey: ["/api/admin/pipeline", selectedPipelineTL, selectedPipelineTeamMember],
     queryFn: async () => {
@@ -1360,7 +1361,7 @@ export default function AdminDashboard() {
   // Pipeline filter period state (must be declared before useMemo that uses them)
   const [selectedPipelineTeam, setSelectedPipelineTeam] = useState<string>("all");
   const [pipelineDate, setPipelineDate] = useState<Date | null>(null);
-  const [selectedPipelineTeamMember, setSelectedPipelineTeamMember] = useState<string>("all");
+  // Note: selectedPipelineTeamMember is declared earlier (before useQuery hook)
   const [pipelineMonth, setPipelineMonth] = useState<string>(format(new Date(), "MMMM"));
   const [pipelineYear, setPipelineYear] = useState<string>(new Date().getFullYear().toString());
   const [pipelineWeekStart, setPipelineWeekStart] = useState<Date | undefined>(new Date());
