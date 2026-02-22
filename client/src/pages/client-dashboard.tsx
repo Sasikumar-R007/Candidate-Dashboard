@@ -1645,6 +1645,9 @@ export default function ClientDashboard() {
                   <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                       <DialogTitle className="text-xl font-semibold">Interview Drop of Rate</DialogTitle>
+                      <DialogDescription>
+                        View interview drop-off rate metrics
+                      </DialogDescription>
                     </DialogHeader>
                     <div className="py-4">
                       <div className="text-center">
@@ -1663,6 +1666,9 @@ export default function ClientDashboard() {
                   <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                       <DialogTitle className="text-xl font-semibold">Offer Drop of Rate</DialogTitle>
+                      <DialogDescription>
+                        View offer drop-off rate metrics
+                      </DialogDescription>
                     </DialogHeader>
                     <div className="py-4">
                       <div className="text-center">
@@ -1935,6 +1941,9 @@ export default function ClientDashboard() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Write Job Description</DialogTitle>
+            <DialogDescription>
+              Create a new job description for your requirement
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>

@@ -98,7 +98,34 @@ export default function CandidateProfile() {
   
   const isFromDatabase = !!(candidate.candidateId || candidate.resumeFile);
   
-  const resumeUrl = candidate.resumeFile;
+  // Normalize resume URL
+  let resumeUrl = candidate.resumeFile;
+  if (resumeUrl) {
+    // If it's a full URL, extract the path
+    if (resumeUrl.startsWith('http://') || resumeUrl.startsWith('https://')) {
+      try {
+        const url = new URL(resumeUrl);
+        resumeUrl = url.pathname;
+      } catch (e) {
+        // If URL parsing fails, try to extract path manually
+        const match = resumeUrl.match(/\/uploads\/.*/);
+        if (match) {
+          resumeUrl = match[0];
+        }
+      }
+    }
+    
+    // Ensure it starts with /uploads
+    if (!resumeUrl.startsWith('/uploads')) {
+      if (resumeUrl.startsWith('uploads/')) {
+        resumeUrl = '/' + resumeUrl;
+      } else if (!resumeUrl.startsWith('/')) {
+        // If it's just a filename, assume it's in uploads/resumes
+        resumeUrl = '/uploads/resumes/' + resumeUrl;
+      }
+    }
+  }
+  
   const lowerUrl = resumeUrl?.toLowerCase() || '';
   const urlWithoutQuery = lowerUrl.split('?')[0];
   const isPdf = urlWithoutQuery.endsWith('.pdf');
@@ -376,11 +403,11 @@ export default function CandidateProfile() {
                   <FileText className="w-5 h-5 text-blue-600" />
                   Resume
                 </h3>
-                {candidate.resumeFile && (
+                {resumeUrl && (
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => window.open(candidate.resumeFile, '_blank')}
+                    onClick={() => window.open(resumeUrl, '_blank')}
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Download
@@ -388,11 +415,11 @@ export default function CandidateProfile() {
                 )}
               </div>
               <div className="border border-gray-200 rounded-lg bg-gray-100 overflow-hidden" style={{ minHeight: '600px', height: '600px' }}>
-                {candidate.resumeFile ? (
+                {resumeUrl ? (
                   <>
                     {isPdf ? (
                       <iframe
-                        src={candidate.resumeFile}
+                        src={resumeUrl}
                         className="w-full h-full border-0"
                         title="Resume Preview"
                       />

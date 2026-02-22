@@ -95,7 +95,21 @@ function extractResumeData(text: string): {
   const email = emails && emails.length > 0 ? emails[0].toLowerCase() : null;
   const phone = phones && phones.length > 0 ? phones[0].replace(/[^\d+]/g, '') : null;
   
-  const fullName = extractName(text);
+  let fullName = extractName(text);
+  
+  // If name not found, try to extract from email (before @)
+  if (!fullName && email) {
+    const emailName = email.split('@')[0];
+    // Try to format email name as a proper name (e.g., "john.doe" -> "John Doe")
+    const nameParts = emailName.split(/[._-]/).filter(part => part.length > 0);
+    if (nameParts.length >= 2) {
+      fullName = nameParts.map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(' ');
+    } else if (nameParts.length === 1 && nameParts[0].length > 2) {
+      // Single name - capitalize first letter
+      fullName = nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1).toLowerCase();
+    }
+  }
+  
   const designation = extractDesignation(text);
   const experience = extractExperience(text);
   const skills = extractSkills(text);

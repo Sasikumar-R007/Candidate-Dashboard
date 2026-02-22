@@ -494,22 +494,43 @@ function calculateRequirementMatch(candidate: any, requirement: any, candidateSk
 export function buildSearchQuery(filters: any) {
   const conditions: any[] = [];
   
-  // Boolean search query
-  if (filters.searchQuery && filters.booleanMode) {
-    // For boolean search, we'll use ILIKE for phrase matching
-    // Complex boolean logic would require full-text search (PostgreSQL tsvector)
-    const query = filters.searchQuery.toLowerCase();
-    conditions.push(
-      or(
-        ilike(candidates.fullName, `%${query}%`),
-        ilike(candidates.designation, `%${query}%`),
-        ilike(candidates.skills, `%${query}%`),
-        ilike(candidates.location, `%${query}%`),
-        ilike(candidates.company, `%${query}%`),
-        ilike(candidates.education, `%${query}%`),
-        ilike(candidates.resumeText, `%${query}%`)
-      )
-    );
+  // Search query - apply for both boolean and non-boolean modes
+  if (filters.searchQuery && filters.searchQuery.trim() !== '') {
+    const query = filters.searchQuery.toLowerCase().trim();
+    
+    if (filters.booleanMode) {
+      // For boolean search, we'll use ILIKE for phrase matching
+      // Complex boolean logic would require full-text search (PostgreSQL tsvector)
+      conditions.push(
+        or(
+          ilike(candidates.fullName, `%${query}%`),
+          ilike(candidates.designation, `%${query}%`),
+          ilike(candidates.skills, `%${query}%`),
+          ilike(candidates.location, `%${query}%`),
+          ilike(candidates.company, `%${query}%`),
+          ilike(candidates.education, `%${query}%`),
+          ilike(candidates.resumeText, `%${query}%`)
+        )
+      );
+    } else {
+      // For non-boolean mode, split query into terms and use OR logic
+      const queryTerms = query.split(/\s+/).filter(t => t.length > 0);
+      if (queryTerms.length > 0) {
+        const termConditions = queryTerms.map(term => 
+          or(
+            ilike(candidates.fullName, `%${term}%`),
+            ilike(candidates.designation, `%${term}%`),
+            ilike(candidates.skills, `%${term}%`),
+            ilike(candidates.location, `%${term}%`),
+            ilike(candidates.company, `%${term}%`),
+            ilike(candidates.education, `%${term}%`),
+            ilike(candidates.resumeText, `%${term}%`)
+          )
+        );
+        // At least one term must match (OR between terms)
+        conditions.push(or(...termConditions));
+      }
+    }
   }
   
   // Experience filter - only apply if not default [0, 15]

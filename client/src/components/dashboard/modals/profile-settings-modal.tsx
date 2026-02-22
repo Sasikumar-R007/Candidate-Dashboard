@@ -93,9 +93,11 @@ export function ProfileSettingsModal({ open, onOpenChange, onChatClick }: Profil
           }
           
           if (endpoint) {
-            const response = await fetch(endpoint);
-            if (response.ok) {
+            try {
+              const response = await apiRequest('GET', endpoint);
               profileData = await response.json();
+            } catch (error) {
+              // Silently fail - profile data is optional
             }
           }
         } catch (error) {

@@ -1001,9 +1001,8 @@ export default function RecruiterDashboard2() {
   const userName = recruiterProfile?.name || employee?.name || "Recruiter User";
   const userRole = employee?.role || 'recruiter';
 
-  const { data: teamMembers } = useQuery({
-    queryKey: ['/api/recruiter/team-members'],
-  }) as { data: any[] };
+  // Recruiters don't have team members - return empty array
+  const teamMembers: any[] = [];
 
   const { data: targetMetrics } = useQuery({
     queryKey: ['/api/recruiter/target-metrics'],

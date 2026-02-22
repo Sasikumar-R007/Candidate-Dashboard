@@ -92,10 +92,12 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
         }
         
         if (endpoint) {
-          const response = await fetch(endpoint);
-          if (response.ok) {
+          try {
+            const response = await apiRequest('GET', endpoint);
             const data = await response.json();
             setProfileData(data);
+          } catch (error) {
+            // Silently fail - profile data is optional
           }
         }
       } catch (error) {

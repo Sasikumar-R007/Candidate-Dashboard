@@ -3533,7 +3533,6 @@ const SourceResume = () => {
                             </div>
                           )}
                           <p className="text-xs text-gray-600 text-right mb-1">University: {candidate.university !== 'Not Available' ? candidate.university : 'Not Available'}</p>
-                          <p className="text-xs text-gray-600 text-right mb-2">Education: {candidate.education !== 'Not Available' ? candidate.education : 'Not Available'}</p>
                           <div className="flex gap-2 mb-3 justify-end">
                             {candidate.linkedinUrl && (
                               <a href={candidate.linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700" onClick={(e) => e.stopPropagation()}>
@@ -3749,15 +3748,35 @@ const SourceResume = () => {
                                 {(() => {
                                   // Fix resume URL - ensure it's properly formatted
                                   let resumeUrl = candidate.resumeFile;
-                                  // If it's a relative path without leading slash, add it
-                                  if (resumeUrl && !resumeUrl.startsWith('http') && !resumeUrl.startsWith('/')) {
-                                    resumeUrl = '/' + resumeUrl;
-                                  } else if (resumeUrl && resumeUrl.startsWith('uploads/')) {
-                                    // If it starts with uploads/, ensure it has leading slash
-                                    resumeUrl = '/' + resumeUrl;
+                                  
+                                  // Normalize the URL
+                                  if (resumeUrl) {
+                                    // If it's a full URL, extract the path
+                                    if (resumeUrl.startsWith('http://') || resumeUrl.startsWith('https://')) {
+                                      try {
+                                        const url = new URL(resumeUrl);
+                                        resumeUrl = url.pathname;
+                                      } catch (e) {
+                                        // If URL parsing fails, try to extract path manually
+                                        const match = resumeUrl.match(/\/uploads\/.*/);
+                                        if (match) {
+                                          resumeUrl = match[0];
+                                        }
+                                      }
+                                    }
+                                    
+                                    // Ensure it starts with /uploads
+                                    if (!resumeUrl.startsWith('/uploads')) {
+                                      if (resumeUrl.startsWith('uploads/')) {
+                                        resumeUrl = '/' + resumeUrl;
+                                      } else if (!resumeUrl.startsWith('/')) {
+                                        // If it's just a filename, assume it's in uploads/resumes
+                                        resumeUrl = '/uploads/resumes/' + resumeUrl;
+                                      }
+                                    }
                                   }
                                   
-                                  const lowerUrl = resumeUrl.toLowerCase();
+                                  const lowerUrl = resumeUrl?.toLowerCase() || '';
                                   const urlWithoutQuery = lowerUrl.split('?')[0];
                                   const isPdf = urlWithoutQuery.endsWith('.pdf');
                                   const isDocx = urlWithoutQuery.endsWith('.docx');

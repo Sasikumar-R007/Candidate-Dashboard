@@ -9123,10 +9123,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let filteredApplications = clientApplications;
       if (dateStr) {
         const filterDate = new Date(dateStr);
+        // Helper to parse date (handles DD-MM-YYYY and ISO formats)
+        const parseDate = (dateStr: string): Date | null => {
+          if (!dateStr) return null;
+          try {
+            // Try DD-MM-YYYY format first
+            if (dateStr.includes('-') && dateStr.split('-').length === 3) {
+              const parts = dateStr.split('-');
+              if (parts[0].length <= 2 && parts[1].length <= 2) {
+                const [day, month, year] = parts;
+                return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+              }
+            }
+            // Try ISO format
+            return new Date(dateStr);
+          } catch {
+            return null;
+          }
+        };
+
         if (period === 'daily') {
           filteredApplications = clientApplications.filter((app: any) => {
             if (!app.appliedDate) return false;
-            const appDate = new Date(app.appliedDate);
+            const appDate = parseDate(app.appliedDate);
+            if (!appDate) return false;
             return appDate.toDateString() === filterDate.toDateString();
           });
         } else if (period === 'weekly') {
@@ -9136,13 +9156,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           weekEnd.setDate(weekEnd.getDate() + 6);
           filteredApplications = clientApplications.filter((app: any) => {
             if (!app.appliedDate) return false;
-            const appDate = new Date(app.appliedDate);
+            const appDate = parseDate(app.appliedDate);
+            if (!appDate) return false;
             return appDate >= weekStart && appDate <= weekEnd;
           });
         } else if (period === 'monthly') {
           filteredApplications = clientApplications.filter((app: any) => {
             if (!app.appliedDate) return false;
-            const appDate = new Date(app.appliedDate);
+            const appDate = parseDate(app.appliedDate);
+            if (!appDate) return false;
             return appDate.getMonth() === filterDate.getMonth() && 
                    appDate.getFullYear() === filterDate.getFullYear();
           });
@@ -9271,10 +9293,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Filter by period
       if (dateStr) {
         const filterDate = new Date(dateStr);
+        // Helper to parse date (handles DD-MM-YYYY and ISO formats)
+        const parseDate = (dateStr: string): Date | null => {
+          if (!dateStr) return null;
+          try {
+            // Try DD-MM-YYYY format first
+            if (dateStr.includes('-') && dateStr.split('-').length === 3) {
+              const parts = dateStr.split('-');
+              if (parts[0].length <= 2 && parts[1].length <= 2) {
+                const [day, month, year] = parts;
+                return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+              }
+            }
+            // Try ISO format
+            return new Date(dateStr);
+          } catch {
+            return null;
+          }
+        };
+
         if (period === 'daily') {
           clientApplications = clientApplications.filter((app: any) => {
             if (!app.appliedDate) return false;
-            const appDate = new Date(app.appliedDate);
+            const appDate = parseDate(app.appliedDate);
+            if (!appDate) return false;
             return appDate.toDateString() === filterDate.toDateString();
           });
         } else if (period === 'weekly') {
@@ -9284,13 +9326,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           weekEnd.setDate(weekEnd.getDate() + 6);
           clientApplications = clientApplications.filter((app: any) => {
             if (!app.appliedDate) return false;
-            const appDate = new Date(app.appliedDate);
+            const appDate = parseDate(app.appliedDate);
+            if (!appDate) return false;
             return appDate >= weekStart && appDate <= weekEnd;
           });
         } else if (period === 'monthly') {
           clientApplications = clientApplications.filter((app: any) => {
             if (!app.appliedDate) return false;
-            const appDate = new Date(app.appliedDate);
+            const appDate = parseDate(app.appliedDate);
+            if (!appDate) return false;
             return appDate.getMonth() === filterDate.getMonth() && 
                    appDate.getFullYear() === filterDate.getFullYear();
           });
