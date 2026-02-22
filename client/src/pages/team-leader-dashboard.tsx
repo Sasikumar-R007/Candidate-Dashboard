@@ -141,6 +141,8 @@ export default function TeamLeaderDashboard() {
   const [requirementSearch, setRequirementSearch] = useState('');
   const [selectedPerformanceMember, setSelectedPerformanceMember] = useState<string>('all');
   const [teamMembersSearch, setTeamMembersSearch] = useState('');
+  const [selectedPipelineRecruiter, setSelectedPipelineRecruiter] = useState<string>('all');
+  const [pipelineDate, setPipelineDate] = useState<Date | null>(null);
   
   const [teamChatMessages, setTeamChatMessages] = useState([
     { id: 1, sender: "John Mathew", message: "Good morning team! Please review the requirements for today", time: "9:00 AM", isOwn: true },
@@ -290,6 +292,9 @@ export default function TeamLeaderDashboard() {
       if (!response.ok) throw new Error('Failed to fetch daily metrics');
       return response.json();
     },
+    enabled: !!employee, // Only fetch when employee is loaded
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    staleTime: 0, // Always consider data stale to ensure fresh updates
   });
 
   // Fetch pipeline counts for the right sidebar
@@ -331,9 +336,25 @@ export default function TeamLeaderDashboard() {
   });
 
   // Fetch pipeline data for team leader
-  const { data: pipelineData = [], isLoading: isLoadingPipeline, isError: isErrorPipeline } = useQuery<any[]>({
-    queryKey: ['/api/team-leader/pipeline'],
+  const { data: pipelineData = [], isLoading: isLoadingPipeline, isError: isErrorPipeline, refetch: refetchPipeline } = useQuery<any[]>({
+    queryKey: ['/api/team-leader/pipeline', selectedPipelineRecruiter, pipelineDate !== null ? format(pipelineDate, 'yyyy-MM-dd') : 'all'],
+    queryFn: async () => {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+      const createApiUrl = (path: string) => `${API_BASE_URL}${path}`;
+      const params = new URLSearchParams();
+      if (selectedPipelineRecruiter && selectedPipelineRecruiter !== 'all') {
+        params.append('ta', selectedPipelineRecruiter);
+      }
+      const url = `/api/team-leader/pipeline${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await fetch(createApiUrl(url), {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch pipeline data');
+      return response.json();
+    },
     enabled: !!employee,
+    refetchOnWindowFocus: true,
+    staleTime: 0, // Always consider data stale to ensure fresh updates
   });
 
   // Fetch requirements from API
@@ -474,9 +495,64 @@ export default function TeamLeaderDashboard() {
     );
   }, [aggregatedTargets, targetSearch]);
 
-  // Group pipeline candidates by status for the pipeline view
+  // Group pipeline candidates by status for the pipeline view with filters
   const groupedPipelineCandidates = useMemo(() => {
     if (!Array.isArray(pipelineData)) return {};
+    
+    // Filter by TA (recruiter) if selected
+    let filteredData = pipelineData;
+    if (selectedPipelineRecruiter && selectedPipelineRecruiter !== 'all') {
+      filteredData = pipelineData.filter((candidate: any) => {
+        // Match by recruiterId if available, otherwise by name
+        return candidate.recruiterId === selectedPipelineRecruiter || 
+               (candidate.recruiter || '').toLowerCase() === selectedPipelineRecruiter.toLowerCase();
+      });
+    }
+    
+    // Filter by date if selected (null means show all)
+    if (pipelineDate !== null) {
+      const filterDate = format(pipelineDate, 'yyyy-MM-dd');
+      filteredData = filteredData.filter((candidate: any) => {
+        let dateToCheck: string | null = null;
+        // Try appliedDate first (from job_applications)
+        if (candidate.appliedDate) {
+          try {
+            const date = new Date(candidate.appliedDate);
+            dateToCheck = format(date, 'yyyy-MM-dd');
+          } catch {
+            // Try appliedOn format (DD-MM-YYYY)
+            if (candidate.appliedOn && candidate.appliedOn !== 'N/A') {
+              try {
+                const [day, month, year] = candidate.appliedOn.split('-');
+                const parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                dateToCheck = format(parsedDate, 'yyyy-MM-dd');
+              } catch {
+                return false;
+              }
+            }
+          }
+        } else if (candidate.appliedOn && candidate.appliedOn !== 'N/A') {
+          // Parse appliedOn date (format: DD-MM-YYYY)
+          try {
+            const [day, month, year] = candidate.appliedOn.split('-');
+            const parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            dateToCheck = format(parsedDate, 'yyyy-MM-dd');
+          } catch {
+            return false;
+          }
+        } else if (candidate.createdAt) {
+          // Fallback to createdAt
+          try {
+            const date = new Date(candidate.createdAt);
+            dateToCheck = format(date, 'yyyy-MM-dd');
+          } catch {
+            return false;
+          }
+        }
+        if (!dateToCheck) return false;
+        return dateToCheck === filterDate;
+      });
+    }
     
     const stages: Record<string, any[]> = {
       'L1': [],
@@ -488,28 +564,47 @@ export default function TeamLeaderDashboard() {
       'Closure': []
     };
     
-    pipelineData.forEach((candidate: any) => {
-      const status = (candidate.status || '').toLowerCase();
-      if (status.includes('l1') || status === 'level 1' || status === 'l1 interview') {
+    filteredData.forEach((candidate: any) => {
+      // Use currentStatus if available (from job_applications), otherwise use status
+      const status = (candidate.currentStatus || candidate.status || '').toLowerCase();
+      if (status === 'l1' || status.includes('l1')) {
         stages['L1'].push(candidate);
-      } else if (status.includes('l2') || status === 'level 2' || status === 'l2 interview') {
+      } else if (status === 'l2' || status.includes('l2')) {
         stages['L2'].push(candidate);
-      } else if (status.includes('l3') || status === 'level 3' || status === 'l3 interview') {
+      } else if (status === 'l3' || status.includes('l3')) {
         stages['L3'].push(candidate);
-      } else if (status.includes('final') || status === 'final round') {
+      } else if (status === 'final round' || status.includes('final')) {
         stages['Final Round'].push(candidate);
-      } else if (status.includes('hr') || status === 'hr round') {
+      } else if (status === 'hr round' || status.includes('hr')) {
         stages['HR Round'].push(candidate);
-      } else if (status.includes('offer') && !status.includes('drop')) {
+      } else if ((status === 'offer stage' || status === 'selected') && !status.includes('drop')) {
         stages['Offer Stage'].push(candidate);
-      } else if (status.includes('clos') || status === 'closed' || status === 'closure') {
+      } else if (status === 'closure' || status === 'joined' || status.includes('clos')) {
         stages['Closure'].push(candidate);
       }
     });
     
     return stages;
-  }, [pipelineData]);
+  }, [pipelineData, selectedPipelineRecruiter, pipelineDate]);
   
+  // Set up interval to refresh pipeline data periodically when on pipeline tab
+  useEffect(() => {
+    if (sidebarTab !== 'pipeline' || !employee) return;
+    
+    // Immediately refetch when switching to pipeline tab
+    refetchPipeline();
+    queryClient.invalidateQueries({ queryKey: ['/api/team-leader/pipeline'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/team-leader/pipeline-counts'] });
+    
+    const interval = setInterval(() => {
+      refetchPipeline();
+      queryClient.invalidateQueries({ queryKey: ['/api/team-leader/pipeline'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/team-leader/pipeline-counts'] });
+    }, 10000); // Refresh every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [sidebarTab, employee, refetchPipeline, queryClient]);
+
   // Check authentication - wait for loading to complete
   useEffect(() => {
     // Don't check auth until loading is complete
@@ -739,13 +834,12 @@ export default function TeamLeaderDashboard() {
                   <CardTitle className="text-lg font-semibold text-gray-900">Target</CardTitle>
                   <Dialog open={isTargetModalOpen} onOpenChange={setIsTargetModalOpen}>
                     <DialogTrigger asChild>
-                      <Button 
-                        variant="link"
-                        className="text-blue-600 hover:text-blue-700 text-sm px-0 font-normal underline"
+                      <button
+                        className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
                         data-testid="button-view-all-targets"
                       >
                         View All
-                      </Button>
+                      </button>
                     </DialogTrigger>
                     <DialogContent className="max-w-4xl">
                       <DialogHeader>
@@ -899,21 +993,6 @@ export default function TeamLeaderDashboard() {
                     <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
                       <div className="flex items-center justify-between mb-4">
                         <h4 className="text-lg font-semibold text-gray-900">Daily Delivery</h4>
-                        <div className="flex items-center gap-2">
-                          <Select defaultValue="overall">
-                            <SelectTrigger className="w-24 h-8 text-xs">
-                              <SelectValue placeholder="Overall" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="overall">Overall</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <StandardDatePicker
-                            value={selectedDate}
-                            onChange={(date) => date && setSelectedDate(date)}
-                            placeholder="Select date"
-                          />
-                        </div>
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="border-2 border-green-500 rounded-lg p-4 text-center">
@@ -1010,13 +1089,13 @@ export default function TeamLeaderDashboard() {
                 <Card className="bg-white border border-gray-200">
                   <CardHeader className="pb-3 pt-4 flex flex-row items-center justify-between gap-2">
                     <CardTitle className="text-lg font-semibold text-gray-900">CEO Commands</CardTitle>
-                    <Button 
-                      className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded font-medium no-underline"
+                    <button
+                      className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
                       onClick={() => setIsCeoCommentsModalOpen(true)}
                       data-testid="button-view-more-comments"
                     >
                       View More
-                    </Button>
+                    </button>
                   </CardHeader>
                   <CardContent className="p-4 pt-0">
                     <div className="bg-slate-800 rounded-lg p-6 text-white space-y-4">
@@ -1101,8 +1180,14 @@ export default function TeamLeaderDashboard() {
                             </td>
                           </tr>
                         ) : (
-                          requirementsData.slice(0, 10).map((requirement) => (
-                            <tr key={requirement.id} className="border-b border-gray-100">
+                          requirementsData.slice(0, 10).map((requirement) => {
+                            const isReassigned = requirement.assignmentStatus === "reassigned";
+                            return (
+                            <tr 
+                              key={requirement.id} 
+                              className={`border-b border-gray-100 ${isReassigned ? 'opacity-50 cursor-not-allowed bg-gray-100' : ''}`}
+                              title={isReassigned ? "Reassigned to another TA" : undefined}
+                            >
                               <td className="p-3 text-gray-900">{requirement.position}</td>
                               <td className="p-3">
                                 <span className={`text-xs font-semibold px-2 py-1 rounded inline-flex items-center ${
@@ -1151,7 +1236,8 @@ export default function TeamLeaderDashboard() {
                                 </Button>
                               </td>
                             </tr>
-                          ))
+                            );
+                          })
                         )}
                       </tbody>
                     </table>
@@ -1169,14 +1255,14 @@ export default function TeamLeaderDashboard() {
                     >
                       Archives
                     </Button>
-                    <Button 
-                      className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded"
+                    <button
+                      className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => setIsViewMoreRequirementsModalOpen(true)}
                       disabled={requirementsData.length <= 5}
                       data-testid="button-view-more-requirements"
                     >
                       View More
-                    </Button>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1471,22 +1557,43 @@ export default function TeamLeaderDashboard() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Pipeline</h2>
               <div className="flex items-center gap-3">
-                {/* Team member selector - shows all recruiters */}
+                {/* Team member (TA) selector - shows all recruiters reporting to this TL */}
                 <select 
+                  value={selectedPipelineRecruiter}
+                  onChange={(e) => setSelectedPipelineRecruiter(e.target.value)}
                   className="w-48 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded text-gray-900 dark:text-white text-sm"
                   data-testid="select-pipeline-recruiter"
                 >
-                  <option value="">All Team Members</option>
+                  <option value="all">All Team Members</option>
                   {Array.isArray(teamMembers) && teamMembers.map((member: any) => (
-                    <option key={member.id} value={member.name}>{member.name}</option>
+                    <option key={member.id} value={member.id}>{member.name}</option>
                   ))}
                 </select>
                 <StandardDatePicker
-                  value={selectedDate}
-                  onChange={(date) => date && setSelectedDate(date)}
+                  value={pipelineDate || undefined}
+                  onChange={(date) => setPipelineDate(date || null)}
                   placeholder="Select date"
                   className="h-10 w-40 rounded"
+                  data-testid="button-pipeline-date-picker"
                 />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPipelineDate(new Date())}
+                  className="h-10"
+                  title="Reset to today"
+                >
+                  Today
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPipelineDate(null)}
+                  className="h-10"
+                  title="Show all candidates (clear date filter)"
+                >
+                  All
+                </Button>
               </div>
             </div>
 
@@ -1779,14 +1886,13 @@ export default function TeamLeaderDashboard() {
             <Card className="bg-gray-50">
               <CardHeader className="pb-2 pt-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-lg text-gray-900">List of Closures</CardTitle>
-                <Button 
-                  size="sm" 
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                <button
+                  className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
                   onClick={() => setIsViewClosuresModalOpen(true)}
                   data-testid="button-view-closures"
                 >
                   View More
-                </Button>
+                </button>
               </CardHeader>
               <CardContent className="p-3">
                 {closureData.length === 0 ? (
@@ -1966,7 +2072,7 @@ export default function TeamLeaderDashboard() {
               </div>
             </div>
             <div className="mt-4 flex justify-end">
-              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">View All</Button>
+              <button className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors">View All</button>
             </div>
           </CardContent>
         </Card>
@@ -2039,7 +2145,7 @@ export default function TeamLeaderDashboard() {
               </div>
             </div>
             <div className="mt-4 text-center">
-              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">View More</Button>
+              <button className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors">View More</button>
             </div>
           </CardContent>
         </Card>
@@ -2277,23 +2383,34 @@ export default function TeamLeaderDashboard() {
                         <p className="text-3xl font-bold text-gray-900 dark:text-white mb-3" data-testid="text-daily-delivered">
                           {dailyMetrics?.dailyDeliveryDelivered ?? 0}
                         </p>
-                        <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 text-white px-4" data-testid="button-view-delivered">
+                        <button
+                          className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
+                          data-testid="button-view-delivered"
+                          onClick={() => setIsDeliveredModalOpen(true)}
+                        >
                           View
-                        </Button>
+                        </button>
                       </div>
                       <div className="text-center">
                         <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Defaulted</p>
                         <p className="text-3xl font-bold text-gray-900 dark:text-white mb-3" data-testid="text-daily-defaulted">
                           {dailyMetrics?.dailyDeliveryDefaulted ?? 0}
                         </p>
-                        <Button variant="default" size="sm" className="bg-blue-500 hover:bg-blue-600 text-white px-4" data-testid="button-view-defaulted">
+                        <button
+                          className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
+                          data-testid="button-view-defaulted"
+                          onClick={() => setIsDefaultedModalOpen(true)}
+                        >
                           View
-                        </Button>
+                        </button>
                       </div>
                     </div>
-                    <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-700 text-white" data-testid="button-view-more">
+                    <button
+                      className="w-full px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
+                      data-testid="button-view-more"
+                    >
                       View More
-                    </Button>
+                    </button>
                   </div>
                 </div>
               </CardContent>
@@ -2471,9 +2588,9 @@ export default function TeamLeaderDashboard() {
                   </table>
                 </div>
                 <div className="mt-4 flex justify-between">
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white rounded btn-rounded">
+                  <button className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors btn-rounded">
                     View More
-                  </Button>
+                  </button>
                   <Button variant="outline" className="rounded btn-rounded">
                     Archive
                   </Button>
@@ -2919,7 +3036,7 @@ export default function TeamLeaderDashboard() {
                   </table>
                 </div>
                 <div className="flex justify-end mt-4">
-                  <Button className="bg-blue-500 hover:bg-blue-600 text-white">View Full List</Button>
+                  <button className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors">View Full List</button>
                 </div>
               </CardContent>
             </Card>
@@ -2993,7 +3110,7 @@ export default function TeamLeaderDashboard() {
                   </table>
                 </div>
                 <div className="flex justify-end mt-4">
-                  <Button className="bg-blue-500 hover:bg-blue-600 text-white">View Full List</Button>
+                  <button className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors">View Full List</button>
                 </div>
               </CardContent>
             </Card>

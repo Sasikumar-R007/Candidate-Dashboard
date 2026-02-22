@@ -18,7 +18,8 @@
     "db:push": "drizzle-kit push",
     "import-sample-resumes": "tsx server/scripts/import-sample-resumes.ts",
     "fix-candidate-status": "tsx server/scripts/fix-candidate-active-status.ts",
-    "migrate-profiles": "tsx server/scripts/migrate-existing-profiles.ts"
+    "migrate-profiles": "tsx server/scripts/migrate-existing-profiles.ts",
+    "debug-candidates": "tsx server/scripts/debug-candidate-data.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

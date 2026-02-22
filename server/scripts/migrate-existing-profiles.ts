@@ -79,9 +79,27 @@ function extractNameFromEmail(email: string): string | null {
  * Check if a field needs updating (is null, empty, or "Not Available")
  */
 function needsUpdate(value: string | null | undefined): boolean {
+  // Check for null, undefined, or empty
   if (!value) return true;
-  const normalized = value.trim().toLowerCase();
-  return normalized === '' || normalized === 'not available' || normalized === 'n/a' || normalized === 'na';
+  
+  // Convert to string and trim
+  const strValue = String(value).trim();
+  
+  // Check for empty string
+  if (strValue === '') return true;
+  
+  // Check for "Not Available" variations (case-insensitive)
+  // IMPORTANT: Also check for the literal string "null" (stored as text, not actual null)
+  const normalized = strValue.toLowerCase();
+  return normalized === 'not available' || 
+         normalized === 'n/a' || 
+         normalized === 'na' ||
+         normalized === 'null' ||        // The string "null" (not actual null)
+         normalized === 'undefined' ||
+         normalized === 'none' ||
+         normalized === '-' ||
+         normalized === 'n/a' ||
+         normalized === 'na';
 }
 
 /**
@@ -140,7 +158,26 @@ async function processCandidate(
       }
     }
 
-    // 2. Re-parse resume file if it exists and we need more data
+    // 2. Convert string "null" to actual null for all fields
+    // This fixes the issue where fields are stored as the text "null" instead of actual null
+    const fieldsToCheck = [
+      'designation', 'phone', 'currentRole', 'experience', 'skills', 
+      'location', 'company', 'education', 'linkedinUrl', 'portfolioUrl', 
+      'websiteUrl', 'noticePeriod', 'ctc', 'ectc'
+    ];
+    
+    for (const field of fieldsToCheck) {
+      const value = candidate[field];
+      if (value && String(value).toLowerCase().trim() === 'null') {
+        updates[field] = null; // Convert string "null" to actual null
+        actionTaken = true;
+        if (!actionDescription) {
+          actionDescription = `Converting string "null" to actual null values`;
+        }
+      }
+    }
+
+    // 3. Re-parse resume file if it exists and we need more data
     const resumeFilePath = getResumeFilePath(candidate.resumeFile);
     if (resumeFilePath) {
       try {
@@ -155,7 +192,7 @@ async function processCandidate(
 
         const parsed = await parseResumeFile(resumeFilePath, mimeType);
 
-        // Update fields only if they're missing or "Not Available"
+        // Update fields only if they're missing or "Not Available" or string "null"
         if (needsUpdate(candidate.fullName) && parsed.fullName) {
           updates.fullName = parsed.fullName;
           actionTaken = true;

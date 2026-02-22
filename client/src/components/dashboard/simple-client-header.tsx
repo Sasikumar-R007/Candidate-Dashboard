@@ -149,7 +149,8 @@ export default function SimpleClientHeader({
                 
                 {/* Menu Items */}
                 <div className="py-2">
-                  <button 
+                  {/* Settings sections - commented out for now */}
+                  {/* <button 
                     onClick={handleProfileSettings}
                     className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-150"
                     data-testid="button-client-profile-settings"
@@ -167,7 +168,7 @@ export default function SimpleClientHeader({
                     <span>Account Settings</span>
                   </button>
                   
-                  <hr className="my-2 border-gray-200" />
+                  <hr className="my-2 border-gray-200" /> */}
                   
                   <button 
                     onClick={handleLogout}

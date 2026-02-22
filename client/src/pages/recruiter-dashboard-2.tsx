@@ -74,7 +74,7 @@ export default function RecruiterDashboard2() {
   const [isInterviewModalOpen, setIsInterviewModalOpen] = useState(false);
   const [isTodayInterviewsModalOpen, setIsTodayInterviewsModalOpen] = useState(false);
   const [isPendingCasesModalOpen, setIsPendingCasesModalOpen] = useState(false);
-  const [pipelineDate, setPipelineDate] = useState<Date>(new Date());
+  const [pipelineDate, setPipelineDate] = useState<Date | null>(null);
   const [isViewAllClosuresModalOpen, setIsViewAllClosuresModalOpen] = useState(false);
   const [closureSearchQuery, setClosureSearchQuery] = useState('');
   const [isPendingMeetingsModalOpen, setIsPendingMeetingsModalOpen] = useState(false);
@@ -274,11 +274,20 @@ export default function RecruiterDashboard2() {
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       setUpdatingApplicantId(id);
       const response = await apiRequest('PATCH', `/api/recruiter/applications/${id}/status`, { status });
-      return { ...response, id };
+      const responseData = await response.json();
+      return { id, status, application: responseData.application };
     },
     onSuccess: (data) => {
+      // Clear the override since the server now has the correct status
+      setApplicantStatusOverrides(prev => {
+        const newOverrides = { ...prev };
+        delete newOverrides[data.id];
+        return newOverrides;
+      });
       // Invalidate and refetch applications to ensure UI reflects database state
       queryClient.invalidateQueries({ queryKey: ['/api/recruiter/applications'] });
+      // Force refetch to ensure pipeline updates immediately
+      queryClient.refetchQueries({ queryKey: ['/api/recruiter/applications'] });
       setUpdatingApplicantId(null);
       toast({
         title: "Status Updated",
@@ -1103,24 +1112,29 @@ export default function RecruiterDashboard2() {
     queryKey: ['/api/recruiter/performance-summary'],
   });
 
-  // Calculate summary stats from real requirements data
+  // Filter out reassigned requirements for counts
+  const activeRequirements = useMemo(() => {
+    return recruiterRequirements.filter((req: any) => req.assignmentStatus !== "reassigned");
+  }, [recruiterRequirements]);
+
+  // Calculate summary stats from real requirements data (excluding reassigned)
   const requirementsSummary = useMemo(() => {
-    const total = recruiterRequirements.length;
-    const highPriority = recruiterRequirements.filter((req: any) => req.criticality === 'HIGH').length;
-    const mediumPriority = recruiterRequirements.filter((req: any) => req.criticality === 'MEDIUM').length;
-    const lowPriority = recruiterRequirements.filter((req: any) => req.criticality === 'LOW').length;
+    const total = activeRequirements.length;
+    const highPriority = activeRequirements.filter((req: any) => req.criticality === 'HIGH').length;
+    const mediumPriority = activeRequirements.filter((req: any) => req.criticality === 'MEDIUM').length;
+    const lowPriority = activeRequirements.filter((req: any) => req.criticality === 'LOW').length;
 
     // Robust = requirements with at least 1 delivery
-    const robust = recruiterRequirements.filter((req: any) => (req.deliveredCount || 0) > 0).length;
+    const robust = activeRequirements.filter((req: any) => (req.deliveredCount || 0) > 0).length;
     // Idle = requirements with 0 deliveries
-    const idle = recruiterRequirements.filter((req: any) => (req.deliveredCount || 0) === 0).length;
+    const idle = activeRequirements.filter((req: any) => (req.deliveredCount || 0) === 0).length;
     // Delivery Pending = total - robust
     const deliveryPending = total - robust;
     // Easy = requirements with toughness 'Easy'
-    const easy = recruiterRequirements.filter((req: any) => req.toughness === 'Easy').length;
+    const easy = activeRequirements.filter((req: any) => req.toughness === 'Easy').length;
 
     return { total, highPriority, mediumPriority, lowPriority, robust, idle, deliveryPending, easy };
-  }, [recruiterRequirements]);
+  }, [activeRequirements]);
 
   // Static priority distribution - fixed counts that never change
   const priorityDistribution: Record<string, Record<string, number>> = {
@@ -1135,39 +1149,39 @@ export default function RecruiterDashboard2() {
     return criticalityData?.[toughness as keyof typeof criticalityData] || 0;
   };
 
-  // Calculate priority counts for sidebar (matching Admin design)
+  // Calculate priority counts for sidebar (matching Admin design) - excluding reassigned
   const priorityCounts = useMemo(() => {
     const counts = {
-      HIGH: recruiterRequirements.filter((req: any) => req.criticality === 'HIGH').length,
-      MEDIUM: recruiterRequirements.filter((req: any) => req.criticality === 'MEDIUM').length,
-      LOW: recruiterRequirements.filter((req: any) => req.criticality === 'LOW').length,
-      TOTAL: recruiterRequirements.length
+      HIGH: activeRequirements.filter((req: any) => req.criticality === 'HIGH').length,
+      MEDIUM: activeRequirements.filter((req: any) => req.criticality === 'MEDIUM').length,
+      LOW: activeRequirements.filter((req: any) => req.criticality === 'LOW').length,
+      TOTAL: activeRequirements.length
     };
 
     const breakdowns = {
       HIGH: {
-        Easy: recruiterRequirements.filter((req: any) => req.criticality === 'HIGH' && req.toughness === 'Easy').length,
-        Medium: recruiterRequirements.filter((req: any) => req.criticality === 'HIGH' && req.toughness === 'Medium').length,
-        Tough: recruiterRequirements.filter((req: any) => req.criticality === 'HIGH' && req.toughness === 'Tough').length
+        Easy: activeRequirements.filter((req: any) => req.criticality === 'HIGH' && req.toughness === 'Easy').length,
+        Medium: activeRequirements.filter((req: any) => req.criticality === 'HIGH' && req.toughness === 'Medium').length,
+        Tough: activeRequirements.filter((req: any) => req.criticality === 'HIGH' && req.toughness === 'Tough').length
       },
       MEDIUM: {
-        Easy: recruiterRequirements.filter((req: any) => req.criticality === 'MEDIUM' && req.toughness === 'Easy').length,
-        Medium: recruiterRequirements.filter((req: any) => req.criticality === 'MEDIUM' && req.toughness === 'Medium').length,
-        Tough: recruiterRequirements.filter((req: any) => req.criticality === 'MEDIUM' && req.toughness === 'Tough').length
+        Easy: activeRequirements.filter((req: any) => req.criticality === 'MEDIUM' && req.toughness === 'Easy').length,
+        Medium: activeRequirements.filter((req: any) => req.criticality === 'MEDIUM' && req.toughness === 'Medium').length,
+        Tough: activeRequirements.filter((req: any) => req.criticality === 'MEDIUM' && req.toughness === 'Tough').length
       },
       LOW: {
-        Easy: recruiterRequirements.filter((req: any) => req.criticality === 'LOW' && req.toughness === 'Easy').length,
-        Medium: recruiterRequirements.filter((req: any) => req.criticality === 'LOW' && req.toughness === 'Medium').length,
-        Tough: recruiterRequirements.filter((req: any) => req.criticality === 'LOW' && req.toughness === 'Tough').length
+        Easy: activeRequirements.filter((req: any) => req.criticality === 'LOW' && req.toughness === 'Easy').length,
+        Medium: activeRequirements.filter((req: any) => req.criticality === 'LOW' && req.toughness === 'Medium').length,
+        Tough: activeRequirements.filter((req: any) => req.criticality === 'LOW' && req.toughness === 'Tough').length
       }
     };
 
     // Calculate pending and closed distribution
-    const pendingDistribution = recruiterRequirements.filter((req: any) => (req.deliveredCount || 0) < getExpectedCount(req.criticality, req.toughness)).length;
-    const closedDistribution = recruiterRequirements.filter((req: any) => (req.deliveredCount || 0) >= getExpectedCount(req.criticality, req.toughness) && getExpectedCount(req.criticality, req.toughness) > 0).length;
+    const pendingDistribution = activeRequirements.filter((req: any) => (req.deliveredCount || 0) < getExpectedCount(req.criticality, req.toughness)).length;
+    const closedDistribution = activeRequirements.filter((req: any) => (req.deliveredCount || 0) >= getExpectedCount(req.criticality, req.toughness) && getExpectedCount(req.criticality, req.toughness) > 0).length;
 
     return { counts, breakdowns, pendingDistribution, closedDistribution };
-  }, [recruiterRequirements]);
+  }, [activeRequirements]);
 
   if (!recruiterProfile) {
     return (
@@ -1490,18 +1504,7 @@ export default function RecruiterDashboard2() {
                       <div className="flex justify-between items-center py-2">
                         <span className="text-sm font-medium text-gray-700">Avg. Resumes per Requirement</span>
                         <span className="text-2xl font-bold text-blue-600">
-                          {String(Math.round(
-                            dailyMetrics?.totalRequirements > 0 
-                              ? (dailyMetrics?.totalResumesDelivered ?? 0) / dailyMetrics.totalRequirements
-                              : 0
-                          )).padStart(2, '0')}
-                        </span>
-                      </div>
-                      <div className="border-t border-gray-200"></div>
-                      <div className="flex justify-between items-center py-2">
-                        <span className="text-sm font-medium text-gray-700">Requirements per Recruiter</span>
-                        <span className="text-2xl font-bold text-blue-600">
-                          {String(dailyMetrics?.totalRequirements ?? 0).padStart(2, '0')}
+                          {String(dailyMetrics?.avgResumesPerRequirement ?? 0).padStart(2, '0')}
                         </span>
                       </div>
                       <div className="border-t border-gray-200"></div>
@@ -1740,7 +1743,7 @@ export default function RecruiterDashboard2() {
   };
 
   const renderRequirementsContent = () => {
-    // Use real requirements data from API - no more sample data
+    // Use real requirements data from API - include reassigned ones for display but mark them
     const requirementsTableData = recruiterRequirements;
 
     // Function to format count display as "delivered/expected"
@@ -1849,8 +1852,13 @@ export default function RecruiterDashboard2() {
                               const delivered = req.deliveredCount || 0;
                               const expected = getExpectedCount(req.criticality, req.toughness);
                               const isComplete = delivered >= expected && expected > 0;
+                              const isReassigned = req.assignmentStatus === "reassigned";
                               return (
-                                <tr key={req.id || index} className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                                <tr 
+                                  key={req.id || index} 
+                                  className={`border-b border-gray-100 ${isReassigned ? 'opacity-50 cursor-not-allowed bg-gray-100' : 'hover:bg-gray-50'} ${index % 2 === 0 && !isReassigned ? 'bg-white' : isReassigned ? 'bg-gray-100' : 'bg-gray-50'}`}
+                                  title={isReassigned ? "Reassigned to another TA" : undefined}
+                                >
                                   <td className="py-3 px-4 text-gray-900 font-medium text-sm">{req.position}</td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">{req.company}</td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">{req.spoc}</td>
@@ -2265,12 +2273,30 @@ export default function RecruiterDashboard2() {
                 <h2 className="text-xl font-semibold text-gray-900">Pipeline</h2>
                 <div className="flex items-center gap-3">
                   <StandardDatePicker
-                    value={pipelineDate}
-                    onChange={(date) => date && setPipelineDate(date)}
+                    value={pipelineDate || undefined}
+                    onChange={(date) => setPipelineDate(date || null)}
                     placeholder="Select date"
                     className="h-10 w-40 rounded"
                     data-testid="button-pipeline-date-picker"
                   />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPipelineDate(new Date())}
+                    className="h-10"
+                    title="Reset to today"
+                  >
+                    Today
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setPipelineDate(null)}
+                    className="h-10"
+                    title="Show all candidates (clear date filter)"
+                  >
+                    All
+                  </Button>
                 </div>
               </div>
 
@@ -2375,13 +2401,22 @@ export default function RecruiterDashboard2() {
                         </div>
                         <div>
                           <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Position</label>
-                          <p className="text-base text-gray-900 dark:text-white">{selectedPipelineCandidate.jobTitle || 'N/A'}</p>
+                          <p className="text-base text-gray-900 dark:text-white">{selectedPipelineCandidate.roleApplied || selectedPipelineCandidate.jobTitle || 'N/A'}</p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</label>
                           <div className="flex items-center gap-2">
                             <Mail size={16} className="text-gray-500 dark:text-gray-400" />
-                            <p className="text-base text-gray-900 dark:text-white">{selectedPipelineCandidate.email || 'N/A'}</p>
+                            {selectedPipelineCandidate.email ? (
+                              <a
+                                href={`mailto:${selectedPipelineCandidate.email}`}
+                                className="text-base text-blue-600 dark:text-blue-400 hover:underline"
+                              >
+                                {selectedPipelineCandidate.email}
+                              </a>
+                            ) : (
+                              <p className="text-base text-gray-900 dark:text-white">N/A</p>
+                            )}
                             {selectedPipelineCandidate.email && (
                               <button
                                 onClick={() => {
@@ -2417,7 +2452,9 @@ export default function RecruiterDashboard2() {
                         </div>
                         <div>
                           <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Status</label>
-                          <p className="text-base text-gray-900 dark:text-white">{selectedPipelineCandidate.status || 'N/A'}</p>
+                          <p className="text-base text-gray-900 dark:text-white">
+                            {applicantStatusOverrides[selectedPipelineCandidate.id] || selectedPipelineCandidate.currentStatus || selectedPipelineCandidate.status || 'N/A'}
+                          </p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Applied On</label>
@@ -2426,19 +2463,6 @@ export default function RecruiterDashboard2() {
                         <div>
                           <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Experience</label>
                           <p className="text-base text-gray-900 dark:text-white">{selectedPipelineCandidate.experience || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Rating</label>
-                          <div className="flex items-center gap-1">
-                            {[1, 2, 3, 4, 5].map((starIndex) => (
-                              <Star
-                                key={starIndex}
-                                size={16}
-                                className={starIndex <= Math.round(selectedPipelineCandidate.rating || 0) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 dark:text-gray-600'}
-                              />
-                            ))}
-                            <span className="text-sm text-gray-600 dark:text-gray-400 ml-1">({selectedPipelineCandidate.rating?.toFixed(1) || 'N/A'})</span>
-                          </div>
                         </div>
                       </div>
                       <div>
@@ -2458,9 +2482,28 @@ export default function RecruiterDashboard2() {
                         <Button
                           className="bg-blue-600 hover:bg-blue-700 text-white"
                           onClick={() => {
-                            if (selectedPipelineCandidate.resumeUrl) {
-                              window.open(selectedPipelineCandidate.resumeUrl, '_blank');
-                            } else {
+                            // Check for resumeFile first
+                            if (selectedPipelineCandidate.resumeFile) {
+                              let resumeUrl = selectedPipelineCandidate.resumeFile;
+                              // Fix URL if needed
+                              if (!resumeUrl.startsWith('http') && !resumeUrl.startsWith('/')) {
+                                resumeUrl = '/' + resumeUrl;
+                              }
+                              window.open(resumeUrl, '_blank');
+                            } 
+                            // Check for profileId to navigate to candidate profile page
+                            else if (selectedPipelineCandidate.profileId) {
+                              window.open(`/candidate-profile/${selectedPipelineCandidate.profileId}`, '_blank');
+                            }
+                            // Check for resumeUrl as fallback
+                            else if (selectedPipelineCandidate.resumeUrl) {
+                              let resumeUrl = selectedPipelineCandidate.resumeUrl;
+                              if (!resumeUrl.startsWith('http') && !resumeUrl.startsWith('/')) {
+                                resumeUrl = '/' + resumeUrl;
+                              }
+                              window.open(resumeUrl, '_blank');
+                            } 
+                            else {
                               toast({ title: "Resume not available", description: "No resume file is attached for this candidate", variant: "destructive" });
                             }
                           }}

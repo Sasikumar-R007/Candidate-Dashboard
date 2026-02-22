@@ -1092,21 +1092,41 @@ function mapDatabaseCandidateToDisplay(dbCandidate: DatabaseCandidate, currentTi
     ? parseFloat(dbCandidate.experience.replace(/[^\d.]/g, '')) || 0
     : 0;
   
-  const createdDate = new Date(dbCandidate.createdAt);
-  const diffMs = currentTime.getTime() - createdDate.getTime();
+  // Use lastViewedAt if available, otherwise fall back to createdAt
+  const lastViewedAt = (dbCandidate as any).lastViewedAt;
+  const dateToUse = lastViewedAt 
+    ? new Date(lastViewedAt) 
+    : new Date(dbCandidate.createdAt);
+  
+  // Validate date
+  const isValidDate = !isNaN(dateToUse.getTime());
+  if (!isValidDate) {
+    // If date is invalid, use current time as fallback
+    dateToUse.setTime(currentTime.getTime());
+  }
+  
+  const diffMs = currentTime.getTime() - dateToUse.getTime();
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
   const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   
   let lastSeen = '';
-  if (diffHours < 1) {
+  if (diffMinutes < 1) {
     lastSeen = 'Just now';
+  } else if (diffMinutes < 60) {
+    lastSeen = diffMinutes === 1 ? '1 minute ago' : `${diffMinutes} minutes ago`;
   } else if (diffHours < 24) {
     lastSeen = diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;
   } else if (diffDays < 7) {
     lastSeen = diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
   } else {
     const diffWeeks = Math.floor(diffDays / 7);
-    lastSeen = diffWeeks === 1 ? '1 week ago' : `${diffWeeks} weeks ago`;
+    if (diffWeeks < 4) {
+      lastSeen = diffWeeks === 1 ? '1 week ago' : `${diffWeeks} weeks ago`;
+    } else {
+      const diffMonths = Math.floor(diffDays / 30);
+      lastSeen = diffMonths === 1 ? '1 month ago' : `${diffMonths} months ago`;
+    }
   }
 
   return {
@@ -2140,29 +2160,62 @@ const SourceResume = () => {
   const displayCandidates: CandidateWithScore[] = useMemo(() => {
     if (view === 'results' && searchResults) {
       // Use server-side search results
-      let candidates = searchResults.candidates.map(c => ({
-        ...c,
-        // Ensure all required fields are present
-        name: c.fullName || c.name,
-        title: c.designation || c.currentRole || c.title || 'Not Available',
-        currentCompany: c.company || 'Not Available',
-        location: c.location || 'Not Available',
-        preferredLocation: c.preferredLocation || c.location || 'Not Available',
-        experience: parseFloat(c.experience?.replace(/[^\d.]/g, '') || '0'),
-        education: c.education || 'Not Available',
-        skills: c.skills ? (typeof c.skills === 'string' ? c.skills.split(',').map(s => s.trim()) : c.skills) : [],
-        ctc: c.ctc || c.ectc || 'Not Available',
-        noticePeriod: c.noticePeriod || 'Not Available',
-        email: c.email,
-        phone: c.phone || '',
-        profilePic: c.profilePicture || '',
-        university: c.collegeName || 'Not Available',
-        saved: savedCandidates.has(c.id),
-        resumeFile: c.resumeFile,
-        resumeText: c.resumeText,
-        createdAt: c.createdAt,
-        isFromDatabase: !!(c.resumeFile || c.addedBy),
-      } as CandidateWithScore));
+      let candidates = searchResults.candidates.map(c => {
+        // Calculate lastSeen from lastViewedAt or createdAt
+        const lastViewedAt = (c as any).lastViewedAt;
+        const dateToUse = lastViewedAt 
+          ? new Date(lastViewedAt) 
+          : new Date(c.createdAt);
+        
+        const diffMs = currentTime.getTime() - dateToUse.getTime();
+        const diffMinutes = Math.floor(diffMs / (1000 * 60));
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        
+        let lastSeen = '';
+        if (diffMinutes < 1) {
+          lastSeen = 'Just now';
+        } else if (diffMinutes < 60) {
+          lastSeen = diffMinutes === 1 ? '1 minute ago' : `${diffMinutes} minutes ago`;
+        } else if (diffHours < 24) {
+          lastSeen = diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;
+        } else if (diffDays < 7) {
+          lastSeen = diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
+        } else {
+          const diffWeeks = Math.floor(diffDays / 7);
+          if (diffWeeks < 4) {
+            lastSeen = diffWeeks === 1 ? '1 week ago' : `${diffWeeks} weeks ago`;
+          } else {
+            const diffMonths = Math.floor(diffDays / 30);
+            lastSeen = diffMonths === 1 ? '1 month ago' : `${diffMonths} months ago`;
+          }
+        }
+
+        return {
+          ...c,
+          // Ensure all required fields are present
+          name: c.fullName || c.name,
+          title: c.designation || c.currentRole || c.title || 'Not Available',
+          currentCompany: c.company || 'Not Available',
+          location: c.location || 'Not Available',
+          preferredLocation: c.preferredLocation || c.location || 'Not Available',
+          experience: parseFloat(c.experience?.replace(/[^\d.]/g, '') || '0'),
+          education: c.education || 'Not Available',
+          skills: c.skills ? (typeof c.skills === 'string' ? c.skills.split(',').map(s => s.trim()) : c.skills) : [],
+          ctc: c.ctc || c.ectc || 'Not Available',
+          noticePeriod: c.noticePeriod || 'Not Available',
+          email: c.email,
+          phone: c.phone || '',
+          profilePic: c.profilePicture || '',
+          university: c.collegeName || 'Not Available',
+          saved: savedCandidates.has(c.id),
+          resumeFile: c.resumeFile,
+          resumeText: c.resumeText,
+          createdAt: c.createdAt,
+          lastSeen, // Add calculated lastSeen
+          isFromDatabase: !!(c.resumeFile || c.addedBy),
+        } as CandidateWithScore;
+      });
       
       // Filter saved profiles if needed
       if (showSavedProfiles) {
@@ -2273,6 +2326,17 @@ const SourceResume = () => {
     return suggestions.slice(0, 8); // Limit to 8 suggestions
   }, [resultsSearchQuery, candidates]);
   
+  // Fetch all candidates for recommended candidates (separate from search results)
+  const { data: allCandidates = [] } = useQuery<DatabaseCandidate[]>({
+    queryKey: ['/api/admin/candidates'],
+    enabled: true, // Always fetch for recommended candidates
+  });
+
+  // Convert all candidates to display format for recommended section
+  const allDisplayCandidates = useMemo(() => {
+    return allCandidates.map(c => mapDatabaseCandidateToDisplay(c, currentTime));
+  }, [allCandidates, currentTime]);
+
   const candidatesPerPage = 10;
   const totalPages = searchResults?.pagination?.totalPages || Math.ceil(displayCandidates.length / candidatesPerPage);
   const paginatedCandidates = searchResults 
@@ -2282,11 +2346,17 @@ const SourceResume = () => {
         currentPage * candidatesPerPage
       );
 
-  // Recommended candidates (other matching candidates when one is selected)
-  const recommendedCandidates = selectedCandidate
-    ? displayCandidates
+  // Recommended candidates - show different candidates from main database, not search results
+  const recommendedCandidates = useMemo(() => {
+    if (selectedCandidate) {
+      // When a candidate is selected, show similar candidates from ALL candidates (not search results)
+      return allDisplayCandidates
         .filter(c => c.id !== selectedCandidate.id)
         .filter(c => {
+          // Exclude candidates that are already in search results
+          const isInSearchResults = displayCandidates.some(dc => dc.id === c.id);
+          if (isInSearchResults) return false;
+          
           // Show candidates with similar skills or experience
           const hasCommonSkills = c.skills.some(skill => 
             selectedCandidate.skills.some(selectedSkill => 
@@ -2297,8 +2367,17 @@ const SourceResume = () => {
           const similarExperience = Math.abs(c.experience - selectedCandidate.experience) <= 2;
           return hasCommonSkills || similarExperience;
         })
-        .slice(0, 5)
-    : displayCandidates.slice(0, 5);
+        .slice(0, 5);
+    } else {
+      // When no candidate is selected, show random candidates from ALL candidates (not search results)
+      return allDisplayCandidates
+        .filter(c => {
+          // Exclude candidates that are already in search results
+          return !displayCandidates.some(dc => dc.id === c.id);
+        })
+        .slice(0, 5);
+    }
+  }, [selectedCandidate, allDisplayCandidates, displayCandidates]);
 
   // Store current values in refs to avoid dependency issues
   const filtersRef = useRef(filters);
@@ -2496,7 +2575,21 @@ const SourceResume = () => {
 
   const selectedCandidateRef = useRef<HTMLDivElement>(null);
 
-  const handleCandidateClick = (candidate: CandidateDisplay) => {
+  const handleCandidateClick = async (candidate: CandidateDisplay) => {
+    // Update last viewed timestamp
+    try {
+      await apiRequest('POST', `/api/recruiter/candidates/${candidate.id}/view`, {});
+      // Refresh ALL candidate data to get updated lastViewedAt
+      // Use refetch to immediately get fresh data
+      await queryClient.refetchQueries({ queryKey: ['/api/admin/candidates'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/source-resume/search'] });
+      // Also invalidate to ensure all related queries refresh
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/candidates'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/source-resume/search'] });
+    } catch (error) {
+      console.error('Failed to update view timestamp:', error);
+    }
+
     if (selectedCandidate?.id === candidate.id) {
       setSelectedCandidate(null);
     } else {
@@ -2587,8 +2680,23 @@ const SourceResume = () => {
     }
   };
 
-  const handleOpenCandidateDetails = (candidateId: string, e: React.MouseEvent) => {
+  const handleOpenCandidateDetails = async (candidateId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    // Update last viewed timestamp before opening profile
+    try {
+      await apiRequest('POST', `/api/recruiter/candidates/${candidateId}/view`, {});
+      // Refresh ALL candidate data to get updated lastViewedAt
+      // Use refetch to immediately get fresh data
+      await queryClient.refetchQueries({ queryKey: ['/api/admin/candidates'] });
+      await queryClient.refetchQueries({ queryKey: ['/api/source-resume/search'] });
+      // Also invalidate to ensure all related queries refresh
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/candidates'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/source-resume/search'] });
+    } catch (error) {
+      console.error('Failed to update view timestamp:', error);
+    }
+    
     window.open(`/candidate-profile/${candidateId}`, '_blank');
   };
 
@@ -3561,19 +3669,7 @@ const SourceResume = () => {
                         </div>
                         <div className="flex flex-col items-end gap-2">
                           <p className="text-xs text-gray-500">
-                            last seen: {candidate.createdAt 
-                              ? (() => {
-                                  const createdDate = new Date(candidate.createdAt);
-                                  const diffMs = currentTime.getTime() - createdDate.getTime();
-                                  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-                                  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-                                  if (diffHours < 1) return 'Just now';
-                                  if (diffHours < 24) return diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;
-                                  if (diffDays < 7) return diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
-                                  const diffWeeks = Math.floor(diffDays / 7);
-                                  return diffWeeks === 1 ? '1 week ago' : `${diffWeeks} weeks ago`;
-                                })()
-                              : candidate.lastSeen}
+                            last seen: {candidate.lastSeen || 'Not viewed yet'}
                           </p>
                           <button
                             onClick={(e) => {
@@ -3994,19 +4090,7 @@ const SourceResume = () => {
                   </button>
                 </div>
                 <p className="text-xs text-gray-500 mt-2 text-right">
-                  last seen: {candidate.createdAt 
-                    ? (() => {
-                        const createdDate = new Date(candidate.createdAt);
-                        const diffMs = currentTime.getTime() - createdDate.getTime();
-                        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-                        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-                        if (diffHours < 1) return 'Just now';
-                        if (diffHours < 24) return diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;
-                        if (diffDays < 7) return diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
-                        const diffWeeks = Math.floor(diffDays / 7);
-                        return diffWeeks === 1 ? '1 week ago' : `${diffWeeks} weeks ago`;
-                      })()
-                    : candidate.lastSeen}
+                  last seen: {candidate.lastSeen || 'Never'}
                 </p>
               </div>
             ))}
@@ -4021,6 +4105,21 @@ const SourceResume = () => {
         >
           <ArrowUp className="w-5 h-5" />
         </button>
+
+        {/* Edit Candidate Modal - Only render when candidate is selected (in results view) */}
+        {candidateToEdit && (
+          <EditCandidateModal
+            open={isEditModalOpen}
+            onOpenChange={(open) => {
+              setIsEditModalOpen(open);
+              if (!open) {
+                // Clear candidate when modal closes
+                setTimeout(() => setCandidateToEdit(null), 300);
+              }
+            }}
+            candidate={candidateToEdit}
+          />
+        )}
       </div>
     );
   }
@@ -4749,21 +4848,6 @@ const SourceResume = () => {
         <span>Source Resume</span>
         <ArrowRight className="w-5 h-5" />
       </button>
-
-      {/* Edit Candidate Modal - Only render when candidate is selected */}
-      {candidateToEdit && (
-        <EditCandidateModal
-          open={isEditModalOpen}
-          onOpenChange={(open) => {
-            setIsEditModalOpen(open);
-            if (!open) {
-              // Clear candidate when modal closes
-              setTimeout(() => setCandidateToEdit(null), 300);
-            }
-          }}
-          candidate={candidateToEdit}
-        />
-      )}
     </div>
   );
 };

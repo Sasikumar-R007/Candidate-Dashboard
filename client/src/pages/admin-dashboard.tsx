@@ -1092,8 +1092,27 @@ export default function AdminDashboard() {
   });
 
   // Fetch pipeline data from API (all applications from all recruiters)
+  // Supports filtering by TL (team leader)
+  const [selectedPipelineTL, setSelectedPipelineTL] = useState<string>("all");
   const { data: pipelineApplications = [], isLoading: isLoadingPipeline, refetch: refetchPipeline } = useQuery<any[]>({
-    queryKey: ["/api/admin/pipeline"],
+    queryKey: ["/api/admin/pipeline", selectedPipelineTL, selectedPipelineTeamMember],
+    queryFn: async () => {
+      const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+      const createApiUrl = (path: string) => `${API_BASE_URL}${path}`;
+      const params = new URLSearchParams();
+      if (selectedPipelineTL && selectedPipelineTL !== 'all') {
+        params.append('tl', selectedPipelineTL);
+      }
+      if (selectedPipelineTeamMember && selectedPipelineTeamMember !== 'all') {
+        params.append('ta', selectedPipelineTeamMember);
+      }
+      const url = `/api/admin/pipeline${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await fetch(createApiUrl(url), {
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Failed to fetch pipeline data');
+      return response.json();
+    },
     refetchOnMount: true,
     refetchOnWindowFocus: true,
     refetchInterval: 10000, // Refresh every 10 seconds for real-time updates
@@ -1340,79 +1359,60 @@ export default function AdminDashboard() {
 
   // Pipeline filter period state (must be declared before useMemo that uses them)
   const [selectedPipelineTeam, setSelectedPipelineTeam] = useState<string>("all");
-  const [pipelinePeriod, setPipelinePeriod] = useState<string>("daily");
-  const [pipelineDate, setPipelineDate] = useState<Date | undefined>(new Date());
+  const [pipelineDate, setPipelineDate] = useState<Date | null>(null);
+  const [selectedPipelineTeamMember, setSelectedPipelineTeamMember] = useState<string>("all");
   const [pipelineMonth, setPipelineMonth] = useState<string>(format(new Date(), "MMMM"));
   const [pipelineYear, setPipelineYear] = useState<string>(new Date().getFullYear().toString());
   const [pipelineWeekStart, setPipelineWeekStart] = useState<Date | undefined>(new Date());
   const [pipelineQuarter, setPipelineQuarter] = useState<string>("Q1");
 
-  // Filter pipeline applicants based on period
+  // Filter pipeline applicants based on date (null = show all)
   const filteredPipelineApplicants = useMemo(() => {
     let filtered = [...pipelineApplicantData];
 
-    // Apply period-based date filtering
-    if (pipelinePeriod === "daily" && pipelineDate) {
+    // Apply date filtering (null means show all)
+    if (pipelineDate !== null) {
       const filterDate = format(pipelineDate, 'yyyy-MM-dd');
       filtered = filtered.filter((a: any) => {
-        // Always show sample data (for testing)
-        if (a.id && a.id.startsWith('sample-')) return true;
-        // Parse appliedOn date (format: DD-MM-YYYY)
-        if (!a.appliedOn || a.appliedOn === 'N/A') return false;
-        try {
-          const [day, month, year] = a.appliedOn.split('-');
-          const appliedDate = format(new Date(parseInt(year), parseInt(month) - 1, parseInt(day)), 'yyyy-MM-dd');
-          return appliedDate === filterDate;
-        } catch {
-          return false;
+        // Skip sample data - only show real data
+        if (a.id && a.id.startsWith('sample-')) return false;
+        // Parse appliedOn date (format: DD-MM-YYYY) or appliedDate (ISO)
+        let dateToCheck: string | null = null;
+        if (a.appliedDate) {
+          try {
+            const parsedDate = new Date(a.appliedDate);
+            dateToCheck = format(parsedDate, 'yyyy-MM-dd');
+          } catch {
+            // Try appliedOn format
+            if (a.appliedOn && a.appliedOn !== 'N/A') {
+              try {
+                const [day, month, year] = a.appliedOn.split('-');
+                const parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                dateToCheck = format(parsedDate, 'yyyy-MM-dd');
+              } catch {
+                return false;
+              }
+            }
+          }
+        } else if (a.appliedOn && a.appliedOn !== 'N/A') {
+          try {
+            const [day, month, year] = a.appliedOn.split('-');
+            const parsedDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            dateToCheck = format(parsedDate, 'yyyy-MM-dd');
+          } catch {
+            return false;
+          }
         }
-      });
-    } else if (pipelinePeriod === "monthly" && pipelineMonth && pipelineYear) {
-      const monthMap: Record<string, number> = {
-        'January': 1, 'February': 2, 'March': 3, 'April': 4,
-        'May': 5, 'June': 6, 'July': 7, 'August': 8,
-        'September': 9, 'October': 10, 'November': 11, 'December': 12
-      };
-      const targetMonth = monthMap[pipelineMonth];
-      const targetYear = parseInt(pipelineYear);
-      filtered = filtered.filter((a: any) => {
-        // Always show sample data (for testing)
-        if (a.id && a.id.startsWith('sample-')) return true;
-        if (!a.appliedOn || a.appliedOn === 'N/A') return false;
-        try {
-          const [day, month, year] = a.appliedOn.split('-');
-          return parseInt(month) === targetMonth && parseInt(year) === targetYear;
-        } catch {
-          return false;
-        }
-      });
-    } else if (pipelinePeriod === "quarterly" && pipelineQuarter && pipelineYear) {
-      const quarterMap: Record<string, number[]> = {
-        'Q1': [1, 2, 3], 'Q2': [4, 5, 6], 'Q3': [7, 8, 9], 'Q4': [10, 11, 12]
-      };
-      const targetMonths = quarterMap[pipelineQuarter] || [];
-      const targetYear = parseInt(pipelineYear);
-      filtered = filtered.filter((a: any) => {
-        // Always show sample data (for testing)
-        if (a.id && a.id.startsWith('sample-')) return true;
-        if (!a.appliedOn || a.appliedOn === 'N/A') return false;
-        try {
-          const [day, month, year] = a.appliedOn.split('-');
-          return targetMonths.includes(parseInt(month)) && parseInt(year) === targetYear;
-        } catch {
-          return false;
-        }
+        if (!dateToCheck) return false;
+        return dateToCheck === filterDate;
       });
     }
 
-    // Filter by team if selected
-    if (selectedPipelineTeam !== "all") {
-      // Team filtering would require mapping applications to teams
-      // For now, we'll keep all if team filtering is needed later
-    }
+    // Filter by TL/TA is now handled at API level via selectedPipelineTL and selectedPipelineTeamMember
+    // No need for client-side filtering here
 
     return filtered;
-  }, [pipelineApplicantData, pipelinePeriod, pipelineDate, pipelineMonth, pipelineYear, pipelineQuarter, selectedPipelineTeam]);
+  }, [pipelineApplicantData, pipelineDate, selectedPipelineTL, selectedPipelineTeamMember]);
 
   // Map applicant statuses to pipeline stages (each status maps to exactly one stage)
   const getPipelineCandidatesByStage = useMemo(() => {
@@ -6485,233 +6485,190 @@ export default function AdminDashboard() {
                 {/* Pipeline Header */}
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Pipeline</h2>
-                  <div className="flex items-center gap-4">
-                    <Select value={selectedPipelineTeam} onValueChange={setSelectedPipelineTeam}>
+                  <div className="flex items-center gap-3">
+                    {/* Team/TA Filter Dropdown - Teams first, then TAs */}
+                    <Select value={selectedPipelineTeamMember} onValueChange={setSelectedPipelineTeamMember}>
                       <SelectTrigger className="w-48 input-styled btn-rounded">
-                        <SelectValue placeholder="Select Team" />
+                        <SelectValue placeholder="Select Team/TA" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All</SelectItem>
-                        {monthlyPerformanceData?.teams?.map((team) => (
-                          <SelectItem key={team} value={team.toLowerCase()}>
-                            {team}
+                        {/* Team Leaders (Teams) - listed first */}
+                        {teamLeads.map((tl: any) => (
+                          <SelectItem key={`tl-${tl.id}`} value={tl.id}>
+                            {tl.name} (team)
+                          </SelectItem>
+                        ))}
+                        {/* Talent Advisors (TAs) - listed after teams */}
+                        {employees.filter((emp: any) => emp.role === 'recruiter').map((ta: any) => (
+                          <SelectItem key={`ta-${ta.id}`} value={ta.id}>
+                            {ta.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
 
-                    {/* Period-based date filters */}
-                    {pipelinePeriod === "daily" && (
-                      <StandardDatePicker
-                        value={pipelineDate}
-                        onChange={(date) => date && setPipelineDate(date)}
-                        placeholder="Select date"
-                        className="w-auto"
-                      />
-                    )}
-
-                    {pipelinePeriod === "monthly" && (
-                      <div className="flex items-center gap-2">
-                        <Select value={pipelineMonth} onValueChange={setPipelineMonth}>
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="January">January</SelectItem>
-                            <SelectItem value="February">February</SelectItem>
-                            <SelectItem value="March">March</SelectItem>
-                            <SelectItem value="April">April</SelectItem>
-                            <SelectItem value="May">May</SelectItem>
-                            <SelectItem value="June">June</SelectItem>
-                            <SelectItem value="July">July</SelectItem>
-                            <SelectItem value="August">August</SelectItem>
-                            <SelectItem value="September">September</SelectItem>
-                            <SelectItem value="October">October</SelectItem>
-                            <SelectItem value="November">November</SelectItem>
-                            <SelectItem value="December">December</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Select value={pipelineYear} onValueChange={setPipelineYear}>
-                          <SelectTrigger className="w-24">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
-                              <SelectItem key={year} value={year.toString()}>
-                                {year}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-
-                    {pipelinePeriod === "quarterly" && (
-                      <div className="flex items-center gap-2">
-                        <Select value={pipelineQuarter} onValueChange={setPipelineQuarter}>
-                          <SelectTrigger className="w-20">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Q1">Q1</SelectItem>
-                            <SelectItem value="Q2">Q2</SelectItem>
-                            <SelectItem value="Q3">Q3</SelectItem>
-                            <SelectItem value="Q4">Q4</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Select value={pipelineYear} onValueChange={setPipelineYear}>
-                          <SelectTrigger className="w-24">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - 5 + i).map((year) => (
-                              <SelectItem key={year} value={year.toString()}>
-                                {year}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-
-                    <Select value={pipelinePeriod} onValueChange={setPipelinePeriod}>
-                      <SelectTrigger className="w-24" data-testid="select-pipeline-period">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="daily">Daily</SelectItem>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                        <SelectItem value="quarterly">Quarterly</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    {/* Date Picker */}
+                    <StandardDatePicker
+                      value={pipelineDate || undefined}
+                      onChange={(date) => setPipelineDate(date || null)}
+                      placeholder="Select date"
+                      className="h-10 w-40 rounded"
+                      data-testid="button-pipeline-date-picker"
+                    />
+                    
+                    {/* Today Button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPipelineDate(new Date())}
+                      className="h-10"
+                      title="Reset to today"
+                    >
+                      Today
+                    </Button>
+                    
+                    {/* All Button */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setPipelineDate(null)}
+                      className="h-10"
+                      title="Show all candidates (clear date filter)"
+                    >
+                      All
+                    </Button>
                   </div>
                 </div>
 
-                {/* Pipeline Stages - Live Data */}
-                <Card className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                  <CardContent className="p-0">
-                    <div className="overflow-x-auto admin-scrollbar">
-                      <table className="w-full border-collapse">
-                        <thead>
-                          <tr>
-                            <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Level 1</th>
-                            <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Level 2</th>
-                            <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Level 3</th>
-                            <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Final Round</th>
-                            <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">HR Round</th>
-                            <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Offer Stage</th>
-                            <th className="text-center p-4 font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 min-w-[140px]">Closure</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            <td className="p-3 align-top">
-                              <div className="space-y-2">
-                                {getPipelineCandidatesByStage.level1.map((candidate: any, index: number) => (
-                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{ backgroundColor: '#E6F4EA' }} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
-                                    {candidate.candidateName}
-                                  </div>
-                                ))}
-                                {getPipelineCandidatesByStage.level1.length === 0 && (
-                                  <div className="text-xs text-gray-400 text-center py-2">No candidates</div>
-                                )}
+                {/* Pipeline Stages - Kanban Board Layout */}
+                <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 p-2 flex-1 flex flex-col min-h-0 mb-6" style={{ height: 'calc(100vh - 200px)' }}>
+                  <div className="flex-1 overflow-x-hidden overflow-y-hidden min-h-0">
+                    <div className="flex gap-1.5 w-full h-full">
+                      {[
+                        { key: 'level1', display: 'Level 1' },
+                        { key: 'level2', display: 'Level 2' },
+                        { key: 'level3', display: 'Level 3' },
+                        { key: 'finalRound', display: 'Final Round' },
+                        { key: 'hrRound', display: 'HR Round' },
+                        { key: 'offerStage', display: 'Offer Stage' },
+                        { key: 'closure', display: 'Closure' }
+                      ].map((stage) => {
+                        const candidates = getPipelineCandidatesByStage[stage.key as keyof typeof getPipelineCandidatesByStage] || [];
+                        const count = Array.isArray(candidates) ? candidates.length : 0;
+                        const getInitials = (name: string): string => {
+                          if (!name) return 'N/A';
+                          const parts = name.trim().split(' ');
+                          if (parts.length >= 2) {
+                            return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+                          }
+                          return name.substring(0, 2).toUpperCase();
+                        };
+                        const calculateDaysAgo = (dateString: string | null | undefined): string => {
+                          if (!dateString) return 'N/A';
+                          try {
+                            const date = new Date(dateString);
+                            if (isNaN(date.getTime())) return 'N/A';
+                            const now = new Date();
+                            const diffTime = Math.abs(now.getTime() - date.getTime());
+                            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                            if (diffDays === 0) return '0 days ago';
+                            if (diffDays === 1) return '01 day ago';
+                            const paddedDays = diffDays < 10 ? `0${diffDays}` : diffDays.toString();
+                            return `${paddedDays} days ago`;
+                          } catch {
+                            return 'N/A';
+                          }
+                        };
+                        return (
+                          <div key={stage.key} className="flex-1 min-w-0 flex flex-col h-full">
+                            {/* Column Header - Fixed */}
+                            <div className="mb-1 flex-shrink-0">
+                              <div className="flex items-center justify-between bg-gray-100 dark:bg-gray-700 rounded-t px-2 py-1 border-b border-gray-200 dark:border-gray-600">
+                                <h3 className="text-[10px] font-medium text-gray-700 dark:text-gray-300 truncate">{stage.display}</h3>
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                                  <span className="text-[10px] font-medium text-gray-700 dark:text-gray-300">{count}</span>
+                                </div>
                               </div>
-                            </td>
-                            <td className="p-3 align-top">
-                              <div className="space-y-2">
-                                {getPipelineCandidatesByStage.level2.map((candidate: any, index: number) => (
-                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{ backgroundColor: '#D9F0E1' }} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
-                                    {candidate.candidateName}
-                                  </div>
-                                ))}
-                                {getPipelineCandidatesByStage.level2.length === 0 && (
-                                  <div className="text-xs text-gray-400 text-center py-2">No candidates</div>
-                                )}
-                              </div>
-                            </td>
-                            <td className="p-3 align-top">
-                              <div className="space-y-2">
-                                {getPipelineCandidatesByStage.level3.map((candidate: any, index: number) => (
-                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{ backgroundColor: '#C2EED0' }} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
-                                    {candidate.candidateName}
-                                  </div>
-                                ))}
-                                {getPipelineCandidatesByStage.level3.length === 0 && (
-                                  <div className="text-xs text-gray-400 text-center py-2">No candidates</div>
-                                )}
-                              </div>
-                            </td>
-                            <td className="p-3 align-top">
-                              <div className="space-y-2">
-                                {getPipelineCandidatesByStage.finalRound.map((candidate: any, index: number) => (
-                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-black text-center cursor-default" style={{ backgroundColor: '#B5E1C1' }} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
-                                    {candidate.candidateName}
-                                  </div>
-                                ))}
-                                {getPipelineCandidatesByStage.finalRound.length === 0 && (
-                                  <div className="text-xs text-gray-400 text-center py-2">No candidates</div>
-                                )}
-                              </div>
-                            </td>
-                            <td className="p-3 align-top">
-                              <div className="space-y-2">
-                                {getPipelineCandidatesByStage.hrRound.map((candidate: any, index: number) => (
-                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-white text-center cursor-default" style={{ backgroundColor: '#99D9AE' }} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
-                                    {candidate.candidateName}
-                                  </div>
-                                ))}
-                                {getPipelineCandidatesByStage.hrRound.length === 0 && (
-                                  <div className="text-xs text-gray-400 text-center py-2">No candidates</div>
-                                )}
-                              </div>
-                            </td>
-                            <td className="p-3 align-top">
-                              <div className="space-y-2">
-                                {getPipelineCandidatesByStage.offerStage.map((candidate: any, index: number) => (
-                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-white text-center cursor-default" style={{ backgroundColor: '#7CCBA0' }} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
-                                    {candidate.candidateName}
-                                  </div>
-                                ))}
-                                {getPipelineCandidatesByStage.offerStage.length === 0 && (
-                                  <div className="text-xs text-gray-400 text-center py-2">No candidates</div>
-                                )}
-                              </div>
-                            </td>
-                            <td className="p-3 align-top">
-                              <div className="space-y-2">
-                                {getPipelineCandidatesByStage.closure.map((candidate: any, index: number) => (
-                                  <div key={candidate.id || index} className="px-3 py-2 rounded text-sm text-white text-center cursor-default" style={{ backgroundColor: '#2F6F52' }} title={`${candidate.candidateName} - ${candidate.roleApplied}`}>
-                                    {candidate.candidateName}
-                                  </div>
-                                ))}
-                                {getPipelineCandidatesByStage.closure.length === 0 && (
-                                  <div className="text-xs text-gray-400 text-center py-2">No candidates</div>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
+                            </div>
+                            
+                            {/* Column Content - Scrollable Vertically */}
+                            <div className="flex-1 overflow-y-auto overflow-x-hidden bg-white dark:bg-gray-900 rounded-b px-1.5 py-1.5 space-y-1.5 min-h-0" style={{ scrollbarWidth: 'thin' }}>
+                              {count === 0 ? (
+                                <div className="flex items-center justify-center h-full min-h-[100px]">
+                                  <p className="text-[10px] text-gray-400 dark:text-gray-500">No candidates</p>
+                                </div>
+                              ) : (
+                                (Array.isArray(candidates) ? candidates : []).map((candidate: any, index: number) => {
+                                  const initials = getInitials(candidate.candidateName || '');
+                                  const daysAgo = calculateDaysAgo(candidate.appliedDate || candidate.updatedAt || candidate.createdAt);
+                                  const roleApplied = candidate.roleApplied || candidate.jobTitle || 'N/A';
+                                  const company = candidate.company || 'N/A';
+                                  
+                                  return (
+                                    <div
+                                      key={candidate.id || index}
+                                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-1.5 cursor-pointer hover:shadow-sm transition-all hover:border-blue-300 dark:hover:border-blue-600 relative"
+                                    >
+                                      {/* Card Content */}
+                                      <div className="flex items-start gap-1.5">
+                                        {/* Avatar - Very Small */}
+                                        <div className="flex-shrink-0">
+                                          <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                                            <span className="text-[9px] font-medium text-blue-700 dark:text-blue-300">
+                                              {initials}
+                                            </span>
+                                          </div>
+                                        </div>
+                                        
+                                        {/* Candidate Info - Very Compact */}
+                                        <div className="flex-1 min-w-0">
+                                          <h4 className="font-semibold text-gray-900 dark:text-white text-[10px] mb-0.5 truncate leading-tight">
+                                            {candidate.candidateName || 'N/A'}
+                                          </h4>
+                                          <p className="text-[9px] text-gray-600 dark:text-gray-400 mb-0.5 truncate leading-tight">
+                                            {roleApplied}
+                                          </p>
+                                          <p className="text-[9px] text-gray-600 dark:text-gray-400 truncate leading-tight">
+                                            {company}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Timestamp in bottom right */}
+                                      <div className="absolute bottom-1 right-1.5">
+                                        <p className="text-[8px] text-gray-500 dark:text-gray-400">
+                                          {daysAgo}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  );
+                                })
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
 
-                {/* Closure Reports Table - Live Data */}
+                {/* Closure Reports Table - Static (not affected by pipeline filters) */}
                 <Card className="mt-6">
                   <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Closure Reports</CardTitle>
-                        {getPipelineCandidatesByStage.closure.length > 0 && (
-                          <Button
-                            className="bg-cyan-400 hover:bg-cyan-500 text-black px-6 py-2 rounded text-sm"
-                            onClick={() => setIsClosureReportsModalOpen(true)}
-                            data-testid="button-view-more-closure-reports"
-                          >
-                            View More
-                          </Button>
-                        )}
-                      </div>
+                      <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Closure Reports</CardTitle>
+                      {closureReportsData.length > 5 && (
+                        <Button
+                          variant="outline"
+                          className="border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-6 py-2 rounded text-sm font-medium"
+                          onClick={() => setIsClosureReportsModalOpen(true)}
+                          data-testid="button-view-more-closure-reports"
+                        >
+                          View More
+                        </Button>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent className="p-0">
@@ -6729,27 +6686,27 @@ export default function AdminDashboard() {
                           </tr>
                         </thead>
                         <tbody>
-                          {getPipelineCandidatesByStage.closure.length === 0 ? (
+                          {closureReportsData.length === 0 ? (
                             <tr>
                               <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
                                 No closures yet. Candidates with 'Closure' or 'Joined' status will appear here automatically.
                               </td>
                             </tr>
                           ) : (
-                            getPipelineCandidatesByStage.closure.slice(0, 5).map((candidate: any, index: number) => (
+                            closureReportsData.slice(0, 5).map((report: any, index: number) => (
                               <tr
-                                key={candidate.id || index}
+                                key={report.id || index}
                                 className={`border-b border-gray-200 dark:border-gray-700 ${index % 2 === 1 ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}
                               >
-                                <td className="p-3 text-gray-900 dark:text-white">{candidate.candidateName}</td>
-                                <td className="p-3 text-gray-600 dark:text-gray-400">{candidate.roleApplied}</td>
-                                <td className="p-3 text-gray-600 dark:text-gray-400">{candidate.company}</td>
-                                <td className="p-3 text-gray-600 dark:text-gray-400">{candidate.location}</td>
-                                <td className="p-3 text-gray-600 dark:text-gray-400">{candidate.experience}</td>
-                                <td className="p-3 text-gray-600 dark:text-gray-400">{candidate.appliedOn}</td>
+                                <td className="p-3 text-gray-900 dark:text-white">{report.candidate}</td>
+                                <td className="p-3 text-gray-600 dark:text-gray-400">{report.position}</td>
+                                <td className="p-3 text-gray-600 dark:text-gray-400">{report.client}</td>
+                                <td className="p-3 text-gray-600 dark:text-gray-400">-</td>
+                                <td className="p-3 text-gray-600 dark:text-gray-400">-</td>
+                                <td className="p-3 text-gray-600 dark:text-gray-400">{report.offeredDate || '-'}</td>
                                 <td className="p-3">
                                   <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                    {candidate.currentStatus}
+                                    {report.status || 'Closure'}
                                   </span>
                                 </td>
                               </tr>

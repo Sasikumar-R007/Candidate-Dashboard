@@ -6,8 +6,8 @@ interface TeamLeaderPerformanceGaugeProps {
 }
 
 export default function TeamLeaderPerformanceGauge({ value, size = 250 }: TeamLeaderPerformanceGaugeProps) {
-  // Map value (0-100) to gauge segments
-  // STRONG BEAR: 0-16.67, BEAR: 16.67-33.33, BEARISH: 33.33-50, BULLISH: 50-66.67, BULL: 66.67-83.33, STRONG BULL: 83.33-100
+  // Map value (0-100) to gauge segments with proper performance names
+  // Poor: 0-20, Below Average: 20-40, Average: 40-60, Good: 60-80, Excellent: 80-100
   return (
     <div className="flex flex-col items-center">
       <GaugeComponent
@@ -18,33 +18,28 @@ export default function TeamLeaderPerformanceGauge({ value, size = 250 }: TeamLe
           cornerRadius: 1,
           subArcs: [
             {
-              limit: 16.67,
-              color: '#DC2626', // Red - STRONG BEAR
+              limit: 20,
+              color: '#DC2626', // Red - Poor
               showTick: true,
             },
             {
-              limit: 33.33,
-              color: '#EF4444', // Lighter Red - BEAR
+              limit: 40,
+              color: '#EF4444', // Lighter Red - Below Average
               showTick: true,
             },
             {
-              limit: 50,
-              color: '#F59E0B', // Orange/Yellow - BEARISH
+              limit: 60,
+              color: '#F59E0B', // Orange/Yellow - Average
               showTick: true,
             },
             {
-              limit: 66.67,
-              color: '#84CC16', // Light Green - BULLISH
-              showTick: true,
-            },
-            {
-              limit: 83.33,
-              color: '#22C55E', // Green - BULL
+              limit: 80,
+              color: '#84CC16', // Light Green - Good
               showTick: true,
             },
             {
               limit: 100,
-              color: '#16A34A', // Dark Green - STRONG BULL
+              color: '#22C55E', // Green - Excellent
               showTick: true,
             }
           ]
@@ -63,21 +58,19 @@ export default function TeamLeaderPerformanceGauge({ value, size = 250 }: TeamLe
             type: 'outer',
             ticks: [
               { value: 0 },
-              { value: 16.67 },
-              { value: 33.33 },
-              { value: 50 },
-              { value: 66.67 },
-              { value: 83.33 },
+              { value: 20 },
+              { value: 40 },
+              { value: 60 },
+              { value: 80 },
               { value: 100 }
             ],
             defaultTickValueConfig: {
               formatTextValue: (value: number) => {
-                if (value === 0) return 'STRONG BEAR';
-                if (value === 16.67) return 'BEAR';
-                if (value === 33.33) return 'BEARISH';
-                if (value === 50) return 'BULLISH';
-                if (value === 66.67) return 'BULL';
-                if (value === 83.33) return 'STRONG BULL';
+                if (value === 0) return 'Poor';
+                if (value === 20) return 'Below Avg';
+                if (value === 40) return 'Average';
+                if (value === 60) return 'Good';
+                if (value === 80) return 'Excellent';
                 return '';
               },
               style: {

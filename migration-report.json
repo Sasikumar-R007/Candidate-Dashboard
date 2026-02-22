@@ -1,0 +1,99 @@
+{
+  "timestamp": "2026-02-22T05:21:59.514Z",
+  "summary": {
+    "total": 17,
+    "processed": 17,
+    "updated": 5,
+    "skipped": 12,
+    "errors": 0,
+    "nameExtractedFromEmail": 0,
+    "resumeReparsed": 5
+  },
+  "details": [
+    {
+      "candidateId": "STCA010",
+      "email": "shivaniii@gmail.com",
+      "action": "Updated designation, currentRole, experience, company"
+    },
+    {
+      "candidateId": "STCA011",
+      "email": "ca235113102@bhc.edu.in",
+      "action": "Updated designation, currentRole, experience"
+    },
+    {
+      "candidateId": "STCA012",
+      "email": "azzimandabdullah1@gmail.com",
+      "action": "No updates needed"
+    },
+    {
+      "candidateId": "STCA013",
+      "email": "pradeep@gmail.com",
+      "action": "No updates needed"
+    },
+    {
+      "candidateId": "STCA014",
+      "email": "abinaya@gmail.com",
+      "action": "No updates needed"
+    },
+    {
+      "candidateId": "STCA015",
+      "email": "sympho@gmail.com",
+      "action": "No updates needed"
+    },
+    {
+      "candidateId": "STCA016",
+      "email": "rishivar@gmail.com",
+      "action": "No updates needed"
+    },
+    {
+      "candidateId": "STCA017",
+      "email": "jason@email.com",
+      "action": "Updated experience, company"
+    },
+    {
+      "candidateId": "STCA004",
+      "email": "shivanivenkatesh5@gmail.com",
+      "action": "No updates needed"
+    },
+    {
+      "candidateId": "STCA009",
+      "email": "abishekapalani@gmail.com",
+      "action": "No updates needed"
+    },
+    {
+      "candidateId": "STCA007",
+      "email": "gayuperiyasamy26@gmail.com",
+      "action": "No updates needed"
+    },
+    {
+      "candidateId": "STCA006",
+      "email": "kowsalyac23@gmail.com",
+      "action": "No updates needed"
+    },
+    {
+      "candidateId": "STCA002",
+      "email": "rishivarmanmuthuvel@gmail.com",
+      "action": "Updated designation, currentRole, experience, skills, location, company, education"
+    },
+    {
+      "candidateId": "STCA005",
+      "email": "ca235113101@bhc.edu.in",
+      "action": "No updates needed"
+    },
+    {
+      "candidateId": "STCA003",
+      "email": "karnan@gmail.com",
+      "action": "No updates needed"
+    },
+    {
+      "candidateId": "STCA008",
+      "email": "jacobmanasayjohn@gmail.com",
+      "action": "No updates needed"
+    },
+    {
+      "candidateId": "STCA001",
+      "email": "sasirajkumar7rs@gmail.com",
+      "action": "Updated designation, currentRole, experience, skills, company, education, linkedinUrl, portfolioUrl"
+    }
+  ]
+}

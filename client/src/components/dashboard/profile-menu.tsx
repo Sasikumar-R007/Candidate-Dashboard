@@ -152,7 +152,8 @@ export default function ProfileMenu({
 
       {showUserDropdown && (
         <div className="absolute right-0 top-full mt-2 w-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-4 z-50">
-          <div className="px-4 pb-3 border-b border-gray-200 dark:border-gray-600">
+          {/* Notifications section - commented out for now */}
+          {/* <div className="px-4 pb-3 border-b border-gray-200 dark:border-gray-600">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               <Bell size={18} />
               Notifications
@@ -202,9 +203,10 @@ export default function ProfileMenu({
                 );
               })
             )}
-          </div>
+          </div> */}
           
-          <div className="py-2 border-t border-gray-200 dark:border-gray-600 mt-2">
+          {/* Settings section - commented out for now */}
+          {/* <div className="py-2 border-t border-gray-200 dark:border-gray-600 mt-2">
             <button 
               onClick={handleProfileSettings}
               className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
@@ -215,7 +217,9 @@ export default function ProfileMenu({
             </button>
             
             <hr className="my-2 border-gray-200 dark:border-gray-600" />
-            
+          </div> */}
+          
+          <div className="py-2 border-t border-gray-200 dark:border-gray-600 mt-2">
             <button 
               onClick={handleLogout}
               disabled={logoutMutation.isPending}

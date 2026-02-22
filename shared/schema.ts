@@ -333,6 +333,7 @@ export const candidates = pgTable("candidates", {
   isVerified: boolean("is_verified").default(false),
   phoneVerified: boolean("phone_verified").default(false),
   createdAt: text("created_at").notNull(),
+  lastViewedAt: text("last_viewed_at"), // Track when profile was last viewed
 });
 
 export const otps = pgTable("otps", {
