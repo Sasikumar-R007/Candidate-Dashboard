@@ -4174,7 +4174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // CRITICAL: Verify we're using the correct employee ID
-      console.log('[RECRUITER DAILY DELIVERY] Employee ID:', employee.id, 'Employee Name:', employee.name, 'Email:', employee.email);
+      console.log('[RECRUITER DELIVERED CANDIDATES] Employee ID:', employee.id, 'Employee Name:', employee.name, 'Email:', employee.email);
 
       const dateParam = req.query.date as string | undefined;
       const today = dateParam || new Date().toISOString().split('T')[0];
@@ -4184,7 +4184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get recruiter's requirements first (CRITICAL for data isolation)
       const recruiterRequirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
       const recruiterRequirementIds = recruiterRequirements.map(r => r.id);
-      console.log('[RECRUITER DAILY DELIVERY] Found requirements for', employee.name, ':', recruiterRequirementIds.length);
+      console.log('[RECRUITER DELIVERED CANDIDATES] Found requirements for', employee.name, ':', recruiterRequirementIds.length);
 
       // Get resume submissions for this date (filtered by recruiter ID)
       const submissionsRaw = await db.select().from(resumeSubmissions)
@@ -4195,11 +4195,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const subDate = new Date(sub.submittedAt).toISOString().split('T')[0];
         return subDate === today;
       });
-
-      // CRITICAL: Get recruiter's requirements FIRST for proper data isolation
-      const recruiterRequirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
-      const recruiterRequirementIds = recruiterRequirements.map(r => r.id);
-      console.log('[RECRUITER DELIVERED CANDIDATES] Employee ID:', employee.id, 'Employee Name:', employee.name, 'Requirements:', recruiterRequirementIds.length);
 
       // Get tagged applications for this date (CRITICAL: filter by recruiter's requirements only)
       const taggedAppsRaw = await db.select().from(jobApplications)
