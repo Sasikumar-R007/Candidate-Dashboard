@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -790,31 +790,25 @@ export default function ClientDashboard() {
                             try {
                               const formData = new FormData();
                               formData.append('jdFile', file);
-                              const response = await fetch('/api/client/parse-jd', {
-                                method: 'POST',
-                                body: formData,
-                                credentials: 'include'
-                              });
-                              if (response.ok) {
-                                const parsed = await response.json();
-                                if (parsed.data) {
-                                  if (parsed.data.position && !jdPosition) {
-                                    setJdPosition(parsed.data.position);
-                                  }
-                                  if (parsed.data.primarySkills && !primarySkills) {
-                                    setPrimarySkills(parsed.data.primarySkills);
-                                  }
-                                  if (parsed.data.secondarySkills && !secondarySkills) {
-                                    setSecondarySkills(parsed.data.secondarySkills);
-                                  }
-                                  if (parsed.data.knowledgeOnly && !knowledgeOnly) {
-                                    setKnowledgeOnly(parsed.data.knowledgeOnly);
-                                  }
-                                  toast({
-                                    title: "JD Parsed",
-                                    description: "Fields have been auto-filled from the JD file.",
-                                  });
+                              const response = await apiFileUpload('/api/client/parse-jd', formData);
+                              const parsed = await response.json();
+                              if (parsed.data) {
+                                if (parsed.data.position && !jdPosition) {
+                                  setJdPosition(parsed.data.position);
                                 }
+                                if (parsed.data.primarySkills && !primarySkills) {
+                                  setPrimarySkills(parsed.data.primarySkills);
+                                }
+                                if (parsed.data.secondarySkills && !secondarySkills) {
+                                  setSecondarySkills(parsed.data.secondarySkills);
+                                }
+                                if (parsed.data.knowledgeOnly && !knowledgeOnly) {
+                                  setKnowledgeOnly(parsed.data.knowledgeOnly);
+                                }
+                                toast({
+                                  title: "JD Parsed",
+                                  description: "Fields have been auto-filled from the JD file.",
+                                });
                               }
                             } catch (error) {
                               console.error('JD parsing error:', error);
@@ -1954,26 +1948,20 @@ export default function ClientDashboard() {
                   // Parse JD text to auto-fill fields (debounced)
                   if (text.length > 100) {
                     try {
-                      const response = await apiRequest('POST', '/api/client/parse-jd', { jdText: text }, {
-                        headers: {
-                          'Content-Type': 'application/json'
+                      const response = await apiRequest('POST', '/api/client/parse-jd', { jdText: text });
+                      const parsed = await response.json();
+                      if (parsed.data) {
+                        if (parsed.data.position && !jdPosition) {
+                          setJdPosition(parsed.data.position);
                         }
-                      });
-                      if (response.ok) {
-                        const parsed = await response.json();
-                        if (parsed.data) {
-                          if (parsed.data.position && !jdPosition) {
-                            setJdPosition(parsed.data.position);
-                          }
-                          if (parsed.data.primarySkills && !primarySkills) {
-                            setPrimarySkills(parsed.data.primarySkills);
-                          }
-                          if (parsed.data.secondarySkills && !secondarySkills) {
-                            setSecondarySkills(parsed.data.secondarySkills);
-                          }
-                          if (parsed.data.knowledgeOnly && !knowledgeOnly) {
-                            setKnowledgeOnly(parsed.data.knowledgeOnly);
-                          }
+                        if (parsed.data.primarySkills && !primarySkills) {
+                          setPrimarySkills(parsed.data.primarySkills);
+                        }
+                        if (parsed.data.secondarySkills && !secondarySkills) {
+                          setSecondarySkills(parsed.data.secondarySkills);
+                        }
+                        if (parsed.data.knowledgeOnly && !knowledgeOnly) {
+                          setKnowledgeOnly(parsed.data.knowledgeOnly);
                         }
                       }
                     } catch (error) {
@@ -2739,11 +2727,11 @@ export default function ClientDashboard() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Reject Candidate</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to reject <strong>{selectedCandidate?.name}</strong>?
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Are you sure you want to reject <strong>{selectedCandidate?.name}</strong>?
-            </p>
             <p className="text-xs text-gray-500">
               Current stage: {selectedCandidate?.stage}
             </p>
