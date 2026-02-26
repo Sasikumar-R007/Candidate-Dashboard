@@ -1,9 +1,11 @@
+# Production Backend Service
 services:
   - type: web
     name: staffos-backend
     env: node
     plan: starter
     region: oregon
+    branch: main
     buildCommand: npm install && npm run build:backend
     startCommand: npm run start:backend
     healthCheckPath: /api/health
@@ -22,3 +24,63 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
+      - key: RESEND_API_KEY
+        sync: false
+
+  # Staging Backend Service (optional - create separately in Render dashboard)
+  # Uncomment and configure if you want to use render.yaml for staging
+  # - type: web
+  #   name: staffos-backend-staging
+  #   env: node
+  #   plan: starter
+  #   region: oregon
+  #   branch: staging
+  #   buildCommand: npm install && npm run build:backend
+  #   startCommand: npm run start:backend
+  #   healthCheckPath: /api/health
+  #   envVars:
+  #     - key: NODE_ENV
+  #       value: production
+  #     - key: NODE_VERSION
+  #       value: 20.10.0
+  #     - key: FRONTEND_URL
+  #       sync: false
+  #     - key: DATABASE_URL
+  #       sync: false
+  #     - key: SESSION_SECRET
+  #       generateValue: true
+  #     - key: GOOGLE_CLIENT_ID
+  #       sync: false
+  #     - key: GOOGLE_CLIENT_SECRET
+  #       sync: false
+  #     - key: RESEND_API_KEY
+  #       sync: false
+
+  # Development Backend Service (optional - create separately in Render dashboard)
+  # Uncomment and configure if you want to use render.yaml for dev
+  # - type: web
+  #   name: staffos-backend-dev
+  #   env: node
+  #   plan: free
+  #   region: oregon
+  #   branch: dev
+  #   buildCommand: npm install && npm run build:backend
+  #   startCommand: npm run start:backend
+  #   healthCheckPath: /api/health
+  #   envVars:
+  #     - key: NODE_ENV
+  #       value: production
+  #     - key: NODE_VERSION
+  #       value: 20.10.0
+  #     - key: FRONTEND_URL
+  #       sync: false
+  #     - key: DATABASE_URL
+  #       sync: false
+  #     - key: SESSION_SECRET
+  #       generateValue: true
+  #     - key: GOOGLE_CLIENT_ID
+  #       sync: false
+  #     - key: GOOGLE_CLIENT_SECRET
+  #       sync: false
+  #     - key: RESEND_API_KEY
+  #       sync: false

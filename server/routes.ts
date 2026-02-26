@@ -8419,13 +8419,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         teamLeadName = employee.name;
       }
 
-      // Get client ID from company name
+      // Get client ID from company name (case-insensitive, flexible matching)
       const allClients = await storage.getAllClients();
-      const clientRecord = allClients.find(c => c.brandName === client || c.companyName === client);
+      const clientLower = client.toLowerCase().trim();
+      const clientRecord = allClients.find(c => {
+        const brandName = (c.brandName || '').toLowerCase().trim();
+        const companyName = (c.companyName || '').toLowerCase().trim();
+        const clientCode = (c.clientCode || '').toLowerCase().trim();
+        return brandName === clientLower || 
+               companyName === clientLower || 
+               clientCode === clientLower ||
+               brandName.includes(clientLower) ||
+               companyName.includes(clientLower);
+      });
       const clientId = clientRecord?.id || '';
 
       if (!clientId) {
-        return res.status(400).json({ message: "Client not found. Please ensure the client exists in the system." });
+        console.error('Closure: Client not found. Searched for:', client);
+        console.error('Available clients:', allClients.filter(c => !c.isLoginOnly).map(c => ({
+          id: c.id,
+          brandName: c.brandName,
+          companyName: c.companyName,
+          clientCode: c.clientCode
+        })));
+        return res.status(400).json({ 
+          message: "Client not found. Please ensure the client exists in the system.",
+          searchedFor: client,
+          availableClients: allClients.filter(c => !c.isLoginOnly).map(c => ({
+            brandName: c.brandName,
+            companyName: c.companyName,
+            clientCode: c.clientCode
+          }))
+        });
       }
 
       // Parse quarter (format: Q1-2024)
@@ -10133,16 +10158,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allRequirements = await storage.getRequirementsByCompany(companyName);
       console.log('All requirements for company:', allRequirements.length);
 
-      // Filter only client-submitted JDs (those with STR format Role IDs)
+      // Return ALL requirements for the client's company (not just STR format)
+      // This includes all JDs uploaded by the client
       const clientJDs = allRequirements.filter((req: any) => {
-        const isSTR = req.id && /^STR\d{5}$/.test(req.id);
-        if (isSTR) {
-          console.log('Found STR requirement:', req.id, req.position, req.company);
-        }
-        return isSTR;
+        // Include all requirements that are not archived
+        return !req.isArchived;
       });
 
-      console.log('Client JDs found:', clientJDs.length);
+      console.log('Client requirements found:', clientJDs.length);
 
       // Get all job applications to count profiles shared per requirement
       const allApplications = await storage.getAllJobApplications();
@@ -10169,8 +10192,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         else if (req.status === 'open' || req.status === 'in_progress') status = 'Active';
         
         return {
-          roleId: req.id, // This is already in STR format
+          id: req.id, // Include id field for filtering
+          roleId: req.id, // This is already in STR format (or UUID)
           role: req.position,
+          position: req.position, // Include position field as well
           team: req.teamLead || 'N/A',
           recruiter: req.talentAdvisor || 'N/A',
           sharedOn: req.createdAt ? new Date(req.createdAt).toLocaleDateString('en-GB', {
@@ -10208,10 +10233,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const client = await findCompanyForEmployee(employee);
       const companyName = client?.brandName || employee.name;
 
-      const applications = await storage.getJobApplicationsByCompany(companyName);
+      // Get filter parameters
+      const requirementId = req.query.requirementId as string | undefined;
+      const talentAdvisorId = req.query.ta as string | undefined;
 
-      // Transform applications to pipeline data format
-      const pipelineData = applications.map((app, index) => {
+      // Get all requirements for this client's company
+      const clientRequirements = await storage.getRequirementsByCompany(companyName);
+      const clientRequirementIds = new Set(clientRequirements.map(req => req.id));
+
+      // Get all job applications
+      const allApplications = await storage.getAllJobApplications();
+
+      // Filter applications to only those tagged to client's requirements
+      let applications = allApplications.filter((app: any) => {
+        // Only include applications that are tagged to client's requirements
+        return app.requirementId && clientRequirementIds.has(app.requirementId);
+      });
+
+      // Apply additional filters if provided
+      if (requirementId && requirementId !== 'all') {
+        applications = applications.filter((app: any) => app.requirementId === requirementId);
+      }
+
+      if (talentAdvisorId && talentAdvisorId !== 'all') {
+        // Get requirements assigned to this TA
+        const taRequirements = clientRequirements.filter((req: any) => 
+          req.talentAdvisorId === talentAdvisorId
+        );
+        const taRequirementIds = new Set(taRequirements.map((req: any) => req.id));
+        applications = applications.filter((app: any) => 
+          app.requirementId && taRequirementIds.has(app.requirementId)
+        );
+      }
+
+      // Get all employees and requirements for enrichment
+      const allEmployees = await storage.getAllEmployees();
+      const allRequirements = await storage.getRequirements();
+
+      // Transform applications to pipeline data format with TA information
+      const pipelineData = applications.map((app: any) => {
         const statusMap: Record<string, string> = {
           'In Process': 'L1',
           'In-Process': 'L1',
@@ -10234,16 +10294,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'Rejected': 'Rejected'
         };
 
+        // Find requirement and TA information
+        let requirementPosition = 'N/A';
+        let talentAdvisorName = 'N/A';
+        let talentAdvisorId = null;
+
+        if (app.requirementId) {
+          const requirement = allRequirements.find((r: any) => r.id === app.requirementId);
+          if (requirement) {
+            requirementPosition = requirement.position || 'N/A';
+            if (requirement.talentAdvisorId) {
+              const ta = allEmployees.find((e: any) => e.id === requirement.talentAdvisorId);
+              if (ta) {
+                talentAdvisorName = ta.name || 'N/A';
+                talentAdvisorId = ta.id;
+              }
+            }
+          }
+        }
+
         return {
-          id: app.id || `app-${index + 1}`,
+          id: app.id,
           candidateName: app.candidateName || 'Unknown',
-          roleApplied: app.jobTitle || 'N/A',
+          roleApplied: app.jobTitle || requirementPosition,
+          requirementId: app.requirementId || null,
+          requirementPosition: requirementPosition,
+          talentAdvisorName: talentAdvisorName,
+          talentAdvisorId: talentAdvisorId,
           currentStatus: statusMap[app.status] || 'L1',
+          status: app.status,
           email: app.candidateEmail || 'N/A',
           phone: app.candidatePhone || 'N/A',
           appliedDate: app.appliedDate ? new Date(app.appliedDate).toLocaleDateString('en-GB', {
             day: '2-digit', month: '2-digit', year: 'numeric'
-          }).replace(/\//g, '-') : 'N/A'
+          }).replace(/\//g, '-') : 'N/A',
+          updatedAt: app.updatedAt || app.appliedDate
         };
       });
 
