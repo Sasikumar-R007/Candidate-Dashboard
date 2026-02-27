@@ -5646,21 +5646,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Master Data Totals API endpoint
   app.get("/api/admin/master-data-totals", requireAdminAuth, async (req, res) => {
     try {
-      const { requirements, employees, candidates, clients, cashOutflows } = await import("@shared/schema");
+      // Use static imports instead of dynamic import to avoid production issues
+      const { candidates, cashOutflows } = await import("@shared/schema");
 
-      // Get counts from database
-      // Use raw SQL to exclude last_login_at column (which may not exist in production)
-      const employeesResult = await db.execute(sql`
-        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
-               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
-               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
-               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
-               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
-               branch, city, reporting_to, is_active, created_at, profile_picture
-        FROM employees
-      `);
-      const allEmployees = employeesResult.rows as any[];
-      const allCandidates = await db.select().from(candidates);
+      // Get counts from database with better error handling
+      let allEmployees: any[] = [];
+      let allCandidates: any[] = [];
+      let allCashOutflows: any[] = [];
+
+      try {
+        // Use raw SQL to exclude last_login_at column (which may not exist in production)
+        const employeesResult = await db.execute(sql`
+          SELECT id, employee_id, name, email, password, role, address, designation, phone, 
+                 department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
+                 father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
+                 increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
+                 current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
+                 branch, city, reporting_to, is_active, created_at, profile_picture
+          FROM employees
+        `);
+        allEmployees = employeesResult.rows as any[];
+      } catch (empError: any) {
+        console.error('Error fetching employees:', empError);
+        // Continue with empty array if employees query fails
+      }
+
+      try {
+        allCandidates = await db.select().from(candidates);
+      } catch (candError: any) {
+        console.error('Error fetching candidates:', candError);
+        // Continue with empty array if candidates query fails
+      }
 
       // Calculate totals
       const resumes = allCandidates.length;
@@ -5696,7 +5712,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const totalResumes = directUploads + recruiterUploads;
 
       // Calculate financial totals from cash_outflows table
-      const allCashOutflows = await db.select().from(cashOutflows);
+      try {
+        allCashOutflows = await db.select().from(cashOutflows);
+      } catch (cashError: any) {
+        console.error('Error fetching cash outflows:', cashError);
+        // Continue with empty array if cash outflows query fails
+      }
 
       const salaryPaid = allCashOutflows.reduce((sum, outflow) => sum + (outflow.totalSalary || 0), 0);
       const otherExpenses = allCashOutflows.reduce((sum, outflow) => sum + (outflow.otherExpenses || 0), 0);
@@ -5713,9 +5734,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         toolsAndDatabases: toolsAndDatabases,
         rentPaid: rentPaid
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Master data totals error:', error);
-      res.status(500).json({ message: "Internal server error" });
+      console.error('Error stack:', error.stack);
+      res.status(500).json({ 
+        message: "Internal server error",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   });
 
@@ -8707,10 +8732,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/candidates", requireEmployeeAuth, async (req, res) => {
     try {
       const candidatesList = await storage.getAllCandidates();
-      res.json(candidatesList);
-    } catch (error) {
+      res.json(candidatesList || []);
+    } catch (error: any) {
       console.error('Get candidates error:', error);
-      res.status(500).json({ message: "Failed to get candidates" });
+      console.error('Error stack:', error.stack);
+      res.status(500).json({ 
+        message: "Failed to get candidates",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   });
 
