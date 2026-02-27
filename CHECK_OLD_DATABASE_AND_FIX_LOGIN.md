@@ -246,3 +246,5 @@ WHERE email = 'your_test_email@example.com';
 - "Account is inactive" → Employee's `is_active` is false
 - "Connection refused" → Backend can't connect to database
 
+
+

@@ -585,9 +585,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.storeOTP(candidateData.email, otp);
 
       // Send welcome email to new candidate
-      const loginUrl = process.env.REPLIT_DEV_DOMAIN
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : process.env.FRONTEND_URL || 'http://localhost:5000';
+      // Use FRONTEND_URL for production, fallback to localhost for development
+      const loginUrl = process.env.FRONTEND_URL 
+        || (process.env.NODE_ENV === 'production' 
+            ? 'https://staffosdemo.vercel.app' 
+            : 'http://localhost:5000');
 
       await sendCandidateWelcomeEmail({
         fullName: newCandidate.fullName,
@@ -5869,9 +5871,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const admin = await storage.createEmployee(employeeData);
 
       // Send welcome email to new admin
-      const loginUrl = process.env.REPLIT_DEV_DOMAIN
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : (process.env.REPLIT_DOMAINS ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}` : 'http://localhost:5000');
+      // Prefer configured FRONTEND_URL; otherwise use public StaffOS URL
+      const envLoginUrlAdmin = process.env.FRONTEND_URL;
+      const loginUrl = envLoginUrlAdmin && !envLoginUrlAdmin.includes('localhost')
+        ? envLoginUrlAdmin
+        : 'https://staffos.io';
 
       try {
         await sendEmployeeWelcomeEmail({
@@ -6183,17 +6187,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         createdAt: new Date().toISOString(),
       });
 
-      // Store raw password for email before it gets hashed
-      const rawPassword = employeeData.password || 'StaffOS@123';
+      // Store raw password for email before it gets hashed (must match exactly what admin entered)
+      const rawPassword = employeeData.password;
 
       // Password will be hashed by storage layer
       const employee = await storage.createEmployee(employeeData);
 
       // Send welcome email to new employee
       if (employee.email && rawPassword) {
-        const loginUrl = process.env.REPLIT_DEV_DOMAIN
-          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-          : 'http://localhost:5000';
+        // Prefer configured FRONTEND_URL; otherwise use public StaffOS URL
+        const envLoginUrl = process.env.FRONTEND_URL;
+        const loginUrl = envLoginUrl && !envLoginUrl.includes('localhost')
+          ? envLoginUrl
+          : 'https://staffos.io';
 
         await sendEmployeeWelcomeEmail({
           name: employee.name,
