@@ -5120,7 +5120,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       // Use raw SQL to exclude last_login_at column (which may not exist in production)
       const result = await db.execute(sql`
-        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
+        3SELECT id, employee_id, name, email, password, role, address, designation, phone, 
                department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
                father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
                increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,

@@ -244,3 +244,4 @@ FROM_EMAIL=StaffOS <staffos@staffos.io>
 
 **Next Steps**: After setting up Resend domain, update the code to use correct login URLs, then test!
 
+
