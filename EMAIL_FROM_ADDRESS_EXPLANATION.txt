@@ -1,0 +1,152 @@
+================================================================================
+WHY YOU CAN'T USE staffos@scalingtheory.com DIRECTLY
+================================================================================
+
+RESEND'S REQUIREMENT:
+Resend requires you to VERIFY the domain before you can send emails FROM that domain.
+
+This is an email security requirement (SPF, DKIM, DMARC) to prevent spam.
+
+WHAT THIS MEANS:
+- You can ONLY send emails FROM addresses that use a VERIFIED domain
+- Since you verified "staffos.io", you can use: staffos@staffos.io
+- You CANNOT use: staffos@scalingtheory.com (unless you verify scalingtheory.com too)
+
+WHY THIS LIMITATION EXISTS:
+Email providers (Gmail, Outlook, etc.) check if the sending domain is verified.
+If you try to send FROM an unverified domain, emails will:
+- Be rejected by Resend (403 error)
+- Or go to spam folder
+- Or be marked as suspicious
+
+================================================================================
+YOUR OPTIONS
+================================================================================
+
+OPTION 1: Use staffos@staffos.io (RECOMMENDED - SIMPLEST)
+- You already verified staffos.io ✓
+- Just use: StaffOS <staffos@staffos.io>
+- Works immediately, no extra setup needed
+
+OPTION 2: Verify scalingtheory.com domain too
+- Add scalingtheory.com as a second domain in Resend
+- Verify it (add DNS records)
+- Then you can use: StaffOS <staffos@scalingtheory.com>
+- BUT: You mentioned Resend only allows one domain per account
+- Check your Resend plan - some plans allow multiple domains
+
+OPTION 3: Use a different Resend account
+- Create a separate Resend account
+- Verify scalingtheory.com in that account
+- Use that account's API key
+- More complex, not recommended
+
+================================================================================
+RECOMMENDED SOLUTION: Use staffos@staffos.io
+================================================================================
+
+Since you already verified staffos.io, just use:
+FROM_EMAIL=StaffOS <staffos@staffos.io>
+
+This will:
+- Work immediately (domain already verified)
+- Show "StaffOS" as sender name
+- Show "staffos@staffos.io" as email address
+- Recipients will see emails from your verified domain
+- Professional and legitimate
+
+The email will look like:
+From: StaffOS <staffos@staffos.io>
+To: employee@example.com
+Subject: Welcome to StaffOS - Your Account is Ready!
+
+================================================================================
+ABOUT YOUR GOOGLE ACCOUNT (staffos@scalingtheory.com)
+================================================================================
+
+Your Google account staffos@scalingtheory.com is a RECEIVING email address.
+It's not the same as a SENDING email address through Resend.
+
+Resend is an email SENDING service (like SendGrid, Mailgun).
+It sends emails ON BEHALF OF your application.
+
+You can:
+- Use staffos@staffos.io to SEND emails (via Resend)
+- Use staffos@scalingtheory.com to RECEIVE emails (your Google account)
+
+They serve different purposes:
+- SENDING: staffos@staffos.io (via Resend) - sends welcome emails to employees
+- RECEIVING: staffos@scalingtheory.com (Google) - receives emails sent to you
+
+You can still use your Google account for:
+- Receiving support emails
+- Managing your business email
+- Personal communication
+
+But for sending automated emails (welcome emails, notifications), you need
+a verified sending domain (staffos.io) through Resend.
+
+================================================================================
+HOW TO SET IT UP
+================================================================================
+
+STEP 1: Create email address in Resend
+1. Go to Resend Dashboard → Domains → staffos.io
+2. Click "Add Email Address" or "Create Email"
+3. Enter: staffos@staffos.io
+4. Click "Add"
+
+STEP 2: Set environment variable
+In Render (all 3 backends) and local .env:
+FROM_EMAIL=StaffOS <staffos@staffos.io>
+
+That's it! Now all emails will be sent FROM: StaffOS <staffos@staffos.io>
+
+================================================================================
+WHAT EMPLOYEES WILL SEE
+================================================================================
+
+When an employee receives a welcome email, they'll see:
+
+From: StaffOS <staffos@staffos.io>
+To: employee@example.com
+Subject: Welcome to StaffOS - Your Account is Ready!
+
+Hi [Employee Name],
+
+Welcome to StaffOS!
+
+Your Login Details:
+- Employee ID: SCE001
+- Email: employee@example.com
+- Password: [password set by admin]
+- Login URL: https://staffosdemo.vercel.app
+
+...
+
+This looks professional and legitimate because:
+- Domain is verified (staffos.io)
+- SPF/DKIM records are set up
+- Emails won't go to spam
+- Employees trust the sender
+
+================================================================================
+SUMMARY
+================================================================================
+
+Q: What FROM email does this use?
+A: Currently defaults to "StaffOS <onboarding@resend.dev>" (Resend's test domain)
+   After setup: "StaffOS <staffos@staffos.io>" (your verified domain)
+
+Q: Why can't I use staffos@scalingtheory.com?
+A: Because scalingtheory.com is not verified in Resend. You can only send FROM
+   verified domains. Since you verified staffos.io, use staffos@staffos.io.
+
+Q: Can I verify scalingtheory.com too?
+A: Check your Resend plan. Some plans allow multiple domains. If allowed,
+   you can verify it and then use staffos@scalingtheory.com.
+
+RECOMMENDATION: Use staffos@staffos.io - it's already verified and ready to use!
+
+================================================================================
+

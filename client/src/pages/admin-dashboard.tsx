@@ -16,6 +16,7 @@ import AddTalentAdvisorModal from '@/components/dashboard/modals/add-talent-advi
 import AddRecruiterModal from '@/components/dashboard/modals/add-recruiter-modal';
 import AddTeamLeaderModalNew from '@/components/dashboard/modals/add-team-leader-modal-new';
 import AddClientCredentialsModal from '@/components/dashboard/modals/add-client-credentials-modal';
+import AddUserModal from '@/components/dashboard/modals/add-user-modal';
 import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-modal';
 import BulkResumeUpload from '@/components/dashboard/bulk-resume-upload';
 import { SearchBar } from '@/components/ui/search-bar';
@@ -1528,6 +1529,7 @@ export default function AdminDashboard() {
   const [isAddRecruiterModalOpen, setIsAddRecruiterModalOpen] = useState(false);
   const [isAddTeamLeaderModalNewOpen, setIsAddTeamLeaderModalNewOpen] = useState(false);
   const [isAddClientCredentialsModalOpen, setIsAddClientCredentialsModalOpen] = useState(false);
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isPerformanceGraphModalOpen, setIsPerformanceGraphModalOpen] = useState(false);
   const [isRevenueGraphModalOpen, setIsRevenueGraphModalOpen] = useState(false);
   const [revenueTeam, setRevenueTeam] = useState<string>("all");
@@ -3052,15 +3054,30 @@ export default function AdminDashboard() {
 
   const handleEditUser = (user: any) => {
     setEditingUser(user);
-    // Map database roles to display roles for modal selection
-    const role = user.role || '';
-    if (role === 'Team Leader' || role === 'team_leader') {
-      setIsAddTeamLeaderModalNewOpen(true);
-    } else if (role === 'Recruiter' || role === 'recruiter' || role === 'Talent Advisor') {
-      // Use AddRecruiterModal for editing Talent Advisors (original working version)
-      setIsAddRecruiterModalOpen(true);
-    } else if (role === 'Client' || role === 'client') {
-      setIsAddClientCredentialsModalOpen(true);
+    setIsAddUserModalOpen(true);
+  };
+
+  const handleUnifiedUserSubmit = (userData: any) => {
+    const role = userData.role?.toLowerCase() || '';
+    if (role === 'client') {
+      if (editingUser) {
+        // For updates, we might need a different handler
+        handleAddClientCredentials(userData);
+      } else {
+        handleAddClientCredentials(userData);
+      }
+    } else if (role === 'team leader') {
+      if (editingUser) {
+        handleUpdateUser(userData);
+      } else {
+        handleAddUser(userData);
+      }
+    } else if (role === 'recruiter') {
+      if (editingUser) {
+        handleUpdateUser(userData);
+      } else {
+        handleAddUser(userData);
+      }
     }
   };
 
@@ -5813,44 +5830,15 @@ export default function AdminDashboard() {
           <div className="px-6 py-6 space-y-6 overflow-y-auto admin-scrollbar" style={{ height: 'calc(100vh - 4rem)' }}>
             {/* User Management Header - Add User Button at top left */}
             <div className="flex items-center justify-between mb-6">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 h-10 text-sm whitespace-nowrap"
-                    data-testid="button-add-user"
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Add User
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-48">
-                  <DropdownMenuItem
-                    onClick={() => setIsAddClientCredentialsModalOpen(true)}
-                    className="cursor-pointer"
-                    data-testid="button-add-client-user-expanded"
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Add Client User
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setIsAddTeamLeaderModalNewOpen(true)}
-                    className="cursor-pointer"
-                    data-testid="button-add-team-leader-expanded"
-                  >
-                    <Users className="h-4 w-4 mr-2" />
-                    Add Team Leader
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => setIsAddTalentAdvisorModalOpen(true)}
-                    className="cursor-pointer"
-                    data-testid="button-add-talent-advisor-expanded"
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Add Talent Advisor
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Button
+                size="sm"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 h-10 text-sm whitespace-nowrap"
+                data-testid="button-add-user"
+                onClick={() => setIsAddUserModalOpen(true)}
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add User
+              </Button>
 
               {/* Search Bar */}
               <div className="w-full max-w-md relative">
@@ -9815,6 +9803,17 @@ export default function AdminDashboard() {
         }}
         editData={editingUser && (editingUser.role === 'Client' || editingUser.role === 'client') ? editingUser : null}
         onSubmit={editingUser ? handleUpdateUser : handleAddClientCredentials}
+      />
+
+      {/* Unified Add User Modal */}
+      <AddUserModal
+        isOpen={isAddUserModalOpen}
+        onClose={() => {
+          setIsAddUserModalOpen(false);
+          setEditingUser(null);
+        }}
+        editData={editingUser}
+        onSubmit={handleUnifiedUserSubmit}
       />
 
       {/* Reassign Requirement Modal */}

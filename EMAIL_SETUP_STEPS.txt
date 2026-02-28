@@ -1,0 +1,260 @@
+================================================================================
+SETUP OFFICE EMAIL - STEP BY STEP INSTRUCTIONS
+================================================================================
+
+Your Requirements:
+- Domain: staffos.io
+- From Email: staffos@scalingtheory.com (or staffos@staffos.io - recommended)
+- Purpose: Send welcome emails with login credentials to new employees
+
+================================================================================
+STEP 1: VERIFY DOMAIN IN RESEND
+================================================================================
+
+1. Go to https://resend.com and sign in
+
+2. Click "Domains" in the left sidebar
+
+3. Click "Add Domain"
+
+4. Enter: staffos.io
+
+5. Click "Add"
+
+6. Resend will show you DNS records to add. You'll see something like:
+
+   SPF Record (TXT):
+   v=spf1 include:resend.com ~all
+
+   DKIM Record (TXT):
+   (Resend will provide a long string - copy it exactly)
+
+7. Go to your domain registrar (where you bought staffos.io)
+
+8. Find "DNS Management" or "DNS Settings"
+
+9. Add the TXT records that Resend provided
+
+10. Wait 24-48 hours for DNS to propagate (usually faster, like 1-2 hours)
+
+11. Go back to Resend Dashboard → Domains → staffos.io
+
+12. Click "Verify" button
+
+13. Wait for green checkmark (verification complete)
+
+================================================================================
+STEP 2: CREATE EMAIL ADDRESS
+================================================================================
+
+IMPORTANT NOTE:
+If Resend doesn't allow staffos@scalingtheory.com (because scalingtheory.com 
+is a different domain), use staffos@staffos.io instead. This is simpler and 
+recommended.
+
+Option A (Recommended): Use staffos@staffos.io
+1. In Resend Dashboard → Domains → staffos.io
+2. Click "Add Email Address" or "Create Email"
+3. Enter: staffos@staffos.io
+4. Click "Add"
+
+Option B: Use staffos@scalingtheory.com (only if you own scalingtheory.com)
+1. You'll need to verify scalingtheory.com domain in Resend first
+2. Then create staffos@scalingtheory.com
+3. More complex setup
+
+RECOMMENDATION: Use Option A (staffos@staffos.io)
+
+================================================================================
+STEP 3: GET RESEND API KEY
+================================================================================
+
+1. In Resend Dashboard, click "API Keys" in left sidebar
+
+2. Click "Create API Key"
+
+3. Name it: "StaffOS Production"
+
+4. Select permission: "Sending access"
+
+5. Click "Add"
+
+6. COPY THE API KEY (starts with re_)
+   Example: re_AbCdEfGhIjKlMnOpQrStUvWxYz123456789
+
+7. SAVE IT SECURELY - You won't see it again!
+
+================================================================================
+STEP 4: UPDATE ENVIRONMENT VARIABLES IN RENDER
+================================================================================
+
+You need to add these to ALL THREE backends (dev, staging, production):
+
+Environment Variables to Add:
+RESEND_API_KEY=re_your_api_key_here
+FROM_EMAIL=StaffOS <staffos@staffos.io>
+
+FOR DEVELOPMENT BACKEND:
+1. Go to Render Dashboard
+2. Click on "staffosdemo-backend" (your dev backend)
+3. Click "Environment" tab
+4. Scroll to "Environment Variables"
+5. Click "Add Environment Variable"
+6. Key: RESEND_API_KEY
+7. Value: (paste your API key from Step 3)
+8. Click "Save Changes"
+9. Click "Add Environment Variable" again
+10. Key: FROM_EMAIL
+11. Value: StaffOS <staffos@staffos.io>
+12. Click "Save Changes"
+13. Render will automatically redeploy
+
+FOR STAGING BACKEND:
+1. Go to Render Dashboard
+2. Click on "staffos-backend-staging"
+3. Click "Environment" tab
+4. Add same two variables:
+   - RESEND_API_KEY=re_your_api_key
+   - FROM_EMAIL=StaffOS <staffos@staffos.io>
+5. Save (triggers redeploy)
+
+FOR PRODUCTION BACKEND:
+1. Go to Render Dashboard
+2. Click on "staffos-backendd" (your production backend)
+3. Click "Environment" tab
+4. Add same two variables:
+   - RESEND_API_KEY=re_your_api_key
+   - FROM_EMAIL=StaffOS <staffos@staffos.io>
+5. Save (triggers redeploy)
+
+NOTE: You can use the SAME API key for all three, OR create separate keys 
+for better security. Your choice.
+
+================================================================================
+STEP 5: UPDATE LOCAL .ENV FILE (FOR TESTING)
+================================================================================
+
+1. Open your .env file in the project root
+
+2. Add these lines:
+   RESEND_API_KEY=re_your_api_key_here
+   FROM_EMAIL=StaffOS <staffos@staffos.io>
+
+3. Save the file
+
+4. Restart your local server if it's running
+
+================================================================================
+STEP 6: TEST EMAIL SENDING
+================================================================================
+
+TEST LOCALLY:
+1. Make sure your local .env has RESEND_API_KEY and FROM_EMAIL
+2. Start your backend: npm run dev:backend
+3. Start your frontend: npm run dev
+4. Go to Admin Dashboard
+5. Create a new employee (fill in name, email, password, etc.)
+6. Submit
+7. Check:
+   - Server console logs (should show "Successfully sent welcome email")
+   - Employee's email inbox (check spam folder too)
+   - Resend Dashboard → Logs (to see delivery status)
+
+TEST ON DEV ENVIRONMENT:
+1. Wait for Render to finish redeploying after adding env vars
+2. Go to your dev frontend URL
+3. Create a test employee
+4. Check email inbox
+
+================================================================================
+WHAT HAPPENS NOW
+================================================================================
+
+When Admin creates a new employee:
+1. Employee account is created in database
+2. Welcome email is automatically sent to employee's email
+3. Email contains:
+   - Employee name
+   - Employee ID (like SCE001)
+   - Email address
+   - Password (the one Admin set)
+   - Login URL (your production/staging URL)
+   - Welcome message and guidelines
+
+The employee can then use the email and password to log in for the first time.
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+EMAIL NOT SENDING?
+1. Check Resend Dashboard → Logs
+   - See if email was attempted
+   - Check error messages
+
+2. Check Render Logs
+   - Go to Render → Your Backend → Logs
+   - Look for email sending errors
+   - Verify API key is set correctly
+
+3. Verify Domain
+   - Check domain is verified in Resend (green checkmark)
+   - Check DNS records are correct (SPF, DKIM)
+
+4. Check Environment Variables
+   - Verify RESEND_API_KEY is set in Render
+   - Verify FROM_EMAIL is set correctly
+   - Format: "StaffOS <staffos@staffos.io>"
+
+403 FORBIDDEN ERROR?
+- API key is invalid or expired
+- Domain not verified in Resend
+- Email address (staffos@staffos.io) not created in Resend
+- API key doesn't have sending permissions
+
+EMAIL GOES TO SPAM?
+- Verify SPF and DKIM records are correct
+- Add DMARC record (optional but recommended)
+- Use proper FROM_EMAIL format: "Display Name <email@domain.com>"
+
+CAN'T VERIFY DOMAIN?
+- Wait longer (DNS can take up to 48 hours)
+- Double-check DNS records are correct
+- Make sure you're adding TXT records, not other types
+- Contact your domain registrar if needed
+
+================================================================================
+QUICK REFERENCE
+================================================================================
+
+Environment Variables Needed:
+RESEND_API_KEY=re_your_api_key_here
+FROM_EMAIL=StaffOS <staffos@staffos.io>
+
+Where to Add:
+- Render: All 3 backends (dev, staging, production)
+- Local .env: For testing
+
+Resend Dashboard:
+- Domains: Verify staffos.io
+- API Keys: Create/get API key
+- Logs: Check email delivery status
+
+================================================================================
+NEXT STEPS AFTER SETUP
+================================================================================
+
+1. Verify domain in Resend (Step 1)
+2. Create email address (Step 2)
+3. Get API key (Step 3)
+4. Add env vars to Render (Step 4)
+5. Test locally (Step 6)
+6. Test on dev environment
+7. Deploy to staging
+8. Deploy to production
+
+Once setup is complete, every new employee created by Admin will 
+automatically receive a welcome email with their login credentials!
+
+================================================================================
+
