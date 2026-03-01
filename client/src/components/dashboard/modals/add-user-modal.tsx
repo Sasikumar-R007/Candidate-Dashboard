@@ -300,7 +300,7 @@ export default function AddUserModal({ isOpen, onClose, editData, onSubmit }: Ad
                 </SelectTrigger>
                 <SelectContent>
                   {masterDataCompanies.length === 0 ? (
-                    <SelectItem value="" disabled>No companies found. Create a company in Master Data first.</SelectItem>
+                    <SelectItem value="no-companies" disabled>No companies found. Create a company in Master Data first.</SelectItem>
                   ) : (
                     masterDataCompanies.map((client: any) => (
                       <SelectItem key={client.id} value={client.id}>
@@ -412,7 +412,7 @@ export default function AddUserModal({ isOpen, onClose, editData, onSubmit }: Ad
                 </SelectTrigger>
                 <SelectContent>
                   {masterDataCompanies.length === 0 ? (
-                    <SelectItem value="" disabled>No companies found. Create a company in Master Data first.</SelectItem>
+                    <SelectItem value="no-companies" disabled>No companies found. Create a company in Master Data first.</SelectItem>
                   ) : (
                     masterDataCompanies.map((client: any) => (
                       <SelectItem key={client.id} value={client.id}>

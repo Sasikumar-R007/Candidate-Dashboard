@@ -8,7 +8,8 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { BrainCircuit, Briefcase, Target, Rocket, Shield, ArrowRight } from "lucide-react";
+import { BrainCircuit, Briefcase, Target, Rocket, Shield, ArrowRight, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
 
 interface LoginForm {
@@ -509,6 +510,14 @@ export default function CandidateLogin() {
       {/* Right Side - Login/Register Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 bg-white dark:bg-gray-900">
         <div className="w-full max-w-md">
+          {/* Back Button */}
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="mb-4 text-gray-600 hover:text-gray-900">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Home
+            </Button>
+          </Link>
+          
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center space-x-3 mb-8">
             <div className="w-10 h-10 bg-emerald-900 rounded-xl flex items-center justify-center">

@@ -18,9 +18,9 @@ import { logRequirementAdded, logCandidateSubmitted, logClosureMade, logCandidat
 import { parseResumeFile, parseBulkResumes } from "./resume-parser";
 import { sendEmployeeWelcomeEmail, sendCandidateWelcomeEmail, sendOTPEmail } from "./email-service";
 import { setupGoogleAuth } from "./passport-google";
-import { 
-  buildSearchQuery, 
-  getSortOrder, 
+import {
+  buildSearchQuery,
+  getSortOrder,
   calculateRelevanceScore,
   normalizeSkills,
   parseAndNormalizeSkills
@@ -586,10 +586,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Send welcome email to new candidate
       // Use FRONTEND_URL for production, fallback to localhost for development
-      const loginUrl = process.env.FRONTEND_URL 
-        || (process.env.NODE_ENV === 'production' 
-            ? 'https://staffosdemo.vercel.app' 
-            : 'http://localhost:5000');
+      const loginUrl = process.env.FRONTEND_URL
+        || (process.env.NODE_ENV === 'production'
+          ? 'https://staffosdemo.vercel.app'
+          : 'http://localhost:5000');
 
       await sendCandidateWelcomeEmail({
         fullName: newCandidate.fullName,
@@ -1644,6 +1644,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Logo upload endpoint for client logos
+  app.post("/api/admin/upload-logo", requireAdminAuth, upload.single('logo'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      // Validate file type (images only for logos)
+      const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/avif'];
+      if (!allowedImageTypes.includes(req.file.mimetype)) {
+        return res.status(400).json({ message: "Only image files are allowed for logos" });
+      }
+
+      const baseUrl = process.env.NODE_ENV === 'production'
+        ? (process.env.BACKEND_URL || `https://${req.get('host')}`)
+        : `http://${req.get('host')}`;
+
+      const fileUrl = `${baseUrl}/uploads/${req.file.filename}`;
+
+      res.json({ url: fileUrl });
+    } catch (error) {
+      console.error('Logo upload error:', error);
+      res.status(500).json({ message: "Upload failed", error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  });
+
   // Placeholder image generator
   app.get('/api/placeholder/:width/:height', (req, res) => {
     const { width, height } = req.params;
@@ -1890,9 +1916,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requirementIds = allRequirements.map(r => r.id);
       const allAssignments = requirementIds.length > 0
         ? await db.select().from(requirementAssignments)
-            .where(inArray(requirementAssignments.requirementId, requirementIds))
+          .where(inArray(requirementAssignments.requirementId, requirementIds))
         : [];
-      
+
       // Filter to only active assignments (exclude reassigned)
       const activeRequirementIds = new Set(
         allAssignments
@@ -1902,7 +1928,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           })
           .map(a => a.requirementId)
       );
-      
+
       // Also include requirements assigned via talentAdvisorId (even if no assignment record exists)
       allRequirements.forEach(req => {
         if (req.talentAdvisorId) {
@@ -1912,7 +1938,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       });
-      
+
       // Filter requirements by date and exclude reassigned - only count requirements created on or before the selected date
       const filteredRequirements = allRequirements.filter(req => {
         const createdDate = new Date(req.createdAt).toISOString().split('T')[0];
@@ -2233,7 +2259,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get all job applications
       const allApplications = await storage.getAllJobApplications();
-      
+
       // Filter applications by TAs who report to this TL
       // Applications are linked via recruiterId (session.employeeId when created)
       const teamApplications = allApplications.filter((app: any) => {
@@ -2241,7 +2267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // We need to find the recruiter who created this application
         // Applications have recruiterJobId which links to recruiter_jobs table
         // Or we can check if the application's recruiterId matches any team recruiter
-        
+
         // Try to match by recruiter ID from the application
         // Since we don't have direct recruiterId in job_applications, we'll use a different approach
         // We'll get all recruiter jobs for the team and match applications to those jobs
@@ -2259,17 +2285,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get requirements assigned to team TAs (using active assignments only)
       const allRequirements = await storage.getRequirements();
       const { requirementAssignments } = await import("@shared/schema");
-      
+
       // Get requirement IDs assigned to team TAs (both from requirements table and assignments table)
       const teamRequirementIds = new Set<string>();
-      
+
       // Method 1: From requirements table (talentAdvisorId)
       allRequirements.forEach((req: any) => {
         if (req.talentAdvisorId && teamRecruiterIds.has(req.talentAdvisorId)) {
           teamRequirementIds.add(req.id);
         }
       });
-      
+
       // Method 2: From requirementAssignments table (active assignments for team recruiters)
       const teamRecruiterIdsArray = Array.from(teamRecruiterIds);
       let allAssignments: any[] = [];
@@ -2281,7 +2307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               inArray(requirementAssignments.recruiterId, teamRecruiterIdsArray)
             )
           );
-        
+
         allAssignments.forEach((assignment: any) => {
           teamRequirementIds.add(assignment.requirementId);
         });
@@ -2291,7 +2317,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { resumeSubmissions } = await import("@shared/schema");
       const teamResumeSubmissions = teamRecruiterIdsArray.length > 0
         ? await db.select().from(resumeSubmissions)
-            .where(inArray(resumeSubmissions.recruiterId, teamRecruiterIdsArray))
+          .where(inArray(resumeSubmissions.recruiterId, teamRecruiterIdsArray))
         : [];
 
       // Filter applications that belong to team recruiter jobs OR tagged to team requirements
@@ -2306,7 +2332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         return false;
       });
-      
+
       // Also include resume submissions as applications (convert them to application format)
       const submissionApplications = teamResumeSubmissions.map((sub: any) => ({
         id: `submission-${sub.id}`,
@@ -2325,7 +2351,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         experience: null,
         skills: null
       }));
-      
+
       // Merge regular applications with submission-based applications
       const allPipelineApplications = [...finalApplications, ...submissionApplications];
 
@@ -2357,7 +2383,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Find which TA this application belongs to
         let recruiterName = 'Unknown';
         let recruiterId = null;
-        
+
         // For submission-based applications, get recruiter from submission
         if (app.id && app.id.startsWith('submission-')) {
           const submissionId = app.id.replace('submission-', '');
@@ -2378,7 +2404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
         }
-        
+
         // Try to find from recruiter job
         if (app.recruiterJobId && recruiterName === 'Unknown') {
           const job = allRecruiterJobs.find((j: any) => j.id === app.recruiterJobId);
@@ -2390,7 +2416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
         }
-        
+
         // Try to find from requirement
         if (app.requirementId && recruiterName === 'Unknown') {
           const req = allRequirements.find((r: any) => r.id === app.requirementId);
@@ -2402,8 +2428,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           } else {
             // Try to find from requirementAssignments
-            const assignment = allAssignments.find((a: any) => 
-              a.requirementId === app.requirementId && 
+            const assignment = allAssignments.find((a: any) =>
+              a.requirementId === app.requirementId &&
               teamRecruiterIds.has(a.recruiterId) &&
               a.status === "active"
             );
@@ -2625,7 +2651,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requirementIds = allRequirements.map(r => r.id);
       const allAssignments = requirementIds.length > 0
         ? await db.select().from(requirementAssignments)
-            .where(inArray(requirementAssignments.requirementId, requirementIds))
+          .where(inArray(requirementAssignments.requirementId, requirementIds))
         : [];
 
       // Add assignment status to each requirement
@@ -2638,9 +2664,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           a.teamLeadId !== employee.id &&
           a.status === "active"
         );
-        
-        const isReassigned = assignment?.status === "reassigned" || 
-                             (assignment && hasActiveAssignmentForOtherTL);
+
+        const isReassigned = assignment?.status === "reassigned" ||
+          (assignment && hasActiveAssignmentForOtherTL);
 
         return {
           ...req,
@@ -2739,7 +2765,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create or update assignment record
       const today = new Date().toISOString().split('T')[0];
       const existingAssignmentForRecruiter = existingAssignments.find(a => a.recruiterId === recruiter.id);
-      
+
       if (existingAssignmentForRecruiter) {
         // Reactivate if it was previously reassigned
         await storage.updateRequirementAssignment(existingAssignmentForRecruiter.id, {
@@ -2934,21 +2960,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Calculate performance score based on requirements and resume delivery
       let performanceScore = 0;
-      
+
       if (teamMembers.length > 0) {
         // Get all requirements assigned to team TAs
         const allRequirements = await storage.getRequirements();
         const teamRequirementIds = new Set(teamMembers.map(ta => ta.id));
-        const teamRequirements = allRequirements.filter(req => 
+        const teamRequirements = allRequirements.filter(req =>
           req.talentAdvisorId && teamRequirementIds.has(req.talentAdvisorId) && !req.isArchived
         );
 
         const totalRequirements = teamRequirements.length;
-        
+
         if (totalRequirements > 0) {
           // Import getResumeTarget for calculations
           const { getResumeTarget } = await import("@shared/constants");
-          
+
           // Get all resume submissions for team TAs using database directly
           const { resumeSubmissions, jobApplications } = await import("@shared/schema");
           const recruiterIds = teamMembers.map(ta => ta.id);
@@ -2958,7 +2984,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Get all tagged applications for team requirements
           const allApplications = await storage.getAllJobApplications();
           const requirementIds = teamRequirements.map(req => req.id);
-          const taggedApplications = allApplications.filter(app => 
+          const taggedApplications = allApplications.filter(app =>
             app.requirementId && requirementIds.includes(app.requirementId) &&
             app.source === 'recruiter_tagged'
           );
@@ -2989,8 +3015,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           // Calculate performance metrics
           // 1. Requirements completion rate (0-100)
-          const requirementsCompletionRate = totalRequirements > 0 
-            ? (completedRequirements / totalRequirements) * 100 
+          const requirementsCompletionRate = totalRequirements > 0
+            ? (completedRequirements / totalRequirements) * 100
             : 0;
 
           // 2. Resume delivery rate (0-100)
@@ -3380,7 +3406,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Get target mappings for this team leader
         const tlTargets = allTargetMappings.filter(tm => tm.teamLeadId === tl.id || tm.teamLeadName === tl.name);
-        
+
         // Calculate quarters achieved (where target was met)
         const qtrsAchieved = tlTargets.filter(tm =>
           (tm.targetAchieved ?? 0) >= tm.minimumTarget
@@ -3395,7 +3421,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
 
         const totalClosures = tlRevenueMappings.filter(rm => rm.status === 'closed').length;
-        
+
         // Calculate total revenue
         const totalRevenue = tlRevenueMappings
           .filter(rm => rm.status === 'closed')
@@ -3495,7 +3521,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get target mappings for this recruiter
       const recruiterTargets = allTargetMappings.filter(tm => tm.teamMemberId === recruiter.id);
-      
+
       // Calculate quarters achieved
       const quartersAchieved = recruiterTargets.filter(tm =>
         (tm.targetAchieved ?? 0) >= tm.minimumTarget
@@ -3508,7 +3534,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
 
       const totalClosures = recruiterRevenueMappings.filter(rm => rm.status === 'closed').length;
-      
+
       // Calculate total revenue
       const totalRevenue = recruiterRevenueMappings
         .filter(rm => rm.status === 'closed')
@@ -3847,29 +3873,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // IMPORTANT: Use employee.id (database ID), not employee.employeeId
       const allRequirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
       console.log('[RECRUITER DAILY METRICS] Found requirements for', employee.name, ':', allRequirements.length);
-      
+
       // Get assignment status to filter out reassigned requirements
       const { requirementAssignments } = await import("@shared/schema");
       const requirementIds = allRequirements.map(r => r.id);
       const allAssignments = requirementIds.length > 0
         ? await db.select().from(requirementAssignments)
-            .where(inArray(requirementAssignments.requirementId, requirementIds))
+          .where(inArray(requirementAssignments.requirementId, requirementIds))
         : [];
-      
+
       // Filter to only active assignments (exclude reassigned)
       const activeRequirementIds = new Set(
         allAssignments
           .filter(a => a.recruiterId === employee.id && a.status === "active")
           .map(a => a.requirementId)
       );
-      
+
       // Also include requirements assigned via talentAdvisorId (even if no assignment record exists)
       allRequirements.forEach(req => {
         if (req.talentAdvisorId === employee.id) {
           activeRequirementIds.add(req.id);
         }
       });
-      
+
       // Filter requirements - include if assigned via talentAdvisorId OR has active assignment
       // Exclude if reassigned to another recruiter
       const requirements = allRequirements.filter(req => {
@@ -3884,7 +3910,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // If not reassigned, include it
           return !hasActiveAssignmentForOtherRecruiter;
         }
-        
+
         // If has active assignment for this recruiter, include it
         return activeRequirementIds.has(req.id);
       });
@@ -4063,7 +4089,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }));
 
       // Calculate average resumes per requirement
-      const avgResumesPerRequirement = totalRequirements > 0 
+      const avgResumesPerRequirement = totalRequirements > 0
         ? Math.round(totalResumesDelivered / totalRequirements)
         : 0;
 
@@ -4431,7 +4457,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const requirementIds = recruiterRequirements.map(r => r.id);
       const allAssignments = requirementIds.length > 0
         ? await db.select().from(requirementAssignments)
-            .where(inArray(requirementAssignments.requirementId, requirementIds))
+          .where(inArray(requirementAssignments.requirementId, requirementIds))
         : [];
 
       // Filter out reassigned requirements - only show active assignments
@@ -4441,14 +4467,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .filter(a => a.recruiterId === employee.id && a.status === "active")
           .map(a => a.requirementId)
       );
-      
+
       // Also include requirements assigned via talentAdvisorId (even if no assignment record exists)
       recruiterRequirements.forEach(req => {
         if (req.talentAdvisorId === employee.id) {
           activeRequirementIds.add(req.id);
         }
       });
-      
+
       // Filter to only active requirements (exclude reassigned)
       const activeRequirements = recruiterRequirements.filter(req => {
         // If requirement is assigned via talentAdvisorId to this recruiter, include it
@@ -4462,21 +4488,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // If reassigned, exclude it
           return !hasActiveAssignmentForOtherRecruiter;
         }
-        
+
         // If requirement has an active assignment for this recruiter, include it
         return activeRequirementIds.has(req.id);
       });
-      
+
       // Also get job applications for each requirement to calculate delivery counts
       const requirementsWithCounts = await Promise.all(
         activeRequirements.map(async (req) => {
           const applications = await storage.getJobApplicationsByRequirementId(req.id);
-          
+
           // Find assignment status for this requirement and recruiter
-          const assignment = allAssignments.find(a => 
+          const assignment = allAssignments.find(a =>
             a.requirementId === req.id && a.recruiterId === employee.id
           );
-          
+
           const isReassigned = assignment?.status === "reassigned";
 
           return {
@@ -4655,8 +4681,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (cleanupError) {
         console.error('File cleanup error:', cleanupError);
       }
-      res.status(500).json({ 
-        message: "Failed to parse resume", 
+      res.status(500).json({
+        message: "Failed to parse resume",
         error: error.message || 'Unknown error',
         details: process.env.NODE_ENV === 'development' ? error.stack : undefined
       });
@@ -4833,7 +4859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const updates = req.body;
-      
+
       // If teamLead is being updated, handle reassignment tracking
       if (updates.teamLead) {
         const { requirementAssignments } = await import("@shared/schema");
@@ -4845,7 +4871,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Get the new TL employee
         const allEmployees = await storage.getAllEmployees();
-        const newTL = allEmployees.find(emp => 
+        const newTL = allEmployees.find(emp =>
           emp.role === 'team_leader' && (emp.name === updates.teamLead || emp.id === updates.teamLead)
         );
 
@@ -4853,10 +4879,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (existingAssignments.length > 0 && newTL) {
           const requirement = await storage.getRequirementById(id);
           if (requirement) {
-            const oldTL = allEmployees.find(emp => 
+            const oldTL = allEmployees.find(emp =>
               emp.role === 'team_leader' && emp.name === requirement.teamLead
             );
-            
+
             // If TL changed, mark all active assignments for this requirement as reassigned
             if (oldTL && oldTL.id !== newTL.id) {
               for (const assignment of existingAssignments) {
@@ -6246,6 +6272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         source: z.string().optional(),
         startDate: z.string().optional(),
         currentStatus: z.string().optional(),
+        logo: z.string().optional(),
         createdAt: z.string(),
       });
 
@@ -8432,11 +8459,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const brandName = (c.brandName || '').toLowerCase().trim();
         const companyName = (c.companyName || '').toLowerCase().trim();
         const clientCode = (c.clientCode || '').toLowerCase().trim();
-        return brandName === clientLower || 
-               companyName === clientLower || 
-               clientCode === clientLower ||
-               brandName.includes(clientLower) ||
-               companyName.includes(clientLower);
+        return brandName === clientLower ||
+          companyName === clientLower ||
+          clientCode === clientLower ||
+          brandName.includes(clientLower) ||
+          companyName.includes(clientLower);
       });
       const clientId = clientRecord?.id || '';
 
@@ -8448,7 +8475,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           companyName: c.companyName,
           clientCode: c.clientCode
         })));
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: "Client not found. Please ensure the client exists in the system.",
           searchedFor: client,
           availableClients: allClients.filter(c => !c.isLoginOnly).map(c => ({
@@ -8538,30 +8565,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/pipeline", requireAdminAuth, async (req, res) => {
     try {
       const tlFilter = req.query.tl as string | undefined; // Optional TL filter
-      
+      const taFilter = req.query.ta as string | undefined; // Optional TA filter
+
       // Get all applications
       let applications = await storage.getAllJobApplications();
-      
-      // If TL filter is specified, filter applications to that TL's team
-      if (tlFilter && tlFilter !== 'all') {
-        // Get all employees to find TL and their TAs
-        const allEmployees = await storage.getAllEmployees();
-        
+
+      // Get all employees, requirements, and recruiter jobs for filtering
+      const allEmployees = await storage.getAllEmployees();
+      const allRequirements = await storage.getRequirements();
+      const allRecruiterJobs = await storage.getAllRecruiterJobs();
+
+      // If TA filter is specified, filter applications to that specific TA
+      if (taFilter && taFilter !== 'all') {
+        // Find the TA
+        const talentAdvisor = allEmployees.find(emp =>
+          (emp.id === taFilter || emp.employeeId === taFilter) && emp.role === 'recruiter'
+        );
+
+        if (talentAdvisor) {
+          const taId = talentAdvisor.id;
+          const taEmployeeId = talentAdvisor.employeeId;
+
+          // Get requirements assigned to this TA
+          const taRequirementIds = new Set(
+            allRequirements
+              .filter((req: any) => req.talentAdvisorId === taId)
+              .map((req: any) => req.id)
+          );
+
+          // Get recruiter jobs for this TA
+          const taRecruiterJobIds = new Set(
+            allRecruiterJobs
+              .filter((job: any) => job.recruiterId === taId || job.recruiterId === taEmployeeId)
+              .map((job: any) => job.id)
+          );
+
+          // Filter applications to this TA
+          applications = applications.filter((app: any) => {
+            // Check if application belongs to TA's job
+            if (app.recruiterJobId && taRecruiterJobIds.has(app.recruiterJobId)) {
+              return true;
+            }
+            // Check if application is tagged to requirement assigned to TA
+            if (app.requirementId && taRequirementIds.has(app.requirementId)) {
+              return true;
+            }
+            return false;
+          });
+        } else {
+          // TA not found, return empty array
+          applications = [];
+        }
+      }
+      // If TL filter is specified (and no TA filter), filter applications to that TL's team
+      else if (tlFilter && tlFilter !== 'all') {
         // Find the TL
-        const teamLeader = allEmployees.find(emp => 
+        const teamLeader = allEmployees.find(emp =>
           (emp.id === tlFilter || emp.employeeId === tlFilter) && emp.role === 'team_leader'
         );
-        
+
         if (teamLeader) {
           // Get TAs reporting to this TL
-          const teamTAs = allEmployees.filter(emp => 
+          const teamTAs = allEmployees.filter(emp =>
             emp.role === 'recruiter' && emp.reportingTo === teamLeader.employeeId
           );
           const teamTAIds = new Set(teamTAs.map(ta => ta.id));
           const teamTAEmployeeIds = new Set(teamTAs.map(ta => ta.employeeId));
-          
+
           // Get requirements assigned to team TAs
-          const allRequirements = await storage.getRequirements();
           const teamRequirementIds = new Set(
             allRequirements
               .filter((req: any) => {
@@ -8570,15 +8641,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               })
               .map((req: any) => req.id)
           );
-          
+
           // Get recruiter jobs for team TAs
-          const allRecruiterJobs = await storage.getAllRecruiterJobs();
           const teamRecruiterJobIds = new Set(
             allRecruiterJobs
               .filter((job: any) => teamTAIds.has(job.recruiterId) || teamTAEmployeeIds.has(job.recruiterId))
               .map((job: any) => job.id)
           );
-          
+
           // Filter applications to team TAs
           applications = applications.filter((app: any) => {
             // Check if application belongs to team TA's job
@@ -8596,18 +8666,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           applications = [];
         }
       }
-      
-      // Format pipeline data
-      const allEmployees = await storage.getAllEmployees();
-      const allRequirements = await storage.getRequirements();
-      const allRecruiterJobs = await storage.getAllRecruiterJobs();
-      
+
+      // Format pipeline data (allEmployees, allRequirements, allRecruiterJobs already fetched above)
+
       const pipelineData = applications.map((app: any) => {
         // Find which TA this application belongs to
         let recruiterName = 'Unknown';
         let recruiterId = null;
         let teamLeaderName = null;
-        
+
         // Try to find from recruiter job
         if (app.recruiterJobId) {
           const job = allRecruiterJobs.find((j: any) => j.id === app.recruiterJobId);
@@ -8624,7 +8691,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
         }
-        
+
         // Try to find from requirement
         if (app.requirementId && recruiterName === 'Unknown') {
           const req = allRequirements.find((r: any) => r.id === app.requirementId);
@@ -8680,7 +8747,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           requirementId: app.requirementId || null
         };
       });
-      
+
       res.json(pipelineData);
     } catch (error) {
       console.error("Get admin pipeline error:", error);
@@ -8744,7 +8811,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================
   // POST /api/source-resume/search
   // Server-side indexed search with pagination, sorting, and advanced scoring
-  
+
   app.post("/api/source-resume/search", requireEmployeeAuth, async (req, res) => {
     try {
       const {
@@ -8790,14 +8857,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Debug logging
       console.log('Source Resume Search - Filters:', JSON.stringify(filters, null, 2));
       console.log('Source Resume Search - Query conditions:', queryConditions ? 'Has conditions' : 'No conditions (showing all)');
-      
+
       // First, check total candidates (regardless of isActive)
       const totalCandidatesQuery = db.select({ count: sql<number>`count(*)` })
         .from(candidates);
       const [totalCandidatesResult] = await totalCandidatesQuery;
       const totalCandidates = Number(totalCandidatesResult?.count || 0);
       console.log('Source Resume Search - Total candidates in DB (all):', totalCandidates);
-      
+
       // Check total active candidates
       const totalActiveQuery = db.select({ count: sql<number>`count(*)` })
         .from(candidates)
@@ -8805,7 +8872,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [totalActiveResult] = await totalActiveQuery;
       const totalActive = Number(totalActiveResult?.count || 0);
       console.log('Source Resume Search - Total active candidates in DB:', totalActive);
-      
+
       // Check candidates with isActive = false or null
       const inactiveQuery = db.select({ count: sql<number>`count(*)` })
         .from(candidates)
@@ -8821,7 +8888,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const countQuery = db.select({ count: sql<number>`count(*)` })
         .from(candidates)
         .where(whereClause);
-      
+
       const [countResult] = await countQuery;
       const totalCount = Number(countResult?.count || 0);
       console.log('Source Resume Search - Candidates matching filters:', totalCount);
@@ -8836,9 +8903,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const page = Math.max(1, pagination.page || 1);
       const pageSize = Math.min(100, Math.max(1, pagination.pageSize || 10));
       const offset = (page - 1) * pageSize;
-      
+
       query = query.limit(pageSize).offset(offset);
-      
+
       // Execute query
       let candidatesList;
       try {
@@ -8914,9 +8981,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error('Source resume search error:', error);
-      res.status(500).json({ 
-        message: "Search failed", 
-        error: error.message || 'Unknown error' 
+      res.status(500).json({
+        message: "Search failed",
+        error: error.message || 'Unknown error'
       });
     }
   });
@@ -8983,8 +9050,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const ctc = parseFloat((candidate.ctc || candidate.ectc || '0').replace(/[^\d.]/g, '')) || 0;
       if (ctc > 0) ctcValues.push(ctc);
     });
-    const avgCTC = ctcValues.length > 0 
-      ? ctcValues.reduce((sum, val) => sum + val, 0) / ctcValues.length 
+    const avgCTC = ctcValues.length > 0
+      ? ctcValues.reduce((sum, val) => sum + val, 0) / ctcValues.length
       : 0;
 
     return {
@@ -9102,9 +9169,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         parsed = await parseResumeFile(req.file.path, req.file.mimetype);
       } catch (parseError: any) {
         console.error('Parse resume error:', parseError);
-        return res.status(500).json({ 
-          success: false, 
-          message: parseError.message || "Failed to parse resume file. Please ensure the file is not corrupted and try again." 
+        return res.status(500).json({
+          success: false,
+          message: parseError.message || "Failed to parse resume file. Please ensure the file is not corrupted and try again."
         });
       }
 
@@ -9136,9 +9203,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error('Parse resume error:', error);
-      res.status(500).json({ 
-        success: false, 
-        message: error.message || "Failed to parse resume. Please try again." 
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to parse resume. Please try again."
       });
     }
   });
@@ -9738,28 +9805,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!employee) {
         return res.status(404).json({ message: "Client not found" });
       }
-      
+
       const client = await findCompanyForEmployee(employee);
       const companyName = client?.brandName || employee.name;
-      
+
       const period = req.query.period as string || 'monthly';
       const dateStr = req.query.date as string;
       const roleId = req.query.role as string;
-      
+
       // Get all requirements for this client
       let allRequirements = await storage.getRequirements();
       allRequirements = allRequirements.filter((req: any) => req.company === companyName);
-      
+
       if (roleId && roleId !== 'all') {
         allRequirements = allRequirements.filter((req: any) => req.id === roleId);
       }
-      
+
       // Get all applications for these requirements
       const allApplications = await storage.getApplications();
       const clientApplications = allApplications.filter((app: any) => {
         return allRequirements.some((req: any) => req.id === app.recruiterJobId);
       });
-      
+
       // Filter by period
       let filteredApplications = clientApplications;
       if (dateStr) {
@@ -9806,12 +9873,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (!app.appliedDate) return false;
             const appDate = parseDate(app.appliedDate);
             if (!appDate) return false;
-            return appDate.getMonth() === filterDate.getMonth() && 
-                   appDate.getFullYear() === filterDate.getFullYear();
+            return appDate.getMonth() === filterDate.getMonth() &&
+              appDate.getFullYear() === filterDate.getFullYear();
           });
         }
       }
-      
+
       // Calculate Time to 1st Submission
       let timeToFirstSubmission = 0;
       const firstSubmissions = allRequirements.map((req: any) => {
@@ -9828,7 +9895,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (firstSubmissions.length > 0) {
         timeToFirstSubmission = Math.round(firstSubmissions.reduce((a: number, b: number) => a + b, 0) / firstSubmissions.length);
       }
-      
+
       // Calculate Time to Interview (simplified - using status changes)
       let timeToInterview = 0;
       const interviewTimes = filteredApplications
@@ -9845,7 +9912,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (interviewTimes.length > 0) {
         timeToInterview = Math.round(interviewTimes.reduce((a: number, b: number) => a + b, 0) / interviewTimes.length);
       }
-      
+
       // Calculate Time to Offer
       let timeToOffer = 0;
       const offerTimes = filteredApplications
@@ -9862,7 +9929,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (offerTimes.length > 0) {
         timeToOffer = Math.round(offerTimes.reduce((a: number, b: number) => a + b, 0) / offerTimes.length);
       }
-      
+
       // Calculate Time to Fill
       let timeToFill = 0;
       const fillTimes = allRequirements
@@ -9879,7 +9946,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (fillTimes.length > 0) {
         timeToFill = Math.round(fillTimes.reduce((a: number, b: number) => a + b, 0) / fillTimes.length);
       }
-      
+
       res.json({
         timeToFirstSubmission: timeToFirstSubmission || 0,
         timeToInterview: timeToInterview || 0,
@@ -9888,7 +9955,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error('Speed metrics error:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         timeToFirstSubmission: 0,
         timeToInterview: 0,
         timeToOffer: 0,
@@ -9909,28 +9976,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!employee) {
         return res.status(404).json({ message: "Client not found" });
       }
-      
+
       const client = await findCompanyForEmployee(employee);
       const companyName = client?.brandName || employee.name;
-      
+
       const period = req.query.period as string || 'monthly';
       const dateStr = req.query.date as string;
       const roleId = req.query.role as string;
-      
+
       // Get all requirements for this client
       let allRequirements = await storage.getRequirements();
       allRequirements = allRequirements.filter((req: any) => req.company === companyName);
-      
+
       if (roleId && roleId !== 'all') {
         allRequirements = allRequirements.filter((req: any) => req.id === roleId);
       }
-      
+
       // Get all applications
       const allApplications = await storage.getApplications();
       let clientApplications = allApplications.filter((app: any) => {
         return allRequirements.some((req: any) => req.id === app.recruiterJobId);
       });
-      
+
       // Filter by period
       if (dateStr) {
         const filterDate = new Date(dateStr);
@@ -9976,38 +10043,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
             if (!app.appliedDate) return false;
             const appDate = parseDate(app.appliedDate);
             if (!appDate) return false;
-            return appDate.getMonth() === filterDate.getMonth() && 
-                   appDate.getFullYear() === filterDate.getFullYear();
+            return appDate.getMonth() === filterDate.getMonth() &&
+              appDate.getFullYear() === filterDate.getFullYear();
           });
         }
       }
-      
+
       // Calculate Submission to Short List %
       const totalSubmissions = clientApplications.length;
-      const shortlisted = clientApplications.filter((app: any) => 
+      const shortlisted = clientApplications.filter((app: any) =>
         ['Shortlisted', 'L1', 'L2', 'L3', 'Final Round', 'HR Round', 'Offer Stage', 'Selected', 'Closure', 'Joined'].includes(app.status)
       ).length;
       const submissionToShortList = totalSubmissions > 0 ? Math.round((shortlisted / totalSubmissions) * 100) : 0;
-      
+
       // Calculate Interview to Offer %
-      const interviewed = clientApplications.filter((app: any) => 
+      const interviewed = clientApplications.filter((app: any) =>
         ['L1', 'L2', 'L3', 'Final Round', 'HR Round', 'Offer Stage', 'Selected', 'Closure', 'Joined'].includes(app.status)
       ).length;
-      const offersExtended = clientApplications.filter((app: any) => 
+      const offersExtended = clientApplications.filter((app: any) =>
         ['Offer Stage', 'Selected', 'Closure', 'Joined'].includes(app.status)
       ).length;
       const interviewToOffer = interviewed > 0 ? Math.round((offersExtended / interviewed) * 100) : 0;
-      
+
       // Calculate Offer Acceptance %
       const totalOffers = offersExtended;
-      const acceptedOffers = clientApplications.filter((app: any) => 
+      const acceptedOffers = clientApplications.filter((app: any) =>
         ['Closure', 'Joined'].includes(app.status)
       ).length;
       const offerAcceptance = totalOffers > 0 ? Math.round((acceptedOffers / totalOffers) * 100) : 0;
-      
+
       // Calculate Early Attrition % (simplified - would need hire date and exit date tracking)
       const earlyAttrition = 0; // TODO: Implement with proper tracking
-      
+
       res.json({
         submissionToShortList: submissionToShortList || 0,
         interviewToOffer: interviewToOffer || 0,
@@ -10016,7 +10083,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error('Quality metrics error:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         submissionToShortList: 0,
         interviewToOffer: 0,
         offerAcceptance: 0,
@@ -10056,10 +10123,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!employee) {
         return res.status(404).json({ message: "Client not found" });
       }
-      
+
       // Get impact metrics (can be global or client-specific)
       const allMetrics = await storage.getImpactMetrics();
-      
+
       // Return first metric or default
       if (allMetrics && allMetrics.length > 0) {
         res.json(allMetrics);
@@ -10175,28 +10242,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get all job applications to count profiles shared per requirement
       const allApplications = await storage.getAllJobApplications();
-      
+
       // Transform requirements for client view
       const rolesData = await Promise.all(clientJDs.map(async (req) => {
         // Count profiles shared for this requirement
         const profilesShared = allApplications.filter(app => app.requirementId === req.id).length;
-        
+
         // Get last active date (most recent application date for this requirement, or requirement creation date)
         const requirementApplications = allApplications
           .filter(app => app.requirementId === req.id)
           .sort((a, b) => new Date(b.appliedDate).getTime() - new Date(a.appliedDate).getTime());
-        
-        const lastActiveDate = requirementApplications.length > 0 
-          ? requirementApplications[0].appliedDate 
+
+        const lastActiveDate = requirementApplications.length > 0
+          ? requirementApplications[0].appliedDate
           : req.createdAt;
-        
+
         // Determine status
         let status = 'Active';
         if (req.status === 'paused') status = 'Paused';
         else if (req.status === 'withdrawn' || req.status === 'cancelled') status = 'Withdrawn';
         else if (req.status === 'completed' || req.status === 'closed') status = 'Closed';
         else if (req.status === 'open' || req.status === 'in_progress') status = 'Active';
-        
+
         return {
           id: req.id, // Include id field for filtering
           roleId: req.id, // This is already in STR format (or UUID)
@@ -10263,11 +10330,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (talentAdvisorId && talentAdvisorId !== 'all') {
         // Get requirements assigned to this TA
-        const taRequirements = clientRequirements.filter((req: any) => 
+        const taRequirements = clientRequirements.filter((req: any) =>
           req.talentAdvisorId === talentAdvisorId
         );
         const taRequirementIds = new Set(taRequirements.map((req: any) => req.id));
-        applications = applications.filter((app: any) => 
+        applications = applications.filter((app: any) =>
           app.requirementId && taRequirementIds.has(app.requirementId)
         );
       }
@@ -10595,17 +10662,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }, async (req, res) => {
     try {
       let jdText = '';
-      
+
       // If file uploaded, extract text
       if (req.file) {
         const filePath = req.file.path;
         const mimeType = req.file.mimetype;
-        
+
         try {
           // Use resume parser to extract text from JD file
           const parsed = await parseResumeFile(filePath, mimeType);
           jdText = parsed.rawText;
-          
+
           // Clean up file
           if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath);
@@ -10617,7 +10684,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (req.body.jdText) {
         jdText = req.body.jdText;
       }
-      
+
       if (!jdText || jdText.trim().length < 10) {
         return res.json({
           success: true,
@@ -10629,7 +10696,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         });
       }
-      
+
       // Extract position
       let position = null;
       const positionPatterns = [
@@ -10644,7 +10711,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           break;
         }
       }
-      
+
       // Extract skills (common tech skills)
       const commonSkills = [
         'JavaScript', 'TypeScript', 'Python', 'Java', 'C++', 'C#', 'React', 'Angular', 'Vue', 'Node.js',
@@ -10653,20 +10720,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         'Data Science', 'TensorFlow', 'PyTorch', 'HTML', 'CSS', 'SASS', 'LESS', 'GraphQL', 'REST API',
         'Microservices', 'DevOps', 'Linux', 'Unix', 'Shell Scripting', 'Jenkins', 'GitLab', 'GitHub'
       ];
-      
+
       const foundSkills: string[] = [];
       const lowerText = jdText.toLowerCase();
-      
+
       for (const skill of commonSkills) {
         if (lowerText.includes(skill.toLowerCase())) {
           foundSkills.push(skill);
         }
       }
-      
+
       // Split skills into primary (first 5-8) and secondary (rest)
       const primarySkills = foundSkills.slice(0, 8).join(', ');
       const secondarySkills = foundSkills.slice(8, 15).join(', ');
-      
+
       res.json({
         success: true,
         data: {
@@ -10678,10 +10745,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error('Parse JD error:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         success: false,
-        message: "Failed to parse JD", 
-        error: error.message || 'Unknown error' 
+        message: "Failed to parse JD",
+        error: error.message || 'Unknown error'
       });
     }
   });
@@ -10742,7 +10809,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Check if requirement ID matches STR + year + 3 digits pattern
         return req.id && /^STR\d{5}$/.test(req.id) && req.id.startsWith(`STR${currentYear}`);
       });
-      
+
       // Find the maximum number to avoid duplicates
       let maxNumber = 0;
       yearRequirements.forEach((req: any) => {
@@ -10752,10 +10819,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           maxNumber = num;
         }
       });
-      
+
       const nextNumber = String(maxNumber + 1).padStart(3, '0');
       let roleId = `STR${currentYear}${nextNumber}`;
-      
+
       // Double-check if ID already exists (race condition protection)
       let attempts = 0;
       while (allRequirements.find((r: any) => r.id === roleId) && attempts < 10) {
@@ -10764,7 +10831,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         roleId = `STR${currentYear}${nextNum}`;
         attempts++;
       }
-      
+
       if (attempts >= 10) {
         return res.status(500).json({ message: "Failed to generate unique role ID. Please try again." });
       }
@@ -10792,7 +10859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create requirement from JD with Role ID as the requirement ID
       // Note: This creates a requirement that will be assigned to a team lead/talent advisor later
       console.log('Creating requirement with company:', companyName, 'SPOC:', client?.spoc || employee.name, 'Role ID:', roleId);
-      
+
       try {
         const requirement = await storage.createRequirement({
           id: roleId, // Use Role ID as requirement ID (STR25001 format)
@@ -10830,14 +10897,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           detail: createError.detail,
           constraint: createError.constraint
         });
-        
+
         // Check if it's a duplicate key error
         if (createError.message && createError.message.includes('duplicate key')) {
           // Try with next available ID
           maxNumber++;
           const nextNum = String(maxNumber + 1).padStart(3, '0');
           const newRoleId = `STR${currentYear}${nextNum}`;
-          
+
           try {
             const requirement = await storage.createRequirement({
               id: newRoleId,
@@ -10855,7 +10922,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               jdFile: jdFile || null,
               jdText: jdText || null,
             });
-            
+
             res.json({
               success: true,
               message: "Job description submitted successfully",
@@ -11286,10 +11353,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         throw sqlError;
       }
-      
+
       // Handle different result structures from db.execute
       const rows = messagesResult?.rows || [];
-      
+
       const messages = rows.map((row: any) => ({
         id: row.id,
         roomId: row.room_id,
@@ -11332,7 +11399,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         detail: error.detail,
         roomId: req.params.roomId
       });
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to fetch messages",
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
@@ -11392,7 +11459,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         VALUES (${roomId}, ${employeeId}, ${employee.name}, ${messageType || 'text'}, ${content.trim()}, ${new Date().toISOString()})
         RETURNING id, room_id, sender_id, sender_name, message_type, content, created_at
       `);
-      
+
       const newMessage = insertResult.rows;
 
       if (!newMessage || !newMessage.length || !newMessage[0]) {
@@ -11449,7 +11516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         detail: error.detail,
         constraint: error.constraint
       });
-      res.status(500).json({ 
+      res.status(500).json({
         error: "Failed to send message",
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
@@ -11502,9 +11569,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         VALUES (${roomId}, ${employeeId}, ${employee.name}, ${fileType}, ${fileName}, ${new Date().toISOString()})
         RETURNING id, room_id, sender_id, sender_name, message_type, content, created_at
       `);
-      
+
       const newMessage = insertResult.rows;
-      
+
       if (!newMessage || !newMessage.length || !newMessage[0]) {
         return res.status(500).json({ error: "Failed to create message" });
       }
@@ -11738,12 +11805,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Vite HMR WebSocket connections will be handled by Vite's middleware
   httpServer.on('upgrade', (request: any, socket, head) => {
     const url = request.url || '';
-    
+
     // Only handle chat WebSocket connections
     // Vite HMR connections typically have paths like '/' or '/?token=...'
     // We must NOT handle these - let Vite middleware handle them
     const isChatConnection = url === '/ws/chat' || url.startsWith('/ws/chat');
-    
+
     // Skip all non-chat connections - Vite will handle its own HMR WebSocket upgrades
     if (!isChatConnection) {
       // Don't interfere - let other upgrade handlers (Vite HMR) process this
