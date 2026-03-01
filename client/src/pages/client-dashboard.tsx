@@ -70,6 +70,7 @@ export default function ClientDashboard() {
   const [metricsRoleFilter, setMetricsRoleFilter] = useState<string>("all");
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [selectedRole, setSelectedRole] = useState<string>('all'); // Single select for dropdown
+  const [selectedRequirement, setSelectedRequirement] = useState<string>('all'); // Filter by requirement
   
   // Sample roles for testing dropdown
   const sampleRoles = [
@@ -271,9 +272,17 @@ export default function ClientDashboard() {
     initialData: []
   });
 
-  // Fetch pipeline data from API
+  // Fetch pipeline data from API with filters
   const { data: pipelineData, isLoading: isLoadingPipeline } = useQuery({
-    queryKey: ['/api/client/pipeline'],
+    queryKey: ['/api/client/pipeline', selectedRequirement],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedRequirement && selectedRequirement !== 'all') {
+        params.append('requirementId', selectedRequirement);
+      }
+      const url = `/api/client/pipeline${params.toString() ? '?' + params.toString() : ''}`;
+      return apiRequest('GET', url);
+    },
     initialData: []
   });
 
@@ -444,7 +453,14 @@ export default function ClientDashboard() {
       });
     }
 
-    // Filter by selected role (single select)
+    // Filter by selected requirement
+    if (selectedRequirement && selectedRequirement !== 'all') {
+      filtered = filtered.filter((c: any) => {
+        return c.requirementId === selectedRequirement;
+      });
+    }
+
+    // Filter by selected role (single select) - Keep for backward compatibility
     if (selectedRole && selectedRole !== 'all') {
       filtered = filtered.filter((c: any) => {
         // Check if it's a sample role
@@ -462,7 +478,7 @@ export default function ClientDashboard() {
     }
 
     return filtered;
-  }, [mergedPipelineData, pipelinePeriod, pipelineDate, pipelineMonth, pipelineYear, pipelineQuarter, selectedRole, allRolesData, sampleRoles]);
+  }, [mergedPipelineData, pipelinePeriod, pipelineDate, pipelineMonth, pipelineYear, pipelineQuarter, selectedRole, selectedRequirement, allRolesData, sampleRoles]);
 
   // Group pipeline data by stage for the column view
   const pipelineStages = [
@@ -964,26 +980,20 @@ export default function ClientDashboard() {
                   <div className="flex justify-between items-center mb-4 flex-shrink-0">
                     <h2 className="text-xl font-semibold text-gray-900">Pipeline</h2>
                     <div className="flex items-center gap-3">
-                      {/* "All" Dropdown - Single Select with Sample Data */}
-                      <Select value={selectedRole} onValueChange={setSelectedRole}>
-                        <SelectTrigger className="h-10 w-40 rounded">
-                          <SelectValue placeholder="All" />
+                      {/* Requirement Filter */}
+                      <Select value={selectedRequirement} onValueChange={setSelectedRequirement}>
+                        <SelectTrigger className="h-10 w-48 rounded">
+                          <SelectValue placeholder="All Requirements" />
                         </SelectTrigger>
                         <SelectContent>
-                          {/* Sample roles for testing */}
-                          {sampleRoles.map((role) => (
-                            <SelectItem key={role.id} value={role.id}>
-                              {role.name}
-                            </SelectItem>
-                          ))}
-                          {/* Real roles from API */}
+                          <SelectItem value="all">All Requirements</SelectItem>
                           {(allRolesData as any[]).map((role) => (
-                            <SelectItem key={role.roleId} value={role.roleId}>
-                              {role.roleId} - {role.role}
+                            <SelectItem key={role.id || role.roleId} value={role.id || role.roleId}>
+                              {role.position || role.role} {role.roleId ? `(${role.roleId})` : ''}
                             </SelectItem>
                           ))}
-                          {(allRolesData as any[]).length === 0 && sampleRoles.length === 0 && (
-                            <SelectItem value="no-roles" disabled>No roles available</SelectItem>
+                          {(allRolesData as any[]).length === 0 && (
+                            <SelectItem value="no-requirements" disabled>No requirements available</SelectItem>
                           )}
                         </SelectContent>
                       </Select>
@@ -1096,8 +1106,9 @@ export default function ClientDashboard() {
                                     
                                     const initials = getInitials(candidate.candidateName || '');
                                     const daysAgo = calculateDaysAgo(candidate.appliedDate || candidate.updatedAt);
-                                    const roleApplied = candidate.roleApplied || 'N/A';
+                                    const roleApplied = candidate.roleApplied || candidate.requirementPosition || 'N/A';
                                     const company = candidate.company || 'N/A';
+                                    const talentAdvisor = candidate.talentAdvisorName || 'N/A';
                                     const isRejected = candidate.currentStatus === 'Rejected' || candidate.status === 'Rejected';
                                     
                                     return (
@@ -1130,8 +1141,8 @@ export default function ClientDashboard() {
                                             <p className="text-[9px] text-gray-600 mb-0.5 truncate leading-tight">
                                               {roleApplied}
                                             </p>
-                                            <p className="text-[9px] text-gray-600 truncate leading-tight">
-                                              {company}
+                                            <p className="text-[9px] text-gray-500 truncate leading-tight">
+                                              TA: {talentAdvisor}
                                             </p>
                                           </div>
                                         </div>

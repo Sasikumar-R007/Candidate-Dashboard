@@ -1031,6 +1031,8 @@ export default function AdminDashboard() {
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
   const [isMetricsModalOpen, setIsMetricsModalOpen] = useState(false);
   const [isClientMetricsModalOpen, setIsClientMetricsModalOpen] = useState(false);
+  const [selectedKeyMetricsClient, setSelectedKeyMetricsClient] = useState<string>("all");
+  const [selectedKeyMetricsPeriod, setSelectedKeyMetricsPeriod] = useState<string>("monthly");
   const [clientMetricsPeriod, setClientMetricsPeriod] = useState<string>("monthly");
   const [clientMetricsDate, setClientMetricsDate] = useState<Date | undefined>(new Date());
   const [clientMetricsWeekStart, setClientMetricsWeekStart] = useState<Date | undefined>(new Date());
@@ -1138,170 +1140,7 @@ export default function AdminDashboard() {
 
   // Transform pipeline applications to candidate data with status stages
   const pipelineApplicantData = useMemo(() => {
-    // Always add sample data for testing when no real applications exist
-    // Check if we have real data from API
-    const hasRealData = Array.isArray(pipelineApplications) && pipelineApplications.length > 0;
-
-    // If no real data, return sample data for testing
-    if (!hasRealData) {
-      const today = new Date();
-      const todayStr = today.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
-
-      return [
-        {
-          id: 'sample-1',
-          appliedOn: todayStr,
-          candidateName: 'Rajesh Kumar',
-          company: 'TechCorp',
-          roleApplied: 'Senior Software Engineer',
-          currentStatus: 'L1',
-          email: 'rajesh.kumar@example.com',
-          phone: '+91 98765 43210',
-          location: 'Bangalore',
-          experience: '5 years',
-          skills: ['React', 'Node.js', 'TypeScript'],
-          resumeUrl: null,
-          rating: 4.0
-        },
-        {
-          id: 'sample-2',
-          appliedOn: todayStr,
-          candidateName: 'Priya Sharma',
-          company: 'Designify',
-          roleApplied: 'Frontend Developer',
-          currentStatus: 'L2',
-          email: 'priya.sharma@example.com',
-          phone: '+91 98765 43211',
-          location: 'Mumbai',
-          experience: '3 years',
-          skills: ['React', 'Vue.js', 'CSS'],
-          resumeUrl: null,
-          rating: 4.0
-        },
-        {
-          id: 'sample-3',
-          appliedOn: todayStr,
-          candidateName: 'Amit Patel',
-          company: 'CloudTech',
-          roleApplied: 'Backend Engineer',
-          currentStatus: 'L3',
-          email: 'amit.patel@example.com',
-          phone: '+91 98765 43212',
-          location: 'Hyderabad',
-          experience: '6 years',
-          skills: ['Node.js', 'Python', 'AWS'],
-          resumeUrl: null,
-          rating: 4.0
-        },
-        {
-          id: 'sample-4',
-          appliedOn: todayStr,
-          candidateName: 'Sneha Reddy',
-          company: 'StartupXYZ',
-          roleApplied: 'Full Stack Developer',
-          currentStatus: 'Final Round',
-          email: 'sneha.reddy@example.com',
-          phone: '+91 98765 43213',
-          location: 'Delhi',
-          experience: '4 years',
-          skills: ['React', 'Node.js', 'MongoDB'],
-          resumeUrl: null,
-          rating: 4.0
-        },
-        {
-          id: 'sample-5',
-          appliedOn: todayStr,
-          candidateName: 'Vikram Singh',
-          company: 'AppLogic',
-          roleApplied: 'DevOps Engineer',
-          currentStatus: 'HR Round',
-          email: 'vikram.singh@example.com',
-          phone: '+91 98765 43214',
-          location: 'Pune',
-          experience: '5 years',
-          skills: ['Docker', 'Kubernetes', 'CI/CD'],
-          resumeUrl: null,
-          rating: 4.0
-        },
-        {
-          id: 'sample-6',
-          appliedOn: todayStr,
-          candidateName: 'Ananya Kapoor',
-          company: 'CreativeStudio',
-          roleApplied: 'UI/UX Designer',
-          currentStatus: 'Offer Stage',
-          email: 'ananya.kapoor@example.com',
-          phone: '+91 98765 43215',
-          location: 'Bangalore',
-          experience: '3 years',
-          skills: ['Figma', 'Adobe XD', 'Sketch'],
-          resumeUrl: null,
-          rating: 4.0
-        },
-        {
-          id: 'sample-7',
-          appliedOn: todayStr,
-          candidateName: 'Karthik Nair',
-          company: 'DataCorp',
-          roleApplied: 'Data Scientist',
-          currentStatus: 'Closure',
-          email: 'karthik.nair@example.com',
-          phone: '+91 98765 43216',
-          location: 'Chennai',
-          experience: '4 years',
-          skills: ['Python', 'Machine Learning', 'SQL'],
-          resumeUrl: null,
-          rating: 4.0
-        },
-        {
-          id: 'sample-8',
-          appliedOn: todayStr,
-          candidateName: 'Meera Joshi',
-          company: 'ProductLabs',
-          roleApplied: 'Product Manager',
-          currentStatus: 'Shortlisted',
-          email: 'meera.joshi@example.com',
-          phone: '+91 98765 43217',
-          location: 'Bangalore',
-          experience: '6 years',
-          skills: ['Product Strategy', 'Agile', 'Analytics'],
-          resumeUrl: null,
-          rating: 4.0
-        },
-        {
-          id: 'sample-9',
-          appliedOn: todayStr,
-          candidateName: 'Rahul Verma',
-          company: 'TestTech',
-          roleApplied: 'QA Engineer',
-          currentStatus: 'In-Process',
-          email: 'rahul.verma@example.com',
-          phone: '+91 98765 43218',
-          location: 'Mumbai',
-          experience: '3 years',
-          skills: ['Selenium', 'Jest', 'Cypress'],
-          resumeUrl: null,
-          rating: 4.0
-        },
-        {
-          id: 'sample-10',
-          appliedOn: todayStr,
-          candidateName: 'Neha Gupta',
-          company: 'MobileFirst',
-          roleApplied: 'Mobile Developer',
-          currentStatus: 'Intro Call',
-          email: 'neha.gupta@example.com',
-          phone: '+91 98765 43219',
-          location: 'Delhi',
-          experience: '4 years',
-          skills: ['React Native', 'Flutter', 'iOS'],
-          resumeUrl: null,
-          rating: 4.0
-        }
-      ];
-    }
-
-    // If we have real data, process it normally
+    // Process real data from API
     if (pipelineApplications && pipelineApplications.length > 0) {
       return pipelineApplications.map((app: any, index: number) => {
         let parsedSkills: string[] = [];
@@ -1376,8 +1215,6 @@ export default function AdminDashboard() {
     if (pipelineDate !== null) {
       const filterDate = format(pipelineDate, 'yyyy-MM-dd');
       filtered = filtered.filter((a: any) => {
-        // Skip sample data - only show real data
-        if (a.id && a.id.startsWith('sample-')) return false;
         // Parse appliedOn date (format: DD-MM-YYYY) or appliedDate (ISO)
         let dateToCheck: string | null = null;
         if (a.appliedDate) {
@@ -1600,8 +1437,10 @@ export default function AdminDashboard() {
     address: '', location: '', spoc: '', email: '', password: '',
     website: '', linkedin: '', agreement: '', percentage: '',
     category: '', paymentTerms: '', source: '', startDate: '',
-    currentStatus: 'active'
+    currentStatus: 'active', logo: ''
   });
+  const [clientLogoFile, setClientLogoFile] = useState<File | null>(null);
+  const [clientLogoPreview, setClientLogoPreview] = useState<string | null>(null);
   const [clientStartDate, setClientStartDate] = useState<Date | undefined>();
   const [employeeForm, setEmployeeForm] = useState({
     employeeId: '',
@@ -1664,6 +1503,13 @@ export default function AdminDashboard() {
   // Requirements API queries
   const { data: requirements = [], isLoading: isLoadingRequirements } = useQuery({
     queryKey: ['/api/admin/requirements']
+  });
+
+  // Fetch archived requirements to check if there are any
+  const { data: archivedRequirements = [], isLoading: isLoadingArchivedRequirements } = useQuery({
+    queryKey: ['/api/admin/archived-requirements'],
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
 
   // Client JDs API query
@@ -4843,12 +4689,67 @@ export default function AdminDashboard() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white" data-testid="text-pipeline-header">Pipeline</h2>
               <div className="flex items-center gap-3">
+                {/* Filter Dropdown - All, TL, or TA */}
+                <Select 
+                  value={selectedPipelineTL !== 'all' ? `tl-${selectedPipelineTL}` : selectedPipelineTeamMember !== 'all' ? `ta-${selectedPipelineTeamMember}` : 'all'} 
+                  onValueChange={(value) => {
+                    if (value === 'all') {
+                      setSelectedPipelineTL('all');
+                      setSelectedPipelineTeamMember('all');
+                    } else if (value.startsWith('tl-')) {
+                      const tlId = value.replace('tl-', '');
+                      setSelectedPipelineTL(tlId);
+                      setSelectedPipelineTeamMember('all');
+                    } else if (value.startsWith('ta-')) {
+                      const taId = value.replace('ta-', '');
+                      setSelectedPipelineTL('all');
+                      setSelectedPipelineTeamMember(taId);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-10 w-48 rounded">
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    {/* Team Leaders (TL) */}
+                    {teamLeads.map((tl: any) => (
+                      <SelectItem key={`tl-${tl.id}`} value={`tl-${tl.id}`}>
+                        {tl.name} (TL)
+                      </SelectItem>
+                    ))}
+                    {/* Talent Advisors (TA) */}
+                    {employees.filter((emp: any) => emp.role === 'recruiter').map((ta: any) => (
+                      <SelectItem key={`ta-${ta.id}`} value={`ta-${ta.id}`}>
+                        {ta.name} (TA)
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <StandardDatePicker
                   value={pipelineDate}
                   onChange={(date) => date && setPipelineDate(date)}
                   placeholder="Select date"
                   className="h-10 w-40 rounded"
                 />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPipelineDate(new Date())}
+                  className="h-10"
+                  title="Reset to today"
+                >
+                  Today
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPipelineDate(null)}
+                  className="h-10"
+                  title="Show all dates"
+                >
+                  All
+                </Button>
               </div>
             </div>
 
@@ -6173,10 +6074,9 @@ export default function AdminDashboard() {
                         Requirement
                       </Button>
                       <Button
-                        className="bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded text-sm"
-                        onClick={() => {
-                          navigate('/archives');
-                        }}
+                        className="bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={handleArchivesClick}
+                        disabled={isLoadingArchivedRequirements || archivedRequirements.length === 0}
                         data-testid="button-archives"
                       >
                         <Folder className="h-4 w-4 mr-2" />
@@ -7677,21 +7577,27 @@ export default function AdminDashboard() {
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                       <CardTitle className="text-base lg:text-lg font-semibold text-gray-900 dark:text-white">Key Metrics</CardTitle>
                       <div className="flex gap-2 flex-wrap">
-                        <Select>
+                        <Select value={selectedKeyMetricsClient} onValueChange={setSelectedKeyMetricsClient}>
                           <SelectTrigger className="w-28 sm:w-32 input-styled rounded text-xs sm:text-sm" data-testid="select-key-metrics-client">
                             <SelectValue placeholder="Client" />
                           </SelectTrigger>
                           <SelectContent>
-                            {clients.map((client: any) => (
-                              <SelectItem key={client.id} value={client.id}>
-                                {client.brandName || client.incorporatedName || 'Unknown'}
-                              </SelectItem>
-                            ))}
-                            <SelectItem value="all">All Clients</SelectItem>
+                            {clients.length === 0 ? (
+                              <SelectItem value="no-clients" disabled>No Clients</SelectItem>
+                            ) : (
+                              <>
+                                {clients.map((client: any) => (
+                                  <SelectItem key={client.id} value={client.id}>
+                                    {client.brandName || client.incorporatedName || 'Unknown'}
+                                  </SelectItem>
+                                ))}
+                                <SelectItem value="all">All Clients</SelectItem>
+                              </>
+                            )}
                           </SelectContent>
                         </Select>
 
-                        <Select>
+                        <Select value={selectedKeyMetricsPeriod} onValueChange={setSelectedKeyMetricsPeriod}>
                           <SelectTrigger className="w-28 sm:w-32 input-styled rounded text-xs sm:text-sm" data-testid="select-key-metrics-period">
                             <SelectValue placeholder="Monthly" />
                           </SelectTrigger>
@@ -9997,30 +9903,74 @@ export default function AdminDashboard() {
 
       {/* Metrics Modal */}
       <Dialog open={isMetricsModalOpen} onOpenChange={setIsMetricsModalOpen}>
-        <DialogContent className="max-w-4xl max-h-[80vh]">
+        <DialogContent className="max-w-6xl max-h-[90vh]">
           <DialogHeader>
-            <DialogTitle>Metrics Data</DialogTitle>
+            <DialogTitle>Key Metrics - Full View</DialogTitle>
+            <div className="flex gap-2 mt-4">
+              <Select value={selectedKeyMetricsClient} onValueChange={setSelectedKeyMetricsClient}>
+                <SelectTrigger className="w-40 input-styled rounded" data-testid="select-key-metrics-client-modal">
+                  <SelectValue placeholder="Client" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clients.length === 0 ? (
+                    <SelectItem value="no-clients" disabled>No Clients</SelectItem>
+                  ) : (
+                    <>
+                      {clients.map((client: any) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.brandName || client.incorporatedName || 'Unknown'}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="all">All Clients</SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedKeyMetricsPeriod} onValueChange={setSelectedKeyMetricsPeriod}>
+                <SelectTrigger className="w-40 input-styled rounded" data-testid="select-key-metrics-period-modal">
+                  <SelectValue placeholder="Period" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="quarterly">Quarterly</SelectItem>
+                  <SelectItem value="yearly">Yearly</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </DialogHeader>
           <div className="overflow-y-auto">
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse bg-white dark:bg-gray-900">
-                <thead>
-                  <tr className="border-b border-gray-200 dark:border-gray-700">
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Month</th>
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Revenue</th>
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Growth</th>
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Profit</th>
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Clients</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td colSpan={5} className="py-8 px-3 text-center text-gray-500 dark:text-gray-400">
-                      No data available
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+            <div className="h-[600px] mt-4">
+              {!keyAspectsData.chartData || keyAspectsData.chartData.length === 0 ? (
+                <div className="flex items-center justify-center w-full h-full bg-gray-50 dark:bg-gray-800 rounded-md border border-dashed border-gray-300 dark:border-gray-600">
+                  <div className="text-center">
+                    <p className="text-gray-600 dark:text-gray-400 text-sm">No metrics data available</p>
+                    <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">Data will appear once metrics are recorded</p>
+                  </div>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={keyAspectsData.chartData}
+                    margin={{
+                      top: 20,
+                      right: 30,
+                      left: 20,
+                      bottom: 20,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" style={{ fontSize: '12px' }} />
+                    <YAxis style={{ fontSize: '12px' }} />
+                    <Tooltip />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                    <Line type="monotone" dataKey="growthMoM" name="Growth MoM (%)" stroke="#82ca9d" strokeWidth={2} />
+                    <Line type="monotone" dataKey="burnRate" name="Burn Rate (%)" stroke="#ff7c7c" strokeWidth={2} />
+                    <Line type="monotone" dataKey="churnRate" name="Churn Rate (%)" stroke="#ffc658" strokeWidth={2} />
+                    <Line type="monotone" dataKey="attrition" name="Attrition (%)" stroke="#8884d8" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </div>
         </DialogContent>
@@ -10442,11 +10392,43 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            {/* Row 9 - Company Logo */}
+            <div className="grid grid-cols-1 gap-4">
+              <div>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Company Logo</Label>
+                <div className="flex items-center gap-4">
+                  {clientLogoPreview && (
+                    <div className="w-20 h-20 border border-gray-300 rounded-lg overflow-hidden">
+                      <img src={clientLogoPreview} alt="Logo preview" className="w-full h-full object-contain" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setClientLogoFile(file);
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setClientLogoPreview(reader.result as string);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                      className="input-styled rounded"
+                      data-testid="input-company-logo"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <div className="flex justify-center pt-6">
               <Button
                 className="bg-cyan-400 hover:bg-cyan-500 text-white px-8 py-2 rounded"
-                onClick={() => {
+                onClick={async () => {
                   if (!clientForm.brandName || !clientForm.email) {
                     toast({
                       title: "Validation Error",
@@ -10455,7 +10437,28 @@ export default function AdminDashboard() {
                     });
                     return;
                   }
-                  createClientMutation.mutate(clientForm);
+                  
+                  // If logo file is selected, upload it first
+                  let logoUrl = clientForm.logo;
+                  if (clientLogoFile) {
+                    try {
+                      const formData = new FormData();
+                      formData.append('logo', clientLogoFile);
+                      const uploadResponse = await fetch('/api/admin/upload-logo', {
+                        method: 'POST',
+                        credentials: 'include',
+                        body: formData
+                      });
+                      if (uploadResponse.ok) {
+                        const uploadData = await uploadResponse.json();
+                        logoUrl = uploadData.url;
+                      }
+                    } catch (error) {
+                      console.error('Logo upload error:', error);
+                    }
+                  }
+                  
+                  createClientMutation.mutate({ ...clientForm, logo: logoUrl });
                 }}
                 disabled={createClientMutation.isPending}
                 data-testid="button-submit-client"
@@ -11109,17 +11112,8 @@ export default function AdminDashboard() {
       {/* Performance Data Modal */}
       <Dialog open={isPerformanceDataModalOpen} onOpenChange={setIsPerformanceDataModalOpen}>
         <DialogContent className="max-w-4xl w-[90vw] max-h-[85vh]">
-          <DialogHeader className="flex flex-row items-center justify-between gap-2">
+          <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">Performance Data - Quarter {performanceMetrics?.currentQuarter || 'Q1 2024'}</DialogTitle>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={() => setIsResetPerformanceConfirmOpen(true)}
-              disabled={resetPerformanceDataMutation.isPending}
-              data-testid="button-reset-performance"
-            >
-              {resetPerformanceDataMutation.isPending ? "Resetting..." : "Reset Data"}
-            </Button>
           </DialogHeader>
           <div className="overflow-y-auto pr-2 max-h-[calc(85vh-120px)]">
             {/* Performance Summary Cards - Using API data */}
@@ -11308,16 +11302,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Floating Help Button */}
-      <button
-        onClick={() => setIsChatOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 z-40"
-        data-testid="button-help"
-        aria-label="Help"
-        title="Need help? Chat with us!"
-      >
-        <HelpCircle size={24} />
-      </button>
 
       {/* Performance Graph Modal */}
       <Dialog open={isPerformanceGraphModalOpen} onOpenChange={setIsPerformanceGraphModalOpen}>
@@ -11375,21 +11359,29 @@ export default function AdminDashboard() {
 
               <div className="flex-1 space-y-1">
                 <label className="text-xs font-medium text-gray-700 dark:text-gray-300">From</label>
-                <StandardDatePicker
-                  value={revenueDateFrom}
-                  onChange={setRevenueDateFrom}
-                  placeholder="dd-mm-yyyy"
-                  className="w-full"
+                <Input
+                  type="date"
+                  value={revenueDateFrom ? format(revenueDateFrom, 'yyyy-MM-dd') : ''}
+                  onChange={(e) => {
+                    const date = e.target.value ? new Date(e.target.value) : undefined;
+                    setRevenueDateFrom(date);
+                  }}
+                  className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                  data-testid="input-revenue-date-from"
                 />
               </div>
 
               <div className="flex-1 space-y-1">
                 <label className="text-xs font-medium text-gray-700 dark:text-gray-300">To</label>
-                <StandardDatePicker
-                  value={revenueDateTo}
-                  onChange={setRevenueDateTo}
-                  placeholder="dd-mm-yyyy"
-                  className="w-full"
+                <Input
+                  type="date"
+                  value={revenueDateTo ? format(revenueDateTo, 'yyyy-MM-dd') : ''}
+                  onChange={(e) => {
+                    const date = e.target.value ? new Date(e.target.value) : undefined;
+                    setRevenueDateTo(date);
+                  }}
+                  className="w-full bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                  data-testid="input-revenue-date-to"
                 />
               </div>
 

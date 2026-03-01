@@ -1,0 +1,167 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - dev
+      - staging
+      - main
+  pull_request:
+    branches:
+      - dev
+      - staging
+      - main
+
+env:
+  NODE_VERSION: '20.10.0'
+
+jobs:
+  # Job 1: Run tests and type checking
+  test:
+    name: Test & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: Candidate-Dashboard/package-lock.json
+
+      - name: Install dependencies
+        working-directory: Candidate-Dashboard
+        run: npm ci
+
+      - name: Run type check
+        working-directory: Candidate-Dashboard
+        run: npm run check
+
+      - name: Build frontend
+        working-directory: Candidate-Dashboard
+        run: npm run build:frontend
+        continue-on-error: false
+
+      - name: Build backend
+        working-directory: Candidate-Dashboard
+        run: npm run build:backend
+        continue-on-error: false
+
+  # Job 2: Deploy to Development
+  deploy-dev:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
+    environment:
+      name: development
+      url: https://staffos-backend-dev.onrender.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Deploy notification
+        run: |
+          echo "🚀 Deploying to Development Environment"
+          echo "Branch: ${{ github.ref }}"
+          echo "Commit: ${{ github.sha }}"
+
+      - name: Smoke test (after deployment)
+        run: |
+          echo "Waiting for deployment to complete..."
+          sleep 60
+          curl -f https://staffos-backend-dev.onrender.com/api/health || exit 1
+
+  # Job 3: Deploy to Staging
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
+    environment:
+      name: staging
+      url: https://staffos-backend-staging.onrender.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Deploy notification
+        run: |
+          echo "🚀 Deploying to Staging Environment"
+          echo "Branch: ${{ github.ref }}"
+          echo "Commit: ${{ github.sha }}"
+
+      - name: Smoke test (after deployment)
+        run: |
+          echo "Waiting for deployment to complete..."
+          sleep 60
+          curl -f https://staffos-backend-staging.onrender.com/api/health || exit 1
+
+  # Job 4: Deploy to Production
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+      url: https://staffos-backend.onrender.com
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Deploy notification
+        run: |
+          echo "🚀 Deploying to PRODUCTION Environment"
+          echo "Branch: ${{ github.ref }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "⚠️  This is a production deployment!"
+
+      - name: Smoke test (after deployment)
+        run: |
+          echo "Waiting for deployment to complete..."
+          sleep 90
+          curl -f https://staffos-backend.onrender.com/api/health || exit 1
+
+      - name: Post-deployment notification
+        run: |
+          echo "✅ Production deployment completed successfully"
+          echo "Monitor logs for any issues"
+
+  # Job 5: Security scan (optional but recommended)
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run npm audit
+        working-directory: Candidate-Dashboard
+        run: npm audit --audit-level=moderate || true
+
+      - name: Check for secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+

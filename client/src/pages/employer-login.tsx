@@ -8,7 +8,8 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { BrainCircuit, BarChart3, Users, TrendingUp, Shield } from "lucide-react";
+import { BrainCircuit, BarChart3, Users, TrendingUp, Shield, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
 import { 
   AlertDialog,
@@ -239,6 +240,14 @@ export default function EmployerLogin() {
       {/* Right Side - Login Form */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white dark:bg-gray-900">
         <div className="w-full max-w-md space-y-8">
+          {/* Back Button */}
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Home
+            </Button>
+          </Link>
+          
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center space-x-3 mb-6">
             <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center">

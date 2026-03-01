@@ -253,18 +253,10 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[600px]" data-testid="modal-add-requirement">
-        <DialogHeader className="relative">
-          <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white pr-8">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
             Add New Requirement
           </DialogTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleClose}
-            className="absolute right-0 top-0 h-8 w-8 p-0 rounded-full"
-          >
-            <X className="h-4 w-4" />
-          </Button>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-6 mt-4">
