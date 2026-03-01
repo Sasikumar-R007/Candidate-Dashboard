@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { ChevronRight, Linkedin, Twitter, Facebook, Home, FileText, GraduationCap, TrendingUp, Users, BarChart, FolderKanban, Database, Rocket, Menu, X, ExternalLink } from "lucide-react";
-import logoImage from "@assets/image_1761276742670.png";
+import navLogoImage from "@/assets/nav logo.png";
 import lp01Image from "@/assets/lp01.png";
 import lp02Image from "@/assets/lp02.png";
 import lp03Image from "@/assets/lp03.png";
@@ -157,9 +157,9 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
-            <div className="flex items-center space-x-2 sm:space-x-3">
+            <div className="flex items-center space-x-1 sm:space-x-1.5">
               <img
-                src={logoImage}
+                src={navLogoImage}
                 alt="StaffOS Logo"
                 className="h-8 sm:h-10 w-auto"
                 data-testid="img-logo"

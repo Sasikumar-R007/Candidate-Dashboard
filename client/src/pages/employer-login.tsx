@@ -10,6 +10,8 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { BrainCircuit, BarChart3, Users, TrendingUp, Shield, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
+import staffosLogo3 from "@/assets/staffos logo 3.png";
+import staffosLogo2 from "@/assets/staffos logo 2.png";
 import { useAuth } from "@/contexts/auth-context";
 import { 
   AlertDialog,
@@ -140,97 +142,71 @@ export default function EmployerLogin() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left Side - Modern SaaS Design with Gradient */}
-      <div className="hidden lg:flex lg:w-1/2 h-screen relative overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
-        {/* Abstract geometric patterns */}
-        <div className="absolute inset-0 overflow-hidden">
-          {/* Floating circles */}
-          <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl" />
-          
-          {/* Grid pattern overlay */}
-          <div 
-            className="absolute inset-0 opacity-5"
-            style={{
-              backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-              backgroundSize: '50px 50px'
-            }}
-          />
-          
-          {/* Floating geometric shapes */}
-          <svg className="absolute top-32 right-20 w-20 h-20 text-blue-400/20" viewBox="0 0 100 100">
-            <polygon points="50,10 90,90 10,90" fill="currentColor" />
-          </svg>
-          <svg className="absolute bottom-40 left-20 w-16 h-16 text-cyan-400/20" viewBox="0 0 100 100">
-            <rect x="10" y="10" width="80" height="80" fill="currentColor" transform="rotate(45 50 50)" />
-          </svg>
-          <svg className="absolute top-1/2 right-1/4 w-12 h-12 text-indigo-400/20" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="40" fill="currentColor" />
-          </svg>
-        </div>
-        
+      {/* Left Side - Modern SaaS Design with Gradient - Matching Landing Page Theme */}
+      <div className="hidden lg:flex lg:w-1/2 h-screen relative overflow-hidden" style={{ background: 'linear-gradient(to bottom, #F5F3FF, #E8E4FF, #8776FF)' }}>
         {/* Content overlay */}
-        <div className="relative z-10 flex flex-col justify-between p-12 text-white w-full">
+        <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           {/* StaffOS logo at top left */}
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/20">
-              <BrainCircuit className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-xl font-bold text-white">StaffOS</span>
+          <div className="flex items-center space-x-2">
+            <img
+              src={staffosLogo2}
+              alt="StaffOS Logo"
+              className="h-10 w-10 rounded-lg object-contain"
+            />
+            <span className="text-xl font-bold text-gray-900">StaffOS</span>
           </div>
           
           {/* Main content area */}
           <div className="flex-1 flex flex-col justify-center space-y-8 max-w-lg">
             {/* Main heading */}
             <div className="space-y-4">
-              <h1 className="text-4xl lg:text-5xl font-bold leading-tight">
+              <h1 className="text-4xl lg:text-5xl font-bold leading-tight text-gray-900">
                 Powerful Hiring
-                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">
+                <span className="block text-purple-600">
                   Analytics Platform
                 </span>
               </h1>
-              <p className="text-lg text-gray-300 leading-relaxed">
+              <p className="text-lg text-gray-700 leading-relaxed">
                 Transform your recruitment with data-driven insights. Track performance, optimize workflows, and make smarter hiring decisions.
               </p>
             </div>
             
             {/* Feature highlights */}
             <div className="space-y-4">
-              <div className="flex items-center space-x-4 p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
-                <div className="w-12 h-12 bg-cyan-500/20 rounded-lg flex items-center justify-center">
-                  <BarChart3 className="w-6 h-6 text-cyan-400" />
+              <div className="flex items-center space-x-4 p-4 backdrop-blur-lg bg-white/30 rounded-xl border border-white/40 shadow-lg">
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <BarChart3 className="w-6 h-6 text-purple-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-white">Real-time Analytics</h3>
-                  <p className="text-sm text-gray-400">Track hiring metrics and KPIs instantly</p>
+                  <h3 className="font-semibold text-gray-900">Real-time Analytics</h3>
+                  <p className="text-sm text-gray-700">Track hiring metrics and KPIs instantly</p>
                 </div>
               </div>
               
-              <div className="flex items-center space-x-4 p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
-                <div className="w-12 h-12 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                  <Users className="w-6 h-6 text-blue-400" />
+              <div className="flex items-center space-x-4 p-4 backdrop-blur-lg bg-white/30 rounded-xl border border-white/40 shadow-lg">
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Users className="w-6 h-6 text-purple-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-white">Team Performance</h3>
-                  <p className="text-sm text-gray-400">Monitor and improve recruiter productivity</p>
+                  <h3 className="font-semibold text-gray-900">Team Performance</h3>
+                  <p className="text-sm text-gray-700">Monitor and improve recruiter productivity</p>
                 </div>
               </div>
               
-              <div className="flex items-center space-x-4 p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
-                <div className="w-12 h-12 bg-indigo-500/20 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="w-6 h-6 text-indigo-400" />
+              <div className="flex items-center space-x-4 p-4 backdrop-blur-lg bg-white/30 rounded-xl border border-white/40 shadow-lg">
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="w-6 h-6 text-purple-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-white">Smart Insights</h3>
-                  <p className="text-sm text-gray-400">AI-powered recommendations for success</p>
+                  <h3 className="font-semibold text-gray-900">Smart Insights</h3>
+                  <p className="text-sm text-gray-700">AI-powered recommendations for success</p>
                 </div>
               </div>
             </div>
           </div>
           
           {/* Trust indicator */}
-          <div className="flex items-center space-x-2 text-gray-400 text-sm">
+          <div className="flex items-center space-x-2 text-gray-700 text-sm">
             <Shield className="w-4 h-4" />
             <span>Enterprise-grade security & compliance</span>
           </div>
@@ -249,19 +225,23 @@ export default function EmployerLogin() {
           </Link>
           
           {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center justify-center space-x-3 mb-6">
-            <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center">
-              <BrainCircuit className="w-6 h-6 text-white" />
-            </div>
+          <div className="lg:hidden flex items-center justify-center space-x-2 mb-6">
+            <img
+              src={staffosLogo3}
+              alt="StaffOS Logo"
+              className="h-10 w-10 rounded-lg object-contain"
+            />
             <span className="text-xl font-bold text-gray-900 dark:text-white">StaffOS</span>
           </div>
 
           {/* Welcome Section */}
           <div className="text-center space-y-3">
             <div className="hidden lg:flex justify-center">
-              <div className="w-14 h-14 bg-gradient-to-br from-slate-900 to-blue-900 rounded-2xl flex items-center justify-center shadow-lg">
-                <BrainCircuit className="w-8 h-8 text-white" />
-              </div>
+              <img
+                src={staffosLogo3}
+                alt="StaffOS Logo"
+                className="h-14 w-14 rounded-xl object-contain shadow-lg"
+              />
             </div>
             <div>
               <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome Back</h2>
@@ -273,14 +253,14 @@ export default function EmployerLogin() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" data-testid="form-employer-login">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300 font-poppins">
                   Email Address
                 </Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="you@company.com"
-                  className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all"
+                  className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-purple-600 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all font-poppins"
                   data-testid="input-email"
                   {...register("email", {
                     required: "Email is required",
@@ -296,13 +276,13 @@ export default function EmployerLogin() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300 font-poppins">
                   Password
                 </Label>
                 <PasswordInput
                   id="password"
                   placeholder="Enter your password"
-                  className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-blue-600 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all"
+                  className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-purple-600 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all font-poppins"
                   data-testid="input-password"
                   {...register("password", {
                     required: "Password is required",
@@ -324,7 +304,7 @@ export default function EmployerLogin() {
                 <AlertDialogTrigger asChild>
                   <button
                     type="button"
-                    className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors"
+                    className="text-sm text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-medium transition-colors font-poppins"
                     data-testid="button-forgot-password"
                   >
                     Forgot Password?
@@ -357,7 +337,7 @@ export default function EmployerLogin() {
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full h-12 bg-gradient-to-r from-slate-900 to-blue-900 hover:from-slate-800 hover:to-blue-800 text-white text-base font-semibold rounded-xl shadow-lg shadow-blue-900/20 transition-all"
+              className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white text-base font-semibold rounded-xl shadow-lg shadow-purple-600/20 transition-all font-poppins"
               data-testid="button-login"
             >
               {isLoading ? "Signing in..." : "Sign In"}

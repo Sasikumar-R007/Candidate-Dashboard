@@ -10,6 +10,8 @@ import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { BrainCircuit, Briefcase, Target, Rocket, Shield, ArrowRight, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
+import staffosLogo3 from "@/assets/staffos logo 3.png";
+import staffosLogo2 from "@/assets/staffos logo 2.png";
 import { useAuth } from "@/contexts/auth-context";
 
 interface LoginForm {
@@ -341,14 +343,14 @@ export default function CandidateLogin() {
                   <Shield className="w-8 h-8 text-white" />
                 </div>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Enter Verification Code</h2>
-              <p className="text-gray-500 dark:text-gray-400">We sent a 4-digit code to {currentEmail}</p>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white font-poppins">Enter Verification Code</h2>
+              <p className="text-gray-600 dark:text-gray-400 font-poppins">We sent a 4-digit code to {currentEmail}</p>
               {otpExpiry > 0 ? (
-                <p className="text-sm text-gray-500 dark:text-gray-400">
+                <p className="text-sm text-gray-600 dark:text-gray-400 font-poppins">
                   Code expires in {Math.floor(otpExpiry / 60)}:{(otpExpiry % 60).toString().padStart(2, '0')}
                 </p>
               ) : (
-                <p className="text-sm text-red-500 dark:text-red-400">Code expired. Please request a new one.</p>
+                <p className="text-sm text-red-500 dark:text-red-400 font-poppins">Code expired. Please request a new one.</p>
               )}
             </div>
 
@@ -357,7 +359,7 @@ export default function CandidateLogin() {
                 <Input
                   type="text"
                   placeholder="Enter 4-digit code"
-                  className="w-full h-14 text-center text-2xl font-mono tracking-widest border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 dark:bg-gray-800 dark:text-white"
+                  className="w-full h-14 text-center text-2xl font-mono tracking-widest border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:border-purple-600 focus:ring-2 focus:ring-purple-100 dark:bg-gray-800 dark:text-white font-poppins"
                   data-testid="input-otp"
                   maxLength={4}
                   {...registerOTP("otp", {
@@ -376,13 +378,13 @@ export default function CandidateLogin() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-12 bg-gradient-to-r from-emerald-900 to-teal-900 hover:from-emerald-800 hover:to-teal-800 text-white text-base font-semibold rounded-xl shadow-lg"
+                className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white text-base font-semibold rounded-xl shadow-lg shadow-purple-600/20 transition-all font-poppins"
                 data-testid="button-verify-otp"
               >
                 {isLoading ? "Verifying..." : "Verify Code"}
               </Button>
 
-              <div className="flex justify-between items-center text-sm pt-2">
+              <div className="flex justify-between items-center text-sm pt-2 font-poppins">
                 <button
                   type="button"
                   onClick={() => setShowOTP(false)}
@@ -395,7 +397,7 @@ export default function CandidateLogin() {
                   type="button"
                   onClick={() => resendOTPMutation.mutate()}
                   disabled={resendOTPMutation.isPending || otpExpiry > 0}
-                  className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   data-testid="button-resend-otp"
                 >
                   {resendOTPMutation.isPending ? "Sending..." : "Resend Code"}
@@ -410,97 +412,71 @@ export default function CandidateLogin() {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* Left Side - Modern SaaS Design with Gradient */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-emerald-900 via-teal-900 to-cyan-900">
-        {/* Abstract geometric patterns */}
-        <div className="absolute inset-0 overflow-hidden">
-          {/* Floating circles */}
-          <div className="absolute top-20 left-10 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl" />
-          
-          {/* Grid pattern overlay */}
-          <div 
-            className="absolute inset-0 opacity-5"
-            style={{
-              backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-              backgroundSize: '50px 50px'
-            }}
-          />
-          
-          {/* Floating geometric shapes */}
-          <svg className="absolute top-32 right-20 w-20 h-20 text-emerald-400/20" viewBox="0 0 100 100">
-            <polygon points="50,10 90,90 10,90" fill="currentColor" />
-          </svg>
-          <svg className="absolute bottom-40 left-20 w-16 h-16 text-cyan-400/20" viewBox="0 0 100 100">
-            <rect x="10" y="10" width="80" height="80" fill="currentColor" transform="rotate(45 50 50)" />
-          </svg>
-          <svg className="absolute top-1/2 right-1/4 w-12 h-12 text-teal-400/20" viewBox="0 0 100 100">
-            <circle cx="50" cy="50" r="40" fill="currentColor" />
-          </svg>
-        </div>
-        
+      {/* Left Side - Modern SaaS Design with Gradient - Matching Landing Page Theme */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden" style={{ background: 'linear-gradient(to bottom, #F5F3FF, #E8E4FF, #8776FF)' }}>
         {/* Content overlay */}
-        <div className="relative z-10 flex flex-col justify-between p-12 text-white w-full">
+        <div className="relative z-10 flex flex-col justify-between p-12 w-full">
           {/* StaffOS logo at top left */}
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/20">
-              <BrainCircuit className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-xl font-bold text-white">StaffOS</span>
+          <div className="flex items-center space-x-2">
+            <img
+              src={staffosLogo2}
+              alt="StaffOS Logo"
+              className="h-10 w-10 rounded-lg object-contain"
+            />
+            <span className="text-xl font-bold text-gray-900">StaffOS</span>
           </div>
           
           {/* Main content area */}
           <div className="flex-1 flex flex-col justify-center space-y-8 max-w-lg">
             {/* Main heading */}
             <div className="space-y-4">
-              <h1 className="text-4xl lg:text-5xl font-bold leading-tight">
+              <h1 className="text-4xl lg:text-5xl font-bold leading-tight text-gray-900">
                 Your Next
-                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">
+                <span className="block text-purple-600">
                   Opportunity Awaits
                 </span>
               </h1>
-              <p className="text-lg text-gray-300 leading-relaxed">
+              <p className="text-lg text-gray-700 leading-relaxed">
                 Discover amazing career opportunities and take control of your professional journey with StaffOS.
               </p>
             </div>
             
             {/* Feature highlights */}
             <div className="space-y-4">
-              <div className="flex items-center space-x-4 p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
-                <div className="w-12 h-12 bg-emerald-500/20 rounded-lg flex items-center justify-center">
-                  <Briefcase className="w-6 h-6 text-emerald-400" />
+              <div className="flex items-center space-x-4 p-4 backdrop-blur-lg bg-white/30 rounded-xl border border-white/40 shadow-lg">
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Briefcase className="w-6 h-6 text-purple-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-white">Premium Job Listings</h3>
-                  <p className="text-sm text-gray-400">Access exclusive opportunities from top companies</p>
+                  <h3 className="font-semibold text-gray-900">Premium Job Listings</h3>
+                  <p className="text-sm text-gray-700">Access exclusive opportunities from top companies</p>
                 </div>
               </div>
               
-              <div className="flex items-center space-x-4 p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
-                <div className="w-12 h-12 bg-teal-500/20 rounded-lg flex items-center justify-center">
-                  <Target className="w-6 h-6 text-teal-400" />
+              <div className="flex items-center space-x-4 p-4 backdrop-blur-lg bg-white/30 rounded-xl border border-white/40 shadow-lg">
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Target className="w-6 h-6 text-purple-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-white">Smart Matching</h3>
-                  <p className="text-sm text-gray-400">Get matched with roles that fit your skills</p>
+                  <h3 className="font-semibold text-gray-900">Smart Matching</h3>
+                  <p className="text-sm text-gray-700">Get matched with roles that fit your skills</p>
                 </div>
               </div>
               
-              <div className="flex items-center space-x-4 p-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
-                <div className="w-12 h-12 bg-cyan-500/20 rounded-lg flex items-center justify-center">
-                  <Rocket className="w-6 h-6 text-cyan-400" />
+              <div className="flex items-center space-x-4 p-4 backdrop-blur-lg bg-white/30 rounded-xl border border-white/40 shadow-lg">
+                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <Rocket className="w-6 h-6 text-purple-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-white">Fast-Track Applications</h3>
-                  <p className="text-sm text-gray-400">Apply with one click and track progress</p>
+                  <h3 className="font-semibold text-gray-900">Fast-Track Applications</h3>
+                  <p className="text-sm text-gray-700">Apply with one click and track progress</p>
                 </div>
               </div>
             </div>
           </div>
           
           {/* Trust indicator */}
-          <div className="flex items-center space-x-2 text-gray-400 text-sm">
+          <div className="flex items-center space-x-2 text-gray-700 text-sm">
             <Shield className="w-4 h-4" />
             <span>Trusted by thousands of job seekers</span>
           </div>
@@ -519,10 +495,12 @@ export default function CandidateLogin() {
           </Link>
           
           {/* Mobile Logo */}
-          <div className="lg:hidden flex items-center justify-center space-x-3 mb-8">
-            <div className="w-10 h-10 bg-emerald-900 rounded-xl flex items-center justify-center">
-              <BrainCircuit className="w-6 h-6 text-white" />
-            </div>
+          <div className="lg:hidden flex items-center justify-center space-x-2 mb-8">
+            <img
+              src={staffosLogo3}
+              alt="StaffOS Logo"
+              className="h-10 w-10 rounded-lg object-contain"
+            />
             <span className="text-xl font-bold text-gray-900 dark:text-white">StaffOS</span>
           </div>
 
@@ -531,14 +509,16 @@ export default function CandidateLogin() {
             {/* Welcome Section */}
             <div className="text-center space-y-3">
               <div className="hidden lg:flex justify-center">
-                <div className="w-14 h-14 bg-gradient-to-br from-emerald-900 to-teal-900 rounded-2xl flex items-center justify-center shadow-lg">
-                  <BrainCircuit className="w-8 h-8 text-white" />
-                </div>
+                <img
+                  src={staffosLogo3}
+                  alt="StaffOS Logo"
+                  className="h-14 w-14 rounded-xl object-contain shadow-lg"
+                />
               </div>
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white font-poppins">
                 {isLogin ? "Welcome Back" : "Create Account"}
               </h2>
-              <p className="text-gray-500 dark:text-gray-400">
+              <p className="text-gray-600 dark:text-gray-400 font-poppins">
                 {isLogin ? "Sign in to continue your journey" : "Join thousands of successful candidates"}
               </p>
             </div>
@@ -547,14 +527,14 @@ export default function CandidateLogin() {
               /* Login Form */
               <form onSubmit={handleSubmitLogin(onLogin)} className="space-y-5" data-testid="form-candidate-login">
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <Label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300 font-poppins">
                     Email Address
                   </Label>
                   <Input
                     id="email"
                     type="email"
                     placeholder="you@example.com"
-                    className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 dark:focus:ring-emerald-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all"
+                    className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-purple-600 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all font-poppins"
                     data-testid="input-login-email"
                     {...registerLogin("email", {
                       required: "Email is required",
@@ -570,13 +550,13 @@ export default function CandidateLogin() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <Label htmlFor="password" className="text-sm font-medium text-gray-700 dark:text-gray-300 font-poppins">
                     Password
                   </Label>
                   <PasswordInput
                     id="password"
                     placeholder="Enter your password"
-                    className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 dark:focus:ring-emerald-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all"
+                    className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-purple-600 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all font-poppins"
                     data-testid="input-login-password"
                     {...registerLogin("password", {
                       required: "Password is required",
@@ -592,7 +572,7 @@ export default function CandidateLogin() {
                   <div className="text-right">
                     <button
                       type="button"
-                      className="text-sm text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 font-medium transition-colors"
+                      className="text-sm text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-medium transition-colors font-poppins"
                       data-testid="button-forgot-password"
                     >
                       Forgot Password?
@@ -603,18 +583,18 @@ export default function CandidateLogin() {
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full h-12 bg-gradient-to-r from-emerald-900 to-teal-900 hover:from-emerald-800 hover:to-teal-800 text-white text-base font-semibold rounded-xl shadow-lg shadow-emerald-900/20 transition-all"
+                  className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white text-base font-semibold rounded-xl shadow-lg shadow-purple-600/20 transition-all font-poppins"
                   data-testid="button-login"
                 >
                   {isLoading ? "Signing in..." : "Sign In"}
                 </Button>
 
-                <div className="text-center text-sm">
+                <div className="text-center text-sm font-poppins">
                   <span className="text-gray-600 dark:text-gray-400">Don't have an account? </span>
                   <button
                     type="button"
                     onClick={() => setLocation('/candidate-registration')}
-                    className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 font-semibold inline-flex items-center gap-1 transition-colors"
+                    className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-semibold inline-flex items-center gap-1 transition-colors"
                     data-testid="button-switch-to-register"
                   >
                     Create one <ArrowRight className="w-4 h-4" />
@@ -625,14 +605,14 @@ export default function CandidateLogin() {
               /* Register Form */
               <form onSubmit={handleSubmitSignup(onRegister)} className="space-y-5" data-testid="form-candidate-register">
                 <div className="space-y-2">
-                  <Label htmlFor="fullName" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <Label htmlFor="fullName" className="text-sm font-medium text-gray-700 dark:text-gray-300 font-poppins">
                     Full Name
                   </Label>
                   <Input
                     id="fullName"
                     type="text"
                     placeholder="John Doe"
-                    className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 dark:focus:ring-emerald-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all"
+                    className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-purple-600 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all font-poppins"
                     data-testid="input-register-fullname"
                     {...registerSignup("fullName", {
                       required: "Full name is required",
@@ -644,14 +624,14 @@ export default function CandidateLogin() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="registerEmail" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <Label htmlFor="registerEmail" className="text-sm font-medium text-gray-700 dark:text-gray-300 font-poppins">
                     Email Address
                   </Label>
                   <Input
                     id="registerEmail"
                     type="email"
                     placeholder="you@example.com"
-                    className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 dark:focus:ring-emerald-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all"
+                    className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-purple-600 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all font-poppins"
                     data-testid="input-register-email"
                     {...registerSignup("email", {
                       required: "Email is required",
@@ -667,13 +647,13 @@ export default function CandidateLogin() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="registerPassword" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <Label htmlFor="registerPassword" className="text-sm font-medium text-gray-700 dark:text-gray-300 font-poppins">
                     Password
                   </Label>
                   <PasswordInput
                     id="registerPassword"
                     placeholder="Create a password"
-                    className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 dark:focus:ring-emerald-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all"
+                    className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-purple-600 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all font-poppins"
                     data-testid="input-register-password"
                     {...registerSignup("password", {
                       required: "Password is required",
@@ -689,13 +669,13 @@ export default function CandidateLogin() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700 dark:text-gray-300 font-poppins">
                     Confirm Password
                   </Label>
                   <PasswordInput
                     id="confirmPassword"
                     placeholder="Confirm your password"
-                    className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 dark:focus:ring-emerald-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all"
+                    className="w-full h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl px-4 focus:border-purple-600 focus:ring-2 focus:ring-purple-100 dark:focus:ring-purple-900 text-gray-900 dark:text-white dark:bg-gray-800 transition-all font-poppins"
                     data-testid="input-register-confirm-password"
                     {...registerSignup("confirmPassword", {
                       required: "Please confirm your password",
@@ -714,18 +694,18 @@ export default function CandidateLogin() {
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full h-12 bg-gradient-to-r from-emerald-900 to-teal-900 hover:from-emerald-800 hover:to-teal-800 text-white text-base font-semibold rounded-xl shadow-lg shadow-emerald-900/20 transition-all"
+                  className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white text-base font-semibold rounded-xl shadow-lg shadow-purple-600/20 transition-all font-poppins"
                   data-testid="button-register"
                 >
                   {isLoading ? "Creating Account..." : "Create Account"}
                 </Button>
 
-                <div className="text-center text-sm">
+                <div className="text-center text-sm font-poppins">
                   <span className="text-gray-600 dark:text-gray-400">Already have an account? </span>
                   <button
                     type="button"
                     onClick={() => setIsLogin(true)}
-                    className="text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300 font-semibold transition-colors"
+                    className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-semibold transition-colors"
                     data-testid="button-switch-to-login"
                   >
                     Sign In
