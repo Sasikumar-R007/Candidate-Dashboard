@@ -9,7 +9,8 @@ import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { Check, Upload } from "lucide-react";
+import { Check, Upload, ArrowLeft } from "lucide-react";
+import { Link } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
 
 interface RegistrationData {
@@ -917,6 +918,14 @@ export default function CandidateRegistration() {
         {/* Content Area */}
         <div className="flex-1 flex flex-col overflow-hidden p-8">
           <div className="max-w-4xl mx-auto w-full h-full flex flex-col">
+            {/* Back Button */}
+            <Link href="/">
+              <Button variant="ghost" size="sm" className="mb-4 text-gray-600 hover:text-gray-900 self-start">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Home
+              </Button>
+            </Link>
+            
             <div className="bg-white rounded-lg flex-1 flex flex-col overflow-hidden p-8">
               {renderContent()}
             </div>

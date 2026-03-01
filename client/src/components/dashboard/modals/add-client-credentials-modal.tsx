@@ -115,7 +115,7 @@ export default function AddClientCredentialsModal({ isOpen, onClose, editData, o
             </SelectTrigger>
             <SelectContent>
               {masterDataCompanies.length === 0 ? (
-                <SelectItem value="" disabled>No companies found. Create a company in Master Data first.</SelectItem>
+                <SelectItem value="no-companies" disabled>No companies found. Create a company in Master Data first.</SelectItem>
               ) : (
                 masterDataCompanies.map((client: any) => (
                   <SelectItem key={client.id} value={client.id}>

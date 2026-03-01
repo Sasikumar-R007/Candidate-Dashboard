@@ -8,6 +8,25 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
+// Parse the DATABASE_URL to handle URL-encoded passwords properly
+function parseDatabaseUrl(url: string) {
+  try {
+    const parsedUrl = new URL(url);
+    const password = decodeURIComponent(parsedUrl.password || '');
+    
+    return {
+      user: parsedUrl.username,
+      password: password,
+      host: parsedUrl.hostname,
+      port: parseInt(parsedUrl.port || '5432'),
+      database: parsedUrl.pathname.slice(1), // Remove leading '/'
+    };
+  } catch (error) {
+    // If URL parsing fails, fall back to connection string
+    return null;
+  }
+}
+
 // Check if this is a local database (localhost or 127.0.0.1)
 const isLocalDatabase = process.env.DATABASE_URL.includes('localhost') || 
                         process.env.DATABASE_URL.includes('127.0.0.1') ||
@@ -21,14 +40,27 @@ let connectionConfig: any = {
   connectionTimeoutMillis: 5000,
 };
 
-if (isLocalDatabase) {
-  // For local PostgreSQL, disable SSL
-  connectionConfig.connectionString = process.env.DATABASE_URL;
-  connectionConfig.ssl = false;
+// Try to parse the connection string for better password handling
+const parsedConfig = parseDatabaseUrl(process.env.DATABASE_URL);
+
+if (parsedConfig) {
+  // Use parsed config for better password handling
+  connectionConfig = {
+    ...connectionConfig,
+    ...parsedConfig,
+    ssl: isLocalDatabase ? false : { rejectUnauthorized: false },
+  };
 } else {
-  // For cloud databases (Neon, etc.), use SSL
-  connectionConfig.connectionString = process.env.DATABASE_URL;
-  connectionConfig.ssl = { rejectUnauthorized: false };
+  // Fall back to connection string
+  if (isLocalDatabase) {
+    // For local PostgreSQL, disable SSL
+    connectionConfig.connectionString = process.env.DATABASE_URL;
+    connectionConfig.ssl = false;
+  } else {
+    // For cloud databases (Neon, etc.), use SSL
+    connectionConfig.connectionString = process.env.DATABASE_URL;
+    connectionConfig.ssl = { rejectUnauthorized: false };
+  }
 }
 
 // Use standard PostgreSQL driver (works with both local and cloud PostgreSQL)
