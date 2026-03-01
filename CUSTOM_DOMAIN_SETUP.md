@@ -313,10 +313,3 @@ You can add multiple domains to the same Vercel project:
 **Last Updated**: 2024  
 **Maintained By**: Development Team
 
-
-
-
-<<<<<<< HEAD
-=======
-
->>>>>>> dev
