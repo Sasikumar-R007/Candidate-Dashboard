@@ -6226,21 +6226,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create employee
+  // Create employee OR attach login credentials to an existing Master Data employee
   app.post("/api/admin/employees", requireAdminAuth, async (req, res) => {
     try {
-      // Always generate employee ID on backend (SCE001, SCE002, etc.)
-      const employeeId = await storage.generateNextEmployeeId(req.body.role || 'employee');
+      // Always generate employee ID on backend (SCE001, SCE002, etc.) for brand new employees
+      const generatedEmployeeId = await storage.generateNextEmployeeId(req.body.role || 'employee');
 
       const employeeData = insertEmployeeSchema.parse({
         ...req.body,
-        employeeId, // Override any client-provided ID
+        employeeId: generatedEmployeeId, // Override any client-provided ID for new employees
         createdAt: new Date().toISOString(),
       });
 
       // Store raw password for email before it gets hashed (must match exactly what admin entered)
       const rawPassword = employeeData.password;
 
+      // If an employee already exists in Master Data with this email, (create or) update login on that same record
+      if (employeeData.email) {
+        const existingEmployee = await storage.getEmployeeByEmail(employeeData.email);
+
+        if (existingEmployee) {
+          if (!rawPassword) {
+            return res.status(400).json({
+              message: "Password is required to create or update a login for an existing employee record",
+            });
+          }
+
+          // Hash password and update existing Master Data employee record
+          const saltRounds = 10;
+          const hashedPassword = await bcrypt.hash(rawPassword, saltRounds);
+
+          const updatedEmployee = await storage.updateEmployee(existingEmployee.id, {
+            password: hashedPassword,
+            // Set / update role for login users (team_leader / recruiter / client, etc.)
+            role: employeeData.role || existingEmployee.role,
+            phone: employeeData.phone ?? existingEmployee.phone,
+            department: employeeData.department ?? existingEmployee.department,
+            joiningDate: employeeData.joiningDate ?? existingEmployee.joiningDate,
+            reportingTo: (employeeData as any).reportingTo ?? (existingEmployee as any).reportingTo,
+          });
+
+          const finalEmployee = updatedEmployee || existingEmployee;
+
+          // Send welcome email for (new or updated) login
+          if (finalEmployee.email) {
+            const envLoginUrl = process.env.FRONTEND_URL;
+            const loginUrl = envLoginUrl && !envLoginUrl.includes('localhost')
+              ? envLoginUrl
+              : 'https://staffos.io';
+
+            await sendEmployeeWelcomeEmail({
+              name: finalEmployee.name,
+              email: finalEmployee.email,
+              employeeId: finalEmployee.employeeId,
+              role: finalEmployee.role,
+              password: rawPassword,
+              loginUrl,
+            });
+          }
+
+          return res.status(200).json({
+            message: "Login created/updated successfully for existing employee",
+            employee: finalEmployee,
+          });
+        }
+      }
+
+      // No existing Master Data record with this email – create a brand new employee + login
       // Password will be hashed by storage layer
       const employee = await storage.createEmployee(employeeData);
 

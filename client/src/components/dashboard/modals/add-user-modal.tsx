@@ -272,7 +272,13 @@ export default function AddUserModal({ isOpen, onClose, editData, onSubmit }: Ad
             {getTitle()}
           </DialogTitle>
         </DialogHeader>
-        
+
+        {/* Guidance note about Master Data dependency */}
+        <div className="px-6 pb-2 text-xs text-gray-500">
+          Note: Employee / user records should be created first in the <span className="font-semibold">Master Data</span> page.
+          Use this form to create login credentials for those existing records (matching by email).
+        </div>
+
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as "client" | "team-leader" | "recruiter")} className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-4 mx-6">
             <TabsTrigger value="client" className="data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700">
@@ -402,27 +408,6 @@ export default function AddUserModal({ isOpen, onClose, editData, onSubmit }: Ad
           {/* Team Leader Tab */}
           <TabsContent value="team-leader" className="px-6 pb-6 space-y-3">
             <form onSubmit={handleTeamLeaderSubmit} className="space-y-3">
-              {/* Select Client Company - First Field */}
-              <Select
-                value={teamLeaderFormData.clientId}
-                onValueChange={(value) => setTeamLeaderFormData({...teamLeaderFormData, clientId: value})}
-              >
-                <SelectTrigger className="w-full bg-gray-50 border-gray-200 text-sm text-gray-500" data-testid="select-team-leader-company">
-                  <SelectValue placeholder="Select Client (company)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {masterDataCompanies.length === 0 ? (
-                    <SelectItem value="no-companies" disabled>No companies found. Create a company in Master Data first.</SelectItem>
-                  ) : (
-                    masterDataCompanies.map((client: any) => (
-                      <SelectItem key={client.id} value={client.id}>
-                        {client.brandName || client.incorporatedName || client.clientCode} ({client.clientCode})
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-
               <div className="grid grid-cols-2 gap-4">
                 <Input
                   id="team-leader-firstName"
