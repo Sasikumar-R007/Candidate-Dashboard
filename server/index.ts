@@ -26,6 +26,8 @@ const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
     ? [
         process.env.FRONTEND_URL || 'https://your-app.vercel.app',
+        'https://www.staffos.io',  // Production domain
+        'https://staffos.io',       // Production domain (without www)
         /\.vercel\.app$/,  // Allow all Vercel preview deployments
         /localhost:\d+$/   // Allow localhost for development
       ]
