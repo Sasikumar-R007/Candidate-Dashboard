@@ -44,15 +44,42 @@ app.use(express.urlencoded({ extended: false }));
 // Session configuration with PostgreSQL store for persistence
 const PgSession = connectPgSimple(session);
 
+// Fix incomplete Render database hostnames
+// Render internal URLs sometimes don't include the full domain
+function fixRenderDatabaseUrl(url: string | undefined): string {
+  if (!url) return '';
+  
+  // Check if this looks like a Render database hostname (dpg-xxxxx-xxxxx)
+  const renderHostnamePattern = /@(dpg-[a-z0-9]+-[a-z0-9]+)(?:\/|$|:)/i;
+  const match = url.match(renderHostnamePattern);
+  
+  if (match && !url.includes('.singapore-postgres.render.com') && !url.includes('.oregon-postgres.render.com') && !url.includes('.frankfurt-postgres.render.com')) {
+    // This is a Render database hostname without the full domain
+    // Try to detect the region from environment or default to singapore
+    // Common Render regions: singapore, oregon, frankfurt
+    const region = process.env.RENDER_DB_REGION || 'singapore';
+    const fullHostname = `${match[1]}.${region}-postgres.render.com`;
+    const fixedUrl = url.replace(match[1], fullHostname);
+    console.warn(`Fixed incomplete Render database hostname: ${match[1]} -> ${fullHostname}`);
+    return fixedUrl;
+  }
+  
+  return url;
+}
+
+// Fix the DATABASE_URL if needed
+const fixedDatabaseUrl = fixRenderDatabaseUrl(process.env.DATABASE_URL);
+
 // Check if this is a local database (localhost or 127.0.0.1)
-const isLocalDatabase = process.env.DATABASE_URL?.includes('localhost') || 
-                        process.env.DATABASE_URL?.includes('127.0.0.1') ||
-                        (!process.env.DATABASE_URL?.includes('neon.tech') && 
-                         !process.env.DATABASE_URL?.includes('sslmode=require'));
+const isLocalDatabase = fixedDatabaseUrl.includes('localhost') || 
+                        fixedDatabaseUrl.includes('127.0.0.1') ||
+                        (!fixedDatabaseUrl.includes('neon.tech') && 
+                         !fixedDatabaseUrl.includes('render.com') &&
+                         !fixedDatabaseUrl.includes('sslmode=require'));
 
 // Configure session pool with appropriate SSL settings
 const sessionPoolConfig: any = {
-  connectionString: process.env.DATABASE_URL,
+  connectionString: fixedDatabaseUrl,
 };
 
 if (isLocalDatabase) {

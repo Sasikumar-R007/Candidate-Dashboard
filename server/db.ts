@@ -8,6 +8,30 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
+// Fix incomplete Render database hostnames
+// Render internal URLs sometimes don't include the full domain
+function fixRenderDatabaseUrl(url: string): string {
+  // Check if this looks like a Render database hostname (dpg-xxxxx-xxxxx)
+  const renderHostnamePattern = /@(dpg-[a-z0-9]+-[a-z0-9]+)(?:\/|$|:)/i;
+  const match = url.match(renderHostnamePattern);
+  
+  if (match && !url.includes('.singapore-postgres.render.com') && !url.includes('.oregon-postgres.render.com') && !url.includes('.frankfurt-postgres.render.com')) {
+    // This is a Render database hostname without the full domain
+    // Try to detect the region from environment or default to singapore
+    // Common Render regions: singapore, oregon, frankfurt
+    const region = process.env.RENDER_DB_REGION || 'singapore';
+    const fullHostname = `${match[1]}.${region}-postgres.render.com`;
+    const fixedUrl = url.replace(match[1], fullHostname);
+    console.warn(`Fixed incomplete Render database hostname: ${match[1]} -> ${fullHostname}`);
+    return fixedUrl;
+  }
+  
+  return url;
+}
+
+// Fix the DATABASE_URL if needed
+const fixedDatabaseUrl = fixRenderDatabaseUrl(process.env.DATABASE_URL);
+
 // Parse the DATABASE_URL to handle URL-encoded passwords properly
 function parseDatabaseUrl(url: string) {
   try {
@@ -28,10 +52,11 @@ function parseDatabaseUrl(url: string) {
 }
 
 // Check if this is a local database (localhost or 127.0.0.1)
-const isLocalDatabase = process.env.DATABASE_URL.includes('localhost') || 
-                        process.env.DATABASE_URL.includes('127.0.0.1') ||
-                        (!process.env.DATABASE_URL.includes('neon.tech') && 
-                         !process.env.DATABASE_URL.includes('sslmode=require'));
+const isLocalDatabase = fixedDatabaseUrl.includes('localhost') || 
+                        fixedDatabaseUrl.includes('127.0.0.1') ||
+                        (!fixedDatabaseUrl.includes('neon.tech') && 
+                         !fixedDatabaseUrl.includes('render.com') &&
+                         !fixedDatabaseUrl.includes('sslmode=require'));
 
 // Parse connection string and remove SSL requirements for local databases
 let connectionConfig: any = {
@@ -41,7 +66,7 @@ let connectionConfig: any = {
 };
 
 // Try to parse the connection string for better password handling
-const parsedConfig = parseDatabaseUrl(process.env.DATABASE_URL);
+const parsedConfig = parseDatabaseUrl(fixedDatabaseUrl);
 
 if (parsedConfig) {
   // Use parsed config for better password handling
@@ -54,11 +79,11 @@ if (parsedConfig) {
   // Fall back to connection string
   if (isLocalDatabase) {
     // For local PostgreSQL, disable SSL
-    connectionConfig.connectionString = process.env.DATABASE_URL;
+    connectionConfig.connectionString = fixedDatabaseUrl;
     connectionConfig.ssl = false;
   } else {
-    // For cloud databases (Neon, etc.), use SSL
-    connectionConfig.connectionString = process.env.DATABASE_URL;
+    // For cloud databases (Neon, Render, etc.), use SSL
+    connectionConfig.connectionString = fixedDatabaseUrl;
     connectionConfig.ssl = { rejectUnauthorized: false };
   }
 }
