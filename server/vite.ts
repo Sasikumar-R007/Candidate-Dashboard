@@ -15,7 +15,7 @@ export function log(message: string, source = "express") {
 }
 
 // DEVELOPMENT ONLY — Vite dev server
-export async function setupVite(app: Express, server: any) {
+export async function setupVite(app: Express, server: any, clientPort: number) {
   if (process.env.NODE_ENV === "production") {
     return; // never load vite on Render
   }
@@ -31,7 +31,7 @@ export async function setupVite(app: Express, server: any) {
         middlewareMode: true,
         hmr: { 
           server,
-          clientPort: 5000,
+          clientPort,
         },
         allowedHosts: true,
       },

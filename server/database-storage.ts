@@ -982,31 +982,57 @@ export class DatabaseStorage implements IStorage {
       status: string;
     }>;
   }> {
-    // Fetch all target mappings for this team leader
     const mappings = await db
       .select()
       .from(targetMappings)
       .where(eq(targetMappings.teamLeadId, teamLeadId))
       .orderBy(desc(targetMappings.year), desc(targetMappings.quarter));
 
-    // Determine current quarter based on current date
-    // Quarter labels match the Admin Target Mapping UI: Q1, Q2, Q3, Q4
     const now = new Date();
-    const month = now.getMonth(); // 0-11
+    const month = now.getMonth();
     const year = now.getFullYear();
     let currentQuarterLabel = "";
-    
+
     if (month >= 0 && month <= 2) {
-      currentQuarterLabel = "Q1"; // January-February-March
+      currentQuarterLabel = "Q1";
     } else if (month >= 3 && month <= 5) {
-      currentQuarterLabel = "Q2"; // April-May-June
+      currentQuarterLabel = "Q2";
     } else if (month >= 6 && month <= 8) {
-      currentQuarterLabel = "Q3"; // July-August-September
+      currentQuarterLabel = "Q3";
     } else {
-      currentQuarterLabel = "Q4"; // October-November-December
+      currentQuarterLabel = "Q4";
     }
 
-    // Group by quarter+year and aggregate
+    const currentKey = `${currentQuarterLabel}-${year}`;
+    const quarterOrder: Record<string, number> = { Q1: 1, Q2: 2, Q3: 3, Q4: 4 };
+    const getTargetStatus = (
+      minimumTarget: number,
+      targetAchieved: number,
+      quarter: string,
+      targetYear: number,
+    ) => {
+      if (minimumTarget <= 0) return "Not Completed";
+      if (targetAchieved >= minimumTarget) return "Completed";
+      if (`${quarter}-${targetYear}` === currentKey) return "In Progress";
+      return "Not Completed";
+    };
+
+    const teamMemberIds = Array.from(
+      new Set(mappings.map((mapping) => mapping.teamMemberId).filter(Boolean))
+    );
+    const teamMembers =
+      teamMemberIds.length > 0
+        ? await db
+            .select({
+              id: employees.id,
+              name: employees.name,
+              employeeId: employees.employeeId,
+            })
+            .from(employees)
+            .where(inArray(employees.id, teamMemberIds))
+        : [];
+    const teamMemberMap = new Map(teamMembers.map((member) => [member.id, member]));
+
     const quarterMap = new Map<string, {
       quarter: string;
       year: number;
@@ -1014,6 +1040,17 @@ export class DatabaseStorage implements IStorage {
       targetAchieved: number;
       incentiveEarned: number;
       closures: number;
+      members: Array<{
+        teamMemberId: string;
+        teamMemberName: string;
+        employeeId: string;
+        minimumTarget: number;
+        targetAchieved: number;
+        defaultAmount: number;
+        incentiveEarned: number;
+        closures: number;
+        status: string;
+      }>;
     }>();
 
     for (const mapping of mappings) {
@@ -1025,47 +1062,82 @@ export class DatabaseStorage implements IStorage {
           minimumTarget: 0,
           targetAchieved: 0,
           incentiveEarned: 0,
-          closures: 0
+          closures: 0,
+          members: [],
         });
       }
+
       const entry = quarterMap.get(key)!;
+      const member = teamMemberMap.get(mapping.teamMemberId);
+      const memberTargetAchieved = mapping.targetAchieved || 0;
+      const memberDefaultAmount = Math.max(mapping.minimumTarget - memberTargetAchieved, 0);
+
       entry.minimumTarget += mapping.minimumTarget;
-      entry.targetAchieved += mapping.targetAchieved || 0;
+      entry.targetAchieved += memberTargetAchieved;
       entry.incentiveEarned += mapping.incentives || 0;
       entry.closures += mapping.closures || 0;
+      entry.members.push({
+        teamMemberId: mapping.teamMemberId,
+        teamMemberName: member?.name || "Unknown Member",
+        employeeId: member?.employeeId || "-",
+        minimumTarget: mapping.minimumTarget,
+        targetAchieved: memberTargetAchieved,
+        defaultAmount: memberDefaultAmount,
+        incentiveEarned: mapping.incentives || 0,
+        closures: mapping.closures || 0,
+        status: getTargetStatus(
+          mapping.minimumTarget,
+          memberTargetAchieved,
+          mapping.quarter,
+          mapping.year,
+        ),
+      });
     }
 
-    // Find current quarter data
-    const currentKey = `${currentQuarterLabel}-${year}`;
     const currentQuarter = quarterMap.get(currentKey) || {
       quarter: currentQuarterLabel,
       year: year,
       minimumTarget: 0,
       targetAchieved: 0,
       incentiveEarned: 0,
-      closures: 0
+      closures: 0,
+      members: [],
     };
 
-    // Build allQuarters array with status
-    const allQuarters = Array.from(quarterMap.values()).map(q => {
-      let status = "Pending";
-      if (q.targetAchieved >= q.minimumTarget && q.minimumTarget > 0) {
-        status = "Completed";
-      } else if (q.targetAchieved > 0 && q.targetAchieved < q.minimumTarget) {
-        status = "In Progress";
-      } else if (`${q.quarter}-${q.year}` === currentKey && q.minimumTarget > 0) {
-        status = "In Progress";
-      }
-      
-      return {
-        ...q,
-        status
-      };
-    });
+    const allQuarters = Array.from(quarterMap.values())
+      .map((quarterData) => ({
+        ...quarterData,
+        defaultAmount: Math.max(quarterData.minimumTarget - quarterData.targetAchieved, 0),
+        status: getTargetStatus(
+          quarterData.minimumTarget,
+          quarterData.targetAchieved,
+          quarterData.quarter,
+          quarterData.year,
+        ),
+        members: quarterData.members.sort((left, right) =>
+          left.teamMemberName.localeCompare(right.teamMemberName)
+        ),
+      }))
+      .sort((left, right) => {
+        if (left.year !== right.year) {
+          return right.year - left.year;
+        }
+        return (quarterOrder[right.quarter] || 0) - (quarterOrder[left.quarter] || 0);
+      });
 
     return {
-      currentQuarter,
-      allQuarters
+      currentQuarter: {
+        ...currentQuarter,
+        defaultAmount: Math.max(currentQuarter.minimumTarget - currentQuarter.targetAchieved, 0),
+        status: getTargetStatus(
+          currentQuarter.minimumTarget,
+          currentQuarter.targetAchieved,
+          currentQuarter.quarter,
+          currentQuarter.year,
+        ),
+        members: currentQuarter.members,
+      },
+      allQuarters,
     };
   }
 

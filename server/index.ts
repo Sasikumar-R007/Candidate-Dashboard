@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
+import { createServer as createNetServer } from "node:net";
 import cors from "cors";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
@@ -14,6 +15,49 @@ function log(message: string, source = "express") {
     hour12: true,
   });
   console.log(`${formattedTime} [${source}] ${message}`);
+}
+
+async function canListenOnPort(port: number, host: string): Promise<boolean> {
+  return await new Promise((resolve) => {
+    const tester = createNetServer();
+
+    tester.once("error", (error: NodeJS.ErrnoException) => {
+      if (error.code === "EADDRINUSE" || error.code === "EACCES") {
+        resolve(false);
+        return;
+      }
+
+      resolve(false);
+    });
+
+    tester.once("listening", () => {
+      tester.close(() => resolve(true));
+    });
+
+    tester.listen(port, host);
+  });
+}
+
+async function resolvePort(preferredPort: number, host: string): Promise<number> {
+  if (process.env.NODE_ENV === "production") {
+    return preferredPort;
+  }
+
+  if (await canListenOnPort(preferredPort, host)) {
+    return preferredPort;
+  }
+
+  for (let offset = 1; offset <= 10; offset += 1) {
+    const candidatePort = preferredPort + offset;
+    if (await canListenOnPort(candidatePort, host)) {
+      log(`Port ${preferredPort} is already in use, switching to ${candidatePort} for development.`);
+      return candidatePort;
+    }
+  }
+
+  throw new Error(
+    `No available development port found between ${preferredPort} and ${preferredPort + 10}.`,
+  );
 }
 
 const app = express();
@@ -159,9 +203,13 @@ app.use((req, res, next) => {
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
   // doesn't interfere with the other routes
+  const preferredPort = parseInt(process.env.PORT || '5000', 10);
+  const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+  const port = await resolvePort(preferredPort, host);
+
   if (process.env.NODE_ENV === "development") {
     const { setupVite } = await import("./vite");
-    await setupVite(app, server);
+    await setupVite(app, server, port);
   } else {
     // In production (Render), do NOT serve frontend
     log("Static frontend disabled — using Vercel frontend.");
@@ -172,10 +220,6 @@ app.use((req, res, next) => {
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  // Use localhost for Windows compatibility in development, 0.0.0.0 for production
-  const host = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
-  
   // Windows doesn't support reusePort, so only use it on non-Windows systems
   const isWindows = process.platform === 'win32';
   const listenOptions: any = {

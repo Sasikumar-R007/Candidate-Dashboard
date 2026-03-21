@@ -197,25 +197,25 @@ export default function TeamLeaderProfileHeader({ profile }: TeamLeaderProfileHe
           <div className="text-center">
             <div className="text-orange-400 text-sm font-medium">Members</div>
             <div className="text-white text-lg font-bold" data-testid="text-members-count">
-              {currentProfile.members || 4}
+              {displayProfile.members ?? 0}
             </div>
           </div>
           <div className="text-center">
             <div className="text-orange-400 text-sm font-medium">Tenure</div>
             <div className="text-white text-lg font-bold" data-testid="text-tenure">
-              {currentProfile.tenure || "4.3"} <span className="text-sm font-normal">years</span>
+              {displayProfile.tenure ?? "0"} <span className="text-sm font-normal">years</span>
             </div>
           </div>
           <div className="text-center">
             <div className="text-orange-400 text-sm font-medium">Qtrs Achieved</div>
             <div className="text-white text-lg font-bold" data-testid="text-qtrs-achieved">
-              {currentProfile.qtrsAchieved || 6}
+              {displayProfile.qtrsAchieved ?? 0}
             </div>
           </div>
           <div className="text-center">
             <div className="text-orange-400 text-sm font-medium">Next Milestone</div>
             <div className="text-white text-lg font-bold" data-testid="text-next-milestone">
-              {currentProfile.nextMilestone || "+3"}
+              {displayProfile.nextMilestone ?? "0"}
             </div>
           </div>
         </div>

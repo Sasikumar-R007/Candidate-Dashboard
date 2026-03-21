@@ -4,7 +4,40 @@ let cachedClient: { client: Resend; fromEmail: string } | null = null;
 
 function getCredentials() {
   const apiKey = process.env.RESEND_API_KEY;
-  const fromEmail = process.env.FROM_EMAIL || 'StaffOS <onboarding@resend.dev>';
+  // Use FROM_EMAIL from environment, but ensure it's not a test email
+  // If FROM_EMAIL contains test domains or test emails, warn and use default
+  let fromEmail = process.env.FROM_EMAIL || 'StaffOS <onboarding@resend.dev>';
+  
+  // Check if FROM_EMAIL is a test email (contains common test patterns)
+  // Valid production domains (verified in Resend)
+  const validProductionDomains = [
+    'staffos.io',
+    'staffos.com'
+  ];
+  
+  const testEmailPatterns = [
+    'sasirajkumar7rs@gmail.com',
+    'test@',
+    'example@',
+    'onboarding@resend.dev' // Resend's test domain
+  ];
+  
+  // Check if email is from a valid production domain
+  const isFromValidDomain = validProductionDomains.some(domain => 
+    fromEmail.toLowerCase().includes(`@${domain.toLowerCase()}`)
+  );
+  
+  const isTestEmail = !isFromValidDomain && testEmailPatterns.some(pattern => 
+    fromEmail.toLowerCase().includes(pattern.toLowerCase())
+  );
+  
+  if (isTestEmail && process.env.NODE_ENV === 'production') {
+    console.warn(`[Resend] Warning: FROM_EMAIL appears to be a test email (${fromEmail}). For production, please verify a domain at resend.com/domains and use an email from that domain.`);
+    console.warn(`[Resend] Current FROM_EMAIL: ${fromEmail}`);
+    console.warn(`[Resend] To fix: Set FROM_EMAIL in Render environment variables to a verified domain email (e.g., "StaffOS <staffos@staffos.io>")`);
+  } else if (isFromValidDomain) {
+    console.log(`[Resend] Using verified production email: ${fromEmail}`);
+  }
   
   if (!apiKey) {
     throw new Error('RESEND_API_KEY environment variable is not set. Please configure your Resend API key in Render environment variables.');

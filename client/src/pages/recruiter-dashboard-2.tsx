@@ -28,7 +28,6 @@ import { useLocation } from "wouter";
 import { LineChart, Line, BarChart, Bar, Cell, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, Legend } from 'recharts';
 import { ChatDock } from '@/components/chat/chat-dock';
 import { ChatModal } from '@/components/chat/admin-chat-modal';
-import { HelpCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useEmployeeAuth } from '@/contexts/auth-context';
 
@@ -3745,16 +3744,6 @@ export default function RecruiterDashboard2() {
           </div>
         </div>
       )}
-
-      {/* Floating Help Button */}
-      <button
-        onClick={() => setIsChatOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 z-50"
-        data-testid="button-floating-help"
-        aria-label="Open Chat"
-      >
-        <HelpCircle size={24} />
-      </button>
 
       {/* JD Details Modal */}
       {isJDDetailsModalOpen && selectedJD && (

@@ -129,9 +129,8 @@ export default function ClientMainSidebar({ activeTab, onTabChange, onExpandedCh
                   
                   {/* Tooltip - Only show when collapsed */}
                   {hoveredItem === item.id && !isExpanded && (
-                    <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-sm rounded whitespace-nowrap z-50 shadow-lg border border-slate-600">
+                    <div className="absolute left-full ml-2 px-3 py-1.5 bg-black text-white text-sm rounded whitespace-nowrap z-50 shadow-xl">
                       {item.label}
-                      <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-slate-800 rotate-45 border-l border-t border-slate-600"></div>
                     </div>
                   )}
                 </button>
@@ -157,9 +156,8 @@ export default function ClientMainSidebar({ activeTab, onTabChange, onExpandedCh
               
               {/* Tooltip */}
               {hoveredItem === 'logout' && !isExpanded && (
-                <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-sm rounded whitespace-nowrap z-50 shadow-lg border border-slate-600">
+                <div className="absolute left-full ml-2 px-3 py-1.5 bg-black text-white text-sm rounded whitespace-nowrap z-50 shadow-xl">
                   {logoutMutation.isPending ? 'Signing out...' : 'Sign Out'}
-                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1 w-2 h-2 bg-slate-800 rotate-45 border-l border-t border-slate-600"></div>
                 </div>
               )}
             </button>
