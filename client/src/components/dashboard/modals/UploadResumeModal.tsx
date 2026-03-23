@@ -9,7 +9,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Upload, Check, ChevronsUpDown, RotateCcw, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { cn } from '@/lib/utils';
 
@@ -49,6 +49,57 @@ interface UploadResumeModalProps {
   setFormError: (error: string) => void;
 }
 
+interface RecruiterRequirement {
+  id: string;
+  position: string;
+  company: string;
+  assignmentStatus?: string;
+  isArchived?: boolean;
+}
+
+function toTitleCase(value: string): string {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function deriveNameFromEmail(email: string | null | undefined): { firstName: string; lastName: string } | null {
+  if (!email) return null;
+
+  const localPart = email.split('@')[0] || '';
+  const cleaned = localPart
+    .replace(/\d+/g, ' ')
+    .replace(/[._-]+/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
+  if (!cleaned) return null;
+
+  const parts = cleaned
+    .split(/\s+/)
+    .filter((part) => /^[a-zA-Z]+$/.test(part))
+    .map(toTitleCase);
+
+  if (parts.length === 0) return null;
+
+  return {
+    firstName: parts[0] || '',
+    lastName: parts.slice(1).join(' '),
+  };
+}
+
+function cleanParsedCollegeName(value: string | null | undefined): string {
+  if (!value) return '';
+
+  return value
+    .replace(/\b([A-Z])\s+([a-z]{2,})/g, '$1$2')
+    .replace(/\s*,\s*/g, ', ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 export default function UploadResumeModal({
   isOpen,
   onClose,
@@ -70,6 +121,17 @@ export default function UploadResumeModal({
   const [locationInput, setLocationInput] = useState("");
   const [domainInput, setDomainInput] = useState("");
   const [isParsing, setIsParsing] = useState(false);
+  const { data: recruiterRequirements = [], isLoading: isLoadingRequirements } = useQuery<RecruiterRequirement[]>({
+    queryKey: ['/api/recruiter/requirements'],
+    enabled: isOpen,
+  });
+
+  const availableRequirements = recruiterRequirements.filter(
+    (requirement) => requirement.assignmentStatus !== 'reassigned' && !requirement.isArchived,
+  );
+  const selectedRequirementDetails = availableRequirements.find(
+    (requirement) => requirement.id === selectedRequirement,
+  );
 
   // Reset function to clear all fields
   const handleReset = () => {
@@ -283,6 +345,8 @@ export default function UploadResumeModal({
       // Map parsed data to form fields
       const updatedFormData = { ...formData };
 
+      const fallbackName = deriveNameFromEmail(parsedData.email);
+
       // Parse fullName into firstName and lastName
       if (parsedData.fullName) {
         const nameParts = parsedData.fullName.trim().split(/\s+/);
@@ -290,6 +354,9 @@ export default function UploadResumeModal({
           updatedFormData.firstName = nameParts[0] || '';
           updatedFormData.lastName = nameParts.slice(1).join(' ') || '';
         }
+      } else if (fallbackName) {
+        updatedFormData.firstName = fallbackName.firstName;
+        updatedFormData.lastName = fallbackName.lastName;
       }
 
       // Map email
@@ -305,6 +372,11 @@ export default function UploadResumeModal({
       // Map location
       if (parsedData.location && !updatedFormData.currentLocation) {
         updatedFormData.currentLocation = parsedData.location;
+      }
+
+      // Map highest qualification
+      if (parsedData.highestQualification && !updatedFormData.highestQualification) {
+        updatedFormData.highestQualification = parsedData.highestQualification;
       }
 
       // Map LinkedIn
@@ -332,9 +404,9 @@ export default function UploadResumeModal({
         updatedFormData.currentCompany = parsedData.company;
       }
 
-      // Map education (college name)
-      if (parsedData.education && !updatedFormData.collegeName) {
-        updatedFormData.collegeName = parsedData.education;
+      // Map college name strictly; do not put degree text into the college field
+      if (parsedData.collegeName && !updatedFormData.collegeName) {
+        updatedFormData.collegeName = cleanParsedCollegeName(parsedData.collegeName);
       }
 
       // Map skills
@@ -351,7 +423,7 @@ export default function UploadResumeModal({
 
       toast({
         title: "Resume parsed successfully",
-        description: "Form fields have been auto-filled. Please review and complete any missing information.",
+        description: "Only confidently extracted fields were auto-filled. Please review before submitting.",
       });
     } catch (error: any) {
       console.error('Resume parsing error:', error);
@@ -386,20 +458,39 @@ export default function UploadResumeModal({
       }
       
       // Then create candidate
-      return apiRequest('POST', '/api/recruiter/candidates', {
+      const candidateResponse = await apiRequest('POST', '/api/recruiter/candidates', {
         ...candidateData,
         resumeFile: resumeFilePath
       });
+
+      const candidateResult = await candidateResponse.json();
+
+      if (deliverToRequirement && selectedRequirementDetails) {
+        await apiRequest('POST', '/api/recruiter/applications', {
+          candidateName: candidateData.fullName,
+          candidateEmail: candidateData.email,
+          candidatePhone: candidateData.phone,
+          jobTitle: selectedRequirementDetails.position || candidateData.designation || candidateData.fullName,
+          company: selectedRequirementDetails.company || candidateData.company || 'Unknown Company',
+          requirementId: selectedRequirementDetails.id,
+          experience: candidateData.experience,
+          skills: candidateData.skills,
+          location: candidateData.location,
+        });
+      }
+
+      return candidateResult;
     },
     onSuccess: () => {
       // Invalidate queries to refresh candidate lists
       queryClient.invalidateQueries({ queryKey: ['/api/admin/candidates'] });
       queryClient.invalidateQueries({ queryKey: ['/api/recruiter/candidates/counts'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/recruiter/applications'] });
       
       toast({
         title: "Resume uploaded successfully",
-        description: deliverToRequirement && selectedRequirement 
-          ? `Resume delivered to requirement: ${selectedRequirement}` 
+        description: deliverToRequirement && selectedRequirementDetails
+          ? `Resume delivered to requirement: ${selectedRequirementDetails.position} - ${selectedRequirementDetails.company}`
           : "Resume has been added to the database",
       });
       
@@ -454,6 +545,11 @@ export default function UploadResumeModal({
     
     if (hasEmptyRequired || !hasSkills) {
       setFormError('Please fill out all required fields and add at least one skill');
+      return;
+    }
+
+    if (deliverToRequirement && !selectedRequirementDetails) {
+      setFormError('Please select a valid requirement before submitting.');
       return;
     }
 
@@ -1090,12 +1186,17 @@ export default function UploadResumeModal({
                   <SelectValue placeholder="Select Requirement" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="frontend-developer">Frontend Developer - REQ001</SelectItem>
-                  <SelectItem value="backend-developer">Backend Developer - REQ002</SelectItem>
-                  <SelectItem value="fullstack-developer">Full Stack Developer - REQ003</SelectItem>
-                  <SelectItem value="ui-ux-designer">UI/UX Designer - REQ004</SelectItem>
-                  <SelectItem value="product-manager">Product Manager - REQ005</SelectItem>
-                  <SelectItem value="devops-engineer">DevOps Engineer - REQ006</SelectItem>
+                  {isLoadingRequirements ? (
+                    <SelectItem value="__loading" disabled>Loading requirements...</SelectItem>
+                  ) : availableRequirements.length === 0 ? (
+                    <SelectItem value="__empty" disabled>No active requirements found</SelectItem>
+                  ) : (
+                    availableRequirements.map((requirement) => (
+                      <SelectItem key={requirement.id} value={requirement.id}>
+                        {requirement.position} - {requirement.company}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>

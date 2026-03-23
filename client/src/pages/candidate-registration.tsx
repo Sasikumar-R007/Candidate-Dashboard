@@ -12,6 +12,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { Check, Upload, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
+import staffosLogo2 from "@/assets/staffos logo 2.png";
 
 interface RegistrationData {
   step1: {
@@ -248,9 +249,20 @@ export default function CandidateRegistration() {
 
   // Sidebar Component
   const StepperSidebar = () => (
-    <div className="w-full h-screen bg-gradient-to-b from-blue-500 to-blue-700 text-white p-6 flex flex-col overflow-y-auto relative">
-      {/* Vertical Progress Line */}
-      <div className="absolute left-8 top-0 bottom-0 w-1 bg-white/20 rounded-full" />
+    <div className="w-full h-screen relative overflow-hidden" style={{ background: 'linear-gradient(to bottom, #F5F3FF, #E8E4FF, #8776FF)' }}>
+      <div className="w-full h-screen text-gray-900 p-6 flex flex-col overflow-y-auto relative">
+        {/* StaffOS logo at top */}
+        <div className="flex items-center space-x-2 mb-8">
+          <img
+            src={staffosLogo2}
+            alt="StaffOS Logo"
+            className="h-10 w-10 rounded-lg object-contain"
+          />
+          <span className="text-xl font-bold text-gray-900 font-poppins">StaffOS</span>
+        </div>
+        
+        {/* Vertical Progress Line */}
+        <div className="absolute left-8 top-24 bottom-0 w-1 bg-gray-300/40 rounded-full" />
 
       {/* Steps */}
       <div className="relative space-y-8 flex-1">
@@ -262,23 +274,23 @@ export default function CandidateRegistration() {
             <div key={step.number} className="relative flex items-start gap-4 pl-6">
               {/* Filled Progress Line Behind Circle */}
               {isCompleted && (
-                <div className="absolute left-1 top-0 w-1 h-20 bg-white rounded-full" />
+                <div className="absolute left-1 top-0 w-1 h-20 bg-purple-600 rounded-full" />
               )}
 
               {/* Circle with Icon */}
               <div
-                className={`relative flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${
+                className={`relative flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all font-poppins ${
                   isCompleted
-                    ? "bg-white text-blue-600 shadow-lg"
+                    ? "bg-purple-600 text-white shadow-lg"
                     : isActive
-                    ? "bg-white text-blue-600 ring-4 ring-white/40 shadow-lg"
-                    : "bg-white/30 text-white border-2 border-white/50"
+                    ? "bg-purple-600 text-white ring-4 ring-purple-200 shadow-lg"
+                    : "bg-white/60 text-gray-700 border-2 border-gray-300"
                 }`}
               >
                 {isCompleted ? (
                   <Check className="w-5 h-5" />
                 ) : isActive ? (
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-white" />
                 ) : (
                   step.number
                 )}
@@ -286,16 +298,17 @@ export default function CandidateRegistration() {
 
               {/* Text Content */}
               <div className="flex-1 min-w-0 pt-1">
-                <p className="text-base font-bold text-white leading-tight">
+                <p className="text-base font-bold text-gray-900 leading-tight font-poppins">
                   {step.title}
                 </p>
-                <p className="text-sm text-white/80 mt-1 leading-snug">
+                <p className="text-sm text-gray-700 mt-1 leading-snug font-poppins">
                   {step.description}
                 </p>
               </div>
             </div>
           );
         })}
+      </div>
       </div>
     </div>
   );
@@ -304,23 +317,23 @@ export default function CandidateRegistration() {
   const Step1Content = () => (
     <div className="h-full flex flex-col">
       <div className="flex-shrink-0 mb-6">
-        <h2 className="text-2xl font-bold text-blue-600">Career Launchpad</h2>
-        <p className="text-gray-600 text-sm mt-1">Upload Resume</p>
+        <h2 className="text-2xl font-bold text-purple-600 font-poppins">Career Launchpad</h2>
+        <p className="text-gray-600 text-sm mt-1 font-poppins">Upload Resume</p>
       </div>
 
       <div className="flex-1 overflow-y-auto space-y-6 pr-4">
         {/* Resume Upload */}
         <div>
-          <label className="block text-sm font-medium text-blue-600 mb-3">
+          <label className="block text-sm font-medium text-purple-600 mb-3 font-poppins">
             Upload Resume
           </label>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition">
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-400 transition">
             <Upload className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-            <p className="text-gray-600 font-medium text-sm mb-1">
+            <p className="text-gray-600 font-medium text-sm mb-1 font-poppins">
               Drag & Drop a file here or Click to Browse
             </p>
-            <p className="text-gray-500 text-xs mb-3">Expected PDF Docx</p>
-            <p className="text-gray-500 text-xs mb-4">Max file size 5MB</p>
+            <p className="text-gray-500 text-xs mb-3 font-poppins">Expected PDF Docx</p>
+            <p className="text-gray-500 text-xs mb-4 font-poppins">Max file size 5MB</p>
             <div className="flex items-center justify-center gap-3">
               <input
                 type="file"
@@ -359,18 +372,18 @@ export default function CandidateRegistration() {
 
         {/* Certificates Upload */}
         <div>
-          <label className="block text-sm font-medium text-blue-600 mb-3">
-            Upload Certificates <span className="text-blue-600">+</span>
+          <label className="block text-sm font-medium text-purple-600 mb-3 font-poppins">
+            Upload Certificates <span className="text-purple-600">+</span>
           </label>
           <div className="border border-gray-200 rounded-lg p-6">
             <Button
               variant="default"
-              className="bg-blue-600 hover:bg-blue-700 text-xs px-4 h-9 mb-3"
+              className="bg-purple-600 hover:bg-purple-700 text-xs px-4 h-9 mb-3 font-poppins"
               size="sm"
             >
               Upload Image
             </Button>
-            <p className="text-gray-600 text-sm">
+            <p className="text-gray-600 text-sm font-poppins">
               or drop a file, paste image, use{" "}
               <span className="text-gray-500">url</span>
             </p>
@@ -415,101 +428,101 @@ export default function CandidateRegistration() {
   const Step2Content = () => (
     <div className="h-full flex flex-col">
       <div className="flex-shrink-0 mb-6">
-        <h2 className="text-2xl font-bold text-blue-600">Career Launchpad</h2>
-        <p className="text-gray-600 text-sm mt-1">About You</p>
+        <h2 className="text-2xl font-bold text-purple-600 font-poppins">Career Launchpad</h2>
+        <p className="text-gray-600 text-sm mt-1 font-poppins">About You</p>
       </div>
 
       <div className="flex-1 overflow-y-auto pr-4">
         <div className="grid grid-cols-2 gap-6">
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               First Name
             </Label>
             <Input
               placeholder="First Name"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step2Form.register("firstName")}
             />
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Last Name
             </Label>
             <Input
               placeholder="Last Name"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step2Form.register("lastName")}
             />
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Mobile Number
             </Label>
             <Input
               placeholder="Mobile Number"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step2Form.register("mobileNumber")}
             />
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Alternative Mobile Number
             </Label>
             <Input
               placeholder="Alternative Mobile Number"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step2Form.register("alternativeMobileNumber")}
             />
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Primary Email
             </Label>
             <Input
               type="email"
               placeholder="Primary Email"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step2Form.register("primaryEmail")}
             />
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Secondary Email
             </Label>
             <Input
               type="email"
               placeholder="Secondary Email"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step2Form.register("secondaryEmail")}
             />
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Date of Birth
             </Label>
             <Input
               type="date"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step2Form.register("dateOfBirth")}
             />
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               WhatsApp Number
             </Label>
             <Input
               placeholder="WhatsApp Number"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step2Form.register("whatsappNumber")}
             />
           </div>
         </div>
 
         <div className="mt-6">
-          <Label className="text-sm font-medium text-blue-600 mb-2 block">
+          <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
             Current Status
           </Label>
-          <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+          <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins">
             <option value="">Select Status</option>
             <option value="employed">Currently Employed</option>
             <option value="unemployed">Unemployed</option>
@@ -524,17 +537,17 @@ export default function CandidateRegistration() {
   const Step3Content = () => (
     <div className="h-full flex flex-col">
       <div className="flex-shrink-0 mb-6">
-        <h2 className="text-2xl font-bold text-blue-600">Career Launchpad</h2>
-        <p className="text-gray-600 text-sm mt-1">Your Strength</p>
+        <h2 className="text-2xl font-bold text-purple-600 font-poppins">Career Launchpad</h2>
+        <p className="text-gray-600 text-sm mt-1 font-poppins">Your Strength</p>
       </div>
 
       <div className="flex-1 overflow-y-auto pr-4">
         <div className="grid grid-cols-2 gap-6">
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Job Type
             </Label>
-            <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+            <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins">
               <option value="">Select Job Type</option>
               <option value="full-time">Full-time</option>
               <option value="part-time">Part-time</option>
@@ -542,33 +555,33 @@ export default function CandidateRegistration() {
             </select>
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Primary Skill
             </Label>
             <Input
               placeholder="Marketing Analytics"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step3Form.register("primarySkill")}
             />
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               University Name
             </Label>
             <Input
               placeholder="University Name"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step3Form.register("universityName")}
             />
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Secondary Skill
             </Label>
             <div className="flex gap-2">
               <Input
                 placeholder="SEO"
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
                 {...step3Form.register("secondarySkill")}
               />
               <Button variant="outline" className="px-3 h-10">
@@ -577,30 +590,30 @@ export default function CandidateRegistration() {
             </div>
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               College Name
             </Label>
             <Input
               placeholder="College Name"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step3Form.register("collegeName")}
             />
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Resource Management
             </Label>
             <Input
               placeholder="Resource Management"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               readOnly
             />
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Proficiency Level
             </Label>
-            <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+            <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins">
               <option value="">Select Level</option>
               <option value="beginner">Beginner</option>
               <option value="intermediate">Intermediate</option>
@@ -609,12 +622,12 @@ export default function CandidateRegistration() {
             </select>
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Business Strategy
             </Label>
             <Input
               placeholder="Business Strategy"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               readOnly
             />
           </div>
@@ -627,46 +640,46 @@ export default function CandidateRegistration() {
   const Step4Content = () => (
     <div className="h-full flex flex-col">
       <div className="flex-shrink-0 mb-6">
-        <h2 className="text-2xl font-bold text-blue-600">Career Launchpad</h2>
-        <p className="text-gray-600 text-sm mt-1">Your Journey</p>
+        <h2 className="text-2xl font-bold text-purple-600 font-poppins">Career Launchpad</h2>
+        <p className="text-gray-600 text-sm mt-1 font-poppins">Your Journey</p>
       </div>
 
       <div className="flex-1 overflow-y-auto pr-4">
         <div className="grid grid-cols-2 gap-6">
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Current Company
             </Label>
             <Input
               placeholder="Company Name"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step4Form.register("currentCompany")}
             />
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Company Sector
             </Label>
             <Input
               placeholder="Company Sector"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
             />
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Current Role
             </Label>
             <Input
               placeholder="Your Role"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step4Form.register("currentRole")}
             />
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Company Type
             </Label>
-            <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+            <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins">
               <option value="">Select Type</option>
               <option value="startup">Startup</option>
               <option value="mid-size">Mid-size</option>
@@ -675,32 +688,32 @@ export default function CandidateRegistration() {
             </select>
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Company Level
             </Label>
             <Input
               placeholder="Level/Grade"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step4Form.register("companyLevel")}
             />
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Product Category
             </Label>
             <Input
               placeholder="Product Category"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step4Form.register("productCategory")}
             />
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Product Domain
             </Label>
             <Input
               placeholder="Domain"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step4Form.register("productDomain")}
             />
           </div>
@@ -713,52 +726,52 @@ export default function CandidateRegistration() {
   const Step5Content = () => (
     <div className="h-full flex flex-col">
       <div className="flex-shrink-0 mb-6">
-        <h2 className="text-2xl font-bold text-blue-600">Career Launchpad</h2>
-        <p className="text-gray-600 text-sm mt-1">Online Presence</p>
+        <h2 className="text-2xl font-bold text-purple-600 font-poppins">Career Launchpad</h2>
+        <p className="text-gray-600 text-sm mt-1 font-poppins">Online Presence</p>
       </div>
 
       <div className="flex-1 overflow-y-auto pr-4">
         <div className="grid grid-cols-2 gap-6">
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               LinkedIn
             </Label>
             <Input
               type="url"
               placeholder="LinkedIn URL"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step5Form.register("linkedinUrl")}
             />
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Portfolio
             </Label>
             <Input
               type="url"
               placeholder="Portfolio URL"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step5Form.register("portfolioUrl")}
             />
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Location
             </Label>
             <Input
               placeholder="City, Country"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step5Form.register("currentLocation")}
             />
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Website
             </Label>
             <Input
               type="url"
               placeholder="Website URL"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step5Form.register("websiteUrl")}
             />
           </div>
@@ -771,78 +784,78 @@ export default function CandidateRegistration() {
   const Step6Content = () => (
     <div className="h-full flex flex-col">
       <div className="flex-shrink-0 mb-6">
-        <h2 className="text-2xl font-bold text-blue-600">Career Launchpad</h2>
-        <p className="text-gray-600 text-sm mt-1">Job Preferences</p>
+        <h2 className="text-2xl font-bold text-purple-600 font-poppins">Career Launchpad</h2>
+        <p className="text-gray-600 text-sm mt-1 font-poppins">Job Preferences</p>
       </div>
 
       <div className="flex-1 overflow-y-auto pr-4">
         <div className="grid grid-cols-2 gap-6">
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Job Title
             </Label>
             <Input
               placeholder="Desired Job Title"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step6Form.register("jobTitle")}
             />
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Employment type
             </Label>
             <Input
               placeholder="Full Time"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step6Form.register("employmentType")}
             />
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Preferred Location
             </Label>
             <Input
               placeholder="City, Country"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step6Form.register("preferredLocation")}
             />
           </div>
           <div>
-            <Label className="text-sm font-medium text-blue-600 mb-2 block">
+            <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
               Starting date
             </Label>
             <Input
               type="date"
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
               {...step6Form.register("startingDate")}
             />
           </div>
         </div>
 
         <div className="mt-6">
-          <Label className="text-sm font-medium text-blue-600 mb-2 block">
+          <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
             Instructions to Recruiter
           </Label>
           <Textarea
             placeholder="Any additional instructions or preferences..."
-            className="border border-gray-300 rounded-md px-3 py-2 text-sm min-h-20"
+            className="border border-gray-300 rounded-md px-3 py-2 text-sm min-h-20 focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
             {...step6Form.register("instructions")}
           />
         </div>
 
         {/* Password Section */}
         <div className="mt-6 pt-6 border-t">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4 font-poppins">
             Create Your Password
           </h3>
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <Label className="text-sm font-medium text-blue-600 mb-2 block">
+              <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
                 Password
               </Label>
               <PasswordInput
                 placeholder="Create a password (min 6 characters)"
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
                 {...step6Form.register("password", {
                   required: "Password is required",
                   minLength: {
@@ -858,12 +871,12 @@ export default function CandidateRegistration() {
               )}
             </div>
             <div>
-              <Label className="text-sm font-medium text-blue-600 mb-2 block">
+              <Label className="text-sm font-medium text-purple-600 mb-2 block font-poppins">
                 Confirm Password
               </Label>
               <PasswordInput
                 placeholder="Confirm your password"
-                className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+                className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-purple-600 focus:ring-2 focus:ring-purple-100 font-poppins"
                 {...step6Form.register("confirmPassword", {
                   required: "Please confirm your password",
                 })}
@@ -909,8 +922,8 @@ export default function CandidateRegistration() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile Header */}
-        <div className="lg:hidden bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 flex-shrink-0">
-          <h3 className="text-lg font-semibold">
+        <div className="lg:hidden bg-gradient-to-r from-purple-600 to-purple-700 text-white p-4 flex-shrink-0">
+          <h3 className="text-lg font-semibold font-poppins">
             {steps[currentStep - 1]?.title}
           </h3>
         </div>
@@ -920,7 +933,7 @@ export default function CandidateRegistration() {
           <div className="max-w-4xl mx-auto w-full h-full flex flex-col">
             {/* Back Button */}
             <Link href="/">
-              <Button variant="ghost" size="sm" className="mb-4 text-gray-600 hover:text-gray-900 self-start">
+              <Button variant="ghost" size="sm" className="mb-4 text-gray-600 hover:text-gray-900 self-start font-poppins">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Home
               </Button>
@@ -936,7 +949,7 @@ export default function CandidateRegistration() {
                 variant="ghost"
                 onClick={onPrevStep}
                 disabled={currentStep === 1}
-                className="text-gray-600 text-sm px-4 h-10"
+                className="text-gray-600 text-sm px-4 h-10 font-poppins"
                 data-testid="button-prev-step"
               >
                 ← Previous Step
@@ -946,7 +959,7 @@ export default function CandidateRegistration() {
                 <Button
                   onClick={onSubmit}
                   disabled={isSubmitting}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-8 h-10 rounded-md"
+                  className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-8 h-10 rounded-md font-poppins"
                   data-testid="button-submit-registration"
                 >
                   {isSubmitting ? "Submitting..." : "Submit"}
@@ -954,7 +967,7 @@ export default function CandidateRegistration() {
               ) : (
                 <Button
                   onClick={onNextStep}
-                  className="bg-blue-600 hover:bg-blue-700 text-white text-sm px-8 h-10 rounded-md"
+                  className="bg-purple-600 hover:bg-purple-700 text-white text-sm px-8 h-10 rounded-md font-poppins"
                   data-testid="button-next-step"
                 >
                   Next

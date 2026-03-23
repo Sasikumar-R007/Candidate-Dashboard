@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/protected-route";
 import ErrorBoundary from "@/components/error-boundary";
 import Landing from "@/pages/landing";
 import EmployerLogin from "@/pages/employer-login";
+import EmployerLanding from "@/pages/employer-landing";
 import CandidateLogin from "@/pages/candidate-login";
 import CandidateRegistration from "@/pages/candidate-registration";
 import Dashboard from "@/pages/dashboard";
@@ -35,6 +36,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Landing} />
+      <Route path="/employer" component={EmployerLanding} />
       <Route path="/setup-admin" component={SetupAdmin} />
       <Route path="/setup-support" component={SetupSupport} />
       <Route path="/employer-login" component={EmployerLogin} />

@@ -11,6 +11,8 @@ interface ParsedResume {
   location: string | null;
   company: string | null;
   education: string | null;
+  highestQualification: string | null;
+  collegeName: string | null;
   linkedinUrl: string | null;
   portfolioUrl: string | null;
   websiteUrl: string | null;
@@ -43,10 +45,7 @@ export async function parseResumeFile(filePath: string, mimeType: string): Promi
       const result = await mammoth.extractRawText({ path: filePath });
       text = result.value;
     } else if (mimeType === 'image/jpeg' || mimeType === 'image/jpg' || mimeType === 'image/png') {
-      // For images, we would need OCR - for now, return empty text
-      // TODO: Implement OCR for image-based resumes
-      text = '';
-      console.warn('Image-based resumes require OCR which is not yet implemented. Please upload a PDF or Word document.');
+      throw new Error('Image-based resumes are not supported yet because OCR is not implemented. Please upload a PDF or Word document.');
     } else {
       throw new Error(`Unsupported file type: ${mimeType}`);
     }
@@ -63,7 +62,7 @@ export async function parseResumeFile(filePath: string, mimeType: string): Promi
     throw new Error('Failed to parse resume file: ' + (error.message || 'Unknown error'));
   }
 
-  const extractedData = extractResumeData(text);
+  const extractedData = extractResumeData(repairCompactedResumeText(normalizeResumeText(text)));
   
   return {
     ...extractedData,
@@ -81,206 +80,281 @@ function extractResumeData(text: string): {
   location: string | null;
   company: string | null;
   education: string | null;
+  highestQualification: string | null;
+  collegeName: string | null;
   linkedinUrl: string | null;
   portfolioUrl: string | null;
   websiteUrl: string | null;
   currentRole: string | null;
 } {
   const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-  const phoneRegex = /(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}|\d{10}/g;
+  const phoneRegex = /(?:\+?\d{1,3}[\s-]?)?(?:\(?\d{2,5}\)?[\s-]?)?\d{3,5}[\s-]?\d{4,5}/g;
   
   const emails = text.match(emailRegex);
   const phones = text.match(phoneRegex);
   
   const email = emails && emails.length > 0 ? emails[0].toLowerCase() : null;
-  const phone = phones && phones.length > 0 ? phones[0].replace(/[^\d+]/g, '') : null;
+  const phone = selectBestPhone(phones);
   
-  let fullName = extractName(text);
-  
-  // If name not found, try to extract from email (before @)
-  if (!fullName && email) {
-    const emailName = email.split('@')[0];
-    // Try to format email name as a proper name (e.g., "john.doe" -> "John Doe")
-    const nameParts = emailName.split(/[._-]/).filter(part => part.length > 0);
-    if (nameParts.length >= 2) {
-      fullName = nameParts.map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(' ');
-    } else if (nameParts.length === 1 && nameParts[0].length > 2) {
-      // Single name - capitalize first letter
-      fullName = nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1).toLowerCase();
-    }
-  }
-  
+  const fullName = extractName(text);
   const designation = extractDesignation(text);
   const experience = extractExperience(text);
   const skills = extractSkills(text);
   const location = extractLocation(text);
   const company = extractCompany(text);
   const education = extractEducation(text);
+  const highestQualification = extractHighestQualification(text) || education;
+  const collegeName = extractCollegeName(text);
   const linkedinUrl = extractLinkedIn(text);
   const portfolioUrl = extractPortfolio(text);
   const websiteUrl = extractWebsite(text);
   const currentRole = extractCurrentRole(text);
   
-  return { fullName, email, phone, designation, experience, skills, location, company, education, linkedinUrl, portfolioUrl, websiteUrl, currentRole };
+  return { fullName, email, phone, designation, experience, skills, location, company, education, highestQualification, collegeName, linkedinUrl, portfolioUrl, websiteUrl, currentRole };
+}
+
+function normalizeResumeText(text: string): string {
+  return text
+    .replace(/\u00a0/g, ' ')
+    .replace(/â€“|–/g, '-')
+    .replace(/â€”|—/g, '-')
+    .replace(/â€¢|•/g, ', ')
+    .replace(/\r/g, '\n')
+    .replace(/\n{3,}/g, '\n\n');
+}
+
+function repairCompactedResumeText(text: string): string {
+  const preservedTokens: string[] = [];
+  const protectedText = text.replace(
+    /https?:\/\/\S+|www\.\S+|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
+    (match) => {
+      const placeholder = `__PRESERVED_${preservedTokens.length}__`;
+      preservedTokens.push(match);
+      return placeholder;
+    }
+  );
+
+  const normalized = protectedText
+    .replace(/\b([A-Z])\s*\n\s*([a-z]{2,})/g, '$1$2')
+    .replace(/[|]+/g, ' | ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z]{2,})([A-Z][a-z])/g, '$1 $2')
+    .replace(/([A-Za-z])(\d{2,4})/g, '$1 $2')
+    .replace(/(\d{2,4})([A-Za-z])/g, '$1 $2')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n[ \t]+/g, '\n')
+    .replace(/[ \t]{2,}/g, ' ');
+
+  return normalized.replace(/__PRESERVED_(\d+)__/g, (_, index) => preservedTokens[Number(index)] || '');
+}
+
+function toDisplayNameCase(value: string): string {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => {
+      if (/^[A-Z]\.?$/.test(word)) return word;
+
+      return word
+        .split('-')
+        .map((part) => {
+          if (!part) return part;
+          const lower = part.toLowerCase();
+          return lower.charAt(0).toUpperCase() + lower.slice(1);
+        })
+        .join('-');
+    })
+    .join(' ');
+}
+
+function normalizeNameCandidate(line: string): string {
+  return line
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z]{2,})([A-Z][a-z])/g, '$1 $2')
+    .replace(/^[^A-Za-z]+/, '')
+    .replace(/^(name|candidate|applicant)\s*[:\-]\s*/i, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+function collectNameCandidates(lines: string[]): Array<{ line: string; index: number; joinBoost: number }> {
+  const candidates: Array<{ line: string; index: number; joinBoost: number }> = [];
+  const scanLimit = Math.min(lines.length, 120);
+
+  for (let index = 0; index < scanLimit; index++) {
+    const singleLine = normalizeNameCandidate(lines[index]);
+    if (looksLikeNameCandidate(singleLine)) {
+      candidates.push({ line: singleLine, index, joinBoost: 0 });
+    }
+
+    if (index < scanLimit - 1) {
+      const combinedTwoLines = normalizeNameCandidate(`${lines[index]} ${lines[index + 1]}`);
+      if (looksLikeNameCandidate(combinedTwoLines)) {
+        candidates.push({ line: combinedTwoLines, index, joinBoost: 25 });
+      }
+    }
+
+    if (index < scanLimit - 2) {
+      const combinedThreeLines = normalizeNameCandidate(`${lines[index]} ${lines[index + 1]} ${lines[index + 2]}`);
+      if (looksLikeNameCandidate(combinedThreeLines)) {
+        candidates.push({ line: combinedThreeLines, index, joinBoost: 15 });
+      }
+    }
+  }
+
+  return candidates;
+}
+
+function isPotentialNameShape(line: string): boolean {
+  const words = line.split(/\s+/).filter(Boolean);
+  if (words.length < 2 || words.length > 5) {
+    return false;
+  }
+
+  return words.every((word) => {
+    if (/^[A-Z]\.?$/.test(word)) return true;
+    if (/^[A-Z][a-z]+(?:[-'][A-Z]?[a-z]+)*$/.test(word)) return true;
+    if (/^[A-Z]{2,}$/.test(word)) return true;
+    return false;
+  });
+}
+
+function looksLikeNameCandidate(line: string): boolean {
+  const cleaned = normalizeNameCandidate(line);
+  if (!cleaned || cleaned.length < 4 || cleaned.length > 70) {
+    return false;
+  }
+
+  const lower = cleaned.toLowerCase();
+  const invalidFragments = [
+    'resume', 'curriculum vitae', 'summary', 'objective', 'experience', 'work history',
+    'professional experience', 'education', 'skills', 'contact', 'profile', 'address',
+    'location', 'qualification', 'certification', 'project', 'achievement', 'reference',
+    'phone', 'mobile', 'email', 'linkedin', 'github', 'portfolio', 'website',
+    'developer', 'engineer', 'manager', 'specialist', 'analyst', 'consultant', 'designer',
+    'director', 'lead', 'intern', 'present', 'current role', 'hong kong', 'india',
+  ];
+
+  if (
+    cleaned.includes('@') ||
+    /^https?:\/\//i.test(cleaned) ||
+    /\d/.test(cleaned) ||
+    invalidFragments.some((fragment) => lower.includes(fragment))
+  ) {
+    return false;
+  }
+
+  return isPotentialNameShape(cleaned);
+}
+
+function selectBestPhone(phones: string[] | null): string | null {
+  if (!phones || phones.length === 0) {
+    return null;
+  }
+
+  for (const rawPhone of phones) {
+    const normalized = rawPhone.replace(/[^\d+]/g, '');
+    const digitCount = normalized.replace(/\D/g, '').length;
+    if (digitCount >= 10 && digitCount <= 13) {
+      return normalized;
+    }
+  }
+
+  return null;
 }
 
 function extractName(text: string): string | null {
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-  
-  // Enhanced name extraction with multiple strategies
-  // Strategy 1: Look for name in first few lines (most common location) - expanded to 20 lines
-  for (let i = 0; i < Math.min(20, lines.length); i++) {
-    const line = lines[i];
-    
-    // Skip lines that are clearly not names
-    if (line.includes('@') || 
-        line.match(/\d{5,}/) || 
-        line.match(/^[+\d\s()-]+$/) ||
-        line.toLowerCase().includes('phone') ||
-        line.toLowerCase().includes('email') ||
-        line.toLowerCase().includes('mobile') ||
-        line.toLowerCase().includes('linkedin') ||
-        line.match(/^https?:\/\//i) ||
-        line.match(/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/) || // Date format
-        line.match(/^(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{4}/i)) {
-      continue;
-    }
-    
-    // Skip common resume headers (expanded list)
-    const commonHeaders = ['resume', 'cv', 'curriculum vitae', 'objective', 'summary', 'experience', 'education', 'skills', 'contact', 'profile', 'address', 'location', 'qualification', 'certification', 'project', 'achievement', 'work history', 'employment', 'professional', 'career', 'accomplishments', 'awards', 'publications', 'references'];
-    if (commonHeaders.some(header => line.toLowerCase().includes(header))) {
-      continue;
-    }
-    
-    // Pattern 1: Standard name format "FirstName LastName" or "FirstName MiddleName LastName"
-    // More flexible: allows for mixed case and common name patterns
-    const namePattern1 = /^[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,4}$/;
-    if (namePattern1.test(line) && line.length >= 4 && line.length <= 70) {
-      // Additional validation: should not be all caps (likely a header)
-      if (line !== line.toUpperCase()) {
-        // Check it's not a common false positive
-        const lowerLine = line.toLowerCase();
-        if (!lowerLine.includes('years') && !lowerLine.includes('experience') && 
-            !lowerLine.includes('developer') && !lowerLine.includes('engineer') &&
-            !lowerLine.includes('manager') && !lowerLine.includes('analyst')) {
-          return line;
-        }
+
+  const explicitNamePatterns = [
+    /(?:^|\n)\s*name\s*[:\-]\s*([A-Z][A-Za-z' -]+(?:\s+[A-Z][A-Za-z' -]+){1,4})/i,
+    /(?:^|\n)\s*candidate\s*[:\-]\s*([A-Z][A-Za-z' -]+(?:\s+[A-Z][A-Za-z' -]+){1,4})/i,
+  ];
+
+  for (const pattern of explicitNamePatterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      const normalized = normalizeNameCandidate(match[1]);
+      if (looksLikeNameCandidate(normalized)) {
+        return toDisplayNameCase(normalized);
       }
     }
-    
-    // Pattern 2: All words capitalized (common in resumes) - more flexible
-    const words = line.split(/\s+/);
-    if (words.length >= 2 && words.length <= 6) {
-      const allCapitalized = words.every(word => {
-        // Allow single letters (middle initials) or words starting with capital
-        return (word.length === 1 && /^[A-Z]$/.test(word)) || 
-               (/^[A-Z]/.test(word) && word.length > 1);
-      });
-      const noNumbers = !/\d/.test(line);
-      const noSpecialChars = !/[@#$%^&*()_+=\[\]{}|\\:";'<>?,./]/.test(line);
-      const notAllCaps = line !== line.toUpperCase();
-      
-      if (allCapitalized && noNumbers && noSpecialChars && notAllCaps && line.length >= 4 && line.length <= 70) {
-        // Additional check: not a job title or common phrase
-        const lowerLine = line.toLowerCase();
-        const jobTitleIndicators = ['years', 'experience', 'developer', 'engineer', 'manager', 'analyst', 'consultant', 'specialist', 'director', 'lead', 'senior', 'junior'];
-        if (!jobTitleIndicators.some(indicator => lowerLine.includes(indicator))) {
-          return line;
-        }
+  }
+
+  const scoredCandidates = collectNameCandidates(lines)
+    .map(({ line, index, joinBoost }) => {
+      const normalized = line;
+      let score = 0;
+      const lower = normalized.toLowerCase();
+      const previousLine = lines[index - 1]?.toLowerCase() || '';
+      const nextLine = lines[index + 1]?.toLowerCase() || '';
+      const nearbyContext = lines
+        .slice(Math.max(0, index - 2), Math.min(lines.length, index + 3))
+        .join(' ')
+        .toLowerCase();
+
+      if (index < 6) score += 50;
+      else if (index < 20) score += 25;
+      score += joinBoost;
+
+      if (normalized === normalized.toUpperCase()) score += 10;
+      if (/^[A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3}$/.test(normalized)) score += 35;
+      if (/^[A-Z][a-z]+\s+[A-Z]\.?\s+[A-Z][a-z]+/.test(normalized)) score += 30;
+      if (/^[A-Z][a-z]+,\s*[A-Z][a-z]+/.test(normalized)) score += 20;
+
+      if (
+        nearbyContext.includes('@') ||
+        nearbyContext.includes('phone') ||
+        nearbyContext.includes('mobile') ||
+        nearbyContext.includes('address') ||
+        nearbyContext.includes('linkedin') ||
+        nearbyContext.includes('e-mail') ||
+        nearbyContext.includes('email')
+      ) {
+        score += 70;
       }
-    }
-    
-    // Pattern 3: Name with middle initial "John D. Smith" or "John D Smith"
-    const middleInitialPattern = /^[A-Z][a-z]+\s+[A-Z]\.?\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*$/;
-    if (middleInitialPattern.test(line) && line.length >= 6 && line.length <= 60) {
-      return line;
-    }
-    
-    // Pattern 4: Name with comma "LastName, FirstName"
-    const commaNamePattern = /^[A-Z][a-z]+,\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*$/;
-    if (commaNamePattern.test(line) && line.length >= 6 && line.length <= 60) {
-      // Reverse it to "FirstName LastName" format
-      const parts = line.split(',').map(p => p.trim());
+
+      if (
+        previousLine.includes('contact') ||
+        nextLine.includes('address') ||
+        nextLine.includes('phone') ||
+        nextLine.includes('email')
+      ) {
+        score += 35;
+      }
+
+      if (
+        lower.includes('summary') ||
+        lower.includes('objective') ||
+        lower.includes('work history')
+      ) {
+        score -= 120;
+      }
+
+      return {
+        line: normalized,
+        score,
+        index,
+      };
+    })
+    .sort((left, right) => {
+      if (right.score !== left.score) return right.score - left.score;
+      return left.index - right.index;
+    });
+
+  if (scoredCandidates.length > 0 && scoredCandidates[0].score >= 40) {
+    const bestCandidate = scoredCandidates[0].line;
+
+    if (/^[A-Z][a-z]+,\s*[A-Z][a-z]+/.test(bestCandidate)) {
+      const parts = bestCandidate.split(',').map((part) => part.trim());
       if (parts.length === 2) {
-        return `${parts[1]} ${parts[0]}`;
+        return toDisplayNameCase(`${parts[1]} ${parts[0]}`);
       }
     }
-    
-    // Pattern 5: Name with hyphen (e.g., "Mary-Jane Smith")
-    const hyphenNamePattern = /^[A-Z][a-z]+(?:-[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+){1,3}$/;
-    if (hyphenNamePattern.test(line) && line.length >= 4 && line.length <= 70 && 
-        line !== line.toUpperCase() && !/\d/.test(line)) {
-      return line;
-    }
-    
-    // Pattern 6: More lenient - just check if it looks like a name (2-4 words, all start with capital, no numbers)
-    if (words.length >= 2 && words.length <= 4 && 
-        words.every(word => /^[A-Z]/.test(word) && word.length > 1) &&
-        !/\d/.test(line) &&
-        !/[@#$%^&*()_+=\[\]{}|\\:";'<>?,./]/.test(line) &&
-        line.length >= 4 && line.length <= 60 &&
-        line !== line.toUpperCase()) {
-      // Final validation: check it's not a common phrase
-      const lowerLine = line.toLowerCase();
-      const invalidPhrases = ['years experience', 'work experience', 'professional experience', 
-                              'current role', 'present position', 'contact information'];
-      if (!invalidPhrases.some(phrase => lowerLine.includes(phrase))) {
-        return line;
-      }
-    }
+
+    return toDisplayNameCase(bestCandidate);
   }
-  
-  // Strategy 2: Look for name patterns near email (name often appears before email)
-  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
-  const emailMatch = text.match(emailRegex);
-  if (emailMatch && emailMatch.index !== undefined) {
-    const emailIndex = emailMatch.index;
-    const textBeforeEmail = text.substring(Math.max(0, emailIndex - 300), emailIndex);
-    const linesBeforeEmail = textBeforeEmail.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-    
-    // Check last 5 lines before email (increased from 3)
-    for (let i = Math.max(0, linesBeforeEmail.length - 5); i < linesBeforeEmail.length; i++) {
-      const line = linesBeforeEmail[i];
-      if (line.length >= 4 && line.length <= 70 && 
-          !line.includes('@') && 
-          !/\d{5,}/.test(line) &&
-          /^[A-Z]/.test(line)) {
-        const words = line.split(/\s+/);
-        if (words.length >= 2 && words.length <= 5 && 
-            words.every(word => /^[A-Z]/.test(word) && word.length > 1) &&
-            !/\d/.test(line) &&
-            !/[@#$%^&*()_+=\[\]{}|\\:";'<>?,./]/.test(line) &&
-            line !== line.toUpperCase()) {
-          // Additional validation
-          const lowerLine = line.toLowerCase();
-          if (!lowerLine.includes('phone') && !lowerLine.includes('email') && 
-              !lowerLine.includes('location') && !lowerLine.includes('address')) {
-            return line;
-          }
-        }
-      }
-    }
-  }
-  
-  // Strategy 3: Look for name in the very first line (often the name is at the top)
-  if (lines.length > 0) {
-    const firstLine = lines[0];
-    const words = firstLine.split(/\s+/);
-    if (words.length >= 2 && words.length <= 5 &&
-        words.every(word => /^[A-Z]/.test(word) && word.length > 1) &&
-        !/\d/.test(firstLine) &&
-        !/[@#$%^&*()_+=\[\]{}|\\:";'<>?,./]/.test(firstLine) &&
-        firstLine.length >= 4 && firstLine.length <= 70 &&
-        firstLine !== firstLine.toUpperCase()) {
-      const lowerLine = firstLine.toLowerCase();
-      const invalidPhrases = ['resume', 'cv', 'curriculum vitae', 'objective', 'summary', 
-                              'experience', 'education', 'skills', 'contact', 'phone', 'email'];
-      if (!invalidPhrases.some(phrase => lowerLine.includes(phrase))) {
-        return firstLine;
-      }
-    }
-  }
-  
+
   return null;
 }
 
@@ -940,6 +1014,74 @@ function extractEducation(text: string): string | null {
     }
   }
   
+  return null;
+}
+
+function extractHighestQualification(text: string): string | null {
+  const normalizedText = text.replace(/\s+/g, ' ');
+  const qualificationPatterns = [
+    /\b(B\.?\s?Tech|Bachelor of Technology)\b(?:\s+in\s+[A-Za-z&().,\s-]+)?/i,
+    /\b(B\.?\s?E|Bachelor of Engineering)\b(?:\s+in\s+[A-Za-z&().,\s-]+)?/i,
+    /\b(B\.?\s?Sc|Bachelor of Science)\b(?:\s+in\s+[A-Za-z&().,\s-]+)?/i,
+    /\b(B\.?\s?Com|Bachelor of Commerce)\b(?:\s+in\s+[A-Za-z&().,\s-]+)?/i,
+    /\b(B\.?\s?A|Bachelor of Arts)\b(?:\s+in\s+[A-Za-z&().,\s-]+)?/i,
+    /\b(BCA|Bachelor of Computer Applications)\b/i,
+    /\b(MCA|Master of Computer Applications)\b/i,
+    /\b(M\.?\s?Tech|Master of Technology)\b(?:\s+in\s+[A-Za-z&().,\s-]+)?/i,
+    /\b(M\.?\s?E|Master of Engineering)\b(?:\s+in\s+[A-Za-z&().,\s-]+)?/i,
+    /\b(M\.?\s?Sc|Master of Science)\b(?:\s+in\s+[A-Za-z&().,\s-]+)?/i,
+    /\b(MBA|Master of Business Administration)\b(?:\s+in\s+[A-Za-z&().,\s-]+)?/i,
+    /\b(MS|Master of Science)\b(?:\s+in\s+[A-Za-z&().,\s-]+)?/i,
+    /\b(Ph\.?\s?D|Doctor of Philosophy)\b(?:\s+in\s+[A-Za-z&().,\s-]+)?/i,
+    /\bDiploma\b(?:\s+in\s+[A-Za-z&().,\s-]+)?/i,
+  ];
+
+  for (const pattern of qualificationPatterns) {
+    const match = normalizedText.match(pattern);
+    if (match?.[0]) {
+      return match[0].trim().replace(/[,:;.\-]+$/, '');
+    }
+  }
+
+  return null;
+}
+
+function extractCollegeName(text: string): string | null {
+  const lines = text.split('\n').map((line) => line.trim()).filter(Boolean);
+  const collegeIndicators = [
+    'university',
+    'college',
+    'institute',
+    'school of',
+    'academy',
+    'polytechnic',
+  ];
+
+  let educationSectionIndex = -1;
+  for (let i = 0; i < lines.length; i += 1) {
+    const lowerLine = lines[i].toLowerCase();
+    if (lowerLine.includes('education') || lowerLine.includes('academic') || lowerLine.includes('qualification')) {
+      educationSectionIndex = i;
+      break;
+    }
+  }
+
+  const startIndex = educationSectionIndex >= 0 ? educationSectionIndex : 0;
+  const endIndex = Math.min(lines.length, startIndex + 20);
+
+  for (let i = startIndex; i < endIndex; i += 1) {
+    const line = lines[i];
+    const lowerLine = line.toLowerCase();
+
+    if (
+      collegeIndicators.some((indicator) => lowerLine.includes(indicator)) &&
+      !/\b(email|phone|linkedin|github|skills|experience)\b/i.test(line) &&
+      !/\d{5,}/.test(line)
+    ) {
+      return line.replace(/^[-:|,\s]+|[-:|,\s]+$/g, '').trim();
+    }
+  }
+
   return null;
 }
 

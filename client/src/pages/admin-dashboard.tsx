@@ -1369,6 +1369,8 @@ export default function AdminDashboard() {
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
   const [isPerformanceGraphModalOpen, setIsPerformanceGraphModalOpen] = useState(false);
   const [isRevenueGraphModalOpen, setIsRevenueGraphModalOpen] = useState(false);
+  const [isIncrementModalOpen, setIsIncrementModalOpen] = useState(false);
+  const [isIncrementEmployeePickerOpen, setIsIncrementEmployeePickerOpen] = useState(false);
   const [revenueTeam, setRevenueTeam] = useState<string>("all");
   const [revenueDateFrom, setRevenueDateFrom] = useState<Date | undefined>(undefined);
   const [revenueDateTo, setRevenueDateTo] = useState<Date | undefined>(undefined);
@@ -1406,11 +1408,20 @@ export default function AdminDashboard() {
   const [cashoutSearch, setCashoutSearch] = useState('');
   const [resumeDatabaseSearch, setResumeDatabaseSearch] = useState('');
   const [employeeMasterSearch, setEmployeeMasterSearch] = useState('');
+  const [incrementEmployeeSearch, setIncrementEmployeeSearch] = useState('');
   const [clientMasterSearch, setClientMasterSearch] = useState('');
   const [teamPerformanceSearch, setTeamPerformanceSearch] = useState('');
   const [closureListSearch, setClosureListSearch] = useState('');
   const [requirementsSearch, setRequirementsSearch] = useState('');
   const [rolesToAssignSearch, setRolesToAssignSearch] = useState('');
+  const [incrementEffectiveDate, setIncrementEffectiveDate] = useState<Date | undefined>();
+  const [incrementForm, setIncrementForm] = useState({
+    selectedEmployeeId: '',
+    incrementType: '',
+    incrementValueType: 'percentage',
+    incrementValue: '',
+    revisedCtc: '',
+  });
   const [userManagementTab, setUserManagementTab] = useState<'all' | 'clients' | 'team_leaders' | 'talent_advisors'>('all');
   const [userManagementSearch, setUserManagementSearch] = useState('');
 
@@ -1433,11 +1444,26 @@ export default function AdminDashboard() {
   const [editingCashout, setEditingCashout] = useState<any>(null);
 
   const [clientForm, setClientForm] = useState({
-    brandName: '', incorporatedName: '', gstin: '',
-    address: '', location: '', spoc: '', email: '', password: '',
-    website: '', linkedin: '', agreement: '', percentage: '',
-    category: '', paymentTerms: '', source: '', startDate: '',
-    currentStatus: 'active', logo: ''
+    brandName: '',
+    incorporatedName: '',
+    gstin: '',
+    address: '',
+    location: '',
+    spoc: '',
+    email: '',
+    password: '',
+    website: '',
+    linkedin: '',
+    agreement: '',
+    percentage: '',
+    category: '',
+    paymentTerms: '',
+    source: '',
+    startDate: '',
+    currentStatus: 'active',
+    logo: '',
+    clientType: 'direct' as 'direct' | 'partnership',
+    partnerId: '',
   });
   const [clientLogoFile, setClientLogoFile] = useState<File | null>(null);
   const [clientLogoPreview, setClientLogoPreview] = useState<string | null>(null);
@@ -1578,6 +1604,35 @@ export default function AdminDashboard() {
     );
   }, [employees]);
 
+  const incrementEligibleEmployees = useMemo(() => {
+    return employees.filter((emp: any) => emp.role === 'team_leader' || emp.role === 'recruiter');
+  }, [employees]);
+
+  const filteredIncrementEmployees = useMemo(() => {
+    if (!incrementEmployeeSearch.trim()) return incrementEligibleEmployees;
+    const search = incrementEmployeeSearch.toLowerCase();
+    return incrementEligibleEmployees.filter((emp: any) =>
+      emp.name?.toLowerCase().includes(search) ||
+      emp.email?.toLowerCase().includes(search) ||
+      emp.employeeId?.toLowerCase().includes(search) ||
+      emp.role?.toLowerCase().includes(search)
+    );
+  }, [incrementEligibleEmployees, incrementEmployeeSearch]);
+
+  const selectedIncrementEmployee = useMemo(() => {
+    return incrementEligibleEmployees.find((emp: any) => emp.id === incrementForm.selectedEmployeeId) || null;
+  }, [incrementEligibleEmployees, incrementForm.selectedEmployeeId]);
+
+  const selectedEmployeeCurrentCtc = useMemo(() => {
+    if (!selectedIncrementEmployee) return '';
+    return (
+      selectedIncrementEmployee.currentMonthlyCTC ||
+      selectedIncrementEmployee.yearlyCTC ||
+      selectedIncrementEmployee.offeredCtc ||
+      ''
+    );
+  }, [selectedIncrementEmployee]);
+
   // Filter employees for User Management based on selected tab and search
   const userManagementEmployees = useMemo(() => {
     let filtered = employees.filter((emp: any) =>
@@ -1693,6 +1748,19 @@ export default function AdminDashboard() {
       emp.employmentStatus?.toLowerCase().includes(search)
     );
   }, [hrEmployees, employeeMasterSearch]);
+
+  const resetIncrementForm = () => {
+    setIncrementForm({
+      selectedEmployeeId: '',
+      incrementType: '',
+      incrementValueType: 'percentage',
+      incrementValue: '',
+      revisedCtc: '',
+    });
+    setIncrementEmployeeSearch('');
+    setIncrementEffectiveDate(undefined);
+    setIsIncrementEmployeePickerOpen(false);
+  };
 
   // Filter candidates for Resume Database table
   const filteredCandidates = useMemo(() => {
@@ -2175,11 +2243,26 @@ export default function AdminDashboard() {
       });
       setIsClientModalOpen(false);
       setClientForm({
-        brandName: '', incorporatedName: '', gstin: '',
-        address: '', location: '', spoc: '', email: '', password: '',
-        website: '', linkedin: '', agreement: '', percentage: '',
-        category: '', paymentTerms: '', source: '', startDate: '',
-        currentStatus: 'active'
+        brandName: '',
+        incorporatedName: '',
+        gstin: '',
+        address: '',
+        location: '',
+        spoc: '',
+        email: '',
+        password: '',
+        website: '',
+        linkedin: '',
+        agreement: '',
+        percentage: '',
+        category: '',
+        paymentTerms: '',
+        source: '',
+        startDate: '',
+        currentStatus: 'active',
+        logo: '',
+        clientType: 'direct',
+        partnerId: '',
       });
       setClientStartDate(undefined);
     },
@@ -3683,6 +3766,99 @@ export default function AdminDashboard() {
         if (teamsPeriod === 'custom' && teamsCustomDate) {
           htmlContent += `<p><strong>Custom Date:</strong> ${teamsCustomDate.toLocaleDateString()}</p>`;
         }
+        
+        // Add actual data based on report type
+        if (teamsReportType === 'cash-outflows') {
+          // Filter cash outflows based on period
+          let filteredCashOutflows = cashoutData;
+          const now = new Date();
+          
+          if (teamsPeriod === 'monthly') {
+            const currentMonth = now.getMonth() + 1;
+            const currentYear = now.getFullYear();
+            filteredCashOutflows = cashoutData.filter((item: any) => {
+              const monthMap: Record<string, number> = {
+                'january': 1, 'february': 2, 'march': 3, 'april': 4,
+                'may': 5, 'june': 6, 'july': 7, 'august': 8,
+                'september': 9, 'october': 10, 'november': 11, 'december': 12,
+                'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4,
+                'jun': 6, 'jul': 7, 'aug': 8, 'sep': 9,
+                'oct': 10, 'nov': 11, 'dec': 12
+              };
+              const monthNum = typeof item.month === 'string' 
+                ? (monthMap[item.month.toLowerCase()] || parseInt(item.month) || 0)
+                : parseInt(String(item.month)) || 0;
+              return monthNum === currentMonth && parseInt(item.year) === currentYear;
+            });
+          } else if (teamsPeriod === 'quarterly') {
+            const currentQuarter = Math.ceil((now.getMonth() + 1) / 3);
+            const currentYear = now.getFullYear();
+            const quarterMonths: Record<number, number[]> = {
+              1: [1, 2, 3], 2: [4, 5, 6], 3: [7, 8, 9], 4: [10, 11, 12]
+            };
+            const monthsInQuarter = quarterMonths[currentQuarter] || [];
+            const monthMap: Record<string, number> = {
+              'january': 1, 'february': 2, 'march': 3, 'april': 4,
+              'may': 5, 'june': 6, 'july': 7, 'august': 8,
+              'september': 9, 'october': 10, 'november': 11, 'december': 12,
+              'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4,
+              'jun': 6, 'jul': 7, 'aug': 8, 'sep': 9,
+              'oct': 10, 'nov': 11, 'dec': 12
+            };
+            filteredCashOutflows = cashoutData.filter((item: any) => {
+              const monthNum = typeof item.month === 'string'
+                ? (monthMap[item.month.toLowerCase()] || parseInt(item.month) || 0)
+                : parseInt(String(item.month)) || 0;
+              return monthsInQuarter.includes(monthNum) && parseInt(item.year) === currentYear;
+            });
+          } else if (teamsPeriod === 'yearly') {
+            const currentYear = now.getFullYear();
+            filteredCashOutflows = cashoutData.filter((item: any) => parseInt(item.year) === currentYear);
+          }
+          
+          htmlContent += `
+            <h2 style="margin-top: 30px; color: #333;">Cash Outflows Data</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Month</th>
+                  <th>Year</th>
+                  <th>Employees</th>
+                  <th>Salary</th>
+                  <th>Incentive</th>
+                  <th>Tools Cost</th>
+                  <th>Rent</th>
+                  <th>Other Expenses</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+          
+          filteredCashOutflows.forEach((item: any) => {
+            const total = (parseInt(item.salary) || 0) + (parseInt(item.incentive) || 0) + 
+                         (parseInt(item.tools) || 0) + (parseInt(item.rent) || 0) + 
+                         (parseInt(item.others) || 0);
+            htmlContent += `
+              <tr>
+                <td>${item.month || '-'}</td>
+                <td>${item.year || '-'}</td>
+                <td>${item.employees || '-'}</td>
+                <td>₹${(parseInt(item.salary) || 0).toLocaleString('en-IN')}</td>
+                <td>₹${(parseInt(item.incentive) || 0).toLocaleString('en-IN')}</td>
+                <td>₹${(parseInt(item.tools) || 0).toLocaleString('en-IN')}</td>
+                <td>₹${(parseInt(item.rent) || 0).toLocaleString('en-IN')}</td>
+                <td>₹${(parseInt(item.others) || 0).toLocaleString('en-IN')}</td>
+                <td>₹${total.toLocaleString('en-IN')}</td>
+              </tr>
+            `;
+          });
+          
+          htmlContent += `
+              </tbody>
+            </table>
+          `;
+        }
       } else if (downloadSection === 'reports') {
         const selectedReports = Object.entries(reportsCheckboxes)
           .filter(([_, checked]) => checked)
@@ -3693,8 +3869,262 @@ export default function AdminDashboard() {
           <p><strong>Priority:</strong> ${reportsPriority || 'All'}</p>
           <p><strong>Type:</strong> ${reportsType || 'All'}</p>
         `;
+        
+        // Add actual data based on selected reports
+        if (selectedReports.includes('requirements')) {
+          // Filter requirements based on selected filters
+          let filteredRequirements = requirements;
+          if (reportsTeam && reportsTeam !== 'all') {
+            filteredRequirements = filteredRequirements.filter((req: any) => 
+              req.teamLead?.toLowerCase() === reportsTeam.toLowerCase()
+            );
+          }
+          if (reportsPriority && reportsPriority !== 'all') {
+            filteredRequirements = filteredRequirements.filter((req: any) => 
+              req.priority?.toLowerCase() === reportsPriority.toLowerCase()
+            );
+          }
+          if (reportsType && reportsType !== 'all') {
+            if (reportsType === 'opened') {
+              filteredRequirements = filteredRequirements.filter((req: any) => req.status !== 'Closed' && req.status !== 'Archived');
+            } else if (reportsType === 'closed') {
+              filteredRequirements = filteredRequirements.filter((req: any) => req.status === 'Closed');
+            } else if (reportsType === 'archived') {
+              filteredRequirements = filteredRequirements.filter((req: any) => req.status === 'Archived');
+            }
+          }
+          
+          htmlContent += `
+            <h2 style="margin-top: 30px; color: #333;">Requirements Data</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Position</th>
+                  <th>Company</th>
+                  <th>Team Lead</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Criticality</th>
+                  <th>Created At</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+          
+          filteredRequirements.forEach((req: any) => {
+            htmlContent += `
+              <tr>
+                <td>${req.position || '-'}</td>
+                <td>${req.company || '-'}</td>
+                <td>${req.teamLead || '-'}</td>
+                <td>${req.priority || '-'}</td>
+                <td>${req.status || '-'}</td>
+                <td>${req.criticality || '-'}</td>
+                <td>${req.createdAt ? new Date(req.createdAt).toLocaleDateString() : '-'}</td>
+              </tr>
+            `;
+          });
+          
+          htmlContent += `
+              </tbody>
+            </table>
+          `;
+        }
+
+        // Pipeline report section
+        if (selectedReports.includes('pipeline') && pipelineApplicantData.length > 0) {
+          htmlContent += `
+            <h2 style="margin-top: 40px; color: #333;">Pipeline Data</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Applied On</th>
+                  <th>Candidate</th>
+                  <th>Company</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Location</th>
+                  <th>Experience</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+
+          pipelineApplicantData.forEach((app: any) => {
+            htmlContent += `
+              <tr>
+                <td>${app.appliedOn || '-'}</td>
+                <td>${app.candidateName || '-'}</td>
+                <td>${app.company || '-'}</td>
+                <td>${app.roleApplied || '-'}</td>
+                <td>${app.currentStatus || '-'}</td>
+                <td>${app.location || '-'}</td>
+                <td>${app.experience || '-'}</td>
+              </tr>
+            `;
+          });
+
+          htmlContent += `
+              </tbody>
+            </table>
+          `;
+        }
+
+        // Closure reports section
+        if (selectedReports.includes('closureReports') && closureReportsData.length > 0) {
+          htmlContent += `
+            <h2 style="margin-top: 40px; color: #333;">Closure Reports</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Candidate</th>
+                  <th>Position</th>
+                  <th>Client</th>
+                  <th>Talent Advisor</th>
+                  <th>Fixed CTC</th>
+                  <th>Offered Date</th>
+                  <th>Joined Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+
+          closureReportsData.forEach((report: any) => {
+            htmlContent += `
+              <tr>
+                <td>${report.candidate || '-'}</td>
+                <td>${report.position || '-'}</td>
+                <td>${report.client || '-'}</td>
+                <td>${report.talentAdvisor || '-'}</td>
+                <td>${report.fixedCTC || '-'}</td>
+                <td>${report.offeredDate || '-'}</td>
+                <td>${report.joinedDate || '-'}</td>
+                <td>${report.status || '-'}</td>
+              </tr>
+            `;
+          });
+
+          htmlContent += `
+              </tbody>
+            </table>
+          `;
+        }
+
+        // Team performance section
+        if (selectedReports.includes('teamPerformance') && teamPerformanceData.length > 0) {
+          htmlContent += `
+            <h2 style="margin-top: 40px; color: #333;">Team Performance</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Talent Advisor</th>
+                  <th>Joining Date</th>
+                  <th>Tenure</th>
+                  <th>Closures</th>
+                  <th>Last Closure</th>
+                  <th>Quarters Achieved</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+
+          teamPerformanceData.forEach((item: any) => {
+            htmlContent += `
+              <tr>
+                <td>${item.talentAdvisor || '-'}</td>
+                <td>${item.joiningDate || '-'}</td>
+                <td>${item.tenure || '-'}</td>
+                <td>${item.closures ?? '-'}</td>
+                <td>${item.lastClosure || '-'}</td>
+                <td>${item.qtrsAchieved ?? '-'}</td>
+              </tr>
+            `;
+          });
+
+          htmlContent += `
+              </tbody>
+            </table>
+          `;
+        }
       } else {
         htmlContent += `<p><strong>Report Type:</strong> ${generalReportType || 'N/A'}</p>`;
+        
+        // Employee Master report
+        if (generalReportType === 'employee-master') {
+          htmlContent += `
+            <table>
+              <thead>
+                <tr>
+                  <th>Employee ID</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Designation</th>
+                  <th>Department</th>
+                  <th>Joining Date</th>
+                  <th>Employment Status</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+          
+          hrEmployees.forEach((emp: any) => {
+            htmlContent += `
+              <tr>
+                <td>${emp.employeeId || '-'}</td>
+                <td>${emp.name || '-'}</td>
+                <td>${emp.email || '-'}</td>
+                <td>${emp.phone || '-'}</td>
+                <td>${emp.designation || '-'}</td>
+                <td>${emp.department || '-'}</td>
+                <td>${emp.joiningDate || '-'}</td>
+                <td>${emp.employmentStatus || '-'}</td>
+              </tr>
+            `;
+          });
+          
+          htmlContent += `
+              </tbody>
+            </table>
+          `;
+        }
+
+        // Client Master report
+        if (generalReportType === 'client-master') {
+          htmlContent += `
+            <table style="margin-top: 24px;">
+              <thead>
+                <tr>
+                  <th>Client Code</th>
+                  <th>Brand Name</th>
+                  <th>Location</th>
+                  <th>SPOC</th>
+                  <th>Website</th>
+                  <th>Current Status</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+
+          masterDataClients.forEach((client: any) => {
+            htmlContent += `
+              <tr>
+                <td>${client.clientCode || '-'}</td>
+                <td>${client.brandName || '-'}</td>
+                <td>${client.location || '-'}</td>
+                <td>${client.spoc || '-'}</td>
+                <td>${client.website || '-'}</td>
+                <td>${client.currentStatus || '-'}</td>
+              </tr>
+            `;
+          });
+
+          htmlContent += `
+              </tbody>
+            </table>
+          `;
+        }
       }
 
       htmlContent += `
@@ -3707,14 +4137,28 @@ export default function AdminDashboard() {
       // Open print dialog for PDF
       const printWindow = window.open('', '_blank');
       if (printWindow) {
+        // Suppress console warnings from PDF rendering
+        const originalConsoleWarn = console.warn;
+        console.warn = (...args: any[]) => {
+          // Filter out PDF/font-related warnings (TT: undefined function)
+          const message = args[0]?.toString() || '';
+          if (!message.includes('TT: undefined function') && !message.includes('Warning: Missing')) {
+            originalConsoleWarn.apply(console, args);
+          }
+        };
+        
         printWindow.document.write(htmlContent);
         printWindow.document.close();
         setTimeout(() => {
           printWindow.print();
-          // Close the window after a delay
+          // Restore console.warn after printing
           setTimeout(() => {
-            printWindow.close();
-          }, 1000);
+            console.warn = originalConsoleWarn;
+            // Close the window after a delay
+            setTimeout(() => {
+              printWindow.close();
+            }, 1000);
+          }, 500);
         }, 500);
         toast({
           title: "PDF Download",
@@ -3727,17 +4171,145 @@ export default function AdminDashboard() {
       let csvContent = '';
 
       if (downloadSection === 'teams') {
-        csvContent = `Report Type,Period,File Format\n${teamsReportType || 'N/A'},${teamsPeriod || 'N/A'},${fileFormat}\n`;
-        if (teamsPeriod === 'custom' && teamsCustomDate) {
-          csvContent += `Custom Date,${teamsCustomDate.toLocaleDateString()}\n`;
+        if (teamsReportType === 'cash-outflows') {
+          // Filter cash outflows based on period
+          let filteredCashOutflows = cashoutData;
+          const now = new Date();
+          
+          if (teamsPeriod === 'monthly') {
+            const currentMonth = now.getMonth() + 1;
+            const currentYear = now.getFullYear();
+            filteredCashOutflows = cashoutData.filter((item: any) => {
+              const monthMap: Record<string, number> = {
+                'january': 1, 'february': 2, 'march': 3, 'april': 4,
+                'may': 5, 'june': 6, 'july': 7, 'august': 8,
+                'september': 9, 'october': 10, 'november': 11, 'december': 12,
+                'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4,
+                'jun': 6, 'jul': 7, 'aug': 8, 'sep': 9,
+                'oct': 10, 'nov': 11, 'dec': 12
+              };
+              const monthNum = typeof item.month === 'string' 
+                ? (monthMap[item.month.toLowerCase()] || parseInt(item.month) || 0)
+                : parseInt(String(item.month)) || 0;
+              return monthNum === currentMonth && parseInt(item.year) === currentYear;
+            });
+          } else if (teamsPeriod === 'quarterly') {
+            const currentQuarter = Math.ceil((now.getMonth() + 1) / 3);
+            const currentYear = now.getFullYear();
+            const quarterMonths: Record<number, number[]> = {
+              1: [1, 2, 3], 2: [4, 5, 6], 3: [7, 8, 9], 4: [10, 11, 12]
+            };
+            const monthsInQuarter = quarterMonths[currentQuarter] || [];
+            const monthMap: Record<string, number> = {
+              'january': 1, 'february': 2, 'march': 3, 'april': 4,
+              'may': 5, 'june': 6, 'july': 7, 'august': 8,
+              'september': 9, 'october': 10, 'november': 11, 'december': 12,
+              'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4,
+              'jun': 6, 'jul': 7, 'aug': 8, 'sep': 9,
+              'oct': 10, 'nov': 11, 'dec': 12
+            };
+            filteredCashOutflows = cashoutData.filter((item: any) => {
+              const monthNum = typeof item.month === 'string'
+                ? (monthMap[item.month.toLowerCase()] || parseInt(item.month) || 0)
+                : parseInt(String(item.month)) || 0;
+              return monthsInQuarter.includes(monthNum) && parseInt(item.year) === currentYear;
+            });
+          } else if (teamsPeriod === 'yearly') {
+            const currentYear = now.getFullYear();
+            filteredCashOutflows = cashoutData.filter((item: any) => parseInt(item.year) === currentYear);
+          }
+          
+          csvContent = 'Month,Year,Employees,Salary,Incentive,Tools Cost,Rent,Other Expenses,Total\n';
+          filteredCashOutflows.forEach((item: any) => {
+            const total = (parseInt(item.salary) || 0) + (parseInt(item.incentive) || 0) + 
+                         (parseInt(item.tools) || 0) + (parseInt(item.rent) || 0) + 
+                         (parseInt(item.others) || 0);
+            csvContent += `"${item.month || ''}","${item.year || ''}","${item.employees || ''}","${item.salary || 0}","${item.incentive || 0}","${item.tools || 0}","${item.rent || 0}","${item.others || 0}","${total}"\n`;
+          });
         }
       } else if (downloadSection === 'reports') {
         const selectedReports = Object.entries(reportsCheckboxes)
           .filter(([_, checked]) => checked)
           .map(([key, _]) => key);
-        csvContent = `Selected Reports,Team,Priority,Type,File Format\n${selectedReports.join('; ') || 'None'},${reportsTeam || 'All'},${reportsPriority || 'All'},${reportsType || 'All'},${fileFormat}\n`;
+
+        const lines: string[] = [];
+
+        // Requirements section
+        if (selectedReports.includes('requirements')) {
+          let filteredRequirements = requirements;
+          if (reportsTeam && reportsTeam !== 'all') {
+            filteredRequirements = filteredRequirements.filter((req: any) => 
+              req.teamLead?.toLowerCase() === reportsTeam.toLowerCase()
+            );
+          }
+          if (reportsPriority && reportsPriority !== 'all') {
+            filteredRequirements = filteredRequirements.filter((req: any) => 
+              req.priority?.toLowerCase() === reportsPriority.toLowerCase()
+            );
+          }
+          if (reportsType && reportsType !== 'all') {
+            if (reportsType === 'opened') {
+              filteredRequirements = filteredRequirements.filter((req: any) => req.status !== 'Closed' && req.status !== 'Archived');
+            } else if (reportsType === 'closed') {
+              filteredRequirements = filteredRequirements.filter((req: any) => req.status === 'Closed');
+            } else if (reportsType === 'archived') {
+              filteredRequirements = filteredRequirements.filter((req: any) => req.status === 'Archived');
+            }
+          }
+
+          lines.push('Section,Position,Company,Team Lead,Priority,Status,Criticality,Created At');
+          filteredRequirements.forEach((req: any) => {
+            lines.push(`"Requirements","${req.position || ''}","${req.company || ''}","${req.teamLead || ''}","${req.priority || ''}","${req.status || ''}","${req.criticality || ''}","${req.createdAt ? new Date(req.createdAt).toLocaleDateString() : ''}"`);
+          });
+        }
+
+        // Pipeline section
+        if (selectedReports.includes('pipeline') && pipelineApplicantData.length > 0) {
+          if (lines.length > 0) lines.push('');
+          lines.push('Section,Applied On,Candidate,Company,Role,Status,Location,Experience');
+          pipelineApplicantData.forEach((app: any) => {
+            lines.push(`"Pipeline","${app.appliedOn || ''}","${app.candidateName || ''}","${app.company || ''}","${app.roleApplied || ''}","${app.currentStatus || ''}","${app.location || ''}","${app.experience || ''}"`);
+          });
+        }
+
+        // Closure reports section
+        if (selectedReports.includes('closureReports') && closureReportsData.length > 0) {
+          if (lines.length > 0) lines.push('');
+          lines.push('Section,Candidate,Position,Client,Talent Advisor,Fixed CTC,Offered Date,Joined Date,Status');
+          closureReportsData.forEach((report: any) => {
+            lines.push(`"Closure Reports","${report.candidate || ''}","${report.position || ''}","${report.client || ''}","${report.talentAdvisor || ''}","${report.fixedCTC || ''}","${report.offeredDate || ''}","${report.joinedDate || ''}","${report.status || ''}"`);
+          });
+        }
+
+        // Team performance section
+        if (selectedReports.includes('teamPerformance') && teamPerformanceData.length > 0) {
+          if (lines.length > 0) lines.push('');
+          lines.push('Section,Talent Advisor,Joining Date,Tenure,Closures,Last Closure,Quarters Achieved');
+          teamPerformanceData.forEach((item: any) => {
+            lines.push(`"Team Performance","${item.talentAdvisor || ''}","${item.joiningDate || ''}","${item.tenure || ''}","${item.closures ?? ''}","${item.lastClosure || ''}","${item.qtrsAchieved ?? ''}"`);
+          });
+        }
+
+        if (lines.length === 0) {
+          lines.push('Selected Reports,Team,Priority,Type,File Format');
+          lines.push(`${selectedReports.join('; ') || 'None'},${reportsTeam || 'All'},${reportsPriority || 'All'},${reportsType || 'All'},${fileFormat}`);
+        }
+
+        csvContent = lines.join('\n');
       } else {
-        csvContent = `Report Type,File Format\n${generalReportType || 'N/A'},${fileFormat}\n`;
+        if (generalReportType === 'employee-master') {
+          // Generate CSV with actual employee data
+          csvContent = 'Employee ID,Name,Email,Phone,Designation,Department,Joining Date,Employment Status\n';
+          hrEmployees.forEach((emp: any) => {
+            csvContent += `"${emp.employeeId || ''}","${emp.name || ''}","${emp.email || ''}","${emp.phone || ''}","${emp.designation || ''}","${emp.department || ''}","${emp.joiningDate || ''}","${emp.employmentStatus || ''}"\n`;
+          });
+        } else if (generalReportType === 'client-master') {
+          // Generate CSV with actual client data
+          csvContent = 'Client Code,Brand Name,Location,SPOC,Website,Current Status\n';
+          masterDataClients.forEach((client: any) => {
+            csvContent += `"${client.clientCode || ''}","${client.brandName || ''}","${client.location || ''}","${client.spoc || ''}","${client.website || ''}","${client.currentStatus || ''}"\n`;
+          });
+        }
       }
 
       // Create and download CSV file
@@ -5206,7 +5778,15 @@ export default function AdminDashboard() {
                   </table>
                 </div>
 
-                <div className="flex justify-end mt-4">
+                <div className="flex justify-end gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                    onClick={() => setIsIncrementModalOpen(true)}
+                    data-testid="button-open-increment-modal"
+                  >
+                    Increment
+                  </Button>
                   <Button
                     className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-4 py-2 rounded font-medium text-sm"
                     onClick={() => {
@@ -6755,15 +7335,25 @@ export default function AdminDashboard() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="text-lg text-gray-900 dark:text-white">Employees Master</CardTitle>
-                  <Button
-                    className="btn-rounded bg-cyan-400 hover:bg-cyan-500 text-slate-900 text-sm px-4"
-                    onClick={() => {
-                      setMasterDbConfirmationTab('employee');
-                      setMasterDbConfirmationOpen(true);
-                    }}
-                  >
-                    View More
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      className="border-blue-300 text-blue-700 hover:bg-blue-50 text-sm px-4"
+                      onClick={() => setIsIncrementModalOpen(true)}
+                      data-testid="button-open-increment-modal-master-data"
+                    >
+                      Increment
+                    </Button>
+                    <Button
+                      className="btn-rounded bg-cyan-400 hover:bg-cyan-500 text-slate-900 text-sm px-4"
+                      onClick={() => {
+                        setMasterDbConfirmationTab('employee');
+                        setMasterDbConfirmationOpen(true);
+                      }}
+                    >
+                      View More
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto admin-scrollbar">
@@ -7322,7 +7912,7 @@ export default function AdminDashboard() {
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Report Type</label>
                     <Select value={teamsReportType} onValueChange={setTeamsReportType}>
-                      <SelectTrigger className="w-full h-10 text-sm border-gray-300 dark:border-gray-600" data-testid="select-teams-report-type">
+                      <SelectTrigger className="w-full h-10 text-sm border-gray-300 dark:border-gray-600 cursor-pointer" data-testid="select-teams-report-type">
                         <SelectValue placeholder="Select Report Type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -7340,7 +7930,7 @@ export default function AdminDashboard() {
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Period</label>
                     <Select value={teamsPeriod} onValueChange={setTeamsPeriod}>
-                      <SelectTrigger className="w-full h-10 text-sm border-gray-300 dark:border-gray-600" data-testid="select-teams-period">
+                      <SelectTrigger className="w-full h-10 text-sm border-gray-300 dark:border-gray-600 cursor-pointer" data-testid="select-teams-period">
                         <SelectValue placeholder="Select Period" />
                       </SelectTrigger>
                       <SelectContent>
@@ -7368,7 +7958,7 @@ export default function AdminDashboard() {
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">File Format</label>
                     <Select value={teamsFileFormat} onValueChange={setTeamsFileFormat}>
-                      <SelectTrigger className="w-full h-10 text-sm border-gray-300 dark:border-gray-600" data-testid="select-teams-file-format">
+                      <SelectTrigger className="w-full h-10 text-sm border-gray-300 dark:border-gray-600 cursor-pointer" data-testid="select-teams-file-format">
                         <SelectValue placeholder="File Format" />
                       </SelectTrigger>
                       <SelectContent>
@@ -7445,7 +8035,7 @@ export default function AdminDashboard() {
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Team</label>
                     <Select value={reportsTeam} onValueChange={setReportsTeam}>
-                      <SelectTrigger className="w-full h-10 text-sm border-gray-300 dark:border-gray-600" data-testid="select-reports-team">
+                      <SelectTrigger className="w-full h-10 text-sm border-gray-300 dark:border-gray-600 cursor-pointer" data-testid="select-reports-team">
                         <SelectValue placeholder="Team" />
                       </SelectTrigger>
                       <SelectContent>
@@ -7462,7 +8052,7 @@ export default function AdminDashboard() {
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Priority</label>
                     <Select value={reportsPriority} onValueChange={setReportsPriority}>
-                      <SelectTrigger className="w-full h-10 text-sm border-gray-300 dark:border-gray-600" data-testid="select-reports-priority">
+                      <SelectTrigger className="w-full h-10 text-sm border-gray-300 dark:border-gray-600 cursor-pointer" data-testid="select-reports-priority">
                         <SelectValue placeholder="Priority" />
                       </SelectTrigger>
                       <SelectContent>
@@ -7477,7 +8067,7 @@ export default function AdminDashboard() {
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Type</label>
                     <Select value={reportsType} onValueChange={setReportsType}>
-                      <SelectTrigger className="w-full h-10 text-sm border-gray-300 dark:border-gray-600" data-testid="select-reports-type">
+                      <SelectTrigger className="w-full h-10 text-sm border-gray-300 dark:border-gray-600 cursor-pointer" data-testid="select-reports-type">
                         <SelectValue placeholder="Type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -7492,7 +8082,7 @@ export default function AdminDashboard() {
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">File Format</label>
                     <Select value={reportsFileFormat} onValueChange={setReportsFileFormat}>
-                      <SelectTrigger className="w-full h-10 text-sm border-gray-300 dark:border-gray-600" data-testid="select-reports-file-format">
+                      <SelectTrigger className="w-full h-10 text-sm border-gray-300 dark:border-gray-600 cursor-pointer" data-testid="select-reports-file-format">
                         <SelectValue placeholder="File Format" />
                       </SelectTrigger>
                       <SelectContent>
@@ -7527,7 +8117,7 @@ export default function AdminDashboard() {
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Report Type</label>
                     <Select value={generalReportType} onValueChange={setGeneralReportType}>
-                      <SelectTrigger className="w-full h-10 text-sm border-gray-300 dark:border-gray-600" data-testid="select-general-report-type">
+                      <SelectTrigger className="w-full h-10 text-sm border-gray-300 dark:border-gray-600 cursor-pointer" data-testid="select-general-report-type">
                         <SelectValue placeholder="Select Report Type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -7540,7 +8130,7 @@ export default function AdminDashboard() {
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">File Format</label>
                     <Select value={generalFileFormat} onValueChange={setGeneralFileFormat}>
-                      <SelectTrigger className="w-full h-10 text-sm border-gray-300 dark:border-gray-600" data-testid="select-general-file-format">
+                      <SelectTrigger className="w-full h-10 text-sm border-gray-300 dark:border-gray-600 cursor-pointer" data-testid="select-general-file-format">
                         <SelectValue placeholder="File Format" />
                       </SelectTrigger>
                       <SelectContent>
@@ -10300,6 +10890,46 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            {/* Row 5b - Client Type & Partner */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Select
+                  value={clientForm.clientType}
+                  onValueChange={(value) =>
+                    setClientForm({ ...clientForm, clientType: value as 'direct' | 'partnership', partnerId: value === 'direct' ? '' : clientForm.partnerId })
+                  }
+                >
+                  <SelectTrigger className="input-styled rounded" data-testid="select-client-type">
+                    <SelectValue placeholder="Client Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="direct">Direct</SelectItem>
+                    <SelectItem value="partnership">Partnership</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Select
+                  value={clientForm.partnerId}
+                  onValueChange={(value) => setClientForm({ ...clientForm, partnerId: value })}
+                  disabled={clientForm.clientType !== 'partnership'}
+                >
+                  <SelectTrigger className="input-styled rounded" data-testid="select-partner-name">
+                    <SelectValue placeholder="Partner Name" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* Partner list – Master Data clients that can act as partners */}
+                    {masterDataClients.map((client: any) => (
+                      <SelectItem key={client.id} value={String(client.id)}>
+                        {client.brandName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             {/* Row 6 */}
             <div className="grid grid-cols-2 gap-4">
               <div className="relative">
@@ -10961,6 +11591,208 @@ export default function AdminDashboard() {
               </table>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Increment Modal */}
+      <Dialog
+        open={isIncrementModalOpen}
+        onOpenChange={(open) => {
+          setIsIncrementModalOpen(open);
+          if (!open) {
+            resetIncrementForm();
+          }
+        }}
+      >
+        <DialogContent className="max-w-3xl w-[95vw] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Employee Increment</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="space-y-2 md:col-span-2">
+                <Label>Select Employee</Label>
+                <Popover open={isIncrementEmployeePickerOpen} onOpenChange={setIsIncrementEmployeePickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full justify-between border-gray-200 bg-gray-50 font-normal text-left hover:bg-gray-100"
+                    >
+                      <span className={selectedIncrementEmployee ? 'text-gray-900 dark:text-white' : 'text-gray-500'}>
+                        {selectedIncrementEmployee
+                          ? `${selectedIncrementEmployee.name} (${selectedIncrementEmployee.employeeId})`
+                          : 'Select Talent Advisor or Team Leader'}
+                      </span>
+                      <ChevronDown className="h-4 w-4 text-gray-500" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[420px] p-3" align="start">
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                        <Input
+                          value={incrementEmployeeSearch}
+                          onChange={(e) => setIncrementEmployeeSearch(e.target.value)}
+                          placeholder="Search by name, mail, ID, or role"
+                          className={`border-gray-200 bg-gray-50 pl-9 ${incrementEmployeeSearch ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 placeholder:text-gray-400 dark:placeholder:text-gray-500'}`}
+                        />
+                      </div>
+                      <div className="max-h-64 overflow-y-auto rounded-md border border-gray-200 dark:border-gray-700">
+                        {filteredIncrementEmployees.length === 0 ? (
+                          <div className="px-3 py-6 text-sm text-center text-gray-500">
+                            No matching employees found.
+                          </div>
+                        ) : (
+                          filteredIncrementEmployees.map((employee: any) => (
+                            <button
+                              key={employee.id}
+                              type="button"
+                              onClick={() => {
+                                setIncrementForm((prev) => ({ ...prev, selectedEmployeeId: employee.id }));
+                                setIsIncrementEmployeePickerOpen(false);
+                              }}
+                              className="flex w-full items-start justify-between border-b border-gray-100 px-3 py-3 text-left last:border-b-0 hover:bg-blue-50 dark:border-gray-800 dark:hover:bg-blue-900/20"
+                            >
+                              <div>
+                                <div className="font-medium text-gray-900 dark:text-white">{employee.name}</div>
+                                <div className="text-xs text-gray-500">{employee.email || 'No email'}</div>
+                              </div>
+                              <div className="text-right">
+                                <div className="text-xs font-medium text-blue-700 dark:text-blue-300">{employee.employeeId || employee.id}</div>
+                                <div className="text-xs text-gray-500">
+                                  {employee.role === 'team_leader' ? 'Team Leader' : 'Talent Advisor'}
+                                </div>
+                              </div>
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Selected Employee Mail</Label>
+                <Input
+                  value={selectedIncrementEmployee?.email || ''}
+                  readOnly
+                  placeholder="Employee mail will appear here"
+                  className={`border-gray-200 bg-gray-50 ${selectedIncrementEmployee?.email ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 placeholder:text-gray-400 dark:placeholder:text-gray-500'}`}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Selected Employee ID</Label>
+                <Input
+                  value={selectedIncrementEmployee?.employeeId || selectedIncrementEmployee?.id || ''}
+                  readOnly
+                  placeholder="Employee ID will appear here"
+                  className={`border-gray-200 bg-gray-50 ${selectedIncrementEmployee?.employeeId || selectedIncrementEmployee?.id ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 placeholder:text-gray-400 dark:placeholder:text-gray-500'}`}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Increment Type</Label>
+                <Select
+                  value={incrementForm.incrementType}
+                  onValueChange={(value) => setIncrementForm((prev) => ({ ...prev, incrementType: value }))}
+                >
+                  <SelectTrigger className="border-gray-200 bg-gray-50">
+                    <SelectValue placeholder="Select increment type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="annual">Annual</SelectItem>
+                    <SelectItem value="performance">Performance</SelectItem>
+                    <SelectItem value="promotion">Promotion</SelectItem>
+                    <SelectItem value="special">Special</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Increment Percentage (%) or Amount</Label>
+                <div className="grid grid-cols-[160px_minmax(0,1fr)] gap-2">
+                  <Select
+                    value={incrementForm.incrementValueType}
+                    onValueChange={(value) => setIncrementForm((prev) => ({ ...prev, incrementValueType: value }))}
+                  >
+                    <SelectTrigger className="border-gray-200 bg-gray-50">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percentage">Percentage (%)</SelectItem>
+                      <SelectItem value="amount">Amount</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    value={incrementForm.incrementValue}
+                    onChange={(e) => setIncrementForm((prev) => ({ ...prev, incrementValue: e.target.value }))}
+                    placeholder={incrementForm.incrementValueType === 'percentage' ? 'e.g. 12' : 'e.g. 50000'}
+                    className={`border-gray-200 bg-gray-50 ${incrementForm.incrementValue ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 placeholder:text-gray-400 dark:placeholder:text-gray-500'}`}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Current Salary / CTC</Label>
+                <Input
+                  value={selectedEmployeeCurrentCtc}
+                  readOnly
+                  placeholder="Current salary / CTC will appear here"
+                  className={`border-gray-200 bg-gray-50 ${selectedEmployeeCurrentCtc ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 placeholder:text-gray-400 dark:placeholder:text-gray-500'}`}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>New Revised Salary / CTC</Label>
+                <Input
+                  value={incrementForm.revisedCtc}
+                  onChange={(e) => setIncrementForm((prev) => ({ ...prev, revisedCtc: e.target.value }))}
+                  placeholder="Enter revised salary / CTC"
+                  className={`border-gray-200 bg-gray-50 ${incrementForm.revisedCtc ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 placeholder:text-gray-400 dark:placeholder:text-gray-500'}`}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Effective Date of Increment</Label>
+                <StandardDatePicker
+                  value={incrementEffectiveDate}
+                  onChange={setIncrementEffectiveDate}
+                  placeholder="Select effective date"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsIncrementModalOpen(false);
+                resetIncrementForm();
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-blue-600 text-white hover:bg-blue-700"
+              onClick={() => {
+                toast({
+                  title: 'Frontend ready',
+                  description: 'Increment form UI is ready. Backend flow can be connected next.',
+                });
+                setIsIncrementModalOpen(false);
+                resetIncrementForm();
+              }}
+            >
+              Save Increment
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

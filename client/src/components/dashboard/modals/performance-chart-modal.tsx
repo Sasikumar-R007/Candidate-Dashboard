@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { CalendarIcon } from "lucide-react";
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, AreaChart, Area } from 'recharts';
 import { useState, useEffect } from "react";
@@ -292,47 +293,19 @@ export default function PerformanceChartModal({ isOpen, onClose }: PerformanceCh
               </SelectContent>
             </Select>
             
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={`w-48 justify-start text-left font-normal ${!defaultRateDateFrom && "text-gray-500 dark:text-gray-400"}`}
-                  data-testid="button-default-rate-date-from"
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {defaultRateDateFrom ? format(defaultRateDateFrom, "PPP") : <span>From Date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={defaultRateDateFrom}
-                  onSelect={setDefaultRateDateFrom}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <StandardDatePicker
+              value={defaultRateDateFrom}
+              onChange={setDefaultRateDateFrom}
+              placeholder="From Date"
+              className="w-48 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 dark:text-white"
+            />
             
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={`w-48 justify-start text-left font-normal ${!defaultRateDateTo && "text-gray-500 dark:text-gray-400"}`}
-                  data-testid="button-default-rate-date-to"
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {defaultRateDateTo ? format(defaultRateDateTo, "PPP") : <span>To Date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={defaultRateDateTo}
-                  onSelect={setDefaultRateDateTo}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <StandardDatePicker
+              value={defaultRateDateTo}
+              onChange={setDefaultRateDateTo}
+              placeholder="To Date"
+              className="w-48 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 dark:text-white"
+            />
           </div>
 
           {/* Stacked Bar Chart */}

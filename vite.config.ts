@@ -3,6 +3,8 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
+const devPort = parseInt(process.env.PORT || "5000", 10);
+
 export default defineConfig({
   plugins: [
     react(),
@@ -30,7 +32,7 @@ export default defineConfig({
   },
   server: {
     host: "0.0.0.0",
-    port: 5000,
+    port: devPort,
     allowedHosts: true,
     // HMR will be configured in middleware mode by the Express server
     fs: {

@@ -2955,7 +2955,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const revenueMappings = await storage.getRevenueMappingsByTeamLeaderId(employee.id);
-      const qtrsAchieved = new Set(revenueMappings.map(rm => rm.quarter)).size;
+      const closedRevenueMappings = revenueMappings.filter(rm => rm.status === 'closed');
+      const qtrsAchieved = new Set(
+        closedRevenueMappings
+          .map(rm => rm.quarter)
+          .filter((quarter): quarter is string => Boolean(quarter))
+      ).size;
       const nextMilestone = qtrsAchieved > 0 ? `+${Math.ceil(qtrsAchieved / 4) * 4 - qtrsAchieved}` : "0";
 
       // Calculate performance score based on requirements and resume delivery
@@ -4665,6 +4670,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           location: parsed.location,
           company: parsed.company,
           education: parsed.education,
+          highestQualification: parsed.highestQualification,
+          collegeName: parsed.collegeName,
           linkedinUrl: parsed.linkedinUrl,
           portfolioUrl: parsed.portfolioUrl,
           websiteUrl: parsed.websiteUrl,
@@ -7538,7 +7545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { targetMappings, revenueMappings } = await import("@shared/schema");
 
       const now = new Date();
-      const currentYear = now.getFullYear();
+      let targetYear = now.getFullYear();
       const currentMonth = now.getMonth() + 1;
 
       // Determine current quarter
@@ -7548,11 +7555,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       else if (currentMonth >= 7 && currentMonth <= 9) currentQuarter = "Q3";
       else currentQuarter = "Q4";
 
+      // Support period parameter (quarterly, monthly, yearly)
+      const { period } = req.query;
+      // For now, period parameter is informational - we still use current quarter
+      // Future enhancement: support filtering by different periods
+
       // Get target mappings for current quarter
       const allTargetMappings = await db.select().from(targetMappings);
       const currentQuarterTargets = allTargetMappings.filter(tm =>
-        tm.quarter === currentQuarter && tm.year === currentYear
+        tm.quarter === currentQuarter && tm.year === targetYear
       );
+
+      // Log for debugging
+      console.log(`[Performance Metrics] Current quarter: ${currentQuarter} ${targetYear}`);
+      console.log(`[Performance Metrics] Total target mappings: ${allTargetMappings.length}`);
+      console.log(`[Performance Metrics] Current quarter targets: ${currentQuarterTargets.length}`);
 
       // Calculate totals
       const totalMinTarget = currentQuarterTargets.reduce((sum, tm) => sum + tm.minimumTarget, 0);

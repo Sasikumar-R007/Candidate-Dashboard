@@ -5,6 +5,7 @@ import AdminTopHeader from '@/components/dashboard/admin-top-header';
 import TeamLeaderTeamBoxes from '@/components/dashboard/team-leader-team-boxes';
 import TeamLeaderSidebar from '@/components/dashboard/team-leader-sidebar';
 import TeamLeaderPerformanceGauge from '@/components/dashboard/team-leader-performance-gauge';
+import AllQuartersTargetDialog from '@/components/dashboard/all-quarters-target-dialog';
 import AddRequirementModal from '@/components/dashboard/modals/add-requirement-modal';
 import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-modal';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +19,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { StandardDatePicker } from "@/components/ui/standard-date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, HelpCircle, ExternalLink, Eye, Search, ArrowUp, Flag, Trophy } from "lucide-react";
+import { CalendarIcon, EditIcon, MoreVertical, Mail, UserRound, Plus, ExternalLink, Eye, Search, ArrowUp, Flag, Trophy } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
@@ -38,6 +39,12 @@ const formatIndianCurrency = (value: number): string => {
     currency: 'INR',
     maximumFractionDigits: 0,
   }).format(value).replace('₹', '').trim();
+};
+
+const formatMetricCount = (value: number | string | null | undefined): string => {
+  const numericValue = typeof value === 'string' ? Number(value) : value;
+  const safeValue = Number.isFinite(numericValue) ? Number(numericValue) : 0;
+  return String(Math.max(0, Math.round(safeValue))).padStart(2, '0');
 };
 
 // Performance Chart Component (separate from Admin page)
@@ -137,7 +144,6 @@ export default function TeamLeaderDashboard() {
   const [activeChatUser, setActiveChatUser] = useState<string | null>(null);
   const [isHelpChatOpen, setIsHelpChatOpen] = useState(false);
   const [selectedDailyMetricsFilter, setSelectedDailyMetricsFilter] = useState('overall');
-  const [targetSearch, setTargetSearch] = useState('');
   const [requirementSearch, setRequirementSearch] = useState('');
   const [selectedPerformanceMember, setSelectedPerformanceMember] = useState<string>('all');
   const [teamMembersSearch, setTeamMembersSearch] = useState('');
@@ -483,18 +489,6 @@ export default function TeamLeaderDashboard() {
     'Vihana': 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200'
   };
 
-  // Memoized filtered targets for the modal
-  const filteredTargets = useMemo(() => {
-    if (!aggregatedTargets?.allQuarters) return [];
-    return aggregatedTargets.allQuarters.filter((quarter: any) => 
-      `${quarter.quarter}-${quarter.year}`.toLowerCase().includes(targetSearch.toLowerCase()) ||
-      formatIndianCurrency(quarter.minimumTarget).toLowerCase().includes(targetSearch.toLowerCase()) ||
-      formatIndianCurrency(quarter.targetAchieved).toLowerCase().includes(targetSearch.toLowerCase()) ||
-      formatIndianCurrency(quarter.incentiveEarned).toLowerCase().includes(targetSearch.toLowerCase()) ||
-      quarter.status.toLowerCase().includes(targetSearch.toLowerCase())
-    );
-  }, [aggregatedTargets, targetSearch]);
-
   // Group pipeline candidates by status for the pipeline view with filters
   const groupedPipelineCandidates = useMemo(() => {
     if (!Array.isArray(pipelineData)) return {};
@@ -705,14 +699,14 @@ export default function TeamLeaderDashboard() {
       name: userName,
       image: teamLeaderProfile?.profilePicture || null,
       members: Array.isArray(teamMembers) ? teamMembers.length : 0,
-      tenure: "3",
-      qtrsAchieved: 6,
-      nextMilestone: "+3",
-      performanceScore: 85
+      tenure: "0",
+      qtrsAchieved: 0,
+      nextMilestone: "0",
+      performanceScore: 0
     };
 
     // Calculate tenure in years
-    const tenureYears = stats.tenure || "3";
+    const tenureYears = stats.tenure ?? "0";
 
     return (
       <div className="flex min-h-screen">
@@ -762,7 +756,7 @@ export default function TeamLeaderDashboard() {
                           <Trophy className="h-4 w-4 text-green-600" />
                           <span className="text-xs font-medium text-green-700">Qtrs Achieved</span>
                         </div>
-                        <p className="text-2xl font-bold text-green-600">{stats.qtrsAchieved || 6}</p>
+                        <p className="text-2xl font-bold text-green-600">{stats.qtrsAchieved ?? 0}</p>
                       </div>
 
                       {/* Next Milestone */}
@@ -771,7 +765,7 @@ export default function TeamLeaderDashboard() {
                           <Flag className="h-4 w-4 text-orange-600" />
                           <span className="text-xs font-medium text-orange-700">Next Milestone</span>
                         </div>
-                        <p className="text-2xl font-bold text-orange-600">{stats.nextMilestone || "+3"}</p>
+                        <p className="text-2xl font-bold text-orange-600">{stats.nextMilestone ?? "0"}</p>
                       </div>
 
                       {/* Tenure */}
@@ -823,7 +817,7 @@ export default function TeamLeaderDashboard() {
                 {/* Right - Performance Gauge */}
                 <Card className="bg-white border border-gray-200">
                   <CardContent className="p-6 flex items-center justify-center h-full">
-                    <TeamLeaderPerformanceGauge value={stats.performanceScore || 85} size={250} />
+                    <TeamLeaderPerformanceGauge value={stats.performanceScore ?? 0} size={250} />
                   </CardContent>
                 </Card>
               </div>
@@ -832,74 +826,13 @@ export default function TeamLeaderDashboard() {
               <Card className="bg-white border border-gray-200 shadow-sm">
                 <CardHeader className="pb-3 pt-4 flex flex-row items-center justify-between">
                   <CardTitle className="text-lg font-semibold text-gray-900">Target</CardTitle>
-                  <Dialog open={isTargetModalOpen} onOpenChange={setIsTargetModalOpen}>
-                    <DialogTrigger asChild>
-                      <button
-                        className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
-                        data-testid="button-view-all-targets"
-                      >
-                        View All
-                      </button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-4xl">
-                      <DialogHeader>
-                        <div className="flex items-center justify-between gap-4">
-                          <DialogTitle className="text-xl font-semibold">All Quarters Target Data</DialogTitle>
-                          <SearchBar
-                            value={targetSearch}
-                            onChange={setTargetSearch}
-                            placeholder="Search targets..."
-                            testId="input-search-targets"
-                          />
-                        </div>
-                      </DialogHeader>
-                      <div className="mt-4">
-                        <div className="overflow-x-auto" style={{ maxHeight: '400px', overflowY: filteredTargets.length > 6 ? 'auto' : 'hidden' }}>
-                          <table className="w-full border-collapse border border-gray-300">
-                            <thead className="sticky top-0 bg-gray-100 z-10">
-                              <tr>
-                                <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Quarter</th>
-                                <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Minimum Target</th>
-                                <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Target Achieved</th>
-                                <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Incentive Earned</th>
-                                <th className="border border-gray-300 px-4 py-3 text-left font-semibold">Status</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {filteredTargets.length > 0 ? (
-                                filteredTargets.map((quarter: any, index: number) => {
-                                  const statusColors = {
-                                    'Completed': 'bg-green-100 text-green-800',
-                                    'In Progress': 'bg-yellow-100 text-yellow-800',
-                                    'Pending': 'bg-gray-100 text-gray-800'
-                                  };
-                                  const statusColor = statusColors[quarter.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800';
-                                  
-                                  return (
-                                    <tr key={`${quarter.quarter}-${quarter.year}`} className={index % 2 === 1 ? 'bg-gray-50' : ''}>
-                                      <td className="border border-gray-300 px-4 py-3">{quarter.quarter}-{quarter.year}</td>
-                                      <td className="border border-gray-300 px-4 py-3">{formatIndianCurrency(quarter.minimumTarget)}</td>
-                                      <td className="border border-gray-300 px-4 py-3">{formatIndianCurrency(quarter.targetAchieved)}</td>
-                                      <td className="border border-gray-300 px-4 py-3">{formatIndianCurrency(quarter.incentiveEarned)}</td>
-                                      <td className="border border-gray-300 px-4 py-3">
-                                        <span className={`${statusColor} px-2 py-1 rounded text-sm`}>{quarter.status}</span>
-                                      </td>
-                                    </tr>
-                                  );
-                                })
-                              ) : (
-                                <tr>
-                                  <td colSpan={5} className="border border-gray-300 px-4 py-3 text-center text-gray-500">
-                                    {targetSearch ? 'No matching targets found' : 'No target data available'}
-                                  </td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                  <button
+                    onClick={() => setIsTargetModalOpen(true)}
+                    className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
+                    data-testid="button-view-all-targets"
+                  >
+                    View All
+                  </button>
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
                   <div className="grid grid-cols-4 gap-0 bg-white rounded-lg overflow-hidden border border-gray-200">
@@ -970,22 +903,22 @@ export default function TeamLeaderDashboard() {
                     <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4 shadow-sm">
                       <div className="flex justify-between items-center py-2">
                         <span className="text-sm font-medium text-gray-700">Total Requirements</span>
-                        <span className="text-2xl font-bold text-blue-600">{dailyMetrics?.totalRequirements ?? 0}</span>
+                        <span className="text-2xl font-bold text-blue-600">{formatMetricCount(dailyMetrics?.totalRequirements)}</span>
                       </div>
                       <div className="border-t border-gray-200"></div>
                       <div className="flex justify-between items-center py-2">
                         <span className="text-sm font-medium text-gray-700">Avg. Resumes per Requirement</span>
-                        <span className="text-2xl font-bold text-blue-600">{String(Math.round(dailyMetrics?.avgResumesPerRequirement ?? 0)).padStart(2, '0')}</span>
+                        <span className="text-2xl font-bold text-blue-600">{formatMetricCount(dailyMetrics?.avgResumesPerRequirement)}</span>
                       </div>
                       <div className="border-t border-gray-200"></div>
                       <div className="flex justify-between items-center py-2">
                         <span className="text-sm font-medium text-gray-700">Requirements per Recruiter</span>
-                        <span className="text-2xl font-bold text-blue-600">{String(Math.round(dailyMetrics?.requirementsPerRecruiter ?? 0)).padStart(2, '0')}</span>
+                        <span className="text-2xl font-bold text-blue-600">{formatMetricCount(dailyMetrics?.requirementsPerRecruiter)}</span>
                       </div>
                       <div className="border-t border-gray-200"></div>
                       <div className="flex justify-between items-center py-2">
                         <span className="text-sm font-medium text-gray-700">Completed Requirements</span>
-                        <span className="text-2xl font-bold text-blue-600">{dailyMetrics?.completedRequirements ?? 0}</span>
+                        <span className="text-2xl font-bold text-blue-600">{formatMetricCount(dailyMetrics?.completedRequirements)}</span>
                       </div>
                     </div>
 
@@ -998,13 +931,13 @@ export default function TeamLeaderDashboard() {
                         <div className="border-2 border-green-500 rounded-lg p-4 text-center">
                           <h5 className="text-sm font-medium text-green-700 mb-2">Delivered</h5>
                           <div className="text-3xl font-bold text-green-600" data-testid="text-delivered-count">
-                            {String(dailyMetrics?.dailyDeliveryDelivered ?? 0).padStart(2, '0')}
+                            {formatMetricCount(dailyMetrics?.dailyDeliveryDelivered)}
                           </div>
                         </div>
                         <div className="border-2 border-red-500 rounded-lg p-4 text-center">
                           <h5 className="text-sm font-medium text-red-700 mb-2">Defaulted</h5>
                           <div className="text-3xl font-bold text-red-600" data-testid="text-defaulted-count">
-                            {String(dailyMetrics?.dailyDeliveryDefaulted ?? 0).padStart(2, '0')}
+                            {formatMetricCount(dailyMetrics?.dailyDeliveryDefaulted)}
                           </div>
                         </div>
                       </div>
@@ -2125,25 +2058,25 @@ export default function TeamLeaderDashboard() {
                 <div className="bg-white p-6 border border-gray-200 rounded">
                   <p className="text-sm text-gray-500 mb-2">Total Requirements</p>
                   <div className="text-right">
-                    <span className="text-4xl font-bold text-blue-600">20</span>
+                        <span className="text-4xl font-bold text-blue-600">{formatMetricCount((dailyMetrics as any)?.totalRequirements)}</span>
                   </div>
                 </div>
                 <div className="bg-white p-6 border border-gray-200 rounded">
                   <p className="text-sm text-gray-500 mb-2">Avg. Resumes per Requirement</p>
                   <div className="text-right">
-                    <span className="text-4xl font-bold text-blue-600">02</span>
+                        <span className="text-4xl font-bold text-blue-600">{formatMetricCount((dailyMetrics as any)?.avgResumesPerRequirement)}</span>
                   </div>
                 </div>
                 <div className="bg-white p-6 border border-gray-200 rounded">
                   <p className="text-sm text-gray-500 mb-2">Requirements per Recruiter</p>
                   <div className="text-right">
-                    <span className="text-4xl font-bold text-blue-600">03</span>
+                        <span className="text-4xl font-bold text-blue-600">{formatMetricCount((dailyMetrics as any)?.requirementsPerRecruiter)}</span>
                   </div>
                 </div>
                 <div className="bg-white p-6 border border-gray-200 rounded">
                   <p className="text-sm text-gray-500 mb-2">Completed Requirements</p>
                   <div className="text-right">
-                    <span className="text-4xl font-bold text-blue-600">12</span>
+                        <span className="text-4xl font-bold text-blue-600">{formatMetricCount((dailyMetrics as any)?.completedRequirements)}</span>
                   </div>
                 </div>
               </div>
@@ -2155,12 +2088,12 @@ export default function TeamLeaderDashboard() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="text-center">
                       <p className="text-sm text-gray-300 mb-2">Delivered</p>
-                      <p className="text-3xl font-bold mb-3">3</p>
+                        <p className="text-3xl font-bold mb-3">{formatMetricCount(dailyMetrics?.dailyDeliveryDelivered)}</p>
                       <Button size="sm" className="bg-cyan-500 hover:bg-cyan-600">View</Button>
                     </div>
                     <div className="text-center">
                       <p className="text-sm text-gray-300 mb-2">Defaulted</p>
-                      <p className="text-3xl font-bold mb-3">1</p>
+                      <p className="text-3xl font-bold mb-3">{formatMetricCount(dailyMetrics?.dailyDeliveryDefaulted)}</p>
                       <Button size="sm" className="bg-cyan-500 hover:bg-cyan-600">View</Button>
                     </div>
                   </div>
@@ -2372,7 +2305,7 @@ export default function TeamLeaderDashboard() {
                       <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Total Requirements</p>
                       <div className="text-right">
                         <span className="text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-total-requirements">
-                          {(dailyMetrics as any)?.totalRequirements || "20"}
+                          {formatMetricCount((dailyMetrics as any)?.totalRequirements)}
                         </span>
                       </div>
                     </div>
@@ -2380,7 +2313,7 @@ export default function TeamLeaderDashboard() {
                       <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Completed Requirements</p>
                       <div className="text-right">
                         <span className="text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-completed-requirements">
-                          {(dailyMetrics as any)?.completedRequirements || "12"}
+                          {formatMetricCount((dailyMetrics as any)?.completedRequirements)}
                         </span>
                       </div>
                     </div>
@@ -2388,7 +2321,7 @@ export default function TeamLeaderDashboard() {
                       <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Avg. Resumes per Requirement</p>
                       <div className="text-right">
                         <span className="text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-avg-resumes">
-                          {(dailyMetrics as any)?.avgResumesPerRequirement || "02"}
+                          {formatMetricCount((dailyMetrics as any)?.avgResumesPerRequirement)}
                         </span>
                       </div>
                     </div>
@@ -2396,7 +2329,7 @@ export default function TeamLeaderDashboard() {
                       <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Requirements per Recruiter</p>
                       <div className="text-right">
                         <span className="text-4xl font-bold text-blue-600 dark:text-blue-400" data-testid="text-requirements-per-recruiter">
-                          {(dailyMetrics as any)?.requirementsPerRecruiter || "05"}
+                          {formatMetricCount((dailyMetrics as any)?.requirementsPerRecruiter)}
                         </span>
                       </div>
                     </div>
@@ -2409,7 +2342,7 @@ export default function TeamLeaderDashboard() {
                       <div className="text-center">
                         <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Delivered</p>
                         <p className="text-3xl font-bold text-gray-900 dark:text-white mb-3" data-testid="text-daily-delivered">
-                          {dailyMetrics?.dailyDeliveryDelivered ?? 0}
+                          {formatMetricCount(dailyMetrics?.dailyDeliveryDelivered)}
                         </p>
                         <button
                           className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
@@ -2422,7 +2355,7 @@ export default function TeamLeaderDashboard() {
                       <div className="text-center">
                         <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Defaulted</p>
                         <p className="text-3xl font-bold text-gray-900 dark:text-white mb-3" data-testid="text-daily-defaulted">
-                          {dailyMetrics?.dailyDeliveryDefaulted ?? 0}
+                          {formatMetricCount(dailyMetrics?.dailyDeliveryDefaulted)}
                         </p>
                         <button
                           className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
@@ -3531,17 +3464,6 @@ export default function TeamLeaderDashboard() {
         </DialogContent>
       </Dialog>
 
-      {/* Floating Help Button */}
-      <button
-        onClick={() => setIsHelpChatOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all duration-200 hover:scale-110 z-40"
-        data-testid="button-help"
-        aria-label="Help"
-        title="Need help? Chat with us!"
-      >
-        <HelpCircle size={24} />
-      </button>
-
       {/* Chat Support */}
       {/* Chat Modal for viewing and replying to messages */}
       {selectedChatRoom && (
@@ -3562,6 +3484,13 @@ export default function TeamLeaderDashboard() {
         onClose={() => setIsHelpChatOpen(false)} 
         userName={userName}
         userRole={userRole}
+      />
+
+      <AllQuartersTargetDialog
+        open={isTargetModalOpen}
+        onOpenChange={setIsTargetModalOpen}
+        allQuarters={aggregatedTargets?.allQuarters || []}
+        formatIndianCurrency={formatIndianCurrency}
       />
     </div>
   );
