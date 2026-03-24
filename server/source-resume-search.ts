@@ -4,9 +4,8 @@
 // Server-side indexed search with skill normalization,
 // semantic matching, and advanced scoring
 
-import { db } from "./db";
 import { candidates } from "@shared/schema";
-import { sql, and, or, like, ilike, gte, lte, inArray, eq, desc, asc } from "drizzle-orm";
+import { sql, and, or, ilike, desc, asc } from "drizzle-orm";
 
 // ============================================
 // PHASE B: SKILL NORMALIZATION ENGINE
@@ -123,6 +122,44 @@ export function normalizeSkills(skills: string[]): string[] {
 export function parseAndNormalizeSkills(skillsString: string): string[] {
   if (!skillsString) return [];
   return normalizeSkills(skillsString.split(',').map(s => s.trim()).filter(Boolean));
+}
+
+function hasTextFilter(value: unknown) {
+  return typeof value === 'string' && value.trim() !== '' && value.trim().toLowerCase() !== 'any';
+}
+
+function buildSearchableTextCondition(term: string) {
+  return or(
+    ilike(candidates.fullName, `%${term}%`),
+    ilike(candidates.designation, `%${term}%`),
+    ilike(candidates.currentRole, `%${term}%`),
+    ilike(candidates.position, `%${term}%`),
+    ilike(candidates.skills, `%${term}%`),
+    ilike(candidates.location, `%${term}%`),
+    ilike(candidates.company, `%${term}%`),
+    ilike(candidates.education, `%${term}%`),
+    ilike(candidates.resumeText, `%${term}%`)
+  );
+}
+
+function buildNumericTextField(field: any) {
+  return sql<number>`CAST(NULLIF(REGEXP_REPLACE(COALESCE(${field}, ''), '[^0-9.]', '', 'g'), '') AS FLOAT)`;
+}
+
+function normalizeNoticePeriodToDays(value: string) {
+  const normalized = value.toLowerCase().trim();
+  if (!normalized || normalized === 'any') return null;
+  if (normalized.includes('immediate') || normalized.includes('join immediately')) return 0;
+  if (normalized.includes('week')) {
+    const weeks = parseInt(normalized.match(/\d+/)?.[0] || '1', 10);
+    return weeks * 7;
+  }
+  if (normalized.includes('month')) {
+    const months = parseInt(normalized.match(/\d+/)?.[0] || '1', 10);
+    return months * 30;
+  }
+  const days = parseInt(normalized.match(/\d+/)?.[0] || '', 10);
+  return Number.isFinite(days) ? days : null;
 }
 
 // ============================================
@@ -513,23 +550,23 @@ export function buildSearchQuery(filters: any) {
         )
       );
     } else {
-      // For non-boolean mode, split query into terms and use OR logic
+      // For non-boolean mode, require each significant term to match at least one searchable field
       const queryTerms = query.split(/\s+/).filter(t => t.length > 0);
       if (queryTerms.length > 0) {
-        const termConditions = queryTerms.map(term => 
-          or(
-            ilike(candidates.fullName, `%${term}%`),
-            ilike(candidates.designation, `%${term}%`),
-            ilike(candidates.skills, `%${term}%`),
-            ilike(candidates.location, `%${term}%`),
-            ilike(candidates.company, `%${term}%`),
-            ilike(candidates.education, `%${term}%`),
-            ilike(candidates.resumeText, `%${term}%`)
-          )
-        );
-        // At least one term must match (OR between terms)
-        conditions.push(or(...termConditions));
+        const termConditions = queryTerms.map(term => buildSearchableTextCondition(term));
+        conditions.push(and(...termConditions));
       }
+    }
+  }
+
+  if (filters.keywords && Array.isArray(filters.keywords) && filters.keywords.length > 0) {
+    const keywordConditions = filters.keywords
+      .map((keyword: string) => keyword?.trim().toLowerCase())
+      .filter(Boolean)
+      .map((keyword: string) => buildSearchableTextCondition(keyword));
+
+    if (keywordConditions.length > 0) {
+      conditions.push(and(...keywordConditions));
     }
   }
   
@@ -552,14 +589,27 @@ export function buildSearchQuery(filters: any) {
       );
     }
   }
+
+  if (hasTextFilter(filters.ctcMin) || hasTextFilter(filters.ctcMax)) {
+    const minCtc = hasTextFilter(filters.ctcMin) ? Number(filters.ctcMin) : null;
+    const maxCtc = hasTextFilter(filters.ctcMax) ? Number(filters.ctcMax) : null;
+    const ctcExpression = sql<number>`COALESCE(${buildNumericTextField(candidates.ectc)}, ${buildNumericTextField(candidates.ctc)})`;
+
+    if (minCtc !== null && Number.isFinite(minCtc)) {
+      conditions.push(sql`${ctcExpression} >= ${minCtc}`);
+    }
+    if (maxCtc !== null && Number.isFinite(maxCtc)) {
+      conditions.push(sql`${ctcExpression} <= ${maxCtc}`);
+    }
+  }
   
   // Location filter
-  if (filters.location) {
+  if (hasTextFilter(filters.location)) {
     conditions.push(ilike(candidates.location, `%${filters.location}%`));
   }
   
   // Role filter
-  if (filters.role && filters.role.trim() !== "") {
+  if (hasTextFilter(filters.role)) {
     conditions.push(
       or(
         ilike(candidates.designation, `%${filters.role}%`),
@@ -570,25 +620,44 @@ export function buildSearchQuery(filters: any) {
   }
   
   // Company filter
-  if (filters.company) {
+  if (hasTextFilter(filters.company)) {
     conditions.push(ilike(candidates.company, `%${filters.company}%`));
   }
   
   // Education filter
-  if (filters.educationUG) {
+  if (hasTextFilter(filters.educationUG)) {
     conditions.push(ilike(candidates.education, `%${filters.educationUG}%`));
   }
-  if (filters.educationPG) {
+  if (hasTextFilter(filters.educationPG)) {
     conditions.push(ilike(candidates.education, `%${filters.educationPG}%`));
   }
   
-  // Skills filter (normalized)
+  // Skills filter: all requested skills should be present for stronger matching
   if (filters.specificSkills && filters.specificSkills.length > 0) {
     const normalizedSkills = normalizeSkills(filters.specificSkills);
     const skillConditions = normalizedSkills.map(skill => 
       ilike(candidates.skills, `%${skill}%`)
     );
-    conditions.push(or(...skillConditions));
+    conditions.push(and(...skillConditions));
+  }
+
+  if (hasTextFilter(filters.noticePeriod)) {
+    const maxNoticeDays = normalizeNoticePeriodToDays(filters.noticePeriod);
+    if (maxNoticeDays !== null) {
+      conditions.push(sql`
+        CASE
+          WHEN ${candidates.noticePeriod} IS NULL OR ${candidates.noticePeriod} = '' THEN 999
+          WHEN LOWER(${candidates.noticePeriod}) LIKE '%immediate%' THEN 0
+          WHEN LOWER(${candidates.noticePeriod}) LIKE '%week%' THEN COALESCE(CAST(NULLIF(REGEXP_REPLACE(${candidates.noticePeriod}, '[^0-9]', '', 'g'), '') AS INTEGER), 1) * 7
+          WHEN LOWER(${candidates.noticePeriod}) LIKE '%month%' THEN COALESCE(CAST(NULLIF(REGEXP_REPLACE(${candidates.noticePeriod}, '[^0-9]', '', 'g'), '') AS INTEGER), 1) * 30
+          ELSE COALESCE(CAST(NULLIF(REGEXP_REPLACE(${candidates.noticePeriod}, '[^0-9]', '', 'g'), '') AS INTEGER), 999)
+        END <= ${maxNoticeDays}
+      `);
+    }
+  }
+
+  if (hasTextFilter(filters.employmentType)) {
+    conditions.push(ilike(candidates.employmentType, `%${filters.employmentType}%`));
   }
   
   // Excluded keywords
@@ -605,6 +674,18 @@ export function buildSearchQuery(filters: any) {
       sql`NOT ${candidates.company} ILIKE ${`%${company}%`}`
     );
     conditions.push(and(...excludeCompanyConditions));
+  }
+
+  if (filters.showWith && Array.isArray(filters.showWith) && filters.showWith.length > 0) {
+    if (filters.showWith.includes('resume')) {
+      conditions.push(sql`${candidates.resumeFile} IS NOT NULL AND ${candidates.resumeFile} <> ''`);
+    }
+    if (filters.showWith.includes('portfolio')) {
+      conditions.push(sql`${candidates.portfolioUrl} IS NOT NULL AND ${candidates.portfolioUrl} <> ''`);
+    }
+    if (filters.showWith.includes('website')) {
+      conditions.push(sql`${candidates.websiteUrl} IS NOT NULL AND ${candidates.websiteUrl} <> ''`);
+    }
   }
   
   return conditions.length > 0 ? and(...conditions) : undefined;
@@ -627,5 +708,3 @@ export function getSortOrder(sortOption: string) {
       return desc(candidates.createdAt); // Default: most recent
   }
 }
-
-

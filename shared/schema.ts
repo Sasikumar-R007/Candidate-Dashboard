@@ -81,6 +81,8 @@ export const jobApplications = pgTable("job_applications", {
   profileId: varchar("profile_id").notNull(),
   recruiterJobId: varchar("recruiter_job_id"), // Links to recruiter_jobs.id
   requirementId: varchar("requirement_id"), // Links to requirements.id (for recruiter-tagged applications)
+  ownerEmployeeId: varchar("owner_employee_id"), // Employee who created/tagged the application
+  ownerRole: text("owner_role"), // recruiter, team_leader, candidate
   jobTitle: text("job_title").notNull(),
   company: text("company").notNull(),
   jobType: text("job_type"),
@@ -329,6 +331,8 @@ export const candidates = pgTable("candidates", {
   productCategory: text("product_category"), // B2B, B2C, B2B2C
   productDomain: text("product_domain"), // Web Development, Mobile Apps, etc.
   employmentType: text("employment_type"), // Full-time, Part-time, Contract, etc.
+  ownerEmployeeId: varchar("owner_employee_id"), // Recruiter or team leader who sourced/uploaded this candidate
+  ownerRole: text("owner_role"), // recruiter or team_leader
   isActive: boolean("is_active").default(true),
   isVerified: boolean("is_verified").default(false),
   phoneVerified: boolean("phone_verified").default(false),
@@ -718,6 +722,8 @@ export const recruiterCommands = pgTable("recruiter_commands", {
 export const recruiterJobs = pgTable("recruiter_jobs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   recruiterId: varchar("recruiter_id"), // Links to employees.id (the recruiter who posted)
+  ownerEmployeeId: varchar("owner_employee_id"), // Recruiter or team leader who owns this job
+  ownerRole: text("owner_role"), // recruiter or team_leader
   companyName: text("company_name").notNull(),
   companyTagline: text("company_tagline"),
   companyType: text("company_type"),
