@@ -6,14 +6,14 @@ import fs from "fs";
 import passport from "passport";
 import { randomBytes } from "crypto";
 import { storage } from "./storage";
-import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, chatUnreadCounts, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema, insertRecruiterCommandSchema, recruiterCommands, employees, candidates, requirements } from "@shared/schema";
+import { insertProfileSchema, insertJobPreferencesSchema, insertSkillSchema, insertSavedJobSchema, insertJobApplicationSchema, insertRequirementSchema, insertEmployeeSchema, insertImpactMetricsSchema, supportConversations, supportMessages, insertMeetingSchema, meetings, insertTargetMappingsSchema, insertRevenueMappingSchema, revenueMappings, chatRooms, chatMessages, chatParticipants, chatAttachments, chatUnreadCounts, insertChatRoomSchema, insertChatMessageSchema, insertChatParticipantSchema, insertChatAttachmentSchema, insertRecruiterCommandSchema, recruiterCommands, employees, candidates, requirements, recruiterJobs, jobApplications } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import multer from "multer";
 import path from "path";
 import "./types"; // Import session types
 import { db } from "./db";
-import { eq, desc, sql, and, inArray } from "drizzle-orm";
+import { eq, desc, sql, and, inArray, or, isNull } from "drizzle-orm";
 import { logRequirementAdded, logCandidateSubmitted, logClosureMade, logCandidatePipelineChanged } from "./activity-logger";
 import { parseResumeFile, parseBulkResumes } from "./resume-parser";
 import { sendEmployeeWelcomeEmail, sendCandidateWelcomeEmail, sendOTPEmail } from "./email-service";
@@ -206,6 +206,90 @@ function requireAdminAuth(req: Request, res: Response, next: NextFunction) {
     return res.status(403).json({ message: "Access denied. Admin authentication required." });
   }
   next();
+}
+
+function normalizeSourcingRole(role: string | null | undefined): "recruiter" | "team_leader" | null {
+  if (role === "team_leader") return "team_leader";
+  if (role === "recruiter") return "recruiter";
+  return null;
+}
+
+function buildCandidateOwnershipFilter(employee: { id: string; name: string; role: string }) {
+  const ownerRole = normalizeSourcingRole(employee.role);
+  if (!ownerRole) {
+    return null;
+  }
+
+  const ownedByActor = and(
+    eq(candidates.ownerEmployeeId, employee.id),
+    eq(candidates.ownerRole, ownerRole),
+  );
+
+  if (ownerRole === "recruiter") {
+    const legacyRecruiterRecords = and(
+      isNull(candidates.ownerEmployeeId),
+      eq(candidates.addedBy, employee.name),
+    );
+    return or(ownedByActor, legacyRecruiterRecords);
+  }
+
+  return ownedByActor;
+}
+
+function isMissingCandidateOwnershipColumnError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || "");
+  return message.includes('owner_employee_id') || message.includes('owner_role');
+}
+
+async function getOwnedCandidatesForEmployee(employee: { id: string; name: string; role: string }) {
+  const ownershipFilter = buildCandidateOwnershipFilter(employee);
+  if (!ownershipFilter) {
+    return null;
+  }
+
+  try {
+    return await db.select().from(candidates).where(ownershipFilter);
+  } catch (error) {
+    if (!isMissingCandidateOwnershipColumnError(error)) {
+      throw error;
+    }
+
+    return await db.select().from(candidates).where(eq(candidates.addedBy, employee.name));
+  }
+}
+
+function buildJobOwnershipFilter(employee: { id: string; role: string }) {
+  const ownerRole = normalizeSourcingRole(employee.role);
+  if (!ownerRole) {
+    return null;
+  }
+
+  const ownedByActor = and(
+    eq(recruiterJobs.ownerEmployeeId, employee.id),
+    eq(recruiterJobs.ownerRole, ownerRole),
+  );
+
+  if (ownerRole === "recruiter") {
+    const legacyRecruiterRecords = and(
+      isNull(recruiterJobs.ownerEmployeeId),
+      eq(recruiterJobs.recruiterId, employee.id),
+    );
+    return or(ownedByActor, legacyRecruiterRecords);
+  }
+
+  return ownedByActor;
+}
+
+function buildApplicationOwnershipFilter(employee: { id: string; role: string }) {
+  const ownerRole = normalizeSourcingRole(employee.role);
+  if (!ownerRole) {
+    return null;
+  }
+
+  return and(
+    eq(jobApplications.ownerEmployeeId, employee.id),
+    eq(jobApplications.ownerRole, ownerRole),
+  );
 }
 
 // Authentication middleware for client routes ONLY
@@ -4449,6 +4533,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
 
+      if (employee.role === 'team_leader') {
+        const allEmployees = await storage.getAllEmployees();
+        const teamRecruiters = allEmployees.filter(
+          emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
+        );
+
+        const allRequirements: any[] = [];
+        const addedIds = new Set<string>();
+
+        for (const recruiter of teamRecruiters) {
+          const recruiterRequirements = await storage.getRequirementsByTalentAdvisorId(recruiter.id);
+          for (const req of recruiterRequirements) {
+            if (!addedIds.has(req.id)) {
+              allRequirements.push(req);
+              addedIds.add(req.id);
+            }
+          }
+        }
+
+        const allReqs = await storage.getRequirements();
+        const unassignedTLRequirements = allReqs.filter(req =>
+          req.teamLead === employee.name &&
+          !req.talentAdvisorId &&
+          !req.isArchived
+        );
+
+        for (const req of unassignedTLRequirements) {
+          if (!addedIds.has(req.id)) {
+            allRequirements.push(req);
+            addedIds.add(req.id);
+          }
+        }
+
+        const { requirementAssignments } = await import("@shared/schema");
+        const requirementIds = allRequirements.map(r => r.id);
+        const allAssignments = requirementIds.length > 0
+          ? await db.select().from(requirementAssignments)
+            .where(inArray(requirementAssignments.requirementId, requirementIds))
+          : [];
+
+        const requirementsWithStatus = allRequirements.map(req => {
+          const assignment = allAssignments.find(a => a.requirementId === req.id);
+          const hasActiveAssignmentForOtherTL = allAssignments.some(a =>
+            a.requirementId === req.id &&
+            a.teamLeadId &&
+            a.teamLeadId !== employee.id &&
+            a.status === "active"
+          );
+
+          const isReassigned = assignment?.status === "reassigned" ||
+            (assignment && hasActiveAssignmentForOtherTL);
+
+          return {
+            ...req,
+            assignmentStatus: isReassigned ? "reassigned" : (assignment?.status || "active")
+          };
+        });
+
+        return res.json(requirementsWithStatus);
+      }
+
+      if (employee.role !== 'recruiter') {
+        return res.status(403).json({ message: "Access denied. Recruiter or Team Leader role required." });
+      }
+
       // CRITICAL: Verify we're using the correct employee ID
       console.log('[RECRUITER REQUIREMENTS] Employee ID:', employee.id, 'Employee Name:', employee.name, 'Email:', employee.email);
 
@@ -7785,7 +7934,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===================== RECRUITER JOBS ROUTES =====================
 
   // Create a new recruiter job posting
-  app.post("/api/recruiter/jobs", async (req, res) => {
+  app.post("/api/recruiter/jobs", requireEmployeeAuth, async (req, res) => {
     try {
       const {
         title,
@@ -7808,7 +7957,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companyLogo
       } = req.body;
 
-      const recruiterId = req.session.employeeId || null;
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      const ownerRole = normalizeSourcingRole(employee.role);
+      if (!ownerRole) {
+        return res.status(403).json({ message: "Only recruiters and team leaders can post jobs" });
+      }
+
+      const recruiterId = employee.id;
 
       // Format experience as text (e.g., "2-5 years")
       let experienceText = '';
@@ -7837,6 +7996,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const jobData = {
         recruiterId,
+        ownerEmployeeId: employee.id,
+        ownerRole,
         companyName: company || 'Company',
         companyTagline: benefits || null,
         companyType: null,
@@ -7876,7 +8037,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // If user is authenticated, filter jobs by their ID for multi-tenant support
       if (session?.employeeId) {
-        jobs = await storage.getRecruiterJobsByRecruiterId(session.employeeId);
+        const employee = await storage.getEmployeeById(session.employeeId);
+        if (!employee) {
+          return res.status(404).json({ message: "Employee not found" });
+        }
+
+        const ownershipFilter = buildJobOwnershipFilter(employee);
+        if (!ownershipFilter) {
+          return res.status(403).json({ message: "Only recruiters and team leaders can access jobs" });
+        }
+
+        jobs = await db.select().from(recruiterJobs)
+          .where(ownershipFilter)
+          .orderBy(desc(recruiterJobs.postedDate));
       } else {
         // Fallback to all jobs for unauthenticated requests (job board view)
         jobs = await storage.getAllRecruiterJobs();
@@ -7892,9 +8065,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get job counts for dashboard (scoped by recruiter)
   app.get("/api/recruiter/jobs/counts", requireEmployeeAuth, async (req, res) => {
     try {
-      const session = req.session as any;
-      // Get jobs for this specific recruiter
-      const jobs = await storage.getRecruiterJobsByRecruiterId(session.employeeId);
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      const ownershipFilter = buildJobOwnershipFilter(employee);
+      if (!ownershipFilter) {
+        return res.status(403).json({ message: "Only recruiters and team leaders can access job counts" });
+      }
+
+      const jobs = await db.select().from(recruiterJobs)
+        .where(ownershipFilter)
+        .orderBy(desc(recruiterJobs.postedDate));
       const counts = {
         total: jobs.length,
         active: jobs.filter(j => j.status === "Active").length,
@@ -7913,7 +8096,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const session = req.session as any;
       const employee = await storage.getEmployeeById(session.employeeId);
-      const recruiterName = employee?.name || 'Recruiter';
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      const ownerRole = normalizeSourcingRole(employee.role);
+      if (!ownerRole) {
+        return res.status(403).json({ message: "Only recruiters and team leaders can upload resumes" });
+      }
+
+      const recruiterName = employee.name;
 
       const { fullName, email, phone, designation, experience, skills, location, company, education, highestQualification, linkedinUrl, websiteUrl, portfolioUrl, noticePeriod, pedigreeLevel, companyLevel, companyDomain, resumeFile } = req.body;
 
@@ -7929,7 +8121,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const candidateId = await storage.generateNextCandidateId();
 
-      const newCandidate = await storage.createCandidate({
+      const candidatePayload = {
         candidateId,
         fullName,
         email: email.toLowerCase(),
@@ -7949,12 +8141,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         companyLevel: companyLevel || null,
         companyDomain: companyDomain || null,
         resumeFile: resumeFile || null,
+        ownerEmployeeId: employee.id,
+        ownerRole,
         addedBy: recruiterName,
         pipelineStatus: 'New',
         isActive: true,
         isVerified: false,
         createdAt: new Date().toISOString()
-      });
+      };
+
+      let newCandidate;
+      try {
+        newCandidate = await storage.createCandidate(candidatePayload);
+      } catch (error) {
+        if (!isMissingCandidateOwnershipColumnError(error)) {
+          throw error;
+        }
+
+        const { ownerEmployeeId, ownerRole: ignoredOwnerRole, ...legacyCandidatePayload } = candidatePayload;
+        newCandidate = await storage.createCandidate(legacyCandidatePayload);
+      }
 
       // Log activity
       await logCandidateSubmitted(recruiterName, newCandidate.candidateId, newCandidate.fullName);
@@ -7979,10 +8185,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/recruiter/candidates/:id/view", requireEmployeeAuth, async (req, res) => {
     try {
       const { id } = req.params;
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
       const candidate = await storage.getCandidateById(id);
 
       if (!candidate) {
         return res.status(404).json({ message: "Candidate not found" });
+      }
+
+      const ownerRole = normalizeSourcingRole(employee.role);
+      if (ownerRole) {
+        const hasAccess =
+          (candidate.ownerEmployeeId === employee.id && candidate.ownerRole === ownerRole) ||
+          (ownerRole === 'recruiter' && !candidate.ownerEmployeeId && candidate.addedBy === employee.name);
+
+        if (!hasAccess) {
+          return res.status(403).json({ message: "Access denied. This candidate does not belong to you." });
+        }
       }
 
       // Update lastViewedAt timestamp
@@ -8000,10 +8221,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/recruiter/candidates/:id", requireEmployeeAuth, async (req, res) => {
     try {
       const { id } = req.params;
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
       const candidate = await storage.getCandidateById(id);
 
       if (!candidate) {
         return res.status(404).json({ message: "Candidate not found" });
+      }
+
+      const ownerRole = normalizeSourcingRole(employee.role);
+      if (!ownerRole) {
+        return res.status(403).json({ message: "Only recruiters and team leaders can update sourced candidates" });
+      }
+
+      const hasAccess =
+        (candidate.ownerEmployeeId === employee.id && candidate.ownerRole === ownerRole) ||
+        (ownerRole === 'recruiter' && !candidate.ownerEmployeeId && candidate.addedBy === employee.name);
+      if (!hasAccess) {
+        return res.status(403).json({ message: "Access denied. This candidate does not belong to you." });
       }
 
       // Validate update data
@@ -8107,23 +8344,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/recruiter/candidates/counts", requireEmployeeAuth, async (req, res) => {
     try {
-      const session = req.session as any;
-      // Get this recruiter's jobs
-      const jobs = await storage.getRecruiterJobsByRecruiterId(session.employeeId);
-      const jobIds = jobs.map(j => j.id);
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
 
-      // Get applications for recruiter's jobs only
-      const allApplications = await storage.getAllJobApplications();
-      const recruiterApplications = allApplications.filter(app =>
-        app.recruiterJobId && jobIds.includes(app.recruiterJobId)
-      );
-
-      // Count unique candidates from these applications
-      const candidateIds = new Set(recruiterApplications.map(app => app.profileId));
+      const ownedCandidates = await getOwnedCandidatesForEmployee(employee);
+      if (!ownedCandidates) {
+        return res.status(403).json({ message: "Only recruiters and team leaders can access candidate counts" });
+      }
       const counts = {
-        total: candidateIds.size,
-        active: candidateIds.size, // All are considered active for this recruiter
-        inactive: 0
+        total: ownedCandidates.length,
+        active: ownedCandidates.filter(candidate => candidate.isActive !== false).length,
+        inactive: ownedCandidates.filter(candidate => candidate.isActive === false).length,
       };
       res.json(counts);
     } catch (error) {
@@ -8137,12 +8370,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      const ownerRole = normalizeSourcingRole(employee.role);
       const job = await storage.getRecruiterJobById(id);
       if (!job) {
         return res.status(404).json({ message: "Job not found" });
       }
       // Verify ownership - job must belong to this recruiter
-      if (job.recruiterId !== session.employeeId) {
+      const isOwner =
+        (ownerRole && job.ownerEmployeeId === session.employeeId && job.ownerRole === ownerRole) ||
+        job.recruiterId === session.employeeId;
+      if (!isOwner) {
         return res.status(403).json({ message: "Access denied. This job does not belong to you." });
       }
       res.json(job);
@@ -8157,6 +8398,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      const ownerRole = normalizeSourcingRole(employee.role);
       const updates = req.body;
 
       // Verify ownership first
@@ -8164,7 +8410,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!existingJob) {
         return res.status(404).json({ message: "Job not found" });
       }
-      if (existingJob.recruiterId !== session.employeeId) {
+      const isOwner =
+        (ownerRole && existingJob.ownerEmployeeId === session.employeeId && existingJob.ownerRole === ownerRole) ||
+        existingJob.recruiterId === session.employeeId;
+      if (!isOwner) {
         return res.status(403).json({ message: "Access denied. This job does not belong to you." });
       }
 
@@ -8185,13 +8434,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      const ownerRole = normalizeSourcingRole(employee.role);
 
       // Verify ownership first
       const existingJob = await storage.getRecruiterJobById(id);
       if (!existingJob) {
         return res.status(404).json({ message: "Job not found" });
       }
-      if (existingJob.recruiterId !== session.employeeId) {
+      const isOwner =
+        (ownerRole && existingJob.ownerEmployeeId === session.employeeId && existingJob.ownerRole === ownerRole) ||
+        existingJob.recruiterId === session.employeeId;
+      if (!isOwner) {
         return res.status(403).json({ message: "Access denied. This job does not belong to you." });
       }
 
@@ -8208,13 +8465,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      const ownerRole = normalizeSourcingRole(employee.role);
 
       // Verify ownership first
       const existingJob = await storage.getRecruiterJobById(id);
       if (!existingJob) {
         return res.status(404).json({ message: "Job not found" });
       }
-      if (existingJob.recruiterId !== session.employeeId) {
+      const isOwner =
+        (ownerRole && existingJob.ownerEmployeeId === session.employeeId && existingJob.ownerRole === ownerRole) ||
+        existingJob.recruiterId === session.employeeId;
+      if (!isOwner) {
         return res.status(403).json({ message: "Access denied. This job does not belong to you." });
       }
 
@@ -8253,26 +8518,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
 
+      const ownerRole = normalizeSourcingRole(employee.role);
+      if (!ownerRole) {
+        return res.status(403).json({ message: "Only recruiters and team leaders can access applications" });
+      }
+
       // CRITICAL: Verify we're using the correct employee ID
       console.log('[RECRUITER APPLICATIONS] Employee ID:', employee.id, 'Employee Name:', employee.name, 'Email:', employee.email);
 
       const { jobId, dateFrom, dateTo, status } = req.query;
 
-      // Get this recruiter's jobs (using employee.id for consistency)
-      const jobs = await storage.getRecruiterJobsByRecruiterId(employee.id);
+      // Get this actor's jobs
+      const jobs = await db.select().from(recruiterJobs)
+        .where(buildJobOwnershipFilter(employee)!)
+        .orderBy(desc(recruiterJobs.postedDate));
       const jobIds = jobs.map(j => j.id);
       console.log('[RECRUITER APPLICATIONS] Found jobs for', employee.name, ':', jobIds.length);
 
-      // Get this recruiter's assigned requirements (using employee.id for consistency)
-      const requirements = await storage.getRequirementsByTalentAdvisorId(employee.id);
-      const requirementIds = requirements.map(r => r.id);
-      console.log('[RECRUITER APPLICATIONS] Found requirements for', employee.name, ':', requirementIds.length);
-
-      // Get all applications and filter to those for recruiter's jobs OR tagged requirements
+      // Get all applications and filter to those for owned jobs OR manual tags owned by this actor
       const allApplications = await storage.getAllJobApplications();
       let recruiterApplications = allApplications.filter(app =>
         (app.recruiterJobId && jobIds.includes(app.recruiterJobId)) ||
-        (app.requirementId && requirementIds.includes(app.requirementId))
+        (app.ownerEmployeeId === employee.id && app.ownerRole === ownerRole)
       );
 
       // Enrich applications with candidate profile data if candidateName is missing
@@ -8355,13 +8622,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      const ownerRole = normalizeSourcingRole(employee.role);
 
       // Verify job ownership first
       const job = await storage.getRecruiterJobById(id);
       if (!job) {
         return res.status(404).json({ message: "Job not found" });
       }
-      if (job.recruiterId !== session.employeeId) {
+      const isOwner =
+        (ownerRole && job.ownerEmployeeId === session.employeeId && job.ownerRole === ownerRole) ||
+        job.recruiterId === session.employeeId;
+      if (!isOwner) {
         return res.status(403).json({ message: "Access denied. This job does not belong to you." });
       }
 
@@ -8376,6 +8651,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a job application (for recruiter tagging candidates to requirements)
   app.post("/api/recruiter/applications", requireEmployeeAuth, async (req, res) => {
     try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      const ownerRole = normalizeSourcingRole(employee.role);
+      if (!ownerRole) {
+        return res.status(403).json({ message: "Only recruiters and team leaders can tag candidates" });
+      }
+
       const {
         candidateName,
         candidateEmail,
@@ -8411,6 +8695,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const applicationData = {
         profileId: `recruiter-tagged-${Date.now()}`,
         requirementId: requirementId || null,
+        ownerEmployeeId: employee.id,
+        ownerRole,
         jobTitle: jobTitle.trim(),
         company: company.trim(),
         status: "In Process",
@@ -8426,7 +8712,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const application = await storage.createJobApplication(applicationData);
 
-      const employee = await storage.getEmployeeById(req.session.employeeId!);
       logCandidateSubmitted(
         storage,
         req.session.employeeId || 'unknown',
@@ -8892,7 +9177,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all candidates (for Master Database)
   app.get("/api/admin/candidates", requireEmployeeAuth, async (req, res) => {
     try {
-      const candidatesList = await storage.getAllCandidates();
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      let candidatesList;
+      const ownedCandidates = await getOwnedCandidatesForEmployee(employee);
+      if (ownedCandidates) {
+        candidatesList = ownedCandidates;
+      } else {
+        candidatesList = await storage.getAllCandidates();
+      }
+
       res.json(candidatesList || []);
     } catch (error: any) {
       console.error('Get candidates error:', error);
@@ -8942,9 +9239,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         booleanMode,
       });
 
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
       // Build where clause
-      // If no query conditions, just filter by isActive
-      // If there are conditions, combine with isActive
+      // Source Resume should search across the full active candidate database.
       let whereClause;
       if (queryConditions) {
         whereClause = and(eq(candidates.isActive, true), queryConditions);
@@ -8979,47 +9280,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const inactiveCount = Number(inactiveResult?.count || 0);
       console.log('Source Resume Search - Inactive/null candidates:', inactiveCount);
 
-      // Base query
-      let query = db.select().from(candidates).where(whereClause);
+      let filteredCandidatesQuery = db.select().from(candidates).where(whereClause);
 
-      // Get total count (for pagination)
-      const countQuery = db.select({ count: sql<number>`count(*)` })
-        .from(candidates)
-        .where(whereClause);
-
-      const [countResult] = await countQuery;
-      const totalCount = Number(countResult?.count || 0);
-      console.log('Source Resume Search - Candidates matching filters:', totalCount);
-
-      // Apply sorting (except relevance which is done in-memory)
       if (sortOption !== 'relevance' && sortOption !== 'ctc-high' && sortOption !== 'ctc-low' && sortOption !== 'notice-period') {
-        const sortOrder = getSortOrder(sortOption);
-        query = query.orderBy(sortOrder);
+        filteredCandidatesQuery = filteredCandidatesQuery.orderBy(getSortOrder(sortOption));
       }
 
-      // Apply pagination
-      const page = Math.max(1, pagination.page || 1);
-      const pageSize = Math.min(100, Math.max(1, pagination.pageSize || 10));
-      const offset = (page - 1) * pageSize;
-
-      query = query.limit(pageSize).offset(offset);
-
-      // Execute query
       let candidatesList;
       try {
-        candidatesList = await query;
-        console.log('Source Resume Search - Query returned', candidatesList.length, 'candidates after pagination');
+        candidatesList = await filteredCandidatesQuery;
+        console.log('Source Resume Search - Query returned', candidatesList.length, 'candidates before scoring');
       } catch (queryError: any) {
         console.error('Source Resume Search - Query execution error:', queryError);
         console.error('Source Resume Search - Error details:', queryError.message, queryError.stack);
         throw queryError;
       }
 
+      const totalCount = candidatesList.length;
+      console.log('Source Resume Search - Candidates matching filters:', totalCount);
+
+      const page = Math.max(1, pagination.page || 1);
+      const pageSize = Math.min(100, Math.max(1, pagination.pageSize || 10));
+      const offset = (page - 1) * pageSize;
+
       // Get requirement if provided
       let requirement = null;
       if (requirementId) {
-        const requirements = await db.select().from(requirements).where(eq(requirements.id, requirementId));
-        requirement = requirements[0] || null;
+        const requirementRows = await db.select().from(requirements).where(eq(requirements.id, requirementId));
+        requirement = requirementRows[0] || null;
       }
 
       // Calculate scores for each candidate
@@ -9058,12 +9346,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Calculate analytics for current result set
+      const paginatedCandidates = sortedCandidates.slice(offset, offset + pageSize);
+
+      // Calculate analytics for the full filtered set, not just one page
       const analytics = calculateAnalytics(sortedCandidates.map(sc => sc.candidate));
 
       // Return paginated results with metadata
       res.json({
-        candidates: sortedCandidates.map(sc => ({
+        candidates: paginatedCandidates.map(sc => ({
           ...sc.candidate,
           relevanceScore: sc.relevanceScore,
           matchPercentage: sc.matchPercentage,
@@ -9165,10 +9455,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/candidates/:id", requireEmployeeAuth, async (req, res) => {
     try {
       const { id } = req.params;
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
       const candidate = await storage.getCandidateById(id);
       if (!candidate) {
         return res.status(404).json({ message: "Candidate not found" });
       }
+
+      const ownerRole = normalizeSourcingRole(employee.role);
+      if (ownerRole) {
+        const hasAccess =
+          (candidate.ownerEmployeeId === employee.id && candidate.ownerRole === ownerRole) ||
+          (ownerRole === 'recruiter' && !candidate.ownerEmployeeId && candidate.addedBy === employee.name);
+
+        if (!hasAccess) {
+          return res.status(403).json({ message: "Access denied. This candidate does not belong to you." });
+        }
+      }
+
       res.json(candidate);
     } catch (error) {
       console.error('Get candidate by ID error:', error);

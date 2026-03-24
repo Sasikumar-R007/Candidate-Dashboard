@@ -20,6 +20,12 @@ interface ParsedResume {
   rawText: string;
 }
 
+interface HeaderInfo {
+  name: string | null;
+  designation: string | null;
+  location: string | null;
+}
+
 async function parsePdf(dataBuffer: Buffer): Promise<string> {
   const pdfParse = (await import('pdf-parse/lib/pdf-parse.js')).default;
   const pdfData = await pdfParse(dataBuffer);
@@ -87,6 +93,7 @@ function extractResumeData(text: string): {
   websiteUrl: string | null;
   currentRole: string | null;
 } {
+  const headerInfo = extractHeaderInfo(text);
   const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
   const phoneRegex = /(?:\+?\d{1,3}[\s-]?)?(?:\(?\d{2,5}\)?[\s-]?)?\d{3,5}[\s-]?\d{4,5}/g;
   
@@ -96,11 +103,11 @@ function extractResumeData(text: string): {
   const email = emails && emails.length > 0 ? emails[0].toLowerCase() : null;
   const phone = selectBestPhone(phones);
   
-  const fullName = extractName(text);
-  const designation = extractDesignation(text);
+  const fullName = headerInfo.name || extractName(text);
+  const designation = headerInfo.designation || extractDesignation(text);
   const experience = extractExperience(text);
   const skills = extractSkills(text);
-  const location = extractLocation(text);
+  const location = headerInfo.location || extractLocation(text);
   const company = extractCompany(text);
   const education = extractEducation(text);
   const highestQualification = extractHighestQualification(text) || education;
@@ -121,6 +128,137 @@ function normalizeResumeText(text: string): string {
     .replace(/â€¢|•/g, ', ')
     .replace(/\r/g, '\n')
     .replace(/\n{3,}/g, '\n\n');
+}
+
+function getMeaningfulLines(text: string): string[] {
+  return text
+    .split('\n')
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+}
+
+function isSectionHeading(line: string, headings: string[]): boolean {
+  const normalized = line.toLowerCase().replace(/[:|\-]+$/g, '').trim();
+  return headings.some((heading) =>
+    normalized === heading ||
+    normalized.startsWith(`${heading}:`) ||
+    normalized.startsWith(`${heading} |`) ||
+    normalized.startsWith(`${heading} -`)
+  );
+}
+
+function cleanRoleText(value: string): string {
+  return value
+    .replace(/^[-,:|]\s*/, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+function looksLikeRoleText(value: string): boolean {
+  if (!value) return false;
+  const lower = value.toLowerCase();
+  if (
+    value.length < 3 ||
+    value.length > 90 ||
+    value.includes('@') ||
+    /\d{5,}/.test(value) ||
+    /^(date|place|nationality|driving license|profile|summary|skills|education|employment history)$/i.test(lower)
+  ) {
+    return false;
+  }
+
+  const roleKeywords = [
+    'designer', 'developer', 'engineer', 'manager', 'analyst', 'consultant', 'architect',
+    'trainer', 'specialist', 'executive', 'coordinator', 'administrator', 'lead', 'scientist',
+    'sales', 'marketing', 'account', 'business', 'product', 'recruiter', 'talent', 'hr',
+    'teacher', 'writer', 'editor', 'officer', 'intern', 'associate'
+  ];
+
+  return roleKeywords.some((keyword) => lower.includes(keyword));
+}
+
+function looksLikeLocationLine(value: string): boolean {
+  return (
+    !value.includes('@') &&
+    !/^https?:\/\//i.test(value) &&
+    !/linkedin|github|portfolio|website/i.test(value) &&
+    !/\[.*\]/.test(value) &&
+    !/\b(software|technologies|solutions|systems|private limited|group|fitness|university|college|institute)\b/i.test(value) &&
+    !looksLikeRoleText(value) &&
+    (/\b(usa|india|uk|uae|canada|germany|singapore|australia)\b/i.test(value) ||
+      /\b(new york|bangalore|bengaluru|chennai|hyderabad|mumbai|delhi|kolkata|pune|london|dubai|singapore)\b/i.test(value) ||
+      /\d{5,}/.test(value))
+  );
+}
+
+function extractLocationFromLine(value: string): string | null {
+  if (
+    !value ||
+    value.includes('@') ||
+    /linkedin|github|portfolio|website/i.test(value) ||
+    /\[.*\]/.test(value) ||
+    /\b(software|technologies|solutions|systems|private limited|group|fitness|university|college|institute)\b/i.test(value)
+  ) {
+    return null;
+  }
+
+  const parts = value
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => !/^\d[\d\s-]*$/.test(part) && !/@/.test(part));
+
+  if (parts.length >= 2) {
+    const meaningfulParts = parts.filter((part) => /[A-Za-z]/.test(part));
+    if (meaningfulParts.length >= 2) {
+      return meaningfulParts.slice(-2).join(', ');
+    }
+    return meaningfulParts[0] || null;
+  }
+
+  return parts[0] || null;
+}
+
+function extractHeaderInfo(text: string): HeaderInfo {
+  const lines = getMeaningfulLines(text).slice(0, 12);
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const parts = line.split(',').map((part) => cleanRoleText(part));
+
+    if (parts.length >= 2 && looksLikeNameCandidate(parts[0]) && looksLikeRoleText(parts[1])) {
+      return {
+        name: toDisplayNameCase(parts[0]),
+        designation: parts[1],
+        location: lines
+          .map((candidateLine, lineIndex) => lineIndex !== index && looksLikeLocationLine(candidateLine) ? extractLocationFromLine(candidateLine) : null)
+          .find(Boolean) || null,
+      };
+    }
+  }
+
+  for (let index = 0; index < Math.min(4, lines.length); index += 1) {
+    const line = normalizeNameCandidate(lines[index]);
+    if (looksLikeNameCandidate(line)) {
+      const nextRoleLine = lines
+        .slice(index + 1, index + 4)
+        .find((candidateLine) => looksLikeRoleText(candidateLine));
+
+      return {
+        name: toDisplayNameCase(line),
+        designation: nextRoleLine ? cleanRoleText(nextRoleLine) : null,
+        location: lines
+          .map((candidateLine, lineIndex) => lineIndex !== index && looksLikeLocationLine(candidateLine) ? extractLocationFromLine(candidateLine) : null)
+          .find(Boolean) || null,
+      };
+    }
+  }
+
+  return {
+    name: null,
+    designation: null,
+    location: null,
+  };
 }
 
 function repairCompactedResumeText(text: string): string {
@@ -718,8 +856,17 @@ function extractSkills(text: string): string | null {
   }
   
   if (skillsSectionIndex !== -1) {
-    // Extract skills from the next 15 lines (more comprehensive)
-    const skillsLines = lines.slice(skillsSectionIndex + 1, skillsSectionIndex + 16);
+    // Extract skills from the next lines until the next major heading
+    const skillsLines: string[] = [];
+    for (let i = skillsSectionIndex + 1; i < Math.min(lines.length, skillsSectionIndex + 18); i += 1) {
+      const line = lines[i];
+      if (!line) continue;
+      if (isSectionHeading(line, ['profile', 'summary', 'employment history', 'experience', 'work experience', 'education', 'projects', 'certifications'])) {
+        break;
+      }
+      skillsLines.push(line);
+    }
+
     const skillsText = skillsLines.join(' ').toLowerCase();
     
     // Split by various delimiters
@@ -734,6 +881,18 @@ function extractSkills(text: string): string | null {
           !commonWords.includes(normalizedSkill) &&
           !/\d{4,}/.test(skill)) { // Exclude year numbers
         foundSkills.push(normalizedSkill);
+      }
+    }
+
+    for (const line of skillsLines) {
+      const cleanedLine = line.replace(/[•·]/g, '').trim();
+      if (
+        cleanedLine.length >= 3 &&
+        cleanedLine.length <= 35 &&
+        !commonWords.includes(cleanedLine.toLowerCase()) &&
+        !/\b(experienced|expert|proficient)\b/i.test(cleanedLine)
+      ) {
+        foundSkills.push(cleanedLine.toLowerCase());
       }
     }
   }
@@ -758,9 +917,18 @@ function extractSkills(text: string): string | null {
     }
   }
   
+  const cleanedSkills = foundSkills
+    .map((skill) => skill.replace(/\s{2,}/g, ' ').trim())
+    .filter((skill) =>
+      skill.length >= 2 &&
+      skill.length <= 35 &&
+      !/\b(experienced|expert|proficient|strong|knowledge|present|current|self)\b/i.test(skill) &&
+      !/[.]{2,}/.test(skill)
+    );
+
   // Return up to 20 skills as comma-separated string (increased from 10)
-  if (foundSkills.length > 0) {
-    return foundSkills.slice(0, 20).join(', ');
+  if (cleanedSkills.length > 0) {
+    return Array.from(new Set(cleanedSkills)).slice(0, 20).join(', ');
   }
   
   return null;
@@ -868,6 +1036,66 @@ function extractLocation(text: string): string | null {
 
 function extractCompany(text: string): string | null {
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+
+  const experienceSectionPatterns = ['employment history', 'work experience', 'experience', 'professional experience', 'employment'];
+  const experienceSectionIndex = lines.findIndex((line) =>
+    isSectionHeading(line, experienceSectionPatterns)
+  );
+
+  if (experienceSectionIndex >= 0) {
+    const nearbyLines = lines.slice(experienceSectionIndex + 1, experienceSectionIndex + 18);
+
+    for (const line of nearbyLines) {
+      const cleaned = line.replace(/\s+/g, ' ').trim();
+      const lower = cleaned.toLowerCase();
+
+      if (
+        cleaned.length < 3 ||
+        cleaned.length > 120 ||
+        cleaned.includes('@') ||
+        /^https?:\/\//i.test(cleaned) ||
+        /\b(profile|summary|skills|education|date of birth|nationality|driving license)\b/i.test(lower)
+      ) {
+        continue;
+      }
+
+      const companyRoleThreePartMatch = cleaned.match(/^([^,]{2,80}),\s+([^,]{2,80}),\s+([^,]{2,80})$/);
+      if (companyRoleThreePartMatch) {
+        const [_, firstPart, secondPart] = companyRoleThreePartMatch;
+        if (looksLikeRoleText(firstPart) && !looksLikeRoleText(secondPart)) {
+          return secondPart.trim();
+        }
+      }
+
+      const companyRoleCommaMatch = cleaned.match(/^([^,]{2,80}),\s+([^,]{2,80})$/);
+      if (companyRoleCommaMatch) {
+        const [_, firstPart, secondPart] = companyRoleCommaMatch;
+        if (looksLikeRoleText(firstPart) && !looksLikeRoleText(secondPart)) {
+          return secondPart.trim();
+        }
+        if (!looksLikeRoleText(firstPart) && looksLikeRoleText(secondPart)) {
+          return firstPart.trim();
+        }
+      }
+
+      const bracketMatch = cleaned.match(/^(.+?)\s*\[(?:19|20)\d{2}.*\]$/);
+      if (bracketMatch?.[1]) {
+        return bracketMatch[1].trim();
+      }
+
+      if (
+        /\b(inc|ltd|llc|corp|corporation|technologies|technology|solutions|systems|software|labs|group|global|fitness|university)\b/i.test(cleaned) &&
+        !looksLikeRoleText(cleaned)
+      ) {
+        return cleaned.replace(/\s*\[(?:19|20)\d{2}.*\]$/, '').trim();
+      }
+
+      const descriptiveCompanyMatch = cleaned.match(/^([A-Z][A-Za-z0-9&'. -]{2,80})\s+is\s+/);
+      if (descriptiveCompanyMatch?.[1] && !looksLikeRoleText(descriptiveCompanyMatch[1])) {
+        return descriptiveCompanyMatch[1].trim();
+      }
+    }
+  }
   
   // Enhanced company-related keywords
   const companyKeywords = [
@@ -876,18 +1104,17 @@ function extractCompany(text: string): string | null {
   ];
   
   // Look for employment/experience section first
-  let experienceSectionIndex = -1;
+  let fallbackExperienceSectionIndex = -1;
   for (let i = 0; i < Math.min(50, lines.length); i++) {
     const lowerLine = lines[i].toLowerCase();
-    if (lowerLine.includes('experience') || lowerLine.includes('employment') || 
-        lowerLine.includes('work history') || lowerLine.includes('career')) {
-      experienceSectionIndex = i;
+    if (isSectionHeading(lines[i], ['experience', 'employment', 'work history', 'career', 'employment history', 'professional experience'])) {
+      fallbackExperienceSectionIndex = i;
       break;
     }
   }
   
   // Search in experience section and nearby lines (more comprehensive)
-  const searchStart = experienceSectionIndex >= 0 ? Math.max(0, experienceSectionIndex) : 0;
+  const searchStart = fallbackExperienceSectionIndex >= 0 ? Math.max(0, fallbackExperienceSectionIndex) : 0;
   const searchEnd = Math.min(searchStart + 40, lines.length);
   
   for (let i = searchStart; i < searchEnd; i++) {
@@ -910,7 +1137,7 @@ function extractCompany(text: string): string | null {
     // Pattern for company names: usually capitalized, may have Inc, Ltd, LLC, etc.
     const companyNamePattern = /^[A-Z][a-zA-Z0-9\s&\-.,]+(?:Inc|Ltd|LLC|Corp|Corporation|Company|Technologies|Tech|Systems|Solutions|Services)?$/;
     
-    if (hasCompanyKeyword || companyNamePattern.test(lines[i])) {
+    if ((hasCompanyKeyword || companyNamePattern.test(lines[i])) && !looksLikeNameCandidate(lines[i])) {
       // Extract company name
       let company = lines[i];
       
@@ -988,6 +1215,17 @@ function extractEducation(text: string): string | null {
     // Extract education from the next few lines
     const educationLines = lines.slice(educationSectionIndex, educationSectionIndex + 10);
     const educationText = educationLines.join(' ');
+
+    for (const line of educationLines) {
+      const compactLine = line.replace(/\s+/g, ' ').trim();
+      if (
+        compactLine.length <= 160 &&
+        /\b(bachelor|master|mba|b\.?\s?tech|b\.?\s?e|bca|mca|ph\.?\s?d|diploma)\b/i.test(compactLine) &&
+        !/\b(email|phone|linkedin|github)\b/i.test(compactLine)
+      ) {
+        return compactLine;
+      }
+    }
     
     for (const pattern of degreePatterns) {
       const match = educationText.match(pattern);
@@ -999,6 +1237,17 @@ function extractEducation(text: string): string | null {
           return extracted;
         }
       }
+    }
+  }
+
+  for (const line of lines) {
+    const compactLine = line.replace(/\s+/g, ' ').trim();
+    if (
+      compactLine.length <= 140 &&
+      /\b(bachelor|master|mba|b\.?\s?tech|b\.?\s?e|bca|mca|ph\.?\s?d|diploma)\b/i.test(compactLine) &&
+      !/\b(email|phone|linkedin|github)\b/i.test(compactLine)
+    ) {
+      return compactLine;
     }
   }
   
@@ -1080,6 +1329,16 @@ function extractCollegeName(text: string): string | null {
     ) {
       return line.replace(/^[-:|,\s]+|[-:|,\s]+$/g, '').trim();
     }
+
+    const trailingInstituteMatch = line.match(/,\s*([^,]*(?:university|college|institute|school of|academy|polytechnic)[^,]*)/i);
+    if (trailingInstituteMatch?.[1]) {
+      return trailingInstituteMatch[1].trim();
+    }
+
+    const institutionMatch = line.match(/([A-Z][A-Za-z&().,\- ]{2,}(?:University|College|Institute|School|Academy|Polytechnic)(?:[A-Za-z&().,\- ]{0,40})?)/i);
+    if (institutionMatch?.[1] && !/\b(email|phone|linkedin|github|experience|skills)\b/i.test(institutionMatch[1])) {
+      return institutionMatch[1].trim();
+    }
   }
 
   return null;
@@ -1141,7 +1400,7 @@ function extractWebsite(text: string): string | null {
     const match = text.match(pattern);
     if (match) {
       const url = match[1] || match[0];
-      if (url && url.length < 200) {
+      if (url && url.length < 200 && !/linkedin\.com|github\.com|behance\.net|dribbble\.com/i.test(url)) {
         return url;
       }
     }
@@ -1151,6 +1410,11 @@ function extractWebsite(text: string): string | null {
 }
 
 function extractCurrentRole(text: string): string | null {
+  const headerInfo = extractHeaderInfo(text);
+  if (headerInfo.designation) {
+    return headerInfo.designation;
+  }
+
   // Current role is similar to designation but specifically looks for "current" or "present" role
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   

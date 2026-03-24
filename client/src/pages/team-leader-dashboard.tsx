@@ -7,6 +7,8 @@ import TeamLeaderSidebar from '@/components/dashboard/team-leader-sidebar';
 import TeamLeaderPerformanceGauge from '@/components/dashboard/team-leader-performance-gauge';
 import AllQuartersTargetDialog from '@/components/dashboard/all-quarters-target-dialog';
 import AddRequirementModal from '@/components/dashboard/modals/add-requirement-modal';
+import PostJobModal from '@/components/dashboard/modals/PostJobModal';
+import UploadResumeModal from '@/components/dashboard/modals/UploadResumeModal';
 import DailyDeliveryModal from '@/components/dashboard/modals/daily-delivery-modal';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -381,6 +383,42 @@ export default function TeamLeaderDashboard() {
     enabled: !!employee,
   });
 
+  const { data: sourcingJobCounts } = useQuery<{ total: number; active: number; closed: number; draft: number }>({
+    queryKey: ['/api/team-leader/sourcing/jobs-counts', employee?.id],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/recruiter/jobs/counts');
+      return await response.json();
+    },
+    enabled: !!employee && employee.role === 'team_leader',
+  });
+
+  const { data: sourcingCandidateCounts } = useQuery<{ total: number; active: number; inactive: number }>({
+    queryKey: ['/api/team-leader/sourcing/candidates-counts', employee?.id],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/recruiter/candidates/counts');
+      return await response.json();
+    },
+    enabled: !!employee && employee.role === 'team_leader',
+  });
+
+  const { data: tlSourcingJobs = [] } = useQuery<any[]>({
+    queryKey: ['/api/team-leader/sourcing/jobs', employee?.id],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/recruiter/jobs');
+      return await response.json();
+    },
+    enabled: !!employee && employee.role === 'team_leader',
+  });
+
+  const { data: tlSourcingCandidates = [] } = useQuery<any[]>({
+    queryKey: ['/api/team-leader/sourcing/candidates', employee?.id],
+    queryFn: async () => {
+      const response = await apiRequest('GET', '/api/admin/candidates');
+      return await response.json();
+    },
+    enabled: !!employee && employee.role === 'team_leader',
+  });
+
   // Fetch team performance graph data
   const { data: performanceGraphData, isLoading: isLoadingPerformanceGraph } = useQuery<{
     members: { id: string; name: string }[];
@@ -398,6 +436,93 @@ export default function TeamLeaderDashboard() {
     }
     return [];
   }, [teamMembers]);
+
+  const activeTlJobs = useMemo(
+    () => tlSourcingJobs.filter((job: any) => String(job.status || '').toLowerCase() === 'active'),
+    [tlSourcingJobs]
+  );
+
+  const tlOwnedCandidates = useMemo(
+    () =>
+      tlSourcingCandidates.filter(
+        (candidate: any) =>
+          (
+            candidate.ownerEmployeeId === employee?.id &&
+            candidate.ownerRole === 'team_leader'
+          ) ||
+          (
+            !candidate.ownerEmployeeId &&
+            candidate.addedBy === employee?.name
+          )
+      ),
+    [employee?.id, employee?.name, tlSourcingCandidates]
+  );
+
+  const tlResumeCount = tlOwnedCandidates.length;
+
+  const formatSourcingDate = (value: string | Date | null | undefined) => {
+    if (!value) return '-';
+    const parsedDate = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(parsedDate.getTime())) return '-';
+    return format(parsedDate, 'dd MMM yyyy');
+  };
+
+  const renderSourcingJobCards = (jobs: any[], emptyMessage: string) => {
+    if (jobs.length === 0) {
+      return (
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center text-sm text-slate-500">
+          {emptyMessage}
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid gap-4 md:grid-cols-2">
+        {jobs.map((job: any) => (
+          <div
+            key={job.id}
+            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_12px_28px_rgba(15,23,42,0.06)]"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-lg font-semibold text-slate-900">{job.role || 'Untitled Role'}</p>
+                <p className="mt-1 text-sm text-slate-600">{job.companyName || '-'}</p>
+              </div>
+              <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                String(job.status || '').toLowerCase() === 'active'
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : 'bg-slate-100 text-slate-700'
+              }`}>
+                {job.status || 'Unknown'}
+              </span>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-slate-600">
+              <div className="rounded-xl bg-slate-50 px-3 py-2">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Experience</p>
+                <p className="mt-1 font-medium text-slate-800">{job.experience || '-'}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 px-3 py-2">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Location</p>
+                <p className="mt-1 font-medium text-slate-800">{job.location || '-'}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 px-3 py-2">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Work Mode</p>
+                <p className="mt-1 font-medium text-slate-800">{job.workMode || '-'}</p>
+              </div>
+              <div className="rounded-xl bg-slate-50 px-3 py-2">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Posted Date</p>
+                <p className="mt-1 font-medium text-slate-800">{formatSourcingDate(job.postedDate || job.createdAt)}</p>
+              </div>
+            </div>
+            <div className="mt-4 rounded-xl bg-blue-50 px-3 py-3 text-sm text-slate-700">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-blue-500">Package</p>
+              <p className="mt-1 font-medium text-slate-900">{job.salaryPackage || '-'}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
   
   // Static priority distribution - fixed counts that never change
   // These represent the expected number of resumes to be delivered based on priority/criticality
@@ -476,6 +601,58 @@ export default function TeamLeaderDashboard() {
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
   const [selectedMember, setSelectedMember] = useState<any>(null);
+  const [isPostJobModalOpen, setIsPostJobModalOpen] = useState(false);
+  const [isUploadResumeModalOpen, setIsUploadResumeModalOpen] = useState(false);
+  const [isActiveJobsModalOpen, setIsActiveJobsModalOpen] = useState(false);
+  const [isPostedJobsModalOpen, setIsPostedJobsModalOpen] = useState(false);
+  const [isUploadedResumesModalOpen, setIsUploadedResumesModalOpen] = useState(false);
+  const [jobFormError, setJobFormError] = useState('');
+  const [resumeFormError, setResumeFormError] = useState('');
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [jobFormData, setJobFormData] = useState({
+    companyName: '',
+    companyTagline: '',
+    companyType: '',
+    market: '',
+    field: '',
+    noOfPositions: '',
+    role: '',
+    experience: '',
+    location: '',
+    workMode: '',
+    employmentType: '',
+    salaryPackage: '',
+    aboutCompany: '',
+    roleDefinitions: '',
+    keyResponsibility: '',
+    primarySkills: [''],
+    secondarySkills: [''],
+    knowledgeOnly: [''],
+    companyLogo: ''
+  });
+  const [resumeFormData, setResumeFormData] = useState({
+    firstName: '',
+    lastName: '',
+    mobileNumber: '',
+    whatsappNumber: '',
+    primaryEmail: '',
+    secondaryEmail: '',
+    highestQualification: '',
+    collegeName: '',
+    linkedin: '',
+    pedigreeLevel: '',
+    currentLocation: '',
+    noticePeriod: '',
+    website: '',
+    portfolio1: '',
+    currentCompany: '',
+    portfolio2: '',
+    currentRole: '',
+    portfolio3: '',
+    companyDomain: '',
+    companyLevel: '',
+    skills: ['', '', '', '', '']
+  });
 
   // Define color mapping for consistent candidate colors
   const candidateColors = {
@@ -814,12 +991,74 @@ export default function TeamLeaderDashboard() {
                   </CardContent>
                 </Card>
 
-                {/* Right - Performance Gauge */}
-                <Card className="bg-white border border-gray-200">
-                  <CardContent className="p-6 flex items-center justify-center h-full">
-                    <TeamLeaderPerformanceGauge value={stats.performanceScore ?? 0} size={250} />
-                  </CardContent>
-                </Card>
+                {/* Right - Action Strip + Performance Gauge */}
+                <div className="space-y-4">
+                  <div className="rounded-[24px] bg-gradient-to-br from-slate-100 via-slate-50 to-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
+                      <div className="rounded-[18px] bg-white/85 px-4 py-3">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => setIsPostJobModalOpen(true)}
+                            className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
+                            data-testid="button-tl-post-job"
+                          >
+                            Post Jobs
+                          </button>
+                          <button
+                            onClick={() => setIsUploadResumeModalOpen(true)}
+                            className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
+                            data-testid="button-tl-upload-resume"
+                          >
+                            Upload Resume
+                          </button>
+                          <button
+                            onClick={() => window.open('/source-resume', '_blank')}
+                            className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
+                            data-testid="button-tl-source-resume"
+                          >
+                            Source Resume
+                          </button>
+                        </div>
+                        <div className="mt-4 flex justify-end">
+                          <div className="grid grid-cols-3 gap-3">
+                            <button
+                              type="button"
+                              onClick={() => setIsActiveJobsModalOpen(true)}
+                              className="min-w-[120px] rounded-2xl bg-emerald-50 px-4 py-3 text-right transition hover:bg-emerald-100"
+                            >
+                              <p className="text-xs font-medium text-emerald-600">Active Jobs</p>
+                              <p className="mt-1 text-2xl font-semibold text-emerald-700">{activeTlJobs.length || sourcingJobCounts?.active || 0}</p>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setIsPostedJobsModalOpen(true)}
+                              className="min-w-[120px] rounded-2xl bg-slate-50 px-4 py-3 text-right transition hover:bg-slate-100"
+                            >
+                              <p className="text-xs font-medium text-slate-500">Posted Jobs</p>
+                              <p className="mt-1 text-2xl font-semibold text-slate-900">{tlSourcingJobs.length || sourcingJobCounts?.total || 0}</p>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setIsUploadedResumesModalOpen(true)}
+                              className="min-w-[120px] rounded-2xl bg-blue-50 px-4 py-3 text-right transition hover:bg-blue-100"
+                            >
+                              <p className="text-xs font-medium text-blue-600">Uploaded Resumes</p>
+                              <p className="mt-1 text-2xl font-semibold text-blue-700">{tlResumeCount || sourcingCandidateCounts?.total || 0}</p>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                  </div>
+
+                  <Card className="border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50/40 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
+                    <CardContent className="p-6">
+                      <div className="rounded-[28px] border border-white/80 bg-white/90 px-4 py-6 shadow-inner">
+                        <div className="flex items-center justify-center">
+                          <TeamLeaderPerformanceGauge value={stats.performanceScore ?? 0} size={250} />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
 
               {/* Target Section */}
@@ -3094,6 +3333,106 @@ export default function TeamLeaderDashboard() {
         chatUnreadCount={tlChatRooms.reduce((sum, room) => sum + (room.unreadCount || 0), 0)} 
       />
       {renderMainContent()}
+
+      <PostJobModal
+        isOpen={isPostJobModalOpen}
+        onClose={() => setIsPostJobModalOpen(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['/api/team-leader/sourcing/jobs-counts', employee?.id] });
+          queryClient.invalidateQueries({ queryKey: ['/api/team-leader/sourcing/jobs', employee?.id] });
+          queryClient.invalidateQueries({ queryKey: ['/api/recruiter/jobs'] });
+          queryClient.refetchQueries({ queryKey: ['/api/team-leader/sourcing/jobs', employee?.id] });
+          queryClient.refetchQueries({ queryKey: ['/api/team-leader/sourcing/jobs-counts', employee?.id] });
+        }}
+        formData={jobFormData}
+        setFormData={setJobFormData}
+        formError={jobFormError}
+        setFormError={setJobFormError}
+      />
+
+      <UploadResumeModal
+        isOpen={isUploadResumeModalOpen}
+        onClose={() => setIsUploadResumeModalOpen(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['/api/team-leader/sourcing/candidates-counts', employee?.id] });
+          queryClient.invalidateQueries({ queryKey: ['/api/team-leader/sourcing/candidates', employee?.id] });
+          queryClient.invalidateQueries({ queryKey: ['/api/admin/candidates'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/source-resume/search'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/recruiter/applications'] });
+          queryClient.refetchQueries({ queryKey: ['/api/team-leader/sourcing/candidates', employee?.id] });
+          queryClient.refetchQueries({ queryKey: ['/api/team-leader/sourcing/candidates-counts', employee?.id] });
+        }}
+        formData={resumeFormData}
+        setFormData={setResumeFormData}
+        resumeFile={resumeFile}
+        setResumeFile={setResumeFile}
+        formError={resumeFormError}
+        setFormError={setResumeFormError}
+      />
+
+      <Dialog open={isActiveJobsModalOpen} onOpenChange={setIsActiveJobsModalOpen}>
+        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Active Jobs</DialogTitle>
+          </DialogHeader>
+          <div className="mt-2">
+            {renderSourcingJobCards(activeTlJobs, 'No active jobs posted by this team leader yet.')}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPostedJobsModalOpen} onOpenChange={setIsPostedJobsModalOpen}>
+        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Posted Jobs</DialogTitle>
+          </DialogHeader>
+          <div className="mt-2">
+            {renderSourcingJobCards(tlSourcingJobs, 'No jobs have been posted by this team leader yet.')}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isUploadedResumesModalOpen} onOpenChange={setIsUploadedResumesModalOpen}>
+        <DialogContent className="max-w-5xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Uploaded Resumes</DialogTitle>
+          </DialogHeader>
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 text-left">
+                  <th className="p-3 text-sm font-semibold text-slate-600">Candidate ID</th>
+                  <th className="p-3 text-sm font-semibold text-slate-600">Name</th>
+                  <th className="p-3 text-sm font-semibold text-slate-600">Email</th>
+                  <th className="p-3 text-sm font-semibold text-slate-600">Current Role</th>
+                  <th className="p-3 text-sm font-semibold text-slate-600">Location</th>
+                  <th className="p-3 text-sm font-semibold text-slate-600">Uploaded On</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tlOwnedCandidates.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-sm text-slate-500">
+                      No resumes have been uploaded by this team leader yet.
+                    </td>
+                  </tr>
+                ) : (
+                  tlOwnedCandidates.map((candidate: any) => (
+                    <tr key={candidate.id} className="border-b border-slate-100">
+                      <td className="p-3 text-sm text-slate-700">{candidate.candidateId || '-'}</td>
+                      <td className="p-3 text-sm font-medium text-slate-900">{candidate.fullName || '-'}</td>
+                      <td className="p-3 text-sm text-slate-700">{candidate.email || '-'}</td>
+                      <td className="p-3 text-sm text-slate-700">{candidate.currentRole || candidate.designation || '-'}</td>
+                      <td className="p-3 text-sm text-slate-700">{candidate.location || '-'}</td>
+                      <td className="p-3 text-sm text-slate-700">{formatSourcingDate(candidate.createdAt)}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </DialogContent>
+      </Dialog>
       
       {/* Closure Details Modal */}
       <Dialog open={isClosureDetailsModalOpen} onOpenChange={setIsClosureDetailsModalOpen}>
