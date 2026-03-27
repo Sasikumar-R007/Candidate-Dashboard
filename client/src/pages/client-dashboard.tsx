@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { StandardDatePicker } from "@/components/ui/standard-date-picker";
-import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, MessageSquare, Minus, Users, Play, Trophy, ArrowLeft, Send, Calendar as CalendarIcon, MoreVertical, HelpCircle, Download, ExternalLink, Eye, Trash2, Paperclip, Image as ImageIcon, File, Video, Link as LinkIcon, X, Smile } from "lucide-react";
+import { Briefcase, FileText, Clock, CheckCircle, XCircle, Pause, User, MapPin, HandHeart, Upload, Edit3, MessageSquare, Minus, Users, Play, Trophy, ArrowLeft, Send, Calendar as CalendarIcon, MoreVertical, HelpCircle, Download, ExternalLink, Eye, Trash2, Paperclip, Image as ImageIcon, File, Video, Link as LinkIcon, X, Smile, RotateCcw } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -117,6 +117,7 @@ export default function ClientDashboard() {
     quality: false,
     impact: false
   });
+  const jdFileInputRef = useRef<HTMLInputElement | null>(null);
   const [printMetrics, setPrintMetrics] = useState({
     speed: true,
     quality: true,
@@ -269,7 +270,9 @@ export default function ClientDashboard() {
   // Fetch roles/requirements from API
   const { data: allRolesData, isLoading: isLoadingRoles } = useQuery({
     queryKey: ['/api/client/requirements'],
-    initialData: []
+    initialData: [],
+    staleTime: 0,
+    refetchOnMount: 'always'
   });
 
   // Fetch pipeline data from API with filters
@@ -281,7 +284,8 @@ export default function ClientDashboard() {
         params.append('requirementId', selectedRequirement);
       }
       const url = `/api/client/pipeline${params.toString() ? '?' + params.toString() : ''}`;
-      return apiRequest('GET', url);
+      const response = await apiRequest('GET', url);
+      return response.json();
     },
     initialData: []
   });
@@ -365,6 +369,23 @@ export default function ClientDashboard() {
   });
 
   // Filter pipeline data by period and selected roles
+  const resetJdUploadForm = () => {
+    setJdText('');
+    setUploadedFile(null);
+    if (jdFilePreviewUrl) {
+      URL.revokeObjectURL(jdFilePreviewUrl);
+    }
+    setJdFilePreviewUrl(null);
+    setPrimarySkills('');
+    setSecondarySkills('');
+    setKnowledgeOnly('');
+    setSpecialInstructions('');
+    setJdPosition('');
+    if (jdFileInputRef.current) {
+      jdFileInputRef.current.value = '';
+    }
+  };
+
   const filteredPipelineData = useMemo(() => {
     let filtered = [...mergedPipelineData];
 
@@ -545,7 +566,14 @@ export default function ClientDashboard() {
       };
 
   // Show all roles in dashboard (user requested to show all, not just 2)
-  const rolesData = (allRolesData as any[]) || [];
+  const rolesData = useMemo(() => {
+    const items = Array.isArray(allRolesData) ? [...allRolesData] : [];
+    return items.sort((a: any, b: any) => {
+      const aDate = new Date(a.createdAt || a.lastActiveRaw || a.sharedOnRaw || 0).getTime();
+      const bDate = new Date(b.createdAt || b.lastActiveRaw || b.sharedOnRaw || 0).getTime();
+      return bDate - aDate;
+    });
+  }, [allRolesData]);
 
   // Recent chats data - static for now
   const recentChats: ChatUser[] = [];
@@ -770,8 +798,17 @@ export default function ClientDashboard() {
               <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
                 <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
                   <h3 className="text-lg font-bold text-gray-900">JD Upload</h3>
-                  {/* Preview & Submit Buttons - Top Right */}
                   <div className="flex gap-3">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={resetJdUploadForm}
+                      className="h-10 w-10 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                      title="Reset JD upload"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                    </Button>
                     <Button
                       onClick={() => setIsJdPreviewModalOpen(true)}
                       variant="outline"
@@ -793,6 +830,7 @@ export default function ClientDashboard() {
                     {/* Drag & Drop Upload - Left Side */}
                     <div className="relative">
                       <input
+                        ref={jdFileInputRef}
                         type="file"
                         accept=".pdf,.docx,.doc"
                         onChange={async (e) => {
@@ -852,6 +890,9 @@ export default function ClientDashboard() {
                                   URL.revokeObjectURL(jdFilePreviewUrl);
                                 }
                                 setJdFilePreviewUrl(null);
+                                if (jdFileInputRef.current) {
+                                  jdFileInputRef.current.value = '';
+                                }
                               }}
                               className="text-xs text-red-500 hover:underline"
                             >
@@ -2192,17 +2233,7 @@ export default function ClientDashboard() {
                     });
                     setIsJdPreviewModalOpen(false);
                     // Reset form
-                    setJdText('');
-                    setUploadedFile(null);
-                    if (jdFilePreviewUrl) {
-                      URL.revokeObjectURL(jdFilePreviewUrl);
-                    }
-                    setJdFilePreviewUrl(null);
-                    setPrimarySkills('');
-                    setSecondarySkills('');
-                    setKnowledgeOnly('');
-                    setSpecialInstructions('');
-                    setJdPosition('');
+                    resetJdUploadForm();
                     // Refresh requirements list
                     queryClient.invalidateQueries({ queryKey: ['/api/client/requirements'] });
                   } else {

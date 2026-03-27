@@ -1081,7 +1081,12 @@ export default function RecruiterDashboard2() {
   // Fetch requirements assigned to this recruiter
   const { data: recruiterRequirements = [], isLoading: isLoadingRequirements } = useQuery<any[]>({
     queryKey: ['/api/recruiter/requirements'],
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000,
   });
+
+  const requirementsTableData = recruiterRequirements;
 
   // Fetch closure reports (revenue mappings) for this recruiter from backend
   const { data: closureReports = [], isLoading: isLoadingClosureReports } = useQuery<any[]>({
@@ -1742,9 +1747,6 @@ export default function RecruiterDashboard2() {
   };
 
   const renderRequirementsContent = () => {
-    // Use real requirements data from API - include reassigned ones for display but mark them
-    const requirementsTableData = recruiterRequirements;
-
     // Function to format count display as "delivered/expected"
     const getCountDisplay = (req: any): string => {
       const delivered = req.deliveredCount || 0;
@@ -1852,13 +1854,29 @@ export default function RecruiterDashboard2() {
                               const expected = getExpectedCount(req.criticality, req.toughness);
                               const isComplete = delivered >= expected && expected > 0;
                               const isReassigned = req.assignmentStatus === "reassigned";
+                              const isOnHold = req.managementStatus === 'hold';
+                              const isRecentlyClosed = req.managementStatus === 'closed' && req.isRecentlyClosed;
                               return (
                                 <tr 
                                   key={req.id || index} 
-                                  className={`border-b border-gray-100 ${isReassigned ? 'opacity-50 cursor-not-allowed bg-gray-100' : 'hover:bg-gray-50'} ${index % 2 === 0 && !isReassigned ? 'bg-white' : isReassigned ? 'bg-gray-100' : 'bg-gray-50'}`}
-                                  title={isReassigned ? "Reassigned to another TA" : undefined}
+                                  className={`border-b border-gray-100 ${isReassigned ? 'opacity-50 cursor-not-allowed bg-gray-100' : isRecentlyClosed ? 'bg-red-100 hover:bg-red-200' : isOnHold ? 'bg-yellow-100/80 hover:bg-yellow-100' : 'hover:bg-gray-50'} ${index % 2 === 0 && !isReassigned && !isOnHold && !isRecentlyClosed ? 'bg-white' : isReassigned ? 'bg-gray-100' : isRecentlyClosed ? 'bg-red-100' : isOnHold ? 'bg-yellow-100/80' : 'bg-gray-50'}`}
+                                  title={isReassigned ? "Reassigned to another TA" : isRecentlyClosed ? "Requirement was closed and will leave this list after 24 hours" : isOnHold ? "Requirement is on Hold" : undefined}
                                 >
-                                  <td className="py-3 px-4 text-gray-900 font-medium text-sm">{req.position}</td>
+                                  <td className="py-3 px-4 text-gray-900 font-medium text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <span>{req.position}</span>
+                                      {isRecentlyClosed && (
+                                        <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-800">
+                                          Closed
+                                        </span>
+                                      )}
+                                      {isOnHold && (
+                                        <span className="inline-flex rounded-full bg-yellow-100 px-2 py-0.5 text-[11px] font-semibold text-yellow-800">
+                                          On Hold
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">{req.company}</td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">{req.spoc}</td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">
@@ -1955,9 +1973,29 @@ export default function RecruiterDashboard2() {
                               const delivered = req.deliveredCount || 0;
                               const expected = getExpectedCount(req.criticality, req.toughness);
                               const isComplete = delivered >= expected && expected > 0;
+                              const isOnHold = req.managementStatus === 'hold';
+                              const isRecentlyClosed = req.managementStatus === 'closed' && req.isRecentlyClosed;
                               return (
-                                <tr key={req.id || index} className={`border-b border-gray-100 hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                                  <td className="py-3 px-4 text-gray-900 font-medium text-sm">{req.position}</td>
+                                <tr
+                                  key={req.id || index}
+                                  className={`border-b border-gray-100 ${isRecentlyClosed ? 'bg-red-100 hover:bg-red-200' : isOnHold ? 'bg-yellow-100/80 hover:bg-yellow-100' : `hover:bg-gray-50 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}`}
+                                  title={isRecentlyClosed ? 'Requirement was closed and will leave this list after 24 hours' : isOnHold ? 'Requirement is on Hold' : undefined}
+                                >
+                                  <td className="py-3 px-4 text-gray-900 font-medium text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <span>{req.position}</span>
+                                      {isRecentlyClosed && (
+                                        <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-800">
+                                          Closed
+                                        </span>
+                                      )}
+                                      {isOnHold && (
+                                        <span className="inline-flex rounded-full bg-yellow-100 px-2 py-0.5 text-[11px] font-semibold text-yellow-800">
+                                          On Hold
+                                        </span>
+                                      )}
+                                    </div>
+                                  </td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">{req.company}</td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">{req.spoc}</td>
                                   <td className="py-3 px-4 text-gray-600 text-sm">
