@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -14,9 +15,30 @@ interface AddRequirementModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialData?: {
+    id?: string;
     position?: string;
+    noOfPositions?: number;
+    splitRequirement?: boolean;
+    criticality?: string;
+    toughness?: string;
     company?: string;
     spoc?: string;
+    talentAdvisor?: string;
+    teamLead?: string;
+    jdFile?: string;
+    jdText?: string;
+    sourceType?: string;
+    sourceDetails?: string;
+    reRequirementContext?: {
+      actionType?: string;
+      candidate?: string;
+      assignedTL?: string;
+      assignedTA?: string;
+      offeredDate?: string;
+      joinedDate?: string;
+      selectedDate?: string;
+      sourceRequirementId?: string;
+    };
     [key: string]: any;
   } | null;
   onSuccess?: () => void;
@@ -33,8 +55,11 @@ interface Employee {
 
 export default function AddRequirementModal({ isOpen, onClose, initialData, onSuccess, jdIdToDelete }: AddRequirementModalProps) {
   const queryClient = useQueryClient();
+  const isEditMode = Boolean(initialData?.id);
   const [formData, setFormData] = useState({
     position: initialData?.position || '',
+    noOfPositions: initialData?.noOfPositions || 1,
+    splitRequirement: initialData?.splitRequirement || false,
     criticality: '',
     toughness: '',
     company: initialData?.company || '',
@@ -53,8 +78,14 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
       setFormData(prev => ({
         ...prev,
         position: initialData.position || prev.position,
+        noOfPositions: initialData.noOfPositions || prev.noOfPositions,
+        splitRequirement: initialData.splitRequirement || false,
+        criticality: initialData.criticality || prev.criticality,
+        toughness: initialData.toughness || prev.toughness,
         company: initialData.company || prev.company,
         spoc: initialData.spoc || prev.spoc,
+        talentAdvisor: initialData.talentAdvisor || prev.talentAdvisor,
+        teamLead: initialData.teamLead || prev.teamLead,
       }));
       // If JD file URL is provided in initialData, set it as preview URL
       if (initialData.jdFile) {
@@ -77,7 +108,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
   const teamLeads = employees.filter(emp => emp.role === 'team_leader');
 
   const createRequirementMutation = useMutation({
-    mutationFn: async (data: typeof formData & { jdFile?: string | null; jdText?: string | null }) => {
+    mutationFn: async (data: typeof formData & { jdFile?: string | null; jdText?: string | null; sourceType?: string | null; sourceDetails?: string | null }) => {
       const response = await apiRequest('POST', '/api/admin/requirements', {
         ...data,
         // Admin doesn't assign TA - TL will assign later
@@ -85,6 +116,8 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
         teamLead: data.teamLead === 'Unassigned' ? null : data.teamLead,
         jdFile: data.jdFile || null,
         jdText: data.jdText || null,
+        sourceType: data.sourceType || null,
+        sourceDetails: data.sourceDetails || null,
         createdAt: new Date().toISOString()
       });
       return response.json();
@@ -124,6 +157,40 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
     }
   });
 
+  const updateRequirementMutation = useMutation({
+    mutationFn: async (data: typeof formData & { jdFile?: string | null; jdText?: string | null; sourceType?: string | null; sourceDetails?: string | null }) => {
+      const response = await apiRequest('PATCH', `/api/admin/requirements/${initialData?.id}`, {
+        ...data,
+        teamLead: data.teamLead === 'Unassigned' ? null : data.teamLead,
+        jdFile: data.jdFile || null,
+        jdText: data.jdText || null,
+        sourceType: data.sourceType || null,
+        sourceDetails: data.sourceDetails || null,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/requirements'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/archived-requirements'] });
+      toast({
+        title: "Success",
+        description: "Requirement updated successfully!",
+        className: "bg-green-50 border-green-200 text-green-800",
+      });
+      if (onSuccess) {
+        onSuccess();
+      }
+      handleClose();
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update requirement. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -131,6 +198,14 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
       toast({
         title: "Missing Fields",
         description: "Please fill in all required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!Number.isFinite(formData.noOfPositions) || formData.noOfPositions < 1) {
+      toast({
+        title: "Invalid Positions",
+        description: "No. of positions must be at least 1.",
         variant: "destructive",
       });
       return;
@@ -175,11 +250,25 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
         }
       }
 
-      createRequirementMutation.mutate({ ...formData, jdFile: jdFileUrl, jdText: jdText.trim() || null });
+      const payload = {
+        ...formData,
+        noOfPositions: Number(formData.noOfPositions) || 1,
+        splitRequirement: formData.noOfPositions >= 5 ? formData.splitRequirement : false,
+        jdFile: jdFileUrl,
+        jdText: jdText.trim() || null,
+        sourceType: initialData?.sourceType || null,
+        sourceDetails: initialData?.sourceDetails || null,
+      };
+
+      if (isEditMode) {
+        updateRequirementMutation.mutate(payload);
+      } else {
+        createRequirementMutation.mutate(payload);
+      }
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to create requirement. Please try again.",
+        description: `Failed to ${isEditMode ? 'update' : 'create'} requirement. Please try again.`,
         variant: "destructive",
       });
     }
@@ -188,6 +277,8 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
   const handleClose = () => {
     setFormData({
       position: '',
+      noOfPositions: 1,
+      splitRequirement: false,
       criticality: '',
       toughness: '',
       company: '',
@@ -250,18 +341,49 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
     }));
   };
 
+  const handlePositionsChange = (value: string) => {
+    const parsed = Number(value);
+    setFormData(prev => ({
+      ...prev,
+      noOfPositions: Number.isFinite(parsed) && parsed > 0 ? parsed : 1,
+      splitRequirement: parsed >= 5 ? prev.splitRequirement : false
+    }));
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[600px]" data-testid="modal-add-requirement">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[720px] p-0 overflow-hidden" data-testid="modal-add-requirement">
+        <DialogHeader className="border-b border-slate-200 bg-slate-50 px-6 py-5 dark:border-slate-800 dark:bg-slate-900">
           <DialogTitle className="text-xl font-semibold text-gray-900 dark:text-white">
-            Add New Requirement
+            {isEditMode ? 'Edit Requirement' : 'Add New Requirement'}
           </DialogTitle>
         </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-          {/* Two Column Layout - Image 5 Design */}
-          <div className="grid grid-cols-2 gap-6">
+
+        <form onSubmit={handleSubmit} className="max-h-[85vh] overflow-y-auto px-6 py-5 space-y-6">
+          {initialData?.sourceType === 're_require' && initialData?.reRequirementContext && (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 dark:border-rose-900/40 dark:bg-rose-950/20">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex rounded-full bg-rose-600 px-2.5 py-1 text-[11px] font-semibold text-white">
+                  Re-Require
+                </span>
+                <p className="text-sm font-semibold text-rose-900 dark:text-rose-200">
+                  Requirement recreated from a closure exception
+                </p>
+              </div>
+              <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-rose-900 dark:text-rose-100 md:grid-cols-2">
+                <p>Candidate: {initialData.reRequirementContext.candidate || '-'}</p>
+                <p>Action: {initialData.reRequirementContext.actionType || '-'}</p>
+                <p>Assigned TL: {initialData.reRequirementContext.assignedTL || '-'}</p>
+                <p>Assigned TA: {initialData.reRequirementContext.assignedTA || '-'}</p>
+                <p>Offered Date: {initialData.reRequirementContext.offeredDate || '-'}</p>
+                <p>Joined Date: {initialData.reRequirementContext.joinedDate || '-'}</p>
+                <p>Selected Date: {initialData.reRequirementContext.selectedDate || '-'}</p>
+                <p>Source Requirement ID: {initialData.reRequirementContext.sourceRequirementId || '-'}</p>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {/* Left Column */}
             <div className="space-y-4">
               <div className="space-y-2">
@@ -274,30 +396,10 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
                   value={formData.position}
                   onChange={(e) => handleInputChange('position', e.target.value)}
                   placeholder="HR"
-                  className="bg-gray-50 dark:bg-gray-800"
+                  className="bg-gray-50 border-slate-200 placeholder:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-500"
                   required
                   data-testid="input-position"
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="toughness" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Toughness *
-                </Label>
-                <Select 
-                  value={formData.toughness} 
-                  onValueChange={(value) => handleInputChange('toughness', value)}
-                  required
-                >
-                  <SelectTrigger className="bg-gray-50 dark:bg-gray-800" data-testid="select-toughness">
-                    <SelectValue placeholder="Select toughness" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Easy">Easy</SelectItem>
-                    <SelectItem value="Medium">Medium</SelectItem>
-                    <SelectItem value="Tough">Tough</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
 
               <div className="space-y-2">
@@ -310,11 +412,45 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
                   value={formData.company}
                   onChange={(e) => handleInputChange('company', e.target.value)}
                   placeholder="Gumlet Marketing Private Limited"
-                  className="bg-gray-50 dark:bg-gray-800"
+                  className="bg-gray-50 border-slate-200 placeholder:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-500"
                   required
                   data-testid="input-company"
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="noOfPositions" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  No. of Positions *
+                </Label>
+                <Input
+                  id="noOfPositions"
+                  type="number"
+                  min={1}
+                  value={formData.noOfPositions}
+                  onChange={(e) => handlePositionsChange(e.target.value)}
+                  placeholder="1"
+                  className="bg-gray-50 border-slate-200 placeholder:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-500"
+                  required
+                  data-testid="input-no-of-positions"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="spoc" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  SPOC *
+                </Label>
+                <Input
+                  id="spoc"
+                  type="text"
+                  value={formData.spoc}
+                  onChange={(e) => handleInputChange('spoc', e.target.value)}
+                  placeholder="Dheena"
+                  className="bg-gray-50 border-slate-200 placeholder:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-500"
+                  required
+                  data-testid="input-spoc"
+                />
+              </div>
+
             </div>
 
             {/* Right Column */}
@@ -328,7 +464,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
                   onValueChange={(value) => handleInputChange('criticality', value)}
                   required
                 >
-                  <SelectTrigger className="bg-gray-50 dark:bg-gray-800" data-testid="select-criticality">
+                  <SelectTrigger className="bg-gray-50 border-slate-200 dark:bg-gray-800 dark:border-slate-700" data-testid="select-criticality">
                     <SelectValue placeholder="Select criticality" />
                   </SelectTrigger>
                   <SelectContent>
@@ -340,22 +476,6 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="spoc" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  SPOC *
-                </Label>
-                <Input
-                  id="spoc"
-                  type="text"
-                  value={formData.spoc}
-                  onChange={(e) => handleInputChange('spoc', e.target.value)}
-                  placeholder="Dheena"
-                  className="bg-gray-50 dark:bg-gray-800"
-                  required
-                  data-testid="input-spoc"
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label htmlFor="teamLead" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Team Leader
                 </Label>
@@ -364,7 +484,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
                   onValueChange={(value) => handleInputChange('teamLead', value)}
                   disabled={isLoadingEmployees}
                 >
-                  <SelectTrigger className="bg-gray-50 dark:bg-gray-800" data-testid="select-team-lead">
+                  <SelectTrigger className="bg-gray-50 border-slate-200 dark:bg-gray-800 dark:border-slate-700" data-testid="select-team-lead">
                     <SelectValue placeholder={isLoadingEmployees ? "Loading..." : "Select team lead"} />
                   </SelectTrigger>
                   <SelectContent>
@@ -375,10 +495,61 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Split Requirement
+                </Label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (formData.noOfPositions >= 5) {
+                      setFormData(prev => ({ ...prev, splitRequirement: !prev.splitRequirement }));
+                    }
+                  }}
+                  title={formData.noOfPositions < 5 ? 'only when positions are 5+' : undefined}
+                  className={`flex w-full items-center gap-3 rounded-2xl border px-4 py-3 text-left shadow-sm transition-colors ${
+                    formData.noOfPositions < 5
+                      ? 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500'
+                      : formData.splitRequirement
+                        ? 'border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-700 dark:bg-sky-900/20 dark:text-sky-300'
+                        : 'border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-sky-700 dark:hover:bg-sky-900/10'
+                  }`}
+                  data-testid="button-split-requirement"
+                >
+                  <Checkbox
+                    id="splitRequirement"
+                    checked={formData.splitRequirement}
+                    disabled={formData.noOfPositions < 5}
+                    onCheckedChange={() => {}}
+                    className="rounded-none pointer-events-none border-sky-400 data-[state=checked]:bg-sky-500 data-[state=checked]:text-white"
+                  />
+                  <span className="text-sm font-medium">Split Requirement</span>
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="toughness" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Toughness *
+                </Label>
+                <Select 
+                  value={formData.toughness} 
+                  onValueChange={(value) => handleInputChange('toughness', value)}
+                  required
+                >
+                  <SelectTrigger className="bg-gray-50 border-slate-200 dark:bg-gray-800 dark:border-slate-700" data-testid="select-toughness">
+                    <SelectValue placeholder="Select toughness" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Easy">Easy</SelectItem>
+                    <SelectItem value="Medium">Medium</SelectItem>
+                    <SelectItem value="Tough">Tough</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
-          {/* JD File Section - Image 5 Design */}
           <div className="space-y-2">
             <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
               JD File(Optional)
@@ -427,24 +598,23 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
             )}
           </div>
 
-          {/* Buttons - Image 5 Design */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
             <Button
               type="button"
               variant="ghost"
               onClick={handleClose}
-              className="text-gray-600 hover:text-gray-900"
+              className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
               data-testid="button-cancel"
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={createRequirementMutation.isPending || isUploadingJd}
-              className="bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-2 rounded"
+              disabled={createRequirementMutation.isPending || updateRequirementMutation.isPending || isUploadingJd}
+              className="bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-2 rounded-md"
               data-testid="button-add-requirement"
             >
-              {isUploadingJd ? 'Uploading JD...' : createRequirementMutation.isPending ? 'Adding...' : 'Submit'}
+              {isUploadingJd ? 'Uploading JD...' : isEditMode ? (updateRequirementMutation.isPending ? 'Updating...' : 'Update Requirement') : (createRequirementMutation.isPending ? 'Adding...' : 'Submit Requirement')}
             </Button>
           </div>
         </form>

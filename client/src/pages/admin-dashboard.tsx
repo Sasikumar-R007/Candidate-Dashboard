@@ -34,7 +34,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users, ExternalLink, HelpCircle, MoreVertical, Download, Edit2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Plus, CheckCircle2, Trash2, RotateCcw, Eye, FileText, Folder } from "lucide-react";
+import { CalendarIcon, EditIcon, Mail, Phone, Send, CalendarCheck, Search, UserPlus, Users, ExternalLink, HelpCircle, MoreVertical, Download, Edit2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Plus, CheckCircle2, Trash2, RotateCcw, Eye, FileText, Folder, AlertTriangle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ComposedChart, BarChart, Bar, Cell, AreaChart, Area } from 'recharts';
@@ -49,14 +49,22 @@ import { ChatDock } from '@/components/chat/chat-dock';
 import { ChatModal } from '@/components/chat/admin-chat-modal';
 // TypeScript interfaces
 interface Requirement {
-  id: number;
+  id: string;
   position: string;
+  noOfPositions?: number;
+  splitRequirement?: boolean;
   criticality: string;
   toughness?: string;
   company: string;
   spoc: string;
-  talentAdvisor: string;
-  teamLead: string;
+  talentAdvisor: string | null;
+  teamLead: string | null;
+  status?: string;
+  managementStatus?: string;
+  managementReason?: string | null;
+  managedAt?: string | null;
+  sourceType?: string | null;
+  sourceDetails?: string | null;
   jdFile?: string;
   jdText?: string;
 }
@@ -1029,6 +1037,7 @@ export default function AdminDashboard() {
   const [requirementsVisible, setRequirementsVisible] = useState(10);
   const [isAddRequirementModalOpen, setIsAddRequirementModalOpen] = useState(false);
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
+  const [isManageRequirementModalOpen, setIsManageRequirementModalOpen] = useState(false);
   const [isMetricsModalOpen, setIsMetricsModalOpen] = useState(false);
   const [isClientMetricsModalOpen, setIsClientMetricsModalOpen] = useState(false);
   const [selectedKeyMetricsClient, setSelectedKeyMetricsClient] = useState<string>("all");
@@ -1069,6 +1078,9 @@ export default function AdminDashboard() {
     month: '', year: '', employees: '', salary: '', incentive: '', tools: '', rent: '', others: ''
   });
   const [selectedRequirement, setSelectedRequirement] = useState<any>(null);
+  const [editingRequirement, setEditingRequirement] = useState<Requirement | null>(null);
+  const [manageRequirementAction, setManageRequirementAction] = useState<'hold' | 'closed' | 'resume' | ''>('');
+  const [manageRequirementReason, setManageRequirementReason] = useState('');
 
   // Check if all cashout form fields are filled
   const isCashoutFormComplete = useMemo(() => {
@@ -1121,15 +1133,7 @@ export default function AdminDashboard() {
     refetchOnWindowFocus: true,
     refetchInterval: 10000, // Refresh every 10 seconds for real-time updates
   });
-
-  // Set up interval to refresh pipeline data periodically (moved after useQuery)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      refetchPipeline();
-    }, 10000); // Refresh every 10 seconds
-
-    return () => clearInterval(interval);
-  }, [refetchPipeline]);
+  // Refetch interval is handled by useQuery's refetchInterval: 10000 above
 
   // Fetch team leads for reassign dropdown
   const { data: teamLeads = [], isLoading: isLoadingTeamLeads } = useQuery<any[]>({
@@ -1405,6 +1409,12 @@ export default function AdminDashboard() {
   const [targetSearch, setTargetSearch] = useState('');
   const [messagesSearch, setMessagesSearch] = useState('');
   const [closureReportsSearch, setClosureReportsSearch] = useState('');
+  const [selectedClosureReportAction, setSelectedClosureReportAction] = useState<any>(null);
+  const [closureReportActionType, setClosureReportActionType] = useState<'offer-drop' | 'early-exit' | null>(null);
+  const [isClosureReportActionModalOpen, setIsClosureReportActionModalOpen] = useState(false);
+  const [closureReportActionReason, setClosureReportActionReason] = useState('');
+  const [closureReportActionDate, setClosureReportActionDate] = useState('');
+  const [closureReportReRequirementRequested, setClosureReportReRequirementRequested] = useState(false);
   const [cashoutSearch, setCashoutSearch] = useState('');
   const [resumeDatabaseSearch, setResumeDatabaseSearch] = useState('');
   const [employeeMasterSearch, setEmployeeMasterSearch] = useState('');
@@ -1970,7 +1980,10 @@ export default function AdminDashboard() {
     fixedCTC: string;
     offeredDate: string;
     joinedDate: string;
+    offeredDateRaw?: string | null;
+    joinedDateRaw?: string | null;
     status: string;
+    sourceRequirement?: any | null;
   }>>({
     queryKey: ['/api/admin/closures-list'],
   });
@@ -1986,6 +1999,144 @@ export default function AdminDashboard() {
       report.talentAdvisor?.toLowerCase().includes(searchLower)
     );
   }, [closureReportsData, closureReportsSearch]);
+
+  const parseClosureReportDate = (value?: string | null) => {
+    if (!value) return null;
+
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed;
+    }
+
+    const parts = value.split(/[/-]/).map((part) => Number(part));
+    if (parts.length === 3 && parts.every((part) => Number.isFinite(part))) {
+      const [day, month, year] = parts;
+      const fallbackDate = new Date(year, month - 1, day);
+      return Number.isNaN(fallbackDate.getTime()) ? null : fallbackDate;
+    }
+
+    return null;
+  };
+
+  const resetClosureReportActionState = () => {
+    setSelectedClosureReportAction(null);
+    setClosureReportActionType(null);
+    setClosureReportActionReason('');
+    setClosureReportActionDate('');
+    setClosureReportReRequirementRequested(false);
+  };
+
+  const earlyExitDayCount = useMemo(() => {
+    if (closureReportActionType !== 'early-exit' || !selectedClosureReportAction?.joinedDate || !closureReportActionDate) {
+      return null;
+    }
+
+    const joinedOn = parseClosureReportDate(selectedClosureReportAction.joinedDate);
+    const selectedDate = parseClosureReportDate(closureReportActionDate);
+    if (!joinedOn || !selectedDate) {
+      return null;
+    }
+
+    const diffInMs = selectedDate.getTime() - joinedOn.getTime();
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24)) + 1;
+    return diffInDays > 0 ? diffInDays : 0;
+  }, [closureReportActionDate, closureReportActionType, selectedClosureReportAction]);
+
+  const handleOpenClosureReportActionModal = (report: any, actionType: 'offer-drop' | 'early-exit') => {
+    setSelectedClosureReportAction(report);
+    setClosureReportActionType(actionType);
+    setClosureReportActionReason('');
+    setClosureReportActionDate('');
+    setClosureReportReRequirementRequested(false);
+    setIsClosureReportActionModalOpen(true);
+  };
+
+  const handleConfirmClosureReportAction = () => {
+    if (!closureReportReRequirementRequested) {
+      toast({
+        title: closureReportActionType === 'early-exit' ? 'Early Exit captured' : 'Offer Drop captured',
+        description: 'Frontend flow is ready. Backend save can be connected next.',
+      });
+      setIsClosureReportActionModalOpen(false);
+      resetClosureReportActionState();
+      return;
+    }
+
+    const sourceRequirement = selectedClosureReportAction?.sourceRequirement;
+    const prefilledRequirement = {
+      position: sourceRequirement?.position || selectedClosureReportAction?.position || '',
+      noOfPositions: sourceRequirement?.noOfPositions || 1,
+      splitRequirement: sourceRequirement?.splitRequirement || false,
+      criticality: sourceRequirement?.criticality || 'MEDIUM',
+      toughness: sourceRequirement?.toughness || 'Medium',
+      company: sourceRequirement?.company || selectedClosureReportAction?.client || '',
+      spoc: sourceRequirement?.spoc || '',
+      talentAdvisor: sourceRequirement?.talentAdvisor || selectedClosureReportAction?.talentAdvisor || '',
+      teamLead: sourceRequirement?.teamLead || '',
+      jdFile: sourceRequirement?.jdFile || null,
+      jdText: sourceRequirement?.jdText || null,
+      sourceType: 're_require',
+      sourceDetails: JSON.stringify({
+        actionType: closureReportActionType,
+        candidate: selectedClosureReportAction?.candidate || '',
+        assignedTL: sourceRequirement?.teamLead || '',
+        assignedTA: sourceRequirement?.talentAdvisor || selectedClosureReportAction?.talentAdvisor || '',
+        offeredDate: selectedClosureReportAction?.offeredDate || '',
+        joinedDate: selectedClosureReportAction?.joinedDate || '',
+        selectedDate: closureReportActionDate || '',
+        sourceRequirementId: sourceRequirement?.originalId || sourceRequirement?.id || '',
+        reason: closureReportActionReason || '',
+        reRequireRequested: closureReportReRequirementRequested,
+      }),
+      reRequirementContext: {
+        actionType: closureReportActionType === 'early-exit' ? 'Early Exit' : 'Offer Drop',
+        candidate: selectedClosureReportAction?.candidate || '',
+        assignedTL: sourceRequirement?.teamLead || '',
+        assignedTA: sourceRequirement?.talentAdvisor || selectedClosureReportAction?.talentAdvisor || '',
+        offeredDate: selectedClosureReportAction?.offeredDate || '',
+        joinedDate: selectedClosureReportAction?.joinedDate || '',
+        selectedDate: closureReportActionDate || '',
+        sourceRequirementId: sourceRequirement?.originalId || sourceRequirement?.id || '',
+      },
+    };
+
+    setEditingRequirement(null);
+    setInitialRequirementData(prefilledRequirement);
+    setIsClosureReportActionModalOpen(false);
+    setIsAddRequirementModalOpen(true);
+    resetClosureReportActionState();
+  };
+
+  const renderClosureReportActions = (report: any) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-8 w-8 rounded-xl border border-slate-200 bg-white p-0 text-slate-600 hover:bg-slate-50">
+          <MoreVertical className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" sideOffset={6} className="w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+        <DropdownMenuItem
+          onClick={() => handleOpenClosureReportActionModal(report, 'offer-drop')}
+          className="flex flex-col items-start rounded-xl px-3 py-2 focus:bg-slate-50 dark:focus:bg-slate-800"
+        >
+          <span className="text-base font-medium text-slate-900 dark:text-white">Offer Drop</span>
+          <span className="text-xs text-slate-400">Candidate declined the offer</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => handleOpenClosureReportActionModal(report, 'early-exit')}
+          className="mt-1 flex flex-col items-start rounded-xl px-3 py-2 focus:bg-slate-50 dark:focus:bg-slate-800"
+        >
+          <span className="text-base font-medium text-slate-900 dark:text-white">Early Exit</span>
+          <span className="text-xs text-slate-400">Candidate exited within 90 days of joining</span>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const getClosureQuarterLabel = (report: any) => {
+    if (!report?.quarter) return 'N/A';
+    return String(report.quarter).replace(', ', ',');
+  };
 
   // Fetch revenue analysis data from API (with team filter)
   const { data: revenueAnalysis } = useQuery<{
@@ -2146,12 +2297,13 @@ export default function AdminDashboard() {
 
   // Archive requirement mutation
   const archiveRequirementMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await apiRequest('POST', `/api/admin/requirements/${id}/archive`);
+    mutationFn: async ({ id, updates }: { id: string; updates?: any }) => {
+      const response = await apiRequest('POST', `/api/admin/requirements/${id}/archive`, updates ?? {});
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/requirements'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/archived-requirements'] });
       toast({
         title: "Success",
         description: "Requirement archived successfully!",
@@ -2175,6 +2327,7 @@ export default function AdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/requirements'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/archived-requirements'] });
       toast({
         title: "Success",
         description: "Requirement updated successfully!",
@@ -2182,6 +2335,10 @@ export default function AdminDashboard() {
       });
       setIsReassignModalOpen(false);
       setSelectedRequirement(null);
+      setEditingRequirement(null);
+      setIsManageRequirementModalOpen(false);
+      setManageRequirementAction('');
+      setManageRequirementReason('');
     },
     onError: () => {
       toast({
@@ -2931,10 +3088,124 @@ export default function AdminDashboard() {
     setIsReassignModalOpen(true);
   };
 
-  const handleArchive = (requirement: Requirement) => {
-    if (window.confirm(`Are you sure you want to archive "${requirement.position}" requirement?`)) {
-      archiveRequirementMutation.mutate(String(requirement.id));
+  const handleEditRequirement = (requirement: Requirement) => {
+    setEditingRequirement(requirement);
+    setIsAddRequirementModalOpen(true);
+  };
+
+  const handleManageRequirement = (requirement: Requirement) => {
+    setSelectedRequirement(requirement);
+    setManageRequirementAction(requirement.managementStatus === 'hold' ? 'resume' : '');
+    setManageRequirementReason('');
+    setIsManageRequirementModalOpen(true);
+  };
+
+  const handleSubmitManageRequirement = () => {
+    if (!selectedRequirement || !manageRequirementAction || !manageRequirementReason.trim()) {
+      toast({
+        title: "Missing Details",
+        description: "Please choose an action and enter a reason.",
+        variant: "destructive",
+      });
+      return;
     }
+
+    const actionLabel = manageRequirementAction === 'closed'
+      ? 'Position Closed'
+      : manageRequirementAction === 'resume'
+        ? 'Resume Requirement'
+        : 'Client Hold';
+    const confirmed = window.confirm(`This requirement will be marked as ${actionLabel}. Do you want to continue?`);
+    if (!confirmed) return;
+
+    const updates = {
+      status: manageRequirementAction === 'closed' ? 'closed' : manageRequirementAction === 'resume' ? 'open' : 'paused',
+      managementStatus: manageRequirementAction === 'resume' ? 'active' : manageRequirementAction,
+      managementReason: manageRequirementReason.trim(),
+      managedAt: new Date().toISOString(),
+    };
+
+    if (manageRequirementAction === 'closed') {
+      archiveRequirementMutation.mutate(
+        { id: String(selectedRequirement.id), updates },
+        {
+          onSuccess: () => {
+            setIsManageRequirementModalOpen(false);
+            setSelectedRequirement(null);
+            setManageRequirementAction('');
+            setManageRequirementReason('');
+          },
+        }
+      );
+      return;
+    }
+
+    updateRequirementMutation.mutate(
+      { id: String(selectedRequirement.id), updates },
+      {
+        onSuccess: () => {
+          setIsManageRequirementModalOpen(false);
+          setSelectedRequirement(null);
+          setManageRequirementAction('');
+          setManageRequirementReason('');
+        },
+      }
+    );
+  };
+
+  const getRequirementRowClassName = (requirement: Requirement, index: number) => {
+    if (requirement.managementStatus === 'hold') {
+      return 'bg-yellow-100/80 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:hover:bg-yellow-900/30';
+    }
+
+    return index % 2 === 0
+      ? 'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800'
+      : 'bg-gray-50 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800';
+  };
+
+  const getRequirementRowTitle = (requirement: Requirement) => {
+    if (requirement.managementStatus === 'hold') {
+      return 'Requirement is on Hold';
+    }
+    return undefined;
+  };
+
+  const getRequirementStateBadge = (requirement: Requirement) => {
+    if (requirement.managementStatus === 'hold') {
+      return (
+        <span className="inline-flex w-fit rounded-full bg-yellow-100 px-2.5 py-1 text-[11px] font-semibold text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+          On Hold
+        </span>
+      );
+    }
+
+    if (requirement.sourceType === 're_require') {
+      return (
+        <span className="inline-flex w-fit rounded-full bg-rose-100 px-2.5 py-1 text-[11px] font-semibold text-rose-800 dark:bg-rose-900/30 dark:text-rose-300">
+          Re-Require
+        </span>
+      );
+    }
+
+    return null;
+  };
+
+  const getManageActionLabels = () => {
+    if (selectedRequirement?.managementStatus === 'hold') {
+      return {
+        primary: 'Resume Requirement',
+        primaryValue: 'resume' as const,
+        secondary: 'Position Closed',
+        secondaryValue: 'closed' as const,
+      };
+    }
+
+    return {
+      primary: 'Client Hold',
+      primaryValue: 'hold' as const,
+      secondary: 'Position Closed',
+      secondaryValue: 'closed' as const,
+    };
   };
 
   const handleRequirementsViewMore = () => {
@@ -4368,8 +4639,7 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Target & Incentives</CardTitle>
             <Button
-              variant="ghost"
-              className="text-sm text-blue-600 hover:text-blue-700 p-0 h-auto font-normal"
+              className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded-md h-auto font-medium"
               onClick={() => setIsTargetModalOpen(true)}
               data-testid="button-view-all-targets"
             >
@@ -4919,7 +5189,11 @@ export default function AdminDashboard() {
                 />
                 <Button
                   className="bg-cyan-400 hover:bg-cyan-500 text-black font-medium px-4 py-2 rounded text-sm whitespace-nowrap"
-                  onClick={() => setIsAddRequirementModalOpen(true)}
+                  onClick={() => {
+                    setEditingRequirement(null);
+                    setInitialRequirementData(null);
+                    setIsAddRequirementModalOpen(true);
+                  }}
                   data-testid="button-add-requirements"
                 >
                   + Add Requirements
@@ -4986,9 +5260,6 @@ export default function AdminDashboard() {
                                   <DropdownMenuItem onClick={() => handleReassign(requirement)}>
                                     Reassign
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleArchive(requirement)}>
-                                    Archive
-                                  </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </td>
@@ -5009,8 +5280,7 @@ export default function AdminDashboard() {
 
                   <div className="flex justify-end p-4 border-t border-gray-200 dark:border-gray-700">
                     <Button
-                      className="text-blue-600 hover:text-blue-700 p-0 h-auto font-normal text-sm"
-                      variant="ghost"
+                      className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded-md h-auto font-medium text-sm disabled:bg-cyan-200 disabled:text-slate-500"
                       onClick={handleRequirementsViewMore}
                       disabled={requirements.length <= 10}
                     >
@@ -6645,6 +6915,7 @@ export default function AdminDashboard() {
                       <Button
                         className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded text-sm"
                         onClick={() => {
+                          setEditingRequirement(null);
                           setInitialRequirementData(null);
                           setIsAddRequirementModalOpen(true);
                         }}
@@ -6681,8 +6952,21 @@ export default function AdminDashboard() {
                         {displayedRequirements.map((requirement: Requirement, index: number) => {
                           const criticalityColor = requirement.criticality === 'HIGH' ? 'text-red-600' : requirement.criticality === 'MEDIUM' ? 'text-blue-600' : 'text-gray-600';
                           return (
-                            <tr key={requirement.id} className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 ${index % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'}`}>
-                              <td className="py-3 px-3 text-gray-900 dark:text-white font-medium text-sm">{requirement.position}</td>
+                            <tr
+                              key={requirement.id}
+                              title={getRequirementRowTitle(requirement)}
+                              className={`border-b border-gray-100 dark:border-gray-800 ${getRequirementRowClassName(requirement, index)}`}
+                            >
+                              <td className="py-3 px-3 text-gray-900 dark:text-white font-medium text-sm">
+                                <div className="flex items-center gap-2">
+                                  <span>{requirement.position}</span>
+                                  {getRequirementStateBadge(requirement)}
+                                </div>
+                                <div className="text-xs font-normal text-gray-500 dark:text-gray-400">
+                                  {requirement.noOfPositions ?? 1} position{(requirement.noOfPositions ?? 1) > 1 ? 's' : ''}
+                                  {requirement.splitRequirement ? ' • Split' : ''}
+                                </div>
+                              </td>
                               <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{requirement.company}</td>
                               <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{requirement.spoc}</td>
                               <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">
@@ -6710,12 +6994,15 @@ export default function AdminDashboard() {
                                       <MoreVertical className="h-4 w-4" />
                                     </Button>
                                   </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="w-32">
+                                  <DropdownMenuContent align="end" className="w-40">
+                                    <DropdownMenuItem onClick={() => handleEditRequirement(requirement)}>
+                                      Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleManageRequirement(requirement)}>
+                                      Manage
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleReassign(requirement)}>
                                       Reassign
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleArchive(requirement)}>
-                                      Archive
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
@@ -6956,7 +7243,21 @@ export default function AdminDashboard() {
                   <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Pipeline</h2>
                   <div className="flex items-center gap-3">
                     {/* Team/TA Filter Dropdown - Teams first, then TAs */}
-                    <Select value={selectedPipelineTeamMember} onValueChange={setSelectedPipelineTeamMember}>
+                    <Select
+                      value={selectedPipelineTL !== 'all' ? `tl-${selectedPipelineTL}` : selectedPipelineTeamMember !== 'all' ? `ta-${selectedPipelineTeamMember}` : 'all'}
+                      onValueChange={(value) => {
+                        if (value === 'all') {
+                          setSelectedPipelineTL('all');
+                          setSelectedPipelineTeamMember('all');
+                        } else if (value.startsWith('tl-')) {
+                          setSelectedPipelineTL(value.replace('tl-', ''));
+                          setSelectedPipelineTeamMember('all');
+                        } else if (value.startsWith('ta-')) {
+                          setSelectedPipelineTL('all');
+                          setSelectedPipelineTeamMember(value.replace('ta-', ''));
+                        }
+                      }}
+                    >
                       <SelectTrigger className="w-48 input-styled btn-rounded">
                         <SelectValue placeholder="Select Team/TA" />
                       </SelectTrigger>
@@ -6964,13 +7265,13 @@ export default function AdminDashboard() {
                         <SelectItem value="all">All</SelectItem>
                         {/* Team Leaders (Teams) - listed first */}
                         {teamLeads.map((tl: any) => (
-                          <SelectItem key={`tl-${tl.id}`} value={tl.id}>
+                          <SelectItem key={`tl-${tl.id}`} value={`tl-${tl.id}`}>
                             {tl.name} (team)
                           </SelectItem>
                         ))}
                         {/* Talent Advisors (TAs) - listed after teams */}
                         {employees.filter((emp: any) => emp.role === 'recruiter').map((ta: any) => (
-                          <SelectItem key={`ta-${ta.id}`} value={ta.id}>
+                          <SelectItem key={`ta-${ta.id}`} value={`ta-${ta.id}`}>
                             {ta.name}
                           </SelectItem>
                         ))}
@@ -7125,7 +7426,7 @@ export default function AdminDashboard() {
 
                 {/* Closure Reports Table - Static (not affected by pipeline filters) */}
                 <Card className="mt-6">
-                  <CardHeader className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                  <CardHeader className="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Closure Reports</CardTitle>
                       {closureReportsData.length > 5 && (
@@ -7140,24 +7441,25 @@ export default function AdminDashboard() {
                       )}
                     </div>
                   </CardHeader>
-                  <CardContent className="p-0">
+                  <CardContent className="p-4">
                     <div className="overflow-x-auto admin-scrollbar">
-                      <table className="w-full border-collapse">
+                      <table className="w-full border-separate border-spacing-y-2">
                         <thead>
-                          <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Candidate</th>
-                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Positions</th>
-                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Client</th>
-                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Location</th>
-                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Experience</th>
-                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Applied Date</th>
-                            <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Status</th>
+                          <tr className="bg-[#f7f4f0] dark:bg-gray-800">
+                            <th className="rounded-l-2xl px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Candidate</th>
+                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Positions</th>
+                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Client</th>
+                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Talent Advisor</th>
+                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">QTR</th>
+                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Offered Date</th>
+                            <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Joined Date</th>
+                            <th className="rounded-r-2xl px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
                           {closureReportsData.length === 0 ? (
                             <tr>
-                              <td colSpan={7} className="py-8 text-center text-gray-500 dark:text-gray-400">
+                              <td colSpan={8} className="py-8 text-center text-gray-500 dark:text-gray-400">
                                 No closures yet. Candidates with 'Closure' or 'Joined' status will appear here automatically.
                               </td>
                             </tr>
@@ -7165,18 +7467,17 @@ export default function AdminDashboard() {
                             closureReportsData.slice(0, 5).map((report: any, index: number) => (
                               <tr
                                 key={report.id || index}
-                                className={`border-b border-gray-200 dark:border-gray-700 ${index % 2 === 1 ? 'bg-gray-50 dark:bg-gray-800/50' : ''}`}
+                                className="bg-white shadow-[0_0_0_1px_rgba(226,232,240,0.8)] dark:bg-gray-900"
                               >
-                                <td className="p-3 text-gray-900 dark:text-white">{report.candidate}</td>
-                                <td className="p-3 text-gray-600 dark:text-gray-400">{report.position}</td>
-                                <td className="p-3 text-gray-600 dark:text-gray-400">{report.client}</td>
-                                <td className="p-3 text-gray-600 dark:text-gray-400">-</td>
-                                <td className="p-3 text-gray-600 dark:text-gray-400">-</td>
-                                <td className="p-3 text-gray-600 dark:text-gray-400">{report.offeredDate || '-'}</td>
-                                <td className="p-3">
-                                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                    {report.status || 'Closure'}
-                                  </span>
+                                <td className="rounded-l-2xl px-4 py-3 text-sm text-gray-900 dark:text-white">{report.candidate}</td>
+                                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{report.position}</td>
+                                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{report.client}</td>
+                                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{report.talentAdvisor || 'Unassigned'}</td>
+                                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{getClosureQuarterLabel(report)}</td>
+                                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{report.offeredDate || '-'}</td>
+                                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">{report.joinedDate || '-'}</td>
+                                <td className="rounded-r-2xl px-4 py-3">
+                                  {renderClosureReportActions(report)}
                                 </td>
                               </tr>
                             ))
@@ -9838,6 +10139,75 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
+      <Dialog
+        open={isClosureReportActionModalOpen}
+        onOpenChange={(open) => {
+          setIsClosureReportActionModalOpen(open);
+          if (!open) {
+            resetClosureReportActionState();
+          }
+        }}
+      >
+        <DialogContent className="max-w-3xl border-none bg-slate-50 p-0 overflow-hidden">
+          <DialogHeader className="px-7 pt-7">
+            <DialogTitle className="text-[20px] font-medium text-slate-900">
+              {closureReportActionType === 'early-exit' ? 'Early Exit' : 'Offer Dropped'}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-5 px-7 pb-7">
+            <Textarea
+              value={closureReportActionReason}
+              onChange={(e) => setClosureReportActionReason(e.target.value)}
+              placeholder="Enter reason for offer decline..."
+              className="min-h-[170px] resize-none rounded-2xl border-slate-200 bg-white text-base placeholder:text-slate-400"
+            />
+
+            <div className="space-y-2">
+              <Label className="text-base font-medium text-slate-700">Date</Label>
+              <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                <Input
+                  type="date"
+                  value={closureReportActionDate}
+                  onChange={(e) => setClosureReportActionDate(e.target.value)}
+                  className="h-11 w-full rounded-2xl border-slate-200 bg-white md:max-w-[250px]"
+                />
+
+                {closureReportActionType === 'early-exit' && earlyExitDayCount !== null && (
+                  <div className={`flex items-center gap-2 text-sm ${earlyExitDayCount > 90 ? 'text-green-600' : 'text-red-500'}`}>
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+                    <span>
+                      Offer declined on Day {earlyExitDayCount} of the 90-day Early Exit window
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setClosureReportReRequirementRequested((prev) => !prev)}
+              className="flex items-center gap-3 text-left"
+            >
+              <Checkbox
+                checked={closureReportReRequirementRequested}
+                onCheckedChange={() => {}}
+                className="pointer-events-none rounded-none border-slate-300 data-[state=checked]:bg-slate-900 data-[state=checked]:text-white"
+              />
+              <span className="text-base text-slate-500">Request for re-require by client</span>
+            </button>
+
+            <Button
+              type="button"
+              className="h-14 w-full rounded-2xl bg-red-600 text-white text-[18px] font-semibold hover:bg-red-700"
+              onClick={handleConfirmClosureReportAction}
+            >
+              Confirm
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Closure Reports Modal */}
       <Dialog open={isClosureReportsModalOpen} onOpenChange={setIsClosureReportsModalOpen}>
         <DialogContent className="max-w-5xl mx-auto max-h-[80vh]">
@@ -9856,17 +10226,17 @@ export default function AdminDashboard() {
           </DialogHeader>
           <div className="p-4 overflow-y-auto admin-scrollbar" style={{ maxHeight: '60vh' }}>
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
+              <table className="w-full border-separate border-spacing-y-2">
                 <thead>
-                  <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-600">
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Candidate</th>
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Position</th>
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Client</th>
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Fixed CTC</th>
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Offered Date</th>
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Joined Date</th>
-                    <th className="text-left p-2 font-medium text-gray-700 dark:text-gray-300 text-sm">Status</th>
+                  <tr className="bg-[#f7f4f0] dark:bg-gray-800">
+                    <th className="rounded-l-2xl p-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Candidate</th>
+                    <th className="p-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Position</th>
+                    <th className="p-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Client</th>
+                    <th className="p-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Talent Advisor</th>
+                    <th className="p-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">QTR</th>
+                    <th className="p-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Offered Date</th>
+                    <th className="p-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Joined Date</th>
+                    <th className="rounded-r-2xl p-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -9884,21 +10254,16 @@ export default function AdminDashboard() {
                     </tr>
                   ) : (
                     filteredClosureReports.map((report) => (
-                      <tr key={report.id} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                        <td className="p-3 text-gray-900 dark:text-white">{report.candidate}</td>
+                      <tr key={report.id} className="bg-white shadow-[0_0_0_1px_rgba(226,232,240,0.8)] dark:bg-gray-900">
+                        <td className="rounded-l-2xl p-3 text-gray-900 dark:text-white">{report.candidate}</td>
                         <td className="p-3 text-gray-600 dark:text-gray-400">{report.position}</td>
                         <td className="p-3 text-gray-600 dark:text-gray-400">{report.client}</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">{report.talentAdvisor}</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">{report.fixedCTC}</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">{report.talentAdvisor || 'Unassigned'}</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">{getClosureQuarterLabel(report)}</td>
                         <td className="p-3 text-gray-600 dark:text-gray-400">{report.offeredDate}</td>
                         <td className="p-3 text-gray-600 dark:text-gray-400">{report.joinedDate}</td>
-                        <td className="p-3">
-                          <span className={`text-sm px-2 py-1 rounded ${report.status === "Joined"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-yellow-100 text-yellow-800"
-                            }`}>
-                            {report.status}
-                          </span>
+                        <td className="rounded-r-2xl p-3">
+                          {renderClosureReportActions(report)}
                         </td>
                       </tr>
                     ))
@@ -9915,14 +10280,17 @@ export default function AdminDashboard() {
         isOpen={isAddRequirementModalOpen}
         onClose={() => {
           setIsAddRequirementModalOpen(false);
+          setEditingRequirement(null);
           setInitialRequirementData(null);
           setJdToAdd(null);
         }}
-        initialData={initialRequirementData}
+        initialData={editingRequirement || initialRequirementData}
         jdIdToDelete={jdToAdd?.id || null}
         onSuccess={() => {
           // Refresh client JDs list after successful conversion
           queryClient.invalidateQueries({ queryKey: ['/api/admin/client-jds'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/admin/archived-requirements'] });
+          setEditingRequirement(null);
           setJdToAdd(null);
         }}
       />
@@ -9959,6 +10327,7 @@ export default function AdminDashboard() {
                     jdFile: req.jdFile || null,
                     jdText: req.jdText || null,
                   });
+                  setEditingRequirement(null);
                   setIsAddToRequirementAlertOpen(false);
                   setIsAddRequirementModalOpen(true);
                 }
@@ -10389,6 +10758,91 @@ export default function AdminDashboard() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={isManageRequirementModalOpen} onOpenChange={(open) => {
+        setIsManageRequirementModalOpen(open);
+        if (!open) {
+          setManageRequirementAction(selectedRequirement?.managementStatus === 'hold' ? 'resume' : '');
+          setManageRequirementReason('');
+        }
+      }}>
+        <DialogContent className="max-w-md p-0 overflow-hidden">
+          <DialogHeader className="border-b border-slate-200 bg-slate-50 px-6 py-4 dark:border-slate-800 dark:bg-slate-900">
+            <DialogTitle className="text-lg font-semibold text-slate-900 dark:text-white">
+              {selectedRequirement?.managementStatus === 'hold' ? 'Update Held Requirement' : 'Manage Requirement'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 px-6 py-5">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">{selectedRequirement?.position}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{selectedRequirement?.company}</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-slate-700 dark:text-slate-200">Choose Action</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant={manageRequirementAction === getManageActionLabels().primaryValue ? 'default' : 'outline'}
+                  onClick={() => setManageRequirementAction(getManageActionLabels().primaryValue)}
+                  className={manageRequirementAction === getManageActionLabels().primaryValue
+                    ? `${getManageActionLabels().primaryValue === 'resume' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-amber-500 hover:bg-amber-600 text-black'} rounded-xl h-11`
+                    : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 rounded-xl h-11'}
+                  data-testid={`button-manage-requirement-${getManageActionLabels().primaryValue}`}
+                >
+                  {getManageActionLabels().primary}
+                </Button>
+                <Button
+                  type="button"
+                  variant={manageRequirementAction === getManageActionLabels().secondaryValue ? 'default' : 'outline'}
+                  onClick={() => setManageRequirementAction(getManageActionLabels().secondaryValue)}
+                  className={manageRequirementAction === getManageActionLabels().secondaryValue
+                    ? 'bg-rose-600 hover:bg-rose-700 text-white rounded-xl h-11'
+                    : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 rounded-xl h-11'}
+                  data-testid={`button-manage-requirement-${getManageActionLabels().secondaryValue}`}
+                >
+                  {getManageActionLabels().secondary}
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="manage-requirement-reason" className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                Reason for Update
+              </Label>
+              <Textarea
+                id="manage-requirement-reason"
+                value={manageRequirementReason}
+                onChange={(e) => setManageRequirementReason(e.target.value)}
+                placeholder={manageRequirementAction === 'closed'
+                  ? 'Enter the reason for closing this requirement.'
+                  : manageRequirementAction === 'resume'
+                    ? 'Enter the reason for resuming this requirement.'
+                    : 'Enter the reason for putting this requirement on hold.'}
+                className="min-h-[120px] border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:ring-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500"
+                data-testid="textarea-manage-requirement-reason"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                variant="outline"
+                onClick={() => setIsManageRequirementModalOpen(false)}
+                className="border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmitManageRequirement}
+                className={`${manageRequirementAction === 'closed' ? 'bg-rose-600 hover:bg-rose-700 text-white' : manageRequirementAction === 'resume' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-amber-400 hover:bg-amber-500 text-black'}`}
+                disabled={!manageRequirementAction || !manageRequirementReason.trim() || updateRequirementMutation.isPending || archiveRequirementMutation.isPending}
+              >
+                {updateRequirementMutation.isPending || archiveRequirementMutation.isPending ? 'Submitting...' : manageRequirementAction === 'resume' ? 'Resume' : 'Submit'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* All Requirements Modal */}
       <Dialog open={isAllRequirementsModalOpen} onOpenChange={(open) => {
         setIsAllRequirementsModalOpen(open);
@@ -10442,8 +10896,21 @@ export default function AdminDashboard() {
                     .map((requirement: Requirement, index: number) => {
                       const criticalityColor = requirement.criticality === 'HIGH' ? 'text-red-600' : requirement.criticality === 'MEDIUM' ? 'text-blue-600' : 'text-gray-600';
                       return (
-                        <tr key={requirement.id} className={`border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 ${index % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800'}`}>
-                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium text-sm">{requirement.position}</td>
+                        <tr
+                          key={requirement.id}
+                          title={getRequirementRowTitle(requirement)}
+                          className={`border-b border-gray-100 dark:border-gray-800 ${getRequirementRowClassName(requirement, index)}`}
+                        >
+                          <td className="py-3 px-3 text-gray-900 dark:text-white font-medium text-sm">
+                            <div className="flex items-center gap-2">
+                              <span>{requirement.position}</span>
+                              {getRequirementStateBadge(requirement)}
+                            </div>
+                            <div className="text-xs font-normal text-gray-500 dark:text-gray-400">
+                              {requirement.noOfPositions ?? 1} position{(requirement.noOfPositions ?? 1) > 1 ? 's' : ''}
+                              {requirement.splitRequirement ? ' • Split' : ''}
+                            </div>
+                          </td>
                           <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{requirement.company}</td>
                           <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{requirement.spoc}</td>
                           <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">
@@ -10471,12 +10938,15 @@ export default function AdminDashboard() {
                                   <MoreVertical className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-32">
+                              <DropdownMenuContent align="end" className="w-40">
+                                <DropdownMenuItem onClick={() => handleEditRequirement(requirement)}>
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleManageRequirement(requirement)}>
+                                  Manage
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleReassign(requirement)}>
                                   Reassign
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleArchive(requirement)}>
-                                  Archive
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>

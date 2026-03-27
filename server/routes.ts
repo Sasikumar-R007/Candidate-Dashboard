@@ -2758,7 +2758,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      res.json(requirementsWithStatus);
+      const recentClosedArchivedRequirements = (await storage.getArchivedRequirements())
+        .filter((req: any) => {
+          if (req.managementStatus !== "closed" || !req.managedAt) return false;
+          const closedAt = new Date(req.managedAt).getTime();
+          if (Number.isNaN(closedAt) || Date.now() - closedAt > 24 * 60 * 60 * 1000) return false;
+          return req.teamLead === employee.name || teamRecruiters.some(rec => rec.name === req.talentAdvisor);
+        })
+        .map((req: any) => ({
+          ...req,
+          id: `recent-closed-${req.id}`,
+          isRecentlyClosed: true,
+          assignmentStatus: "archived",
+        }));
+
+      res.json([...recentClosedArchivedRequirements, ...requirementsWithStatus]);
     } catch (error) {
       console.error('Get team leader requirements error:', error);
       res.status(500).json({ message: "Internal server error", error: error instanceof Error ? error.message : String(error) });
@@ -3080,42 +3094,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           let totalResumesRequired = 0;
           let totalResumesDelivered = 0;
-          let completedRequirements = 0;
+          let totalCompletionPercentage = 0;
 
           // Calculate for each requirement
           for (const req of teamRequirements) {
             const target = getResumeTarget(req.criticality, req.toughness);
             totalResumesRequired += target;
 
-            // Count resumes submitted for this requirement
-            const deliveredFromSubmissions = teamSubmissions.filter(s => s.requirementId === req.id).length;
+            // Get unique candidate emails delivered for this requirement
+            const deliveredEmails = new Set<string>();
+            
+            // From submissions
+            teamSubmissions
+              .filter(s => s.requirementId === req.id && s.candidateEmail)
+              .forEach(s => deliveredEmails.add(s.candidateEmail!.toLowerCase()));
 
-            // Count candidates tagged to this requirement
-            const deliveredFromTagged = taggedApplications.filter(app => app.requirementId === req.id).length;
+            // From tagged applications
+            taggedApplications
+              .filter(app => app.requirementId === req.id && app.candidateEmail)
+              .forEach(app => deliveredEmails.add(app.candidateEmail!.toLowerCase()));
 
-            const deliveredForReq = deliveredFromSubmissions + deliveredFromTagged;
-            totalResumesDelivered += deliveredForReq;
+            const uniqueDelivered = deliveredEmails.size;
+            totalResumesDelivered += uniqueDelivered;
 
-            // Check if this requirement is fully delivered
-            if (deliveredForReq >= target) {
-              completedRequirements++;
-            }
+            // Calculate percentage completion for this requirement (capped at 100%)
+            const reqCompletion = Math.min(100, (uniqueDelivered / target) * 100);
+            totalCompletionPercentage += reqCompletion;
           }
 
           // Calculate performance metrics
-          // 1. Requirements completion rate (0-100)
-          const requirementsCompletionRate = totalRequirements > 0
-            ? (completedRequirements / totalRequirements) * 100
+          // 1. Average requirements completion percentage
+          const avgRequirementsCompletion = totalRequirements > 0
+            ? totalCompletionPercentage / totalRequirements
             : 0;
 
-          // 2. Resume delivery rate (0-100)
-          const resumeDeliveryRate = totalResumesRequired > 0
+          // 2. Total resume delivery rate across all requirements
+          const overallResumeDeliveryRate = totalResumesRequired > 0
             ? Math.min(100, (totalResumesDelivered / totalResumesRequired) * 100)
             : 0;
 
           // Overall performance: Average of both metrics
-          // Weight: 50% requirements completion + 50% resume delivery
-          performanceScore = (requirementsCompletionRate + resumeDeliveryRate) / 2;
+          performanceScore = (avgRequirementsCompletion + overallResumeDeliveryRate) / 2;
         } else {
           // No requirements assigned yet - default to 0
           performanceScore = 0;
@@ -3283,24 +3302,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const recruiters = allEmployees.filter(
         emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
       );
+      const recruiterIds = new Set(recruiters.map(rec => rec.id));
+      const recruiterNames = new Set(recruiters.map(rec => rec.name.toLowerCase()));
+      const allRevenueMappings = await storage.getAllRevenueMappings();
 
-      const closures: any[] = [];
-      for (const rec of recruiters) {
-        const revenueMappings = await storage.getRevenueMappingsByRecruiterId(rec.id);
-        const closedMappings = revenueMappings.filter(rm => rm.status === 'closed');
-
-        for (const mapping of closedMappings) {
-          closures.push({
-            name: mapping.candidateName || 'Unknown',
-            position: mapping.position || 'Unknown Position',
-            company: mapping.company || 'Unknown Company',
-            closureMonth: mapping.quarter || 'N/A',
-            talentAdvisor: rec.name,
-            package: mapping.package ? `${Number(mapping.package).toLocaleString('en-IN')}` : '0',
-            revenue: mapping.revenue ? `${Number(mapping.revenue).toLocaleString('en-IN')}` : '0'
-          });
-        }
-      }
+      const closures = allRevenueMappings
+        .filter((mapping: any) => {
+          const status = String(mapping.status || '').toLowerCase();
+          const matchesRecruiterId = mapping.talentAdvisorId && recruiterIds.has(mapping.talentAdvisorId);
+          const matchesRecruiterName = mapping.talentAdvisorName && recruiterNames.has(String(mapping.talentAdvisorName).toLowerCase());
+          const matchesTeamLead = mapping.teamLeadId === employee.id || String(mapping.teamLeadName || '').toLowerCase() === employee.name.toLowerCase();
+          return status === 'closed' && (matchesRecruiterId || matchesRecruiterName || matchesTeamLead);
+        })
+        .sort((a: any, b: any) => {
+          const aTime = new Date(a.closureDate || a.createdAt || 0).getTime();
+          const bTime = new Date(b.closureDate || b.createdAt || 0).getTime();
+          return bTime - aTime;
+        })
+        .map((mapping: any) => ({
+          name: mapping.candidateName || 'Unknown',
+          position: mapping.position || 'Unknown Position',
+          company: mapping.clientName || mapping.company || 'Unknown Company',
+          closureMonth: mapping.quarter || 'N/A',
+          talentAdvisor: mapping.talentAdvisorName || 'Unassigned',
+          package: mapping.package ? `${Number(mapping.package).toLocaleString('en-IN')}` : '0',
+          revenue: mapping.revenue ? `${Number(mapping.revenue).toLocaleString('en-IN')}` : '0',
+          offeredDate: mapping.offeredDate || null,
+          joinedDate: mapping.closureDate || null,
+        }));
 
       res.json(closures);
     } catch (error) {
@@ -4591,7 +4620,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
         });
 
-        return res.json(requirementsWithStatus);
+        const recentClosedArchivedRequirements = (await storage.getArchivedRequirements())
+          .filter((req: any) => {
+            if (req.managementStatus !== "closed" || !req.managedAt) return false;
+            const closedAt = new Date(req.managedAt).getTime();
+            if (Number.isNaN(closedAt) || Date.now() - closedAt > 24 * 60 * 60 * 1000) return false;
+            return req.teamLead === employee.name || teamRecruiters.some(rec => rec.name === req.talentAdvisor);
+          })
+          .map((req: any) => ({
+            ...req,
+            id: `recent-closed-${req.id}`,
+            isRecentlyClosed: true,
+            assignmentStatus: "archived",
+          }));
+
+        return res.json([...recentClosedArchivedRequirements, ...requirementsWithStatus]);
       }
 
       if (employee.role !== 'recruiter') {
@@ -4667,7 +4710,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         })
       );
 
-      res.json(requirementsWithCounts);
+      const recentClosedArchivedRequirements = (await storage.getArchivedRequirements())
+        .filter((req: any) => {
+          if (req.managementStatus !== "closed" || !req.managedAt) return false;
+          const closedAt = new Date(req.managedAt).getTime();
+          if (Number.isNaN(closedAt) || Date.now() - closedAt > 24 * 60 * 60 * 1000) return false;
+          return req.talentAdvisor === employee.name;
+        })
+        .map((req: any) => ({
+          ...req,
+          id: `recent-closed-${req.id}`,
+          isRecentlyClosed: true,
+          deliveredCount: 0,
+          assignmentStatus: "archived",
+        }));
+
+      res.json([...recentClosedArchivedRequirements, ...requirementsWithCounts]);
     } catch (error) {
       console.error('Get recruiter requirements error:', error);
       res.status(500).json({ message: "Failed to fetch requirements" });
@@ -5114,7 +5172,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/requirements/:id/archive", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      const archivedRequirement = await storage.archiveRequirement(id);
+      const archivedRequirement = await storage.archiveRequirement(id, req.body || {});
       if (!archivedRequirement) {
         return res.status(404).json({ message: "Requirement not found" });
       }
@@ -5142,6 +5200,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const archivedRequirements = await storage.getArchivedRequirements();
       res.json(archivedRequirements);
     } catch (error) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/team-leader/archived-requirements", requireEmployeeAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(401).json({ message: "Employee not found" });
+      }
+
+      if (employee.role !== "team_leader" && employee.role !== "teamLead") {
+        return res.status(403).json({ message: "Access denied. Team Leader role required." });
+      }
+
+      const archivedRequirements = await storage.getArchivedRequirements();
+      const teamLeaderArchivedRequirements = archivedRequirements.filter((requirement: any) =>
+        requirement.teamLead === employee.name
+      );
+
+      res.json(teamLeaderArchivedRequirements);
+    } catch (error) {
+      console.error("Get team leader archived requirements error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.get("/api/recruiter/archived-requirements", requireEmployeeAuth, async (req, res) => {
+    try {
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
+      if (!employee) {
+        return res.status(401).json({ message: "Employee not found" });
+      }
+
+      if (!["recruiter", "talent_advisor"].includes(employee.role)) {
+        return res.status(403).json({ message: "Access denied. Recruiter role required." });
+      }
+
+      const archivedRequirements = await storage.getArchivedRequirements();
+      const recruiterArchivedRequirements = archivedRequirements.filter((requirement: any) =>
+        requirement.talentAdvisor === employee.name
+      );
+
+      res.json(recruiterArchivedRequirements);
+    } catch (error) {
+      console.error("Get recruiter archived requirements error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -5330,17 +5434,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { getResumeTarget } = await import("@shared/constants");
 
       // Import schema tables
-      const { requirements, employees, candidates, resumeSubmissions } = await import("@shared/schema");
+      const { requirements, resumeSubmissions, jobApplications } = await import("@shared/schema");
 
       // Get all active (non-archived) requirements created on or before the selected date
       const allRequirements = await db.select().from(requirements)
         .where(eq(requirements.isArchived, false));
 
-      // Filter by date on created date
-      const filteredRequirements = allRequirements.filter(req => {
+      // Use raw SQL to exclude last_login_at column (which may not exist in production)
+      const employeesResult = await db.execute(sql`
+        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
+               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
+               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
+               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
+               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
+               branch, city, reporting_to, is_active, created_at, profile_picture
+        FROM employees
+      `);
+      const allEmployees = employeesResult.rows as any[];
+
+      const { requirementAssignments } = await import("@shared/schema");
+      const allAssignments = await db.select().from(requirementAssignments);
+
+      let filteredRequirements = allRequirements.filter(req => {
         const createdDate = new Date(req.createdAt).toISOString().split('T')[0];
         return createdDate <= selectedDate;
       });
+
+      let selectedTeamLead: any = null;
+      let teamRecruiters: any[] = [];
+      if (team && team !== 'overall') {
+        selectedTeamLead = allEmployees.find((emp: any) =>
+          emp.role === 'team_leader' && (emp.id === team || emp.employee_id === team)
+        );
+
+        if (!selectedTeamLead) {
+          return res.json({
+            totalRequirements: 0,
+            avgResumesPerRequirement: "0.00",
+            requirementsPerRecruiter: "0.00",
+            completedRequirements: 0,
+            totalResumes: 0,
+            totalResumesDelivered: 0,
+            totalResumesRequired: 0,
+            dailyDeliveryDelivered: 0,
+            dailyDeliveryDefaulted: 0,
+            overallPerformance: "G",
+            date: selectedDate
+          });
+        }
+
+        teamRecruiters = allEmployees.filter((emp: any) =>
+          emp.role === 'recruiter' &&
+          (emp.reporting_to === selectedTeamLead.employee_id ||
+            emp.reporting_to === selectedTeamLead.id ||
+            emp.reporting_to === selectedTeamLead.name)
+        );
+
+        const teamRecruiterIds = new Set(teamRecruiters.map((rec: any) => rec.id));
+        const assignedRequirementIds = new Set(
+          allAssignments
+            .filter((assignment: any) => assignment.status === 'active' && teamRecruiterIds.has(assignment.recruiterId))
+            .map((assignment: any) => assignment.requirementId)
+        );
+
+        filteredRequirements = filteredRequirements.filter((req: any) =>
+          req.teamLeadId === selectedTeamLead.id ||
+          req.teamLead === selectedTeamLead.name ||
+          (req.talentAdvisorId && teamRecruiterIds.has(req.talentAdvisorId)) ||
+          assignedRequirementIds.has(req.id)
+        );
+      }
 
       const totalRequirements = filteredRequirements.length;
 
@@ -5353,6 +5516,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return submittedDate <= selectedDate;
       });
 
+      // Also count recruiter-tagged applications for delivered/pipeline metrics
+      const allTaggedApplications = await db.select().from(jobApplications)
+        .where(eq(jobApplications.source, 'recruiter_tagged'));
+
+      const filteredRequirementIds = new Set(filteredRequirements.map((req: any) => req.id));
+      const filteredTaggedApplications = allTaggedApplications.filter(app => {
+        if (!app.appliedDate || !app.requirementId) return false;
+        const appliedDate = new Date(app.appliedDate).toISOString().split('T')[0];
+        return appliedDate <= selectedDate && filteredRequirementIds.has(app.requirementId);
+      });
+
+      const getUniqueDeliveryCount = (requirementId: string) => {
+        const requirementSubmissions = filteredSubmissions.filter(s => s.requirementId === requirementId);
+        const requirementTaggedApplications = filteredTaggedApplications.filter(app => app.requirementId === requirementId);
+        const uniqueDeliveries = new Set<string>();
+
+        requirementSubmissions.forEach((submission: any) => {
+          uniqueDeliveries.add(
+            `${requirementId}::${(submission.candidateEmail || submission.candidateName || submission.id || '').toString().trim().toLowerCase()}`
+          );
+        });
+
+        requirementTaggedApplications.forEach((application: any) => {
+          uniqueDeliveries.add(
+            `${requirementId}::${(application.candidateEmail || application.candidateName || application.id || '').toString().trim().toLowerCase()}`
+          );
+        });
+
+        return uniqueDeliveries.size;
+      };
+
       // Calculate metrics for all requirements
       let totalResumesRequired = 0;
       let totalResumesDelivered = 0;
@@ -5363,7 +5557,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalResumesRequired += target;
 
         // Count resumes submitted for this requirement up to selected date
-        const deliveredForReq = filteredSubmissions.filter(s => s.requirementId === req.id).length;
+        const deliveredForReq = getUniqueDeliveryCount(req.id);
         totalResumesDelivered += deliveredForReq;
 
         // Check if this requirement is fully delivered
@@ -5378,24 +5572,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : "0.00";
 
       // Get count of active recruiters for requirements per recruiter calculation
-      // Use raw SQL to exclude last_login_at column (which may not exist in production)
-      const employeesResult = await db.execute(sql`
-        SELECT id, employee_id, name, email, password, role, address, designation, phone, 
-               department, joining_date, employment_status, esic, epfo, esic_no, epfo_no,
-               father_name, mother_name, father_number, mother_number, offered_ctc, current_status,
-               increment_count, appraised_quarter, appraised_amount, appraised_year, yearly_ctc,
-               current_monthly_ctc, name_as_per_bank, account_number, ifsc_code, bank_name,
-               branch, city, reporting_to, is_active, created_at, profile_picture
-        FROM employees
-      `);
-      const allEmployees = employeesResult.rows as any[];
-      const activeRecruiters = allEmployees.filter(emp =>
-        (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.is_active === true
-      );
+      const activeRecruiters = team && team !== 'overall'
+        ? teamRecruiters.filter((emp: any) => emp.is_active === true)
+        : allEmployees.filter((emp: any) =>
+            (emp.role === 'recruiter' || emp.role === 'team_leader') && emp.is_active === true
+          );
       const recruiterCount = activeRecruiters.length;
       const requirementsPerRecruiter = recruiterCount > 0
         ? (totalRequirements / recruiterCount).toFixed(2)
         : "0.00";
+
+      const aggregateMetrics = team && team !== 'overall' && selectedTeamLead
+        ? await storage.calculateTeamDailyMetrics(selectedTeamLead.id, selectedDate)
+        : await storage.calculateOrgDailyMetrics(selectedDate);
 
       // Return the calculated metrics
       res.json({
@@ -5406,11 +5595,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalResumes: totalResumesDelivered,
         totalResumesDelivered,
         totalResumesRequired,
-        dailyDeliveryDelivered: totalResumesDelivered,
-        dailyDeliveryDefaulted: Math.max(0, totalResumesRequired - totalResumesDelivered),
+        dailyDeliveryDelivered: aggregateMetrics.delivered,
+        dailyDeliveryDefaulted: aggregateMetrics.defaulted,
         overallPerformance: (() => {
-          if (totalResumesRequired === 0) return "G";
-          const performanceRatio = totalResumesDelivered / totalResumesRequired;
+          if (aggregateMetrics.required === 0) return "G";
+          const performanceRatio = aggregateMetrics.delivered / aggregateMetrics.required;
           if (performanceRatio >= 1.0) return "G"; // Good: 100% or more
           if (performanceRatio >= 0.5) return "A"; // Average: 50-99%
           return "B"; // Bad: less than 50%
@@ -7540,6 +7729,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get all revenue mappings (closures)
       const allRevenueMappings = await db.select().from(revenueMappings);
+      const allApplications = await storage.getAllJobApplications();
+      const activeRequirements = await storage.getRequirements();
+      const archivedRequirements = await storage.getArchivedRequirements();
+      const allKnownRequirements = [...activeRequirements, ...archivedRequirements];
 
       // Transform to closure list format for "All Closure Reports" modal
       const closuresList = allRevenueMappings.map(rm => {
@@ -7562,6 +7755,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Determine status: if closureDate exists, it's "Joined", otherwise "Pending"
         const status = rm.closureDate ? "Joined" : "Pending";
+        const matchedApplication = allApplications.find((app: any) =>
+          (app.candidateName || '').trim().toLowerCase() === (rm.candidateName || '').trim().toLowerCase() &&
+          (app.jobTitle || '').trim().toLowerCase() === (rm.position || '').trim().toLowerCase() &&
+          (app.company || '').trim().toLowerCase() === (rm.clientName || '').trim().toLowerCase()
+        );
+        const sourceRequirement = matchedApplication?.requirementId
+          ? allKnownRequirements.find((req: any) => req.id === matchedApplication.requirementId || req.originalId === matchedApplication.requirementId)
+          : null;
 
         return {
           id: rm.id,
@@ -7572,7 +7773,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fixedCTC: fixedCTC > 0 ? `₹${fixedCTC.toLocaleString('en-IN')}` : "N/A",
           offeredDate: formatDate(rm.offeredDate),
           joinedDate: formatDate(rm.closureDate),
+          offeredDateRaw: rm.offeredDate || null,
+          joinedDateRaw: rm.closureDate || null,
           status: status,
+          sourceRequirement: sourceRequirement
+            ? {
+                id: sourceRequirement.id,
+                originalId: sourceRequirement.originalId || sourceRequirement.id,
+                position: sourceRequirement.position,
+                noOfPositions: sourceRequirement.noOfPositions ?? 1,
+                splitRequirement: sourceRequirement.splitRequirement ?? false,
+                criticality: sourceRequirement.criticality,
+                toughness: sourceRequirement.toughness,
+                company: sourceRequirement.company,
+                spoc: sourceRequirement.spoc,
+                talentAdvisor: sourceRequirement.talentAdvisor || rm.talentAdvisorName || null,
+                teamLead: sourceRequirement.teamLead || rm.teamLeadName || null,
+                jdFile: sourceRequirement.jdFile || null,
+                jdText: sourceRequirement.jdText || null,
+                sourceType: sourceRequirement.sourceType || null,
+                sourceDetails: sourceRequirement.sourceDetails || null,
+              }
+            : null,
           // Keep these for backward compatibility with other closures endpoints
           quarter: `${rm.quarter}, ${rm.year}`,
           ctc: fixedCTC > 0 ? fixedCTC.toLocaleString('en-IN') : "N/A",
@@ -7694,7 +7916,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { targetMappings, revenueMappings } = await import("@shared/schema");
 
       const now = new Date();
-      let targetYear = now.getFullYear();
+      const currentYear = now.getFullYear();
+      const targetYear = currentYear;
       const currentMonth = now.getMonth() + 1;
 
       // Determine current quarter
@@ -8946,17 +9169,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const tlFilter = req.query.tl as string | undefined; // Optional TL filter
       const taFilter = req.query.ta as string | undefined; // Optional TA filter
 
-      // Get all applications
+      // Support both applications and submissions
       let applications = await storage.getAllJobApplications();
+      const { resumeSubmissions } = await import("@shared/schema");
+      let submissions = await db.select().from(resumeSubmissions);
 
       // Get all employees, requirements, and recruiter jobs for filtering
       const allEmployees = await storage.getAllEmployees();
       const allRequirements = await storage.getRequirements();
       const allRecruiterJobs = await storage.getAllRecruiterJobs();
+      const { requirementAssignments } = await import("@shared/schema");
+      const allAssignments = await db.select().from(requirementAssignments);
 
-      // If TA filter is specified, filter applications to that specific TA
+      // If TA filter is specified, filter to that specific TA
       if (taFilter && taFilter !== 'all') {
-        // Find the TA
         const talentAdvisor = allEmployees.find(emp =>
           (emp.id === taFilter || emp.employeeId === taFilter) && emp.role === 'recruiter'
         );
@@ -8964,125 +9190,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (talentAdvisor) {
           const taId = talentAdvisor.id;
           const taEmployeeId = talentAdvisor.employeeId;
+          const taRequirementIds = new Set(allRequirements.filter((req: any) => req.talentAdvisorId === taId).map((req: any) => req.id));
+          allAssignments
+            .filter((assignment: any) => assignment.status === 'active' && assignment.recruiterId === taId)
+            .forEach((assignment: any) => taRequirementIds.add(assignment.requirementId));
+          const taRecruiterJobIds = new Set(allRecruiterJobs.filter((job: any) => job.recruiterId === taId || job.recruiterId === taEmployeeId).map((job: any) => job.id));
 
-          // Get requirements assigned to this TA
-          const taRequirementIds = new Set(
-            allRequirements
-              .filter((req: any) => req.talentAdvisorId === taId)
-              .map((req: any) => req.id)
-          );
-
-          // Get recruiter jobs for this TA
-          const taRecruiterJobIds = new Set(
-            allRecruiterJobs
-              .filter((job: any) => job.recruiterId === taId || job.recruiterId === taEmployeeId)
-              .map((job: any) => job.id)
-          );
-
-          // Filter applications to this TA
-          applications = applications.filter((app: any) => {
-            // Check if application belongs to TA's job
-            if (app.recruiterJobId && taRecruiterJobIds.has(app.recruiterJobId)) {
-              return true;
-            }
-            // Check if application is tagged to requirement assigned to TA
-            if (app.requirementId && taRequirementIds.has(app.requirementId)) {
-              return true;
-            }
-            return false;
-          });
+          applications = applications.filter((app: any) => (app.recruiterJobId && taRecruiterJobIds.has(app.recruiterJobId)) || (app.requirementId && taRequirementIds.has(app.requirementId)));
+          submissions = submissions.filter((sub: any) => sub.recruiterId === taId);
         } else {
-          // TA not found, return empty array
           applications = [];
+          submissions = [];
         }
       }
-      // If TL filter is specified (and no TA filter), filter applications to that TL's team
       else if (tlFilter && tlFilter !== 'all') {
-        // Find the TL
-        const teamLeader = allEmployees.find(emp =>
-          (emp.id === tlFilter || emp.employeeId === tlFilter) && emp.role === 'team_leader'
-        );
-
+        const teamLeader = allEmployees.find(emp => (emp.id === tlFilter || emp.employeeId === tlFilter) && emp.role === 'team_leader');
         if (teamLeader) {
-          // Get TAs reporting to this TL
-          const teamTAs = allEmployees.filter(emp =>
-            emp.role === 'recruiter' && emp.reportingTo === teamLeader.employeeId
-          );
+          const teamTAs = allEmployees.filter(emp => emp.role === 'recruiter' && emp.reportingTo === teamLeader.employeeId);
           const teamTAIds = new Set(teamTAs.map(ta => ta.id));
           const teamTAEmployeeIds = new Set(teamTAs.map(ta => ta.employeeId));
 
-          // Get requirements assigned to team TAs
-          const teamRequirementIds = new Set(
-            allRequirements
-              .filter((req: any) => {
-                if (!req.talentAdvisorId) return false;
-                return teamTAIds.has(req.talentAdvisorId);
-              })
-              .map((req: any) => req.id)
-          );
+          const teamRequirementIds = new Set(allRequirements.filter((req: any) =>
+            req.talentAdvisorId && teamTAIds.has(req.talentAdvisorId)
+          ).map((req: any) => req.id));
+          allRequirements
+            .filter((req: any) => req.teamLeadId === teamLeader.id || req.teamLead === teamLeader.name)
+            .forEach((req: any) => teamRequirementIds.add(req.id));
+          allAssignments
+            .filter((assignment: any) => assignment.status === 'active' && teamTAIds.has(assignment.recruiterId))
+            .forEach((assignment: any) => teamRequirementIds.add(assignment.requirementId));
+          const teamRecruiterJobIds = new Set(allRecruiterJobs.filter((job: any) => teamTAIds.has(job.recruiterId) || teamTAEmployeeIds.has(job.recruiterId)).map((job: any) => job.id));
 
-          // Get recruiter jobs for team TAs
-          const teamRecruiterJobIds = new Set(
-            allRecruiterJobs
-              .filter((job: any) => teamTAIds.has(job.recruiterId) || teamTAEmployeeIds.has(job.recruiterId))
-              .map((job: any) => job.id)
-          );
-
-          // Filter applications to team TAs
-          applications = applications.filter((app: any) => {
-            // Check if application belongs to team TA's job
-            if (app.recruiterJobId && teamRecruiterJobIds.has(app.recruiterJobId)) {
-              return true;
-            }
-            // Check if application is tagged to requirement assigned to team TA
-            if (app.requirementId && teamRequirementIds.has(app.requirementId)) {
-              return true;
-            }
-            return false;
-          });
+          applications = applications.filter((app: any) => (app.recruiterJobId && teamRecruiterJobIds.has(app.recruiterJobId)) || (app.requirementId && teamRequirementIds.has(app.requirementId)));
+          submissions = submissions.filter((sub: any) => teamTAIds.has(sub.recruiterId));
         } else {
-          // TL not found, return empty array
           applications = [];
+          submissions = [];
         }
       }
 
+      // Convert submissions to application format
+      const submissionApps = submissions.map((sub: any) => ({
+        id: `sub-${sub.id}`,
+        profileId: sub.candidateId || sub.id,
+        recruiterJobId: null,
+        requirementId: sub.requirementId,
+        status: sub.status || 'Sourced',
+        source: 'recruiter_tagged',
+        appliedDate: sub.submittedAt ? new Date(sub.submittedAt) : new Date(),
+        candidateName: sub.candidateName,
+        candidateEmail: sub.candidateEmail,
+        candidatePhone: null,
+        jobTitle: 'Sourced', // Fallback, will try to improve from requirement below
+        company: 'N/A',
+        location: null,
+        experience: null,
+        skills: null
+      }));
+
+      // Combine all and de-duplicate overlapping submission/application rows
+      const allPipelineApps = [...applications, ...submissionApps];
+      const dedupedPipelineMap = new Map<string, any>();
+      for (const app of allPipelineApps) {
+        const dedupeKey = [
+          app.requirementId || app.recruiterJobId || 'no-link',
+          (app.candidateEmail || app.candidateName || app.profileId || app.id || '').toString().trim().toLowerCase()
+        ].join('::');
+        const existing = dedupedPipelineMap.get(dedupeKey);
+        const isSubmission = app.id && typeof app.id === 'string' && app.id.startsWith('sub-');
+        const existingIsSubmission = existing?.id && typeof existing.id === 'string' && existing.id.startsWith('sub-');
+
+        if (!existing || (existingIsSubmission && !isSubmission)) {
+          dedupedPipelineMap.set(dedupeKey, app);
+        }
+      }
+      const dedupedPipelineApps = Array.from(dedupedPipelineMap.values());
+
+      const validPipelineStatuses = new Set([
+        'In-Process', 'In Process', 'Sourced', 'Applied',
+        'Shortlisted',
+        'Intro Call',
+        'Assignment',
+        'L1', 'Level 1',
+        'L2', 'Level 2',
+        'L3', 'Level 3',
+        'Final Round',
+        'HR Round',
+        'Offer Stage', 'Selected',
+        'Closure', 'Joined',
+        'Offer Drop', 'Declined',
+        'Interview Scheduled'
+      ]);
+      const pipelineSourceApps = dedupedPipelineApps.filter((app: any) => validPipelineStatuses.has(String(app.status || '').trim()));
+
       // Format pipeline data (allEmployees, allRequirements, allRecruiterJobs already fetched above)
 
-      const pipelineData = applications.map((app: any) => {
+      const pipelineData = pipelineSourceApps.map((app: any) => {
         // Find which TA this application belongs to
         let recruiterName = 'Unknown';
         let recruiterId = null;
         let teamLeaderName = null;
 
-        // Try to find from recruiter job
-        if (app.recruiterJobId) {
-          const job = allRecruiterJobs.find((j: any) => j.id === app.recruiterJobId);
-          if (job) {
-            const recruiter = allEmployees.find((e: any) => e.id === job.recruiterId || e.employeeId === job.recruiterId);
+        // Special handling for submission-based apps (sub-ID)
+        if (app.id && typeof app.id === 'string' && app.id.startsWith('sub-')) {
+          const submissionId = app.id.replace('sub-', '');
+          const submission = submissions.find((s: any) => String(s.id) === submissionId);
+          if (submission) {
+            const recruiter = allEmployees.find((e: any) => e.id === submission.recruiterId);
             if (recruiter) {
               recruiterName = recruiter.name;
               recruiterId = recruiter.id;
-              // Find TL for this recruiter
               if (recruiter.reportingTo) {
                 const tl = allEmployees.find((e: any) => e.employeeId === recruiter.reportingTo && e.role === 'team_leader');
                 if (tl) teamLeaderName = tl.name;
               }
             }
+            // Also get job title and company from requirement if available
+            if (submission.requirementId) {
+              const req = allRequirements.find((r: any) => r.id === submission.requirementId);
+              if (req) {
+                app.jobTitle = req.position;
+                app.company = req.company;
+              }
+            }
           }
-        }
+        } else {
+          // Normal application handling
+          // Try to find from recruiter job
+          if (app.recruiterJobId) {
+            const job = allRecruiterJobs.find((j: any) => j.id === app.recruiterJobId);
+            if (job) {
+              const recruiter = allEmployees.find((e: any) => e.id === job.recruiterId || e.employeeId === job.recruiterId);
+              if (recruiter) {
+                recruiterName = recruiter.name;
+                recruiterId = recruiter.id;
+                if (recruiter.reportingTo) {
+                  const tl = allEmployees.find((e: any) => e.employeeId === recruiter.reportingTo && e.role === 'team_leader');
+                  if (tl) teamLeaderName = tl.name;
+                }
+              }
+            }
+          }
 
-        // Try to find from requirement
-        if (app.requirementId && recruiterName === 'Unknown') {
-          const req = allRequirements.find((r: any) => r.id === app.requirementId);
-          if (req && req.talentAdvisorId) {
-            const recruiter = allEmployees.find((e: any) => e.id === req.talentAdvisorId);
-            if (recruiter) {
-              recruiterName = recruiter.name;
-              recruiterId = recruiter.id;
-              // Find TL for this recruiter
-              if (recruiter.reportingTo) {
-                const tl = allEmployees.find((e: any) => e.employeeId === recruiter.reportingTo && e.role === 'team_leader');
-                if (tl) teamLeaderName = tl.name;
+          // Try to find from requirement if still unknown
+          if (app.requirementId && recruiterName === 'Unknown') {
+            const req = allRequirements.find((r: any) => r.id === app.requirementId);
+            if (req && req.talentAdvisorId) {
+              const recruiter = allEmployees.find((e: any) => e.id === req.talentAdvisorId);
+              if (recruiter) {
+                recruiterName = recruiter.name;
+                recruiterId = recruiter.id;
+                if (recruiter.reportingTo) {
+                  const tl = allEmployees.find((e: any) => e.employeeId === recruiter.reportingTo && e.role === 'team_leader');
+                  if (tl) teamLeaderName = tl.name;
+                }
               }
             }
           }
@@ -9103,7 +9364,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'Closure': 'Closure',
           'Selected': 'Selected',
           'Interview Scheduled': 'L1',
-          'Applied': 'In-Process'
+          'Applied': 'In-Process',
+          'Sourced': 'In-Process'
         };
 
         return {
@@ -9119,7 +9381,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           phone: app.candidatePhone || null,
           location: app.location || 'N/A',
           experience: app.experience || 'N/A',
-          skills: app.skills ? (typeof app.skills === 'string' ? JSON.parse(app.skills) : app.skills) : [],
+          skills: (() => {
+            if (!app.skills) return [];
+            if (typeof app.skills !== 'string') return app.skills;
+            try {
+              return JSON.parse(app.skills);
+            } catch (e) {
+              // Handle legacy plain text strings (comma-separated)
+              return app.skills.split(',').map((s: string) => s.trim()).filter(Boolean);
+            }
+          })(),
           appliedDate: app.appliedDate || null,
           appliedOn: app.appliedDate ? new Date(app.appliedDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : 'N/A',
           profileId: app.profileId || null,
@@ -9127,7 +9398,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       });
 
-      res.json(pipelineData);
+      res.json(
+        pipelineData.sort((a: any, b: any) => {
+          const aTime = new Date(a.appliedDate || a.updatedAt || 0).getTime();
+          const bTime = new Date(b.appliedDate || b.updatedAt || 0).getTime();
+          return bTime - aTime;
+        })
+      );
     } catch (error) {
       console.error("Get admin pipeline error:", error);
       res.status(500).json({ message: "Failed to get pipeline data" });
@@ -10226,10 +10503,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get all applications for these requirements
-      const allApplications = await storage.getApplications();
-      const clientApplications = allApplications.filter((app: any) => {
-        return allRequirements.some((req: any) => req.id === app.recruiterJobId);
-      });
+      const allApplications = await storage.getAllJobApplications();
+      const clientRequirementIds = new Set(allRequirements.map((req: any) => req.id));
+      const clientApplications = allApplications.filter((app: any) =>
+        app.requirementId && clientRequirementIds.has(app.requirementId)
+      );
 
       // Filter by period
       let filteredApplications = clientApplications;
@@ -10287,7 +10565,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let timeToFirstSubmission = 0;
       const firstSubmissions = allRequirements.map((req: any) => {
         const firstApp = filteredApplications
-          .filter((app: any) => app.recruiterJobId === req.id)
+          .filter((app: any) => app.requirementId === req.id)
           .sort((a: any, b: any) => new Date(a.appliedDate).getTime() - new Date(b.appliedDate).getTime())[0];
         if (firstApp && req.createdAt) {
           const reqDate = new Date(req.createdAt);
@@ -10397,10 +10675,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get all applications
-      const allApplications = await storage.getApplications();
-      let clientApplications = allApplications.filter((app: any) => {
-        return allRequirements.some((req: any) => req.id === app.recruiterJobId);
-      });
+      const allApplications = await storage.getAllJobApplications();
+      const clientRequirementIds = new Set(allRequirements.map((req: any) => req.id));
+      let clientApplications = allApplications.filter((app: any) =>
+        app.requirementId && clientRequirementIds.has(app.requirementId)
+      );
 
       // Filter by period
       if (dateStr) {
@@ -10640,6 +10919,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const clientJDs = allRequirements.filter((req: any) => {
         // Include all requirements that are not archived
         return !req.isArchived;
+      }).sort((a: any, b: any) => {
+        const aTime = new Date(a.createdAt || 0).getTime();
+        const bTime = new Date(b.createdAt || 0).getTime();
+        return bTime - aTime;
       });
 
       console.log('Client requirements found:', clientJDs.length);
@@ -10688,7 +10971,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           primarySkills: req.primarySkills || null,
           secondarySkills: req.secondarySkills || null,
           knowledgeOnly: req.knowledgeOnly || null,
-          specialInstructions: req.specialInstructions || null
+          specialInstructions: req.specialInstructions || null,
+          createdAt: req.createdAt || null,
+          sharedOnRaw: req.createdAt || null,
+          lastActiveRaw: lastActiveDate || null
         };
       }));
 
@@ -10890,8 +11176,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Requirement not found" });
       }
 
-      // Check if requirement belongs to client's company and is STR format
-      if (requirement.company.toLowerCase() !== companyName.toLowerCase() || !/^STR\d{5}$/.test(requirement.id)) {
+      // Check if requirement belongs to client's company
+      if (requirement.company.toLowerCase() !== companyName.toLowerCase()) {
         return res.status(403).json({ message: "You can only update your own requirements" });
       }
 
@@ -11020,11 +11306,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Verify the requirement belongs to this client (STR format and matching company)
       const client = await findCompanyForEmployee(employee);
       const companyName = client?.brandName || employee.name;
-
-      // Only allow deletion of STR format requirements (client-submitted JDs)
-      if (!id.match(/^STR\d{5}$/)) {
-        return res.status(403).json({ message: "You can only delete client-submitted job descriptions" });
-      }
 
       // Get all requirements for the company to verify ownership
       const companyRequirements = await storage.getRequirementsByCompany(companyName);
@@ -11262,7 +11543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Create requirement from JD with Role ID as the requirement ID
       // Note: This creates a requirement that will be assigned to a team lead/talent advisor later
-      console.log('Creating requirement with company:', companyName, 'SPOC:', client?.spoc || employee.name, 'Role ID:', roleId);
+      console.log('Creating requirement with company:', companyName, 'SPOC:', employee.name, 'Role ID:', roleId);
 
       try {
         const requirement = await storage.createRequirement({
@@ -11271,7 +11552,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           criticality: 'Medium', // Default, can be updated by admin
           toughness: 'Medium', // Default, can be updated by admin
           company: companyName,
-          spoc: client?.spoc || employee.name,
+          spoc: employee.name,
           talentAdvisor: null, // Will be assigned by team lead
           talentAdvisorId: null,
           teamLead: null, // Will be assigned by admin
@@ -11316,7 +11597,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               criticality: 'Medium',
               toughness: 'Medium',
               company: companyName,
-              spoc: client?.spoc || employee.name,
+              spoc: employee.name,
               talentAdvisor: null,
               talentAdvisorId: null,
               teamLead: null,

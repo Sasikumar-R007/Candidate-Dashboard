@@ -309,6 +309,7 @@ export default function TeamLeaderDashboard() {
   const { data: pipelineCounts = {} } = useQuery<Record<string, number>>({
     queryKey: ['/api/team-leader/pipeline-counts'],
     enabled: !!employee,
+    refetchInterval: 10000, // Refresh every 10 seconds
   });
 
   const { data: meetings = [], isLoading: isLoadingMeetings, isError: isErrorMeetings } = useQuery<any[]>({
@@ -363,13 +364,19 @@ export default function TeamLeaderDashboard() {
     enabled: !!employee,
     refetchOnWindowFocus: true,
     staleTime: 0, // Always consider data stale to ensure fresh updates
+    refetchInterval: 10000, // Refresh every 10 seconds
   });
 
   // Fetch requirements from API
   const { data: requirementsData = [], isLoading: isLoadingRequirements } = useQuery<Requirement[]>({
     queryKey: ['/api/team-leader/requirements'],
     enabled: !!employee, // Only fetch if logged in
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000,
   });
+
+  const visibleRequirementsData = requirementsData as any[];
 
   // Fetch team performance data from API
   const { data: teamPerformanceData = [] } = useQuery<any[]>({
@@ -758,7 +765,7 @@ export default function TeamLeaderDashboard() {
     return stages;
   }, [pipelineData, selectedPipelineRecruiter, pipelineDate]);
   
-  // Set up interval to refresh pipeline data periodically when on pipeline tab
+  // Handle immediate refetch when switching to pipeline tab
   useEffect(() => {
     if (sidebarTab !== 'pipeline' || !employee) return;
     
@@ -766,14 +773,6 @@ export default function TeamLeaderDashboard() {
     refetchPipeline();
     queryClient.invalidateQueries({ queryKey: ['/api/team-leader/pipeline'] });
     queryClient.invalidateQueries({ queryKey: ['/api/team-leader/pipeline-counts'] });
-    
-    const interval = setInterval(() => {
-      refetchPipeline();
-      queryClient.invalidateQueries({ queryKey: ['/api/team-leader/pipeline'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/team-leader/pipeline-counts'] });
-    }, 10000); // Refresh every 10 seconds
-
-    return () => clearInterval(interval);
   }, [sidebarTab, employee, refetchPipeline, queryClient]);
 
   // Check authentication - wait for loading to complete
@@ -921,7 +920,7 @@ export default function TeamLeaderDashboard() {
                       {/* Name and Role */}
                       <div className="flex-1">
                         <h2 className="text-2xl font-bold text-gray-900 mb-1">{stats.name}</h2>
-                        <p className="text-sm font-medium text-gray-600">Senior Team Leader</p>
+                        <p className="text-sm font-medium text-gray-600">Team Leader</p>
                       </div>
                     </div>
 
@@ -1345,22 +1344,38 @@ export default function TeamLeaderDashboard() {
                               Loading requirements...
                             </td>
                           </tr>
-                        ) : requirementsData.length === 0 ? (
+                        ) : visibleRequirementsData.length === 0 ? (
                           <tr>
                             <td colSpan={7} className="p-6 text-center text-gray-600">
                               No requirements assigned to you yet.
                             </td>
                           </tr>
                         ) : (
-                          requirementsData.slice(0, 10).map((requirement) => {
+                          visibleRequirementsData.slice(0, 10).map((requirement: any) => {
                             const isReassigned = requirement.assignmentStatus === "reassigned";
+                            const isOnHold = requirement.managementStatus === "hold";
+                            const isRecentlyClosed = requirement.managementStatus === "closed" && requirement.isRecentlyClosed;
                             return (
                             <tr 
                               key={requirement.id} 
-                              className={`border-b border-gray-100 ${isReassigned ? 'opacity-50 cursor-not-allowed bg-gray-100' : ''}`}
-                              title={isReassigned ? "Reassigned to another TA" : undefined}
+                              className={`border-b border-gray-100 ${isReassigned ? 'opacity-50 cursor-not-allowed bg-gray-100' : isRecentlyClosed ? 'bg-red-100 hover:bg-red-200' : isOnHold ? 'bg-yellow-100/80 hover:bg-yellow-100' : ''}`}
+                              title={isReassigned ? "Reassigned to another TA" : isRecentlyClosed ? "Requirement was closed and will leave this list after 24 hours" : isOnHold ? "Requirement is on Hold" : undefined}
                             >
-                              <td className="p-3 text-gray-900">{requirement.position}</td>
+                              <td className="p-3 text-gray-900">
+                                <div className="flex items-center gap-2">
+                                  <span>{requirement.position}</span>
+                                  {isRecentlyClosed && (
+                                    <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-800">
+                                      Closed
+                                    </span>
+                                  )}
+                                  {isOnHold && (
+                                    <span className="inline-flex rounded-full bg-yellow-100 px-2 py-0.5 text-[11px] font-semibold text-yellow-800">
+                                      On Hold
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
                               <td className="p-3">
                                 <span className={`text-xs font-semibold px-2 py-1 rounded inline-flex items-center ${
                                   requirement.criticality.toUpperCase() === 'HIGH' ? 'bg-red-100 text-red-800' :
@@ -1397,15 +1412,19 @@ export default function TeamLeaderDashboard() {
                                 )}
                               </td>
                               <td className="p-3">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  className="p-1"
-                                  onClick={() => handleAssign(requirement)}
-                                  data-testid={`button-assign-ta-${requirement.id}`}
-                                >
-                                  <UserRound className="w-4 h-4" />
-                                </Button>
+                                {isRecentlyClosed ? (
+                                  <span className="text-xs text-red-700 font-medium">Archived</span>
+                                ) : (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="p-1"
+                                    onClick={() => handleAssign(requirement)}
+                                    data-testid={`button-assign-ta-${requirement.id}`}
+                                  >
+                                    <UserRound className="w-4 h-4" />
+                                  </Button>
+                                )}
                               </td>
                             </tr>
                             );
@@ -1430,7 +1449,7 @@ export default function TeamLeaderDashboard() {
                     <button
                       className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => setIsViewMoreRequirementsModalOpen(true)}
-                      disabled={requirementsData.length <= 5}
+                      disabled={visibleRequirementsData.length <= 5}
                       data-testid="button-view-more-requirements"
                     >
                       View More
@@ -2730,7 +2749,7 @@ export default function TeamLeaderDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {requirementsData
+                  {visibleRequirementsData
                         .filter((requirement) => 
                           requirement.position.toLowerCase().includes(requirementSearch.toLowerCase()) ||
                           requirement.criticality.toLowerCase().includes(requirementSearch.toLowerCase()) ||
@@ -2738,9 +2757,27 @@ export default function TeamLeaderDashboard() {
                           (requirement.spoc && requirement.spoc.toLowerCase().includes(requirementSearch.toLowerCase())) ||
                           (requirement.talentAdvisor && requirement.talentAdvisor.toLowerCase().includes(requirementSearch.toLowerCase()))
                         )
-                        .map((requirement) => (
-                        <tr key={requirement.id} className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-4 px-4 text-gray-900 dark:text-white">{requirement.position}</td>
+                        .map((requirement: any) => (
+                        <tr
+                          key={requirement.id}
+                          className={`border-b border-gray-100 dark:border-gray-800 ${requirement.managementStatus === 'closed' && requirement.isRecentlyClosed ? 'bg-red-100 hover:bg-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/30' : requirement.managementStatus === 'hold' ? 'bg-yellow-100/80 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:hover:bg-yellow-900/30' : ''}`}
+                          title={requirement.managementStatus === 'closed' && requirement.isRecentlyClosed ? 'Requirement was closed and will leave this list after 24 hours' : requirement.managementStatus === 'hold' ? 'Requirement is on Hold' : undefined}
+                        >
+                          <td className="py-4 px-4 text-gray-900 dark:text-white">
+                            <div className="flex items-center gap-2">
+                              <span>{requirement.position}</span>
+                              {requirement.managementStatus === 'closed' && requirement.isRecentlyClosed && (
+                                <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-800 dark:bg-red-900/30 dark:text-red-300">
+                                  Closed
+                                </span>
+                              )}
+                              {requirement.managementStatus === 'hold' && (
+                                <span className="inline-flex rounded-full bg-yellow-100 px-2 py-0.5 text-[11px] font-semibold text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                                  On Hold
+                                </span>
+                              )}
+                            </div>
+                          </td>
                           <td className="py-4 px-4">
                             <span className={`text-xs font-semibold px-3 py-1 rounded-full ${
                               requirement.criticality.toUpperCase() === 'HIGH' 
@@ -2756,7 +2793,9 @@ export default function TeamLeaderDashboard() {
                           <td className="py-4 px-4 text-gray-600 dark:text-gray-400">{requirement.spoc || '-'}</td>
                           <td className="py-4 px-4 text-gray-600 dark:text-gray-400">{requirement.talentAdvisor || '-'}</td>
                           <td className="py-4 px-4">
-                            {requirement.talentAdvisor ? (
+                            {requirement.managementStatus === 'closed' && requirement.isRecentlyClosed ? (
+                              <span className="text-sm font-medium text-red-700">Archived</span>
+                            ) : requirement.talentAdvisor ? (
                               <span className="text-gray-600 dark:text-gray-400">{requirement.talentAdvisor}</span>
                             ) : (
                               <Button 
@@ -2769,7 +2808,7 @@ export default function TeamLeaderDashboard() {
                             )}
                           </td>
                           <td className="py-4 px-4">
-                            {requirement.talentAdvisor && (
+                            {requirement.talentAdvisor && !(requirement.managementStatus === 'closed' && requirement.isRecentlyClosed) && (
                               <Button 
                                 variant="ghost" 
                                 size="sm" 
@@ -3520,7 +3559,7 @@ export default function TeamLeaderDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {requirementsData.map((requirement, index) => (
+                  {visibleRequirementsData.map((requirement: any, index) => (
                     <tr key={requirement.id} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
                       <td className="p-3 text-gray-900 border border-gray-300">{requirement.position}</td>
                       <td className="p-3 border border-gray-300">

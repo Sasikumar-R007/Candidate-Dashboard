@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, User, Briefcase } from "lucide-react";
@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useLocation } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useEmployeeAuth } from '@/contexts/auth-context';
 
 const getCriticalityColor = (criticality: string) => {
   switch (criticality) {
@@ -35,61 +36,30 @@ const getStatusColor = (status: string) => {
 
 export default function Archives() {
   const [, setLocation] = useLocation();
+  const employee = useEmployeeAuth();
   const [visibleRows, setVisibleRows] = useState(10);
   const [visibleCandidateRows, setVisibleCandidateRows] = useState(10);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeTab, setActiveTab] = useState('candidates');
+  const [activeTab, setActiveTab] = useState('requirements');
 
-  // Security check: Prevent direct URL access
-  React.useEffect(() => {
-    const isFromRecruiter = sessionStorage.getItem('recruiterDashboardSidebarTab') === 'requirements';
-    const isFromAdmin = sessionStorage.getItem('adminDashboardSidebarTab') === 'requirements';
-    const referrer = document.referrer;
-    
-    // Check if accessed from recruiter or admin page, or if referrer contains the dashboard path
-    if (!isFromRecruiter && !isFromAdmin && !referrer.includes('/recruiter-login-2') && !referrer.includes('/admin-login')) {
-      // If accessed directly via URL, redirect to appropriate login
-      if (referrer.includes('recruiter') || !referrer) {
-        setLocation('/recruiter-login-2');
-      } else {
-        setLocation('/admin-login');
-      }
+  const archivedRequirementsEndpoint = useMemo(() => {
+    if (employee?.role === 'team_leader' || employee?.role === 'teamLead') {
+      return '/api/team-leader/archived-requirements';
     }
-  }, [setLocation]);
 
-  // Fetch archived requirements - check if coming from recruiter dashboard
-  const isFromRecruiter = sessionStorage.getItem('recruiterDashboardSidebarTab') === 'requirements';
-  
-  // Fetch recruiter's requirements to filter archived ones
-  const { data: recruiterRequirements = [] } = useQuery({
-    queryKey: ['recruiter', 'requirements'],
-    queryFn: async () => {
-      try {
-        const response = await fetch('/api/recruiter/requirements', {
-          credentials: 'include'
-        });
-        if (!response.ok) {
-          console.warn('Failed to fetch recruiter requirements:', response.status);
-          return [];
-        }
-        const data = await response.json();
-        return Array.isArray(data) ? data : [];
-      } catch (error) {
-        console.error('Error fetching recruiter requirements:', error);
-        return [];
-      }
-    },
-    enabled: isFromRecruiter,
-    retry: 1,
-    refetchOnWindowFocus: false
-  });
+    if (employee?.role === 'recruiter' || employee?.role === 'talent_advisor') {
+      return '/api/recruiter/archived-requirements';
+    }
+
+    return '/api/admin/archived-requirements';
+  }, [employee?.role]);
 
   // Fetch archived requirements from API
   const { data: allArchivedRequirements = [], isLoading: isLoadingRequirements } = useQuery({
-    queryKey: ['admin', 'archived-requirements'],
+    queryKey: [archivedRequirementsEndpoint],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/admin/archived-requirements', {
+        const response = await fetch(archivedRequirementsEndpoint, {
           credentials: 'include'
         });
         if (!response.ok) {
@@ -103,16 +73,14 @@ export default function Archives() {
         return [];
       }
     },
+    enabled: !!employee,
     retry: 1,
-    refetchOnWindowFocus: false
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000
   });
 
-  // Filter archived requirements by recruiter if coming from recruiter dashboard
-  const archivedRequirements = isFromRecruiter && recruiterRequirements.length > 0
-    ? allArchivedRequirements.filter((archived: any) => 
-        recruiterRequirements.some((req: any) => req.id === archived.originalId)
-      )
-    : allArchivedRequirements;
+  const archivedRequirements = allArchivedRequirements;
 
   // Fetch archived candidates (applications with status Screened Out, Rejected, or Archived)
   const { data: archivedCandidates = [], isLoading: isLoadingCandidates } = useQuery({
@@ -165,6 +133,8 @@ export default function Archives() {
 
   const displayedRequirements = archivedRequirements.slice(0, visibleRows);
   const isShowingAllRequirements = visibleRows >= archivedRequirements.length;
+  const isClosedArchivedRequirement = (requirement: any) =>
+    requirement.managementStatus === 'closed' && Boolean(requirement.managementReason?.trim());
 
   // Filter candidates by search query
   const filteredCandidates = archivedCandidates.filter((candidate: any) => {
@@ -327,12 +297,20 @@ export default function Archives() {
                             <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 text-sm">SPOC</th>
                             <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 text-sm">Talent Advisor</th>
                             <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 text-sm">Team Lead</th>
+                            <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 text-sm">Status</th>
                             <th className="text-left p-3 font-semibold text-gray-700 dark:text-gray-300 text-sm">Archived Date</th>
                           </tr>
                         </thead>
                         <tbody>
                           {displayedRequirements.map((requirement: any) => (
-                            <tr key={requirement.id} className="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900/50">
+                            <tr
+                              key={requirement.id}
+                              className={`border-b border-gray-100 dark:border-gray-800 ${
+                                isClosedArchivedRequirement(requirement)
+                                  ? 'bg-red-100 hover:bg-red-200 dark:bg-red-900/20 dark:hover:bg-red-900/30'
+                                  : 'hover:bg-gray-50 dark:hover:bg-gray-900/50'
+                              }`}
+                            >
                               <td className="py-3 px-3 text-gray-900 dark:text-white font-medium text-sm">{requirement.position}</td>
                               <td className="py-3 px-3">
                                 <span className={`text-xs font-semibold px-3 py-1 rounded ${getCriticalityColor(requirement.criticality)}`}>
@@ -343,6 +321,9 @@ export default function Archives() {
                               <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{requirement.spoc}</td>
                               <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{requirement.talentAdvisor || 'Unassigned'}</td>
                               <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">{requirement.teamLead || 'Unassigned'}</td>
+                              <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">
+                                {isClosedArchivedRequirement(requirement) ? 'Position Closed' : 'Archived'}
+                              </td>
                               <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">
                                 {requirement.archivedAt ? new Date(requirement.archivedAt).toLocaleDateString() : 'N/A'}
                               </td>

@@ -6,6 +6,7 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import pg from "pg";
 import { registerRoutes } from "./routes";
+import { ensureRequirementManagementColumns } from "./db";
 
 function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -189,6 +190,13 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  try {
+    await ensureRequirementManagementColumns();
+    log("Requirement management columns verified.", "db");
+  } catch (error) {
+    console.error("Failed to verify requirement management columns:", error);
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

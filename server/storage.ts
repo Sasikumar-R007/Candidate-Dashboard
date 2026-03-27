@@ -87,7 +87,7 @@ export interface IStorage {
   getRequirementsByTalentAdvisorId(talentAdvisorId: string): Promise<Requirement[]>;
   createRequirement(requirement: InsertRequirement): Promise<Requirement>;
   updateRequirement(id: string, updates: Partial<Requirement>): Promise<Requirement | undefined>;
-  archiveRequirement(id: string): Promise<ArchivedRequirement | undefined>;
+  archiveRequirement(id: string, overrides?: Partial<Requirement>): Promise<ArchivedRequirement | undefined>;
   getArchivedRequirements(): Promise<ArchivedRequirement[]>;
   deleteRequirement(id: string): Promise<boolean>;
   
@@ -562,16 +562,24 @@ export class MemStorage implements IStorage {
       const requirement: Requirement = {
         id: randomUUID(),
         position: req.position,
+        noOfPositions: 1,
+        splitRequirement: false,
         criticality: req.criticality,
         toughness: req.toughness,
         company: req.company,
         spoc: req.spoc,
         talentAdvisor: req.talentAdvisor,
+        talentAdvisorId: null,
         teamLead: req.teamLead,
         status: "open",
+        managementStatus: "active",
+        managementReason: null,
+        managedAt: null,
         completedAt: null,
         isArchived: false,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        jdFile: null,
+        jdText: null
       };
       this.requirements.set(requirement.id, requirement);
     });
@@ -1002,10 +1010,19 @@ export class MemStorage implements IStorage {
     const requirement: Requirement = {
       ...insertRequirement,
       id,
+      noOfPositions: insertRequirement.noOfPositions ?? 1,
+      splitRequirement: insertRequirement.splitRequirement ?? false,
       talentAdvisor: insertRequirement.talentAdvisor || null,
+      talentAdvisorId: insertRequirement.talentAdvisorId || null,
       teamLead: insertRequirement.teamLead || null,
+      status: insertRequirement.status || "open",
+      managementStatus: insertRequirement.managementStatus || "active",
+      managementReason: insertRequirement.managementReason || null,
+      managedAt: insertRequirement.managedAt || null,
       isArchived: false,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      jdFile: insertRequirement.jdFile || null,
+      jdText: insertRequirement.jdText || null
     };
     this.requirements.set(id, requirement);
     return requirement;
@@ -1020,21 +1037,28 @@ export class MemStorage implements IStorage {
     return updated;
   }
 
-  async archiveRequirement(id: string): Promise<ArchivedRequirement | undefined> {
+  async archiveRequirement(id: string, overrides?: Partial<Requirement>): Promise<ArchivedRequirement | undefined> {
     const requirement = this.requirements.get(id);
     if (!requirement) return undefined;
+    const finalRequirement = { ...requirement, ...overrides };
 
     // Create archived version
     const archivedId = randomUUID();
     const archived: ArchivedRequirement = {
       id: archivedId,
-      position: requirement.position,
-      criticality: requirement.criticality,
-      toughness: requirement.toughness,
-      company: requirement.company,
-      spoc: requirement.spoc,
-      talentAdvisor: requirement.talentAdvisor,
-      teamLead: requirement.teamLead,
+      position: finalRequirement.position,
+      noOfPositions: finalRequirement.noOfPositions ?? 1,
+      splitRequirement: finalRequirement.splitRequirement ?? false,
+      criticality: finalRequirement.criticality,
+      toughness: finalRequirement.toughness,
+      company: finalRequirement.company,
+      spoc: finalRequirement.spoc,
+      talentAdvisor: finalRequirement.talentAdvisor,
+      teamLead: finalRequirement.teamLead,
+      status: finalRequirement.status || "closed",
+      managementStatus: finalRequirement.managementStatus || "closed",
+      managementReason: finalRequirement.managementReason || null,
+      managedAt: finalRequirement.managedAt || new Date().toISOString(),
       archivedAt: new Date().toISOString(),
       originalId: requirement.id
     };
@@ -1042,7 +1066,7 @@ export class MemStorage implements IStorage {
     this.archivedRequirements.set(archivedId, archived);
     
     // Mark original as archived
-    const updated = { ...requirement, isArchived: true };
+    const updated = { ...requirement, ...overrides, isArchived: true };
     this.requirements.set(id, updated);
     
     return archived;
@@ -1457,7 +1481,7 @@ export class MemStorage implements IStorage {
     
     return {
       rolesAssigned: requirements.length,
-      totalPositions: requirements.length,
+      totalPositions: requirements.reduce((sum, req) => sum + (req.noOfPositions ?? 1), 0),
       activeRoles,
       successfulHires: completedRoles,
       pausedRoles: 0,

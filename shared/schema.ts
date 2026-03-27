@@ -9,6 +9,13 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
 });
 
+// Session table for express-session with connect-pg-simple
+export const sessions = pgTable("session", {
+  sid: varchar("sid").primaryKey(),
+  sess: json("sess").notNull(),
+  expire: timestamp("expire", { precision: 6 }).notNull(),
+});
+
 export const profiles = pgTable("profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull(),
@@ -192,6 +199,8 @@ export const ceoComments = pgTable("ceo_comments", {
 export const requirements = pgTable("requirements", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   position: text("position").notNull(),
+  noOfPositions: integer("no_of_positions").notNull().default(1),
+  splitRequirement: boolean("split_requirement").notNull().default(false),
   criticality: text("criticality").notNull(), // HIGH, MEDIUM, LOW
   toughness: text("toughness").notNull().default("Medium"), // Easy, Medium, Tough
   company: text("company").notNull(),
@@ -199,7 +208,12 @@ export const requirements = pgTable("requirements", {
   talentAdvisor: text("talent_advisor"),
   talentAdvisorId: varchar("talent_advisor_id"), // Stable ID-based linkage to employees table
   teamLead: text("team_lead"),
+  sourceType: text("source_type"), // re_require, manual, etc.
+  sourceDetails: text("source_details"), // JSON payload for source context
   status: text("status").notNull().default("open"), // open, in_progress, completed
+  managementStatus: text("management_status").notNull().default("active"), // active, hold, closed
+  managementReason: text("management_reason"),
+  managedAt: text("managed_at"),
   completedAt: text("completed_at"),
   isArchived: boolean("is_archived").default(false),
   createdAt: text("created_at").notNull(),
@@ -210,12 +224,20 @@ export const requirements = pgTable("requirements", {
 export const archivedRequirements = pgTable("archived_requirements", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   position: text("position").notNull(),
+  noOfPositions: integer("no_of_positions").notNull().default(1),
+  splitRequirement: boolean("split_requirement").notNull().default(false),
   criticality: text("criticality").notNull(),
   toughness: text("toughness").notNull().default("Medium"), // Easy, Medium, Tough
   company: text("company").notNull(),
   spoc: text("spoc").notNull(),
   talentAdvisor: text("talent_advisor"),
   teamLead: text("team_lead"),
+  sourceType: text("source_type"),
+  sourceDetails: text("source_details"),
+  status: text("status").notNull().default("closed"),
+  managementStatus: text("management_status").notNull().default("closed"),
+  managementReason: text("management_reason"),
+  managedAt: text("managed_at"),
   archivedAt: text("archived_at").notNull(),
   originalId: varchar("original_id").notNull(),
 });

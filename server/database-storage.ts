@@ -252,6 +252,9 @@ export class DatabaseStorage implements IStorage {
     const { id, ...requirementDataWithoutId } = insertRequirement as any;
     const requirementData: any = {
       ...requirementDataWithoutId,
+      noOfPositions: insertRequirement.noOfPositions ?? 1,
+      splitRequirement: insertRequirement.splitRequirement ?? false,
+      managementStatus: insertRequirement.managementStatus ?? 'active',
       isArchived: false,
       createdAt: new Date().toISOString()
     };
@@ -278,19 +281,27 @@ export class DatabaseStorage implements IStorage {
     return requirement || undefined;
   }
 
-  async archiveRequirement(id: string): Promise<ArchivedRequirement | undefined> {
+  async archiveRequirement(id: string, overrides?: Partial<Requirement>): Promise<ArchivedRequirement | undefined> {
     // Get the requirement first
     const [requirement] = await db.select().from(requirements).where(eq(requirements.id, id));
     if (!requirement) return undefined;
+    const finalRequirement = { ...requirement, ...overrides };
 
     // Create archived version
     const archivedData: InsertArchivedRequirement = {
-      position: requirement.position,
-      criticality: requirement.criticality,
-      company: requirement.company,
-      spoc: requirement.spoc,
-      talentAdvisor: requirement.talentAdvisor,
-      teamLead: requirement.teamLead,
+      position: finalRequirement.position,
+      noOfPositions: finalRequirement.noOfPositions ?? 1,
+      splitRequirement: finalRequirement.splitRequirement ?? false,
+      criticality: finalRequirement.criticality,
+      toughness: finalRequirement.toughness,
+      company: finalRequirement.company,
+      spoc: finalRequirement.spoc,
+      talentAdvisor: finalRequirement.talentAdvisor,
+      teamLead: finalRequirement.teamLead,
+      status: finalRequirement.status || 'closed',
+      managementStatus: finalRequirement.managementStatus || 'closed',
+      managementReason: finalRequirement.managementReason || null,
+      managedAt: finalRequirement.managedAt || new Date().toISOString(),
       archivedAt: new Date().toISOString(),
       originalId: requirement.id
     };
@@ -298,7 +309,7 @@ export class DatabaseStorage implements IStorage {
     const [archived] = await db.insert(archivedRequirements).values(archivedData).returning();
     
     // Mark original as archived
-    await db.update(requirements).set({ isArchived: true }).where(eq(requirements.id, id));
+    await db.update(requirements).set({ ...overrides, isArchived: true }).where(eq(requirements.id, id));
     
     return archived;
   }
@@ -798,7 +809,7 @@ export class DatabaseStorage implements IStorage {
     const closures = await this.getRevenueMappingsByClientName(companyName);
     
     // Calculate total positions (sum of positions count, or just count of requirements)
-    const totalPositions = clientReqs.length;
+    const totalPositions = clientReqs.reduce((sum, req) => sum + (req.noOfPositions ?? 1), 0);
     
     return {
       rolesAssigned: clientReqs.length,
