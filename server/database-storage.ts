@@ -120,8 +120,166 @@ function normalizeEmployee(emp: any): Employee {
   } as Employee;
 }
 
+function normalizeCandidate(candidate: any): Candidate {
+  if (!candidate) return candidate;
+  return {
+    ...candidate,
+    candidateId: candidate.candidate_id || candidate.candidateId,
+    fullName: candidate.full_name || candidate.fullName || candidate.name,
+    googleId: candidate.google_id || candidate.googleId,
+    profilePicture: candidate.profile_picture || candidate.profilePicture,
+    bannerImage: candidate.banner_image || candidate.bannerImage,
+    resumeFile: candidate.resume_file || candidate.resumeFile,
+    resumeText: candidate.resume_text || candidate.resumeText,
+    currentRole: candidate.current_role || candidate.currentRole,
+    portfolioUrl: candidate.portfolio_url || candidate.portfolioUrl,
+    websiteUrl: candidate.website_url || candidate.websiteUrl,
+    linkedinUrl: candidate.linkedin_url || candidate.linkedinUrl,
+    pipelineStatus: candidate.pipeline_status || candidate.pipelineStatus,
+    addedBy: candidate.added_by || candidate.addedBy,
+    assignedTo: candidate.assigned_to || candidate.assignedTo,
+    noticePeriod: candidate.notice_period || candidate.noticePeriod,
+    pedigreeLevel: candidate.pedigree_level || candidate.pedigreeLevel,
+    companyLevel: candidate.company_level || candidate.companyLevel,
+    companySector: candidate.company_sector || candidate.companySector,
+    productService: candidate.product_service || candidate.productService,
+    productCategory: candidate.product_category || candidate.productCategory,
+    productDomain: candidate.product_domain || candidate.productDomain,
+    employmentType: candidate.employment_type || candidate.employmentType,
+    ownerEmployeeId: candidate.owner_employee_id || candidate.ownerEmployeeId,
+    ownerRole: candidate.owner_role || candidate.ownerRole,
+    isActive: candidate.is_active !== undefined ? candidate.is_active : candidate.isActive,
+    isVerified: candidate.is_verified !== undefined ? candidate.is_verified : candidate.isVerified,
+    phoneVerified: candidate.phone_verified !== undefined ? candidate.phone_verified : candidate.phoneVerified,
+    createdAt: candidate.created_at || candidate.createdAt,
+    lastViewedAt: candidate.last_viewed_at || candidate.lastViewedAt,
+  } as Candidate;
+}
+
+function normalizeClient(client: any): Client {
+  if (!client) return client;
+  return {
+    ...client,
+    clientCode: client.client_code || client.clientCode,
+    brandName: client.brand_name || client.brandName,
+    incorporatedName: client.incorporated_name || client.incorporatedName,
+    paymentTerms: client.payment_terms || client.paymentTerms,
+    startDate: client.start_date || client.startDate,
+    currentStatus: client.current_status || client.currentStatus,
+    isLoginOnly: client.is_login_only !== undefined ? client.is_login_only : client.isLoginOnly,
+    createdAt: client.created_at || client.createdAt,
+  } as Client;
+}
+
+function normalizeJobApplication(application: any): JobApplication {
+  if (!application) return application;
+  return {
+    ...application,
+    profileId: application.profile_id || application.profileId,
+    recruiterJobId: application.recruiter_job_id || application.recruiterJobId,
+    requirementId: application.requirement_id || application.requirementId,
+    ownerEmployeeId: application.owner_employee_id || application.ownerEmployeeId,
+    ownerRole: application.owner_role || application.ownerRole,
+    jobTitle: application.job_title || application.jobTitle,
+    jobType: application.job_type || application.jobType,
+    appliedDate: application.applied_date || application.appliedDate,
+    candidateName: application.candidate_name || application.candidateName,
+    candidateEmail: application.candidate_email || application.candidateEmail,
+    candidatePhone: application.candidate_phone || application.candidatePhone,
+    workMode: application.work_mode || application.workMode,
+  } as JobApplication;
+}
+
+const candidateColumnCandidates = [
+  "id", "candidate_id", "full_name", "email", "password", "google_id", "phone", "company",
+  "designation", "age", "gender", "location", "experience", "skills", "profile_picture",
+  "banner_image", "resume_file", "resume_text", "education", "current_role", "portfolio_url",
+  "website_url", "linkedin_url", "pipeline_status", "added_by", "assigned_to", "ctc", "ectc",
+  "notice_period", "position", "pedigree_level", "company_level", "company_sector",
+  "product_service", "product_category", "product_domain", "employment_type",
+  "owner_employee_id", "owner_role", "is_active", "is_verified", "phone_verified",
+  "created_at", "last_viewed_at",
+];
+
+const clientColumnCandidates = [
+  "id", "client_code", "brand_name", "incorporated_name", "gstin", "address", "location", "spoc",
+  "email", "website", "linkedin", "agreement", "percentage", "category", "payment_terms",
+  "source", "start_date", "referral", "current_status", "is_login_only", "logo", "created_at",
+];
+
+const jobApplicationColumnCandidates = [
+  "id", "profile_id", "recruiter_job_id", "requirement_id", "owner_employee_id", "owner_role",
+  "job_title", "company", "job_type", "status", "source", "applied_date", "candidate_name",
+  "candidate_email", "candidate_phone", "description", "salary", "location", "work_mode",
+  "experience", "skills", "logo",
+];
+
 export class DatabaseStorage implements IStorage {
   private otpStorage: Map<string, { otp: string; expiry: Date; email: string }> = new Map();
+  private tableColumnsCache = new Map<string, string[]>();
+
+  private async getAvailableColumns(tableName: string): Promise<string[]> {
+    const cached = this.tableColumnsCache.get(tableName);
+    if (cached) {
+      return cached;
+    }
+
+    const result = await db.execute(sql`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = ${tableName}
+      ORDER BY ordinal_position
+    `);
+
+    const columns = result.rows
+      .map((row: any) => row.column_name as string)
+      .filter(Boolean);
+
+    this.tableColumnsCache.set(tableName, columns);
+    return columns;
+  }
+
+  private async queryCandidates(whereClause?: ReturnType<typeof sql>, orderClause?: ReturnType<typeof sql>): Promise<Candidate[]> {
+    const availableColumns = await this.getAvailableColumns("candidates");
+    const selectedColumns = candidateColumnCandidates.filter((column) => availableColumns.includes(column));
+
+    const result = await db.execute(sql`
+      SELECT ${sql.join(selectedColumns.map((column) => sql.raw(`"${column}"`)), sql`, `)}
+      FROM ${sql.raw(`"candidates"`)}
+      ${whereClause ? sql`WHERE ${whereClause}` : sql``}
+      ${orderClause ? orderClause : sql``}
+    `);
+
+    return result.rows.map(normalizeCandidate);
+  }
+
+  private async queryClients(whereClause?: ReturnType<typeof sql>, orderClause?: ReturnType<typeof sql>): Promise<Client[]> {
+    const availableColumns = await this.getAvailableColumns("clients");
+    const selectedColumns = clientColumnCandidates.filter((column) => availableColumns.includes(column));
+
+    const result = await db.execute(sql`
+      SELECT ${sql.join(selectedColumns.map((column) => sql.raw(`"${column}"`)), sql`, `)}
+      FROM ${sql.raw(`"clients"`)}
+      ${whereClause ? sql`WHERE ${whereClause}` : sql``}
+      ${orderClause ? orderClause : sql``}
+    `);
+
+    return result.rows.map(normalizeClient);
+  }
+
+  private async queryJobApplications(whereClause?: ReturnType<typeof sql>, orderClause?: ReturnType<typeof sql>): Promise<JobApplication[]> {
+    const availableColumns = await this.getAvailableColumns("job_applications");
+    const selectedColumns = jobApplicationColumnCandidates.filter((column) => availableColumns.includes(column));
+
+    const result = await db.execute(sql`
+      SELECT ${sql.join(selectedColumns.map((column) => sql.raw(`"${column}"`)), sql`, `)}
+      FROM ${sql.raw(`"job_applications"`)}
+      ${whereClause ? sql`WHERE ${whereClause}` : sql``}
+      ${orderClause ? orderClause : sql``}
+    `);
+
+    return result.rows.map(normalizeJobApplication);
+  }
 
   // User methods
   async getUser(id: string): Promise<User | undefined> {
@@ -470,23 +628,23 @@ export class DatabaseStorage implements IStorage {
 
   // Candidate methods
   async getCandidateById(id: string): Promise<Candidate | undefined> {
-    const [candidate] = await db.select().from(candidates).where(eq(candidates.id, id));
-    return candidate || undefined;
+    const [candidate] = await this.queryCandidates(sql`id = ${id}`);
+    return candidate;
   }
 
   async getCandidateByEmail(email: string): Promise<Candidate | undefined> {
-    const [candidate] = await db.select().from(candidates).where(eq(candidates.email, email));
-    return candidate || undefined;
+    const [candidate] = await this.queryCandidates(sql`LOWER(email) = LOWER(${email})`);
+    return candidate;
   }
 
   async getCandidateByCandidateId(candidateId: string): Promise<Candidate | undefined> {
-    const [candidate] = await db.select().from(candidates).where(eq(candidates.candidateId, candidateId));
-    return candidate || undefined;
+    const [candidate] = await this.queryCandidates(sql`candidate_id = ${candidateId}`);
+    return candidate;
   }
 
   async getCandidateByGoogleId(googleId: string): Promise<Candidate | undefined> {
-    const [candidate] = await db.select().from(candidates).where(eq(candidates.googleId, googleId));
-    return candidate || undefined;
+    const [candidate] = await this.queryCandidates(sql`google_id = ${googleId}`);
+    return candidate;
   }
 
   async createCandidateWithGoogle(candidateData: { candidateId: string; fullName: string; email: string; googleId: string; profilePicture?: string; isActive: boolean; isVerified: boolean; createdAt: string }): Promise<Candidate> {
@@ -519,12 +677,34 @@ export class DatabaseStorage implements IStorage {
       createdAt: new Date().toISOString()
     };
 
-    const [candidate] = await db.insert(candidates).values(candidateData).returning();
-    return candidate;
+    try {
+      const [candidate] = await db.insert(candidates).values(candidateData).returning();
+      return candidate;
+    } catch (error: any) {
+      const errorMessage = String(error?.message || "");
+      if (!errorMessage.includes("owner_employee_id") && !errorMessage.includes("owner_role")) {
+        throw error;
+      }
+
+      const { ownerEmployeeId, ownerRole, ...legacyCandidateData } = candidateData as InsertCandidate & {
+        ownerEmployeeId?: string | null;
+        ownerRole?: string | null;
+      };
+
+      await db.insert(candidates).values(legacyCandidateData as InsertCandidate);
+      const createdCandidate = await this.getCandidateByEmail(candidateData.email);
+      if (!createdCandidate) {
+        throw error;
+      }
+      return createdCandidate;
+    }
   }
 
   async getAllCandidates(): Promise<Candidate[]> {
-    return await db.select().from(candidates).where(eq(candidates.isActive, true)).orderBy(desc(candidates.createdAt));
+    return await this.queryCandidates(
+      sql`COALESCE(is_active, true) = true`,
+      sql`ORDER BY created_at DESC`
+    );
   }
 
   async updateCandidate(id: string, updates: Partial<Candidate>): Promise<Candidate | undefined> {
@@ -551,8 +731,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async generateNextCandidateId(): Promise<string> {
-    // Get the highest candidate ID number
-    const allCandidates = await db.select().from(candidates);
+    const allCandidates = await this.queryCandidates();
     const maxNumber = allCandidates
       .map(c => parseInt(c.candidateId.replace('STCA', '')))
       .filter(n => !isNaN(n))
@@ -750,7 +929,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllClients(): Promise<Client[]> {
-    return await db.select().from(clients).orderBy(desc(clients.createdAt));
+    return await this.queryClients(undefined, sql`ORDER BY created_at DESC`);
   }
 
   async getClientByClientCode(clientCode: string): Promise<Client | undefined> {
@@ -1409,7 +1588,7 @@ export class DatabaseStorage implements IStorage {
 
   // Applicant methods (for job applications from job board and recruiter tags)
   async getAllJobApplications(): Promise<JobApplication[]> {
-    return await db.select().from(jobApplications).orderBy(desc(jobApplications.appliedDate));
+    return await this.queryJobApplications(undefined, sql`ORDER BY applied_date DESC`);
   }
 
   async getJobApplicationsByRecruiterJobId(recruiterJobId: string): Promise<JobApplication[]> {

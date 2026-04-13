@@ -1,4 +1,5 @@
 import { getUncachableResendClient } from './resend-client';
+import { getEmployeeWelcomeMessage } from './admin-settings';
 
 interface EmployeeWelcomeEmailData {
   name: string;
@@ -26,33 +27,24 @@ interface OTPEmailData {
 export async function sendEmployeeWelcomeEmail(data: EmployeeWelcomeEmailData): Promise<boolean> {
   try {
     const { client: resend, fromEmail } = await getUncachableResendClient();
+    const welcomeMessage = await getEmployeeWelcomeMessage();
+    const welcomeParagraphs = welcomeMessage
+      .split(/\n\s*\n/)
+      .map((paragraph) => paragraph.trim())
+      .filter(Boolean);
+    const welcomeText = welcomeParagraphs.join("\n\n");
+    const welcomeHtml = welcomeParagraphs.map((paragraph) => `<p>${paragraph}</p>`).join("");
 
     const emailContent = `
 Hi ${data.name},
 
-Welcome to StaffOS!
-
-Your account has been successfully created, and you can now log in to manage all your day-to-day recruitment activities. StaffOS is built to streamline your workflow, improve productivity, and help you deliver a world-class recruitment experience.
+${welcomeText}
 
 **Your Login Details:**
 - Employee ID: ${data.employeeId}
 - Email: ${data.email}
 - Password: ${data.password}
 - Login URL: ${data.loginUrl}
-
-As you begin using the platform, please keep the following in mind:
-
-1. Maintain complete confidentiality while handling all client and candidate information.
-
-2. Enter accurate and original data at every step to ensure excellent metrics, transparent reporting, and proper tracking.
-
-3. Engage meaningfully with clients and candidates through the system for a smooth and professional communication experience.
-
-4. Use StaffOS consistently to ensure we build a strong, metrics-driven approach across the organisation.
-
-If you have any questions or face any issues, please feel free to reach out via the Support Chat inside StaffOS. Our team is always here to help you.
-
-Wishing you a productive and seamless experience with StaffOS!
 
 Warm regards,
 Team StaffOS
@@ -81,10 +73,8 @@ Team StaffOS
     </div>
     <div class="content">
       <p>Hi ${data.name},</p>
-      
-      <p>Welcome to StaffOS!</p>
-      
-      <p>Your account has been successfully created, and you can now log in to manage all your day-to-day recruitment activities. StaffOS is built to streamline your workflow, improve productivity, and help you deliver a world-class recruitment experience.</p>
+
+      ${welcomeHtml}
       
       <div class="credentials">
         <h3 style="margin-top: 0;">Your Login Details:</h3>
@@ -93,20 +83,6 @@ Team StaffOS
         <p><strong>Password:</strong> ${data.password}</p>
         <p><strong>Login URL:</strong> <a href="${data.loginUrl}">${data.loginUrl}</a></p>
       </div>
-      
-      <div class="guidelines">
-        <p>As you begin using the platform, please keep the following in mind:</p>
-        <ol>
-          <li>Maintain complete confidentiality while handling all client and candidate information.</li>
-          <li>Enter accurate and original data at every step to ensure excellent metrics, transparent reporting, and proper tracking.</li>
-          <li>Engage meaningfully with clients and candidates through the system for a smooth and professional communication experience.</li>
-          <li>Use StaffOS consistently to ensure we build a strong, metrics-driven approach across the organisation.</li>
-        </ol>
-      </div>
-      
-      <p>If you have any questions or face any issues, please feel free to reach out via the Support Chat inside StaffOS. Our team is always here to help you.</p>
-      
-      <p>Wishing you a productive and seamless experience with StaffOS!</p>
       
       <div class="footer">
         <p><strong>Warm regards,<br>Team StaffOS</strong></p>

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "wouter";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
   BarChart,
@@ -23,6 +23,8 @@ import navLogoImage from "@/assets/nav logo.png";
 import lp01Image from "@/assets/lp01.png";
 import lp02Image from "@/assets/lp02.png";
 import lp03Image from "@/assets/lp03.png";
+import { useAuth } from "@/contexts/auth-context";
+import { getDefaultRouteForAuthUser } from "@/lib/auth-routing";
 
 type SearchSuggestion = {
   role: string;
@@ -119,6 +121,8 @@ const jobCategories = [
 ];
 
 export default function Landing() {
+  const [, navigate] = useLocation();
+  const { user, isLoading, isVerified } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [experience, setExperience] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
@@ -163,6 +167,17 @@ export default function Landing() {
         .sort((left, right) => right.score - left.score)
         .slice(0, 6)
     : [];
+
+  useEffect(() => {
+    if (isLoading || !isVerified) {
+      return;
+    }
+
+    const redirectPath = getDefaultRouteForAuthUser(user);
+    if (redirectPath) {
+      navigate(redirectPath);
+    }
+  }, [user, isLoading, isVerified, navigate]);
 
   return (
     <div

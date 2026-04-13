@@ -150,6 +150,24 @@ export default function Archives() {
 
   const displayedCandidates = filteredCandidates.slice(0, visibleCandidateRows);
   const isShowingAllCandidates = visibleCandidateRows >= filteredCandidates.length;
+  const handleBackNavigation = () => {
+    if (employee?.role === 'team_leader' || employee?.role === 'teamLead') {
+      setLocation('/team-leader');
+      return;
+    }
+
+    if (employee?.role === 'recruiter' || employee?.role === 'talent_advisor') {
+      setLocation('/recruiter-login-2');
+      return;
+    }
+
+    if (employee?.role === 'client') {
+      setLocation('/client');
+      return;
+    }
+
+    setLocation('/admin');
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6">
@@ -159,9 +177,7 @@ export default function Archives() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              window.history.back();
-            }}
+            onClick={handleBackNavigation}
             className="flex items-center gap-2"
             data-testid="button-back"
           >

@@ -1,860 +1,612 @@
-import { useState, useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { useEffect, useMemo, useState } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/hooks/use-toast";
-import { Camera, Upload, User, Contact, Briefcase, Award, Shield, X, Lock, Eye, EyeOff, MessageCircle, Bell } from "lucide-react";
-import { useAuth, useEmployeeAuth, useCandidateAuth } from "@/contexts/auth-context";
-import type { Employee, Candidate } from '@shared/schema';
+import { Camera, Mail, Pencil, Settings, Shield, UserCircle } from "lucide-react";
+import { useAuth, useCandidateAuth, useEmployeeAuth } from "@/contexts/auth-context";
+import { toast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
 
 interface ProfileSettingsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onChatClick?: () => void;
+  initialView?: "profile" | "settings";
 }
 
-export function ProfileSettingsModal({ open, onOpenChange, onChatClick }: ProfileSettingsModalProps) {
+type NotificationPrefs = {
+  email: boolean;
+  inApp: boolean;
+};
+
+const defaultNotifications: NotificationPrefs = {
+  email: true,
+  inApp: true,
+};
+
+const ADMIN_STORAGE_KEYS = {
+  autoRefresh: "adminPipelineAutoRefreshEnabled",
+  refreshSeconds: "adminPipelineRefreshSeconds",
+  performancePeriod: "adminDefaultPerformancePeriod",
+};
+
+export function ProfileSettingsModal({
+  open,
+  onOpenChange,
+  initialView = "profile",
+}: ProfileSettingsModalProps) {
   const { user, setUser } = useAuth();
   const employee = useEmployeeAuth();
   const candidate = useCandidateAuth();
-  const { toast } = useToast();
-  
-  const [isUploading, setIsUploading] = useState(false);
-  const [bannerFile, setBannerFile] = useState<File | null>(null);
-  const [profileFile, setProfileFile] = useState<File | null>(null);
-  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [activeView, setActiveView] = useState<"profile" | "settings">(
+    initialView === "settings" && employee?.role === "admin" ? "settings" : "profile",
+  );
+  const [profileData, setProfileData] = useState<any>(null);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isSavingSystemSettings, setIsSavingSystemSettings] = useState(false);
+  const [selectedProfileFile, setSelectedProfileFile] = useState<File | null>(null);
   const [profilePreview, setProfilePreview] = useState<string | null>(null);
-  
-  // Password change states
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-  
-  // Form data states
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPrefs>(defaultNotifications);
   const [formData, setFormData] = useState({
-    // Common fields
-    name: '',
-    email: '',
-    phone: '',
-    
-    // Employee specific
-    role: '',
-    department: '',
-    employeeId: '',
-    joiningDate: '',
-    reportingTo: '',
-    
-    // Candidate specific
-    company: '',
-    designation: '',
-    location: '',
-    experience: '',
-    skills: '',
+    name: "",
+    email: "",
+    phone: "",
+    role: "",
+    employeeId: "",
+    department: "",
+    joiningDate: "",
+  });
+  const [systemSettings, setSystemSettings] = useState({
+    pipelineAutoRefreshEnabled: true,
+    pipelineRefreshSeconds: "10",
+    adminDefaultPerformancePeriod: "monthly",
+    employeeWelcomeMessage: "",
   });
 
-  // Sync form data with auth context when user data loads
+  const isAdmin = employee?.role === "admin";
+
+  const endpoint = useMemo(() => {
+    if (employee?.role === "admin") return "/api/admin/profile";
+    if (employee?.role === "team_leader") return "/api/team-leader/profile";
+    if (employee?.role === "recruiter") return "/api/recruiter/profile";
+    if (employee?.role === "client") return "/api/client/profile";
+    if (candidate) return "/api/candidate/profile";
+    return null;
+  }, [candidate, employee?.role]);
+
+  const uploadEndpoint = useMemo(() => {
+    if (employee?.role === "admin") return "/api/admin/upload/profile";
+    if (employee?.role === "team_leader") return "/api/team-leader/upload/profile";
+    if (employee?.role === "recruiter") return "/api/recruiter/upload/profile";
+    if (employee?.role === "client") return "/api/client/upload/profile";
+    return "/api/upload/profile";
+  }, [employee?.role]);
+
   useEffect(() => {
-    const loadProfileData = async () => {
-      let profileData = {};
-      
-      // Load role-specific profile data from API
-      if (employee?.role) {
-        try {
-          let endpoint = '';
-          switch (employee.role) {
-            case 'recruiter':
-              endpoint = '/api/recruiter/profile';
-              break;
-            case 'team_leader':
-              endpoint = '/api/team-leader/profile';
-              break;
-            case 'admin':
-              endpoint = '/api/admin/profile';
-              break;
-            case 'client':
-              endpoint = '/api/client/profile';
-              break;
-          }
-          
-          if (endpoint) {
-            try {
-              const response = await apiRequest('GET', endpoint);
-              profileData = await response.json();
-            } catch (error) {
-              // Silently fail - profile data is optional
-            }
-          }
-        } catch (error) {
-          console.error('Failed to load profile data:', error);
-        }
+    if (!open) return;
+
+    setActiveView(initialView === "settings" && isAdmin ? "settings" : "profile");
+  }, [initialView, isAdmin, open]);
+
+  useEffect(() => {
+    if (!open || !endpoint) return;
+
+    const loadProfile = async () => {
+      try {
+        const response = await apiRequest("GET", endpoint);
+        const data = await response.json();
+        setProfileData(data);
+        setFormData({
+          name: data?.name || employee?.name || candidate?.fullName || "",
+          email: data?.email || employee?.email || candidate?.email || "",
+          phone: data?.phone || employee?.phone || candidate?.phone || "",
+          role: data?.role || employee?.role || "",
+          employeeId: data?.employeeId || employee?.employeeId || "",
+          department: data?.department || "",
+          joiningDate: data?.joiningDate || "",
+        });
+        setProfilePreview(data?.profilePicture || null);
+      } catch {
+        toast({
+          title: "Error",
+          description: "Failed to load profile details.",
+          variant: "destructive",
+        });
       }
-      
-      const updatedFormData = {
-        // Common fields - use API data first, then auth context as fallback
-        name: (profileData as any)?.name || employee?.name || candidate?.fullName || '',
-        email: (profileData as any)?.email || employee?.email || candidate?.email || '',
-        phone: (profileData as any)?.phone || employee?.phone || candidate?.phone || '',
-        
-        // Employee specific
-        role: (profileData as any)?.role || employee?.role || '',
-        department: (profileData as any)?.department || employee?.department || '',
-        employeeId: (profileData as any)?.employeeId || employee?.employeeId || '',
-        joiningDate: (profileData as any)?.joiningDate || employee?.joiningDate || '',
-        reportingTo: (profileData as any)?.reportingTo || employee?.reportingTo || '',
-        
-        // Candidate specific
-        company: candidate?.company || '',
-        designation: candidate?.designation || '',
-        location: candidate?.location || '',
-        experience: candidate?.experience || '',
-        skills: candidate?.skills || '',
-      };
-      
-      setFormData(updatedFormData);
     };
-    
-    loadProfileData();
-  }, [employee, candidate]);
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+    loadProfile();
+  }, [candidate?.email, candidate?.fullName, employee?.email, employee?.employeeId, employee?.name, endpoint, open]);
 
-  const handlePasswordChange = (field: string, value: string) => {
-    setPasswordData(prev => ({ ...prev, [field]: value }));
-  };
+  useEffect(() => {
+    if (!open || !isAdmin) return;
 
-  const handlePasswordSave = async () => {
-    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
-      toast({
-        title: "Validation Error",
-        description: "Please fill in all password fields.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast({
-        title: "Password Mismatch",
-        description: "New password and confirm password do not match.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (passwordData.newPassword.length < 6) {
-      toast({
-        title: "Password Too Short",
-        description: "New password must be at least 6 characters long.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsChangingPassword(true);
-    try {
-      const endpoint = user?.type === 'employee' 
-        ? '/api/employee/change-password' 
-        : '/api/candidate/change-password';
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: employee?.email || candidate?.email,
-          currentPassword: passwordData.currentPassword,
-          newPassword: passwordData.newPassword,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to change password');
+    const loadSystemSettings = async () => {
+      try {
+        const response = await apiRequest("GET", "/api/admin/system-settings");
+        const data = await response.json();
+        setSystemSettings({
+          pipelineAutoRefreshEnabled: window.localStorage.getItem(ADMIN_STORAGE_KEYS.autoRefresh) !== "false",
+          pipelineRefreshSeconds: window.localStorage.getItem(ADMIN_STORAGE_KEYS.refreshSeconds) || "10",
+          adminDefaultPerformancePeriod: window.localStorage.getItem(ADMIN_STORAGE_KEYS.performancePeriod) || "monthly",
+          employeeWelcomeMessage: data?.employeeWelcomeMessage || "",
+        });
+      } catch {
+        setSystemSettings((prev) => ({
+          ...prev,
+          pipelineAutoRefreshEnabled: window.localStorage.getItem(ADMIN_STORAGE_KEYS.autoRefresh) !== "false",
+          pipelineRefreshSeconds: window.localStorage.getItem(ADMIN_STORAGE_KEYS.refreshSeconds) || "10",
+          adminDefaultPerformancePeriod: window.localStorage.getItem(ADMIN_STORAGE_KEYS.performancePeriod) || "monthly",
+        }));
       }
+    };
 
-      toast({
-        title: "Password Changed",
-        description: "Your password has been updated successfully.",
-      });
+    loadSystemSettings();
+  }, [isAdmin, open]);
 
-      // Clear password fields
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      });
-    } catch (error: any) {
-      toast({
-        title: "Password Change Failed",
-        description: error.message || "Failed to change password. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsChangingPassword(false);
-    }
+  const handleFormChange = (field: keyof typeof formData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleFileSelect = (type: 'banner' | 'profile', file: File) => {
+  const handleProfileFileChange = (file?: File) => {
+    if (!file) return;
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const preview = e.target?.result as string;
-      if (type === 'banner') {
-        setBannerFile(file);
-        setBannerPreview(preview);
-      } else {
-        setProfileFile(file);
-        setProfilePreview(preview);
-      }
+    reader.onload = (event) => {
+      setSelectedProfileFile(file);
+      setProfilePreview(String(event.target?.result || ""));
     };
     reader.readAsDataURL(file);
   };
 
-  const handleImageUpload = async (file: File, type: 'banner' | 'profile') => {
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-      
-      let endpoint = '';
-      if (user?.type === 'employee' && employee?.role) {
-        switch (employee.role) {
-          case 'recruiter':
-            endpoint = `/api/recruiter/upload/${type}`;
-            break;
-          case 'team_leader':
-            endpoint = `/api/team-leader/upload/${type}`;
-            break;
-          case 'admin':
-            endpoint = `/api/admin/upload/${type}`;
-            break;
-          case 'client':
-            endpoint = `/api/client/upload/${type}`;
-            break;
-          default:
-            endpoint = `/api/upload/${type}`;
-        }
-      } else {
-        endpoint = `/api/upload/${type}`;
-      }
-      
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!response.ok) throw new Error(`Failed to upload ${type}`);
-      
-      const result = await response.json();
-      return result.url;
-    } catch (error) {
-      console.error(`${type} upload error:`, error);
-      throw error;
+  const uploadProfileImage = async () => {
+    if (!selectedProfileFile) return profileData?.profilePicture || null;
+    const uploadForm = new FormData();
+    uploadForm.append("file", selectedProfileFile);
+    const response = await fetch(uploadEndpoint, {
+      method: "POST",
+      body: uploadForm,
+      credentials: "include",
+    });
+    if (!response.ok) {
+      throw new Error("Failed to upload profile image");
     }
+    const result = await response.json();
+    return result.url || null;
   };
 
-  const handleSave = async () => {
-    setIsUploading(true);
+  const handleSaveProfile = async () => {
+    if (!endpoint || !isEditingProfile) return;
+    setIsSavingProfile(true);
     try {
-      let bannerUrl = null;
-      let profileUrl = null;
-
-      // Upload files if selected
-      if (bannerFile) {
-        bannerUrl = await handleImageUpload(bannerFile, 'banner');
-      }
-      if (profileFile) {
-        profileUrl = await handleImageUpload(profileFile, 'profile');
-      }
-
-      // Prepare profile update data
-      const updateData: any = {
-        ...formData,
+      const uploadedProfilePicture = await uploadProfileImage();
+      const payload = {
+        name: formData.name,
+        phone: formData.phone,
+        department: formData.department,
+        profilePicture: uploadedProfilePicture,
       };
-
-      if (bannerUrl) updateData.bannerImage = bannerUrl;
-      if (profileUrl) updateData.profilePicture = profileUrl;
-
-      // API endpoint based on user type and role
-      let apiEndpoint = '/api/profile'; // Default fallback
-      
-      if (user?.type === 'employee' && employee?.role) {
-        switch (employee.role) {
-          case 'recruiter':
-            apiEndpoint = '/api/recruiter/profile';
-            break;
-          case 'team_leader':
-            apiEndpoint = '/api/team-leader/profile';
-            break;
-          case 'admin':
-            apiEndpoint = '/api/admin/profile';
-            break;
-          case 'client':
-            apiEndpoint = '/api/client/profile';
-            break;
-          default:
-            apiEndpoint = '/api/employee/profile';
-        }
-      } else if (user?.type === 'candidate') {
-        apiEndpoint = '/api/candidate/profile';
-      }
-
-      const response = await fetch(apiEndpoint, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updateData),
-      });
-
-      if (!response.ok) throw new Error('Failed to update profile');
-
+      const response = await apiRequest("PATCH", endpoint, payload);
       const updatedProfile = await response.json();
-      
-      // Update auth context with new data
+      setProfileData(updatedProfile);
+      setSelectedProfileFile(null);
+      setIsEditingProfile(false);
       if (user) {
         setUser({
           ...user,
-          data: updatedProfile
+          data: {
+            ...(user as any).data,
+            name: updatedProfile?.name ?? (user as any).data?.name,
+            phone: updatedProfile?.phone ?? (user as any).data?.phone,
+            department: updatedProfile?.department ?? (user as any).data?.department,
+            profilePicture: updatedProfile?.profilePicture ?? (user as any).data?.profilePicture,
+            bannerImage: updatedProfile?.bannerImage ?? (user as any).data?.bannerImage,
+          },
         });
       }
-
       toast({
-        title: "Profile Updated",
-        description: "Your profile has been updated successfully.",
+        title: "Success",
+        description: "Profile updated successfully.",
       });
-
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Profile update error:', error);
+    } catch {
       toast({
-        title: "Update Failed",
-        description: "Failed to update profile. Please try again.",
+        title: "Error",
+        description: "Failed to save profile changes.",
         variant: "destructive",
       });
     } finally {
-      setIsUploading(false);
+      setIsSavingProfile(false);
     }
   };
 
-  const clearImagePreview = (type: 'banner' | 'profile') => {
-    if (type === 'banner') {
-      setBannerFile(null);
-      setBannerPreview(null);
-    } else {
-      setProfileFile(null);
-      setProfilePreview(null);
+  const handleSaveSystemSettings = async () => {
+    if (!isAdmin) return;
+
+    setIsSavingSystemSettings(true);
+    try {
+      await apiRequest("PATCH", "/api/admin/system-settings", {
+        employeeWelcomeMessage: systemSettings.employeeWelcomeMessage,
+      });
+
+      window.localStorage.setItem(ADMIN_STORAGE_KEYS.autoRefresh, String(systemSettings.pipelineAutoRefreshEnabled));
+      window.localStorage.setItem(ADMIN_STORAGE_KEYS.refreshSeconds, systemSettings.pipelineRefreshSeconds);
+      window.localStorage.setItem(ADMIN_STORAGE_KEYS.performancePeriod, systemSettings.adminDefaultPerformancePeriod);
+      window.dispatchEvent(new CustomEvent("admin-settings-updated"));
+
+      toast({
+        title: "Success",
+        description: "System settings updated successfully.",
+      });
+    } catch {
+      toast({
+        title: "Error",
+        description: "Failed to update system settings.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingSystemSettings(false);
     }
   };
 
-  const currentBannerImage = bannerPreview || (employee as any)?.bannerImage || (candidate as any)?.bannerImage;
-  const currentProfileImage = profilePreview || (employee as any)?.profilePicture || (candidate as any)?.profilePicture;
+  const profileImage = profilePreview || profileData?.profilePicture || null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle className="flex items-center gap-2 text-2xl">
-              <User className="h-6 w-6" />
-              Profile Settings
-            </DialogTitle>
-            {onChatClick && (user?.type === 'candidate' || (user?.type === 'employee' && employee?.role === 'client')) && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  onChatClick();
-                  onOpenChange(false);
-                }}
-                className="flex items-center gap-2"
-                data-testid="button-profile-chat"
+      <DialogContent className="max-h-[92vh] max-w-5xl overflow-hidden border-0 bg-[#f5f7fb] p-0 shadow-2xl">
+        <DialogHeader className="border-b border-slate-200 bg-white px-6 py-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <DialogTitle className="text-xl font-semibold text-slate-900">
+                {activeView === "settings" ? "System Settings" : "Account Profile"}
+              </DialogTitle>
+              <DialogDescription className="text-sm text-slate-500">
+                {activeView === "settings"
+                  ? "Manage core admin preferences and the welcome message used for new user onboarding."
+                  : "Review your account details, profile photo, and edit access from one place."}
+              </DialogDescription>
+            </div>
+
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setActiveView((prev) => (prev === "profile" ? "settings" : "profile"))}
+                className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                aria-label={activeView === "profile" ? "Open settings" : "Open profile"}
               >
-                <MessageCircle className="h-4 w-4" />
-                Start Chat
-              </Button>
+                {activeView === "profile" ? <Settings className="h-4 w-4" /> : <UserCircle className="h-4 w-4" />}
+              </button>
             )}
           </div>
-          <DialogDescription>
-            Manage your profile information, photos, and account details.
-          </DialogDescription>
         </DialogHeader>
 
-        <div className="mt-6">
-          <Tabs defaultValue="basic" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="basic" className="flex items-center gap-2">
-                <User className="h-4 w-4" />
-                Profile
-              </TabsTrigger>
-              <TabsTrigger value="notifications" className="flex items-center gap-2">
-                <Bell className="h-4 w-4" />
-                Notifications
-              </TabsTrigger>
-              <TabsTrigger value="privacy" className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                Privacy
-              </TabsTrigger>
-              <TabsTrigger value="security" className="flex items-center gap-2">
-                <Lock className="h-4 w-4" />
-                Security
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="basic" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
-                    Basic Information
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="name">Full Name</Label>
-                      <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => handleInputChange('name', e.target.value)}
-                        placeholder="Enter your full name"
-                        data-testid="input-profile-name"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        placeholder="Enter your email"
-                        data-testid="input-profile-email"
-                      />
-                    </div>
+        <div className="grid max-h-[calc(92vh-86px)] gap-0 overflow-hidden lg:grid-cols-[280px_1fr]">
+          <div className="overflow-y-auto border-r border-slate-200 bg-[#eef3fb] px-6 py-6">
+            <div className="flex flex-col items-center text-center">
+              <div className="relative">
+                {profileImage ? (
+                  <img src={profileImage} alt="Profile" className="h-24 w-24 rounded-[28px] object-cover shadow-md" />
+                ) : (
+                  <div className="flex h-24 w-24 items-center justify-center rounded-[28px] bg-gradient-to-br from-indigo-500 to-cyan-500 text-3xl font-semibold text-white shadow-md">
+                    {(formData.name || "A").trim().charAt(0).toUpperCase()}
                   </div>
-                  {user?.type === 'employee' && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="role">Role</Label>
-                        <Input
-                          id="role"
-                          value={formData.role}
-                          onChange={(e) => handleInputChange('role', e.target.value)}
-                          placeholder="Enter your role"
-                          data-testid="input-profile-role"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="employeeId">Employee ID</Label>
-                        <Input
-                          id="employeeId"
-                          value={formData.employeeId}
-                          onChange={(e) => handleInputChange('employeeId', e.target.value)}
-                          placeholder="Employee ID"
-                          data-testid="input-employee-id"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                )}
+                <Label
+                  htmlFor="profile-image"
+                  className={`absolute -bottom-2 right-0 flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-white shadow-lg transition ${
+                    isEditingProfile ? "cursor-pointer hover:bg-slate-700" : "cursor-not-allowed opacity-60"
+                  }`}
+                >
+                  <Camera className="h-4 w-4" />
+                </Label>
+                <Input
+                  id="profile-image"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  disabled={!isEditingProfile}
+                  onChange={(event) => handleProfileFileChange(event.target.files?.[0])}
+                />
+              </div>
 
-            <TabsContent value="notifications" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Bell className="h-5 w-5" />
-                    Notification Preferences
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Job Match Alerts</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Get notified when new jobs match your profile</p>
-                      </div>
-                      <input type="checkbox" className="w-5 h-5" defaultChecked />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Application Updates</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Updates about your job applications</p>
-                      </div>
-                      <input type="checkbox" className="w-5 h-5" defaultChecked />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Messages from Recruiters</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Direct messages from hiring managers</p>
-                      </div>
-                      <input type="checkbox" className="w-5 h-5" defaultChecked />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Email Notifications</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Receive email updates for important notifications</p>
-                      </div>
-                      <input type="checkbox" className="w-5 h-5" defaultChecked />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">Weekly Job Digest</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Weekly summary of recommended jobs</p>
-                      </div>
-                      <input type="checkbox" className="w-5 h-5" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+              <h3 className="mt-5 text-lg font-semibold text-slate-900">{formData.name || "Admin"}</h3>
+              <p className="text-sm text-slate-500">{formData.role || "Admin"}</p>
 
-            <TabsContent value="photos" className="mt-6">
-              <div className="space-y-6">
-                {/* Banner Image */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Banner Image</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="relative">
-                      <div className="h-48 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg overflow-hidden relative">
-                        {currentBannerImage && (
-                          <>
-                            <img 
-                              src={currentBannerImage} 
-                              alt="Banner" 
-                              className="w-full h-full object-cover"
-                            />
-                            {bannerPreview && (
-                              <button
-                                onClick={() => clearImagePreview('banner')}
-                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                                data-testid="button-remove-banner-preview"
-                              >
-                                <X className="h-4 w-4" />
-                              </button>
-                            )}
-                          </>
-                        )}
-                        <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                          <Label htmlFor="banner-upload" className="cursor-pointer">
-                            <div className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-white/30">
-                              <Upload className="h-4 w-4" />
-                              Change Banner
-                            </div>
-                          </Label>
-                          <Input
-                            id="banner-upload"
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => e.target.files?.[0] && handleFileSelect('banner', e.target.files[0])}
-                            className="hidden"
-                            data-testid="input-banner-upload"
-                          />
-                        </div>
-                      </div>
+              <div className="mt-6 grid w-full gap-3">
+                <Card className="border-slate-200 bg-white/80 shadow-none">
+                  <CardContent className="flex items-start gap-3 p-4 text-left">
+                    <Mail className="mt-0.5 h-4 w-4 text-slate-400" />
+                    <div>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Email</div>
+                      <div className="mt-1 text-sm font-medium text-slate-700">{formData.email || "-"}</div>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Profile Picture */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Profile Picture</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center gap-6">
-                      <div className="relative">
-                        <img 
-                          src={currentProfileImage || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&h=150"} 
-                          alt="Profile" 
-                          className="w-24 h-24 rounded-full object-cover border-4 border-gray-200 dark:border-gray-700"
-                        />
-                        {profilePreview && (
-                          <button
-                            onClick={() => clearImagePreview('profile')}
-                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                            data-testid="button-remove-profile-preview"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        )}
-                      </div>
-                      <div>
-                        <Label htmlFor="profile-upload" className="cursor-pointer">
-                          <Button variant="outline" type="button">
-                            <Camera className="h-4 w-4 mr-2" />
-                            Change Photo
-                          </Button>
-                        </Label>
-                        <Input
-                          id="profile-upload"
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => e.target.files?.[0] && handleFileSelect('profile', e.target.files[0])}
-                          className="hidden"
-                          data-testid="input-profile-upload"
-                        />
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                          Recommended: Square image, at least 200x200px
-                        </p>
-                      </div>
+                <Card className="border-slate-200 bg-white/80 shadow-none">
+                  <CardContent className="flex items-start gap-3 p-4 text-left">
+                    <Shield className="mt-0.5 h-4 w-4 text-slate-400" />
+                    <div>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Role</div>
+                      <div className="mt-1 text-sm font-medium text-slate-700">{formData.role || "-"}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-slate-200 bg-white/80 shadow-none">
+                  <CardContent className="flex items-start gap-3 p-4 text-left">
+                    <UserCircle className="mt-0.5 h-4 w-4 text-slate-400" />
+                    <div>
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Joined</div>
+                      <div className="mt-1 text-sm font-medium text-slate-700">{formData.joiningDate || "-"}</div>
                     </div>
                   </CardContent>
                 </Card>
               </div>
-            </TabsContent>
+            </div>
+          </div>
 
-            <TabsContent value="work" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    {user?.type === 'employee' ? <Briefcase className="h-5 w-5" /> : <Award className="h-5 w-5" />}
-                    {user?.type === 'employee' ? 'Work Details' : 'Professional Experience'}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {user?.type === 'employee' ? (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="department">Department</Label>
-                        <Input
-                          id="department"
-                          value={formData.department}
-                          onChange={(e) => handleInputChange('department', e.target.value)}
-                          placeholder="Department"
-                          data-testid="input-department"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="joiningDate">Joining Date</Label>
-                        <Input
-                          id="joiningDate"
-                          type="date"
-                          value={formData.joiningDate}
-                          onChange={(e) => handleInputChange('joiningDate', e.target.value)}
-                          data-testid="input-joining-date"
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <Label htmlFor="reportingTo">Reporting To</Label>
-                        <Input
-                          id="reportingTo"
-                          value={formData.reportingTo}
-                          onChange={(e) => handleInputChange('reportingTo', e.target.value)}
-                          placeholder="Manager/Supervisor"
-                          data-testid="input-reporting-to"
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label htmlFor="company">Current Company</Label>
-                          <Input
-                            id="company"
-                            value={formData.company}
-                            onChange={(e) => handleInputChange('company', e.target.value)}
-                            placeholder="Company name"
-                            data-testid="input-company"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="designation">Designation</Label>
-                          <Input
-                            id="designation"
-                            value={formData.designation}
-                            onChange={(e) => handleInputChange('designation', e.target.value)}
-                            placeholder="Your current role"
-                            data-testid="input-designation"
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label htmlFor="experience">Experience</Label>
-                        <Input
-                          id="experience"
-                          value={formData.experience}
-                          onChange={(e) => handleInputChange('experience', e.target.value)}
-                          placeholder="Years of experience"
-                          data-testid="input-experience"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="skills">Skills</Label>
-                        <Textarea
-                          id="skills"
-                          value={formData.skills}
-                          onChange={(e) => handleInputChange('skills', e.target.value)}
-                          placeholder="List your key skills (comma separated)"
-                          rows={3}
-                          data-testid="textarea-skills"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+          <div className="overflow-y-auto px-6 py-6">
+            {activeView === "profile" ? (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-900">Profile Details</h3>
+                    <p className="text-sm text-slate-500">Use the edit button to unlock changes for your account information.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingProfile((prev) => !prev)}
+                    className={`flex h-11 w-11 items-center justify-center rounded-2xl border transition ${
+                      isEditingProfile
+                        ? "border-slate-900 bg-slate-900 text-white"
+                        : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                    }`}
+                    aria-label="Toggle profile edit"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                </div>
 
-            <TabsContent value="security" className="mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Lock className="h-5 w-5" />
-                    Password & Security
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="currentPassword">Current Password</Label>
-                      <div className="relative">
-                        <Input
-                          id="currentPassword"
-                          type={showCurrentPassword ? "text" : "password"}
-                          value={passwordData.currentPassword}
-                          onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
-                          placeholder="Enter your current password"
-                          data-testid="input-current-password"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                          data-testid="button-toggle-current-password"
-                        >
-                          {showCurrentPassword ? (
-                            <EyeOff className="h-4 w-4 text-gray-400" />
-                          ) : (
-                            <Eye className="h-4 w-4 text-gray-400" />
-                          )}
-                        </button>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-slate-700">Full Name</Label>
+                    <Input
+                      value={formData.name}
+                      onChange={(e) => handleFormChange("name", e.target.value)}
+                      disabled={!isEditingProfile}
+                      className="h-11 bg-white disabled:bg-slate-100 disabled:text-slate-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-slate-700">Phone</Label>
+                    <Input
+                      value={formData.phone}
+                      onChange={(e) => handleFormChange("phone", e.target.value)}
+                      disabled={!isEditingProfile}
+                      className="h-11 bg-white disabled:bg-slate-100 disabled:text-slate-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-slate-700">Department</Label>
+                    <Input
+                      value={formData.department}
+                      onChange={(e) => handleFormChange("department", e.target.value)}
+                      disabled={!isEditingProfile}
+                      className="h-11 bg-white disabled:bg-slate-100 disabled:text-slate-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium text-slate-700">Email</Label>
+                    <Input value={formData.email} readOnly className="h-11 bg-slate-100 text-slate-500" />
+                  </div>
+                </div>
+
+                <Card className="border-slate-200 bg-white shadow-none">
+                  <CardContent className="space-y-3 p-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h4 className="text-sm font-semibold text-slate-900">Password & Security</h4>
+                        <p className="text-sm text-slate-500">
+                          Password change is intentionally disabled for now until the secured backend flow is finalized.
+                        </p>
                       </div>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="newPassword">New Password</Label>
-                      <div className="relative">
-                        <Input
-                          id="newPassword"
-                          type={showNewPassword ? "text" : "password"}
-                          value={passwordData.newPassword}
-                          onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
-                          placeholder="Enter your new password"
-                          data-testid="input-new-password"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowNewPassword(!showNewPassword)}
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                          data-testid="button-toggle-new-password"
-                        >
-                          {showNewPassword ? (
-                            <EyeOff className="h-4 w-4 text-gray-400" />
-                          ) : (
-                            <Eye className="h-4 w-4 text-gray-400" />
-                          )}
-                        </button>
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Password must be at least 6 characters long
-                      </p>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                      <div className="relative">
-                        <Input
-                          id="confirmPassword"
-                          type={showConfirmPassword ? "text" : "password"}
-                          value={passwordData.confirmPassword}
-                          onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
-                          placeholder="Confirm your new password"
-                          data-testid="input-confirm-password"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                          data-testid="button-toggle-confirm-password"
-                        >
-                          {showConfirmPassword ? (
-                            <EyeOff className="h-4 w-4 text-gray-400" />
-                          ) : (
-                            <Eye className="h-4 w-4 text-gray-400" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div className="pt-4">
-                      <Button 
-                        onClick={handlePasswordSave} 
-                        disabled={isChangingPassword || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword}
-                        data-testid="button-change-password"
-                      >
-                        {isChangingPassword ? (
-                          <>
-                            <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
-                            Changing Password...
-                          </>
-                        ) : (
-                          'Change Password'
-                        )}
+                      <Button type="button" disabled className="h-10 rounded-xl bg-slate-200 px-4 text-slate-500 hover:bg-slate-200">
+                        Change Password
                       </Button>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
+                  </CardContent>
+                </Card>
 
-        <div className="flex justify-end gap-3 mt-8 pt-6 border-t">
-          <Button 
-            variant="outline" 
-            onClick={() => onOpenChange(false)}
-            disabled={isUploading}
-            data-testid="button-cancel-profile-settings"
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleSave} 
-            disabled={isUploading}
-            data-testid="button-save-profile-settings"
-          >
-            {isUploading ? (
-              <>
-                <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
-                Saving...
-              </>
+                <div className="flex justify-end gap-3">
+                  {isEditingProfile && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-11 rounded-xl"
+                      onClick={() => {
+                        setIsEditingProfile(false);
+                        setSelectedProfileFile(null);
+                        setProfilePreview(profileData?.profilePicture || null);
+                        setFormData((prev) => ({
+                          ...prev,
+                          name: profileData?.name || employee?.name || candidate?.fullName || "",
+                          phone: profileData?.phone || employee?.phone || candidate?.phone || "",
+                          department: profileData?.department || "",
+                        }));
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                  <Button
+                    onClick={handleSaveProfile}
+                    disabled={isSavingProfile || !isEditingProfile}
+                    className="h-11 rounded-xl bg-slate-900 px-5 text-white hover:bg-slate-800"
+                  >
+                    {isSavingProfile ? "Saving..." : "Save Profile"}
+                  </Button>
+                </div>
+              </div>
             ) : (
-              'Save Changes'
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">System Settings</h3>
+                  <p className="text-sm text-slate-500">Keep this focused on the few admin settings that actually affect daily operations.</p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Card className="border-slate-200 bg-white shadow-none">
+                    <CardContent className="space-y-4 p-5">
+                      <div>
+                        <h4 className="text-sm font-semibold text-slate-900">Pipeline Refresh</h4>
+                        <p className="text-sm text-slate-500">Control how frequently the admin pipeline refreshes.</p>
+                      </div>
+
+                      <div className="flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3">
+                        <div>
+                          <div className="text-sm font-medium text-slate-800">Auto-refresh pipeline</div>
+                          <div className="text-xs text-slate-500">Keeps pipeline data updated in the admin dashboard.</div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSystemSettings((prev) => ({
+                              ...prev,
+                              pipelineAutoRefreshEnabled: !prev.pipelineAutoRefreshEnabled,
+                            }))
+                          }
+                          className={`relative h-6 w-11 rounded-full transition ${
+                            systemSettings.pipelineAutoRefreshEnabled ? "bg-emerald-500" : "bg-slate-300"
+                          }`}
+                        >
+                          <span
+                            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition ${
+                              systemSettings.pipelineAutoRefreshEnabled ? "left-5" : "left-0.5"
+                            }`}
+                          />
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-slate-700">Refresh interval in seconds</Label>
+                        <Input
+                          type="number"
+                          min={5}
+                          max={120}
+                          value={systemSettings.pipelineRefreshSeconds}
+                          onChange={(e) =>
+                            setSystemSettings((prev) => ({
+                              ...prev,
+                              pipelineRefreshSeconds: e.target.value,
+                            }))
+                          }
+                          className="h-11 bg-white"
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-slate-200 bg-white shadow-none">
+                    <CardContent className="space-y-4 p-5">
+                      <div>
+                        <h4 className="text-sm font-semibold text-slate-900">Performance Defaults</h4>
+                        <p className="text-sm text-slate-500">Choose the default period used when the admin performance page opens.</p>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2">
+                        {["monthly", "quarterly", "yearly"].map((period) => (
+                          <button
+                            key={period}
+                            type="button"
+                            onClick={() =>
+                              setSystemSettings((prev) => ({
+                                ...prev,
+                                adminDefaultPerformancePeriod: period,
+                              }))
+                            }
+                            className={`rounded-2xl border px-3 py-3 text-sm font-medium capitalize transition ${
+                              systemSettings.adminDefaultPerformancePeriod === period
+                                ? "border-slate-900 bg-slate-900 text-white"
+                                : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                            }`}
+                          >
+                            {period}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                        <div className="text-sm font-medium text-slate-800">Notification defaults</div>
+                        <div className="mt-3 space-y-3">
+                          {[
+                            { key: "email", label: "Email updates" },
+                            { key: "inApp", label: "In-app updates" },
+                          ].map((item) => (
+                            <div key={item.key} className="flex items-center justify-between">
+                              <span className="text-sm text-slate-600">{item.label}</span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setNotificationPrefs((prev) => ({
+                                    ...prev,
+                                    [item.key]: !prev[item.key as keyof NotificationPrefs],
+                                  }))
+                                }
+                                className={`relative h-6 w-11 rounded-full transition ${
+                                  notificationPrefs[item.key as keyof NotificationPrefs] ? "bg-emerald-500" : "bg-slate-300"
+                                }`}
+                              >
+                                <span
+                                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition ${
+                                    notificationPrefs[item.key as keyof NotificationPrefs] ? "left-5" : "left-0.5"
+                                  }`}
+                                />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card className="border-slate-200 bg-white shadow-none">
+                  <CardContent className="space-y-4 p-5">
+                    <div>
+                      <h4 className="text-sm font-semibold text-slate-900">Welcome Mail Message</h4>
+                      <p className="text-sm text-slate-500">
+                        This text is used in the employee welcome email. Login credentials are still added automatically by the system.
+                      </p>
+                    </div>
+
+                    <Textarea
+                      value={systemSettings.employeeWelcomeMessage}
+                      onChange={(e) =>
+                        setSystemSettings((prev) => ({
+                          ...prev,
+                          employeeWelcomeMessage: e.target.value,
+                        }))
+                      }
+                      className="min-h-[220px] resize-none rounded-2xl border-slate-200 bg-slate-50 text-sm"
+                    />
+                  </CardContent>
+                </Card>
+
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleSaveSystemSettings}
+                    disabled={isSavingSystemSettings}
+                    className="h-11 rounded-xl bg-slate-900 px-5 text-white hover:bg-slate-800"
+                  >
+                    {isSavingSystemSettings ? "Saving..." : "Save Settings"}
+                  </Button>
+                </div>
+              </div>
             )}
-          </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -5,11 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { Upload, FileText, X } from "lucide-react";
+import { Check, FileText, Upload, X } from "lucide-react";
 
 interface AddRequirementModalProps {
   isOpen: boolean;
@@ -71,6 +70,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
   const [jdFilePreviewUrl, setJdFilePreviewUrl] = useState<string | null>(null);
   const [isUploadingJd, setIsUploadingJd] = useState(false);
   const [jdText, setJdText] = useState<string>('');
+  const [positionsInput, setPositionsInput] = useState<string>(String(initialData?.noOfPositions ?? 1));
 
   // Update form data when initialData changes
   useEffect(() => {
@@ -87,6 +87,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
         talentAdvisor: initialData.talentAdvisor || prev.talentAdvisor,
         teamLead: initialData.teamLead || prev.teamLead,
       }));
+      setPositionsInput(String(initialData.noOfPositions ?? 1));
       // If JD file URL is provided in initialData, set it as preview URL
       if (initialData.jdFile) {
         setJdFilePreviewUrl(initialData.jdFile);
@@ -95,8 +96,24 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
       if (initialData.jdText) {
         setJdText(initialData.jdText);
       }
+    } else if (isOpen) {
+      setFormData({
+        position: '',
+        noOfPositions: 1,
+        splitRequirement: false,
+        criticality: '',
+        toughness: '',
+        company: '',
+        spoc: '',
+        talentAdvisor: '',
+        teamLead: ''
+      });
+      setPositionsInput('1');
+      setJdText('');
+      setJdFile(null);
+      setJdFilePreviewUrl(null);
     }
-  }, [initialData]);
+  }, [initialData, isOpen]);
 
   // Fetch all employees from backend
   const { data: employees = [], isLoading: isLoadingEmployees } = useQuery<Employee[]>({
@@ -286,6 +303,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
       talentAdvisor: '',
       teamLead: ''
     });
+    setPositionsInput('1');
     setJdFile(null);
     if (jdFilePreviewUrl) {
       URL.revokeObjectURL(jdFilePreviewUrl);
@@ -342,12 +360,35 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
   };
 
   const handlePositionsChange = (value: string) => {
-    const parsed = Number(value);
+    const sanitized = value.replace(/[^\d]/g, '');
+    setPositionsInput(sanitized);
+
+    if (sanitized === '') {
+      setFormData(prev => ({
+        ...prev,
+        noOfPositions: 0,
+        splitRequirement: false
+      }));
+      return;
+    }
+
+    const parsed = Number(sanitized);
     setFormData(prev => ({
       ...prev,
       noOfPositions: Number.isFinite(parsed) && parsed > 0 ? parsed : 1,
       splitRequirement: parsed >= 5 ? prev.splitRequirement : false
     }));
+  };
+
+  const handlePositionsBlur = () => {
+    if (!positionsInput || Number(positionsInput) < 1) {
+      setPositionsInput('1');
+      setFormData(prev => ({
+        ...prev,
+        noOfPositions: 1,
+        splitRequirement: false
+      }));
+    }
   };
 
   return (
@@ -424,10 +465,12 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
                 </Label>
                 <Input
                   id="noOfPositions"
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   min={1}
-                  value={formData.noOfPositions}
+                  value={positionsInput}
                   onChange={(e) => handlePositionsChange(e.target.value)}
+                  onBlur={handlePositionsBlur}
                   placeholder="1"
                   className="bg-gray-50 border-slate-200 placeholder:text-slate-300 dark:bg-gray-800 dark:border-slate-700 dark:placeholder:text-slate-500"
                   required
@@ -517,13 +560,16 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
                   }`}
                   data-testid="button-split-requirement"
                 >
-                  <Checkbox
-                    id="splitRequirement"
-                    checked={formData.splitRequirement}
-                    disabled={formData.noOfPositions < 5}
-                    onCheckedChange={() => {}}
-                    className="rounded-none pointer-events-none border-sky-400 data-[state=checked]:bg-sky-500 data-[state=checked]:text-white"
-                  />
+                  <span
+                    aria-hidden="true"
+                    className={`flex h-5 w-5 items-center justify-center rounded-sm border ${
+                      formData.splitRequirement
+                        ? 'border-sky-500 bg-sky-500 text-white'
+                        : 'border-slate-300 bg-white text-transparent dark:border-slate-600 dark:bg-slate-900'
+                    }`}
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                  </span>
                   <span className="text-sm font-medium">Split Requirement</span>
                 </button>
               </div>
@@ -611,7 +657,7 @@ export default function AddRequirementModal({ isOpen, onClose, initialData, onSu
             <Button
               type="submit"
               disabled={createRequirementMutation.isPending || updateRequirementMutation.isPending || isUploadingJd}
-              className="bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-2 rounded-md"
+              className="bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-2 rounded-[6px]"
               data-testid="button-add-requirement"
             >
               {isUploadingJd ? 'Uploading JD...' : isEditMode ? (updateRequirementMutation.isPending ? 'Updating...' : 'Update Requirement') : (createRequirementMutation.isPending ? 'Adding...' : 'Submit Requirement')}

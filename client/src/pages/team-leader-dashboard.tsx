@@ -1392,7 +1392,15 @@ export default function TeamLeaderDashboard() {
                               </td>
                               <td className="p-3 text-gray-900">{requirement.company}</td>
                               <td className="p-3 text-gray-900">{requirement.spoc}</td>
-                              <td className="p-3 text-gray-900">{requirement.talentAdvisor || 'not-assigned'}</td>
+                              <td className="p-3 text-gray-900">
+                                {requirement.needsTalentAdvisorReassignment && requirement.talentAdvisor ? (
+                                  <span className="inline-flex rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700">
+                                    {requirement.talentAdvisor}
+                                  </span>
+                                ) : (
+                                  requirement.talentAdvisor || 'not-assigned'
+                                )}
+                              </td>
                               <td className="p-3">
                                 {requirement.jdFile ? (
                                   <Button
@@ -2796,7 +2804,13 @@ export default function TeamLeaderDashboard() {
                             {requirement.managementStatus === 'closed' && requirement.isRecentlyClosed ? (
                               <span className="text-sm font-medium text-red-700">Archived</span>
                             ) : requirement.talentAdvisor ? (
-                              <span className="text-gray-600 dark:text-gray-400">{requirement.talentAdvisor}</span>
+                              requirement.needsTalentAdvisorReassignment ? (
+                                <span className="inline-flex rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                                  {requirement.talentAdvisor}
+                                </span>
+                              ) : (
+                                <span className="text-gray-600 dark:text-gray-400">{requirement.talentAdvisor}</span>
+                              )
                             ) : (
                               <Button 
                                 size="sm" 

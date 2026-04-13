@@ -67,7 +67,16 @@ interface Requirement {
   sourceDetails?: string | null;
   jdFile?: string;
   jdText?: string;
+  talentAdvisorId?: string | null;
+  assignmentStatus?: string;
+  needsTalentAdvisorReassignment?: boolean;
 }
+
+const getStoredAdminSetting = (key: string, fallback: string) => {
+  if (typeof window === 'undefined') return fallback;
+  const stored = window.localStorage.getItem(key);
+  return stored ?? fallback;
+};
 
 // Requirements data for pagination
 const requirementsData = [
@@ -741,8 +750,24 @@ function ImpactMetricsEditor() {
   );
 }
 
-// Client Settings Section Component
-function ClientSettingsSection() {
+// Admin Settings Section Component
+function AdminSettingsSection({
+  adminProfile,
+  pipelineAutoRefreshEnabled,
+  setPipelineAutoRefreshEnabled,
+  pipelineRefreshSeconds,
+  setPipelineRefreshSeconds,
+  adminDefaultPerformancePeriod,
+  setAdminDefaultPerformancePeriod,
+}: {
+  adminProfile: typeof initialAdminProfile;
+  pipelineAutoRefreshEnabled: boolean;
+  setPipelineAutoRefreshEnabled: (value: boolean) => void;
+  pipelineRefreshSeconds: string;
+  setPipelineRefreshSeconds: (value: string) => void;
+  adminDefaultPerformancePeriod: string;
+  setAdminDefaultPerformancePeriod: (value: string) => void;
+}) {
   const queryClient = useQueryClient();
   const [isEditingFeedback, setIsEditingFeedback] = useState(false);
   const [avgDaysValue, setAvgDaysValue] = useState<string>("");
@@ -839,14 +864,84 @@ function ClientSettingsSection() {
   if (isLoading) {
     return (
       <div className="px-6 py-6 flex items-center justify-center h-full">
-        <div className="text-center text-gray-500">Loading client settings...</div>
+        <div className="text-center text-gray-500">Loading admin settings...</div>
       </div>
     );
   }
 
   return (
     <div className="px-6 py-6 space-y-4 overflow-auto">
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Client Settings</h2>
+      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Admin Settings</h2>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="bg-white dark:bg-gray-800">
+          <CardHeader className="pb-2 pt-3">
+            <CardTitle className="text-lg text-gray-900 dark:text-white">Admin Profile</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 p-4 text-sm text-gray-600 dark:text-gray-300">
+            <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
+              <div className="text-xs uppercase tracking-wide text-slate-500">Name</div>
+              <div className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{adminProfile.name}</div>
+            </div>
+            <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
+              <div className="text-xs uppercase tracking-wide text-slate-500">Role</div>
+              <div className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{adminProfile.role}</div>
+            </div>
+            <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900">
+              <div className="text-xs uppercase tracking-wide text-slate-500">Email</div>
+              <div className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{adminProfile.email}</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white dark:bg-gray-800">
+          <CardHeader className="pb-2 pt-3">
+            <CardTitle className="text-lg text-gray-900 dark:text-white">Dashboard Preferences</CardTitle>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Saved for this browser on the admin dashboard.</p>
+          </CardHeader>
+          <CardContent className="grid gap-4 p-4">
+            <div className="flex items-center justify-between rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+              <div>
+                <div className="text-sm font-medium text-slate-900 dark:text-white">Pipeline auto refresh</div>
+                <div className="text-xs text-slate-500">Keep admin pipeline refreshed automatically.</div>
+              </div>
+              <Checkbox
+                checked={pipelineAutoRefreshEnabled}
+                onCheckedChange={(checked) => setPipelineAutoRefreshEnabled(checked === true)}
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <Label className="text-sm font-medium text-slate-700 dark:text-slate-200">Pipeline refresh interval</Label>
+              <Select value={pipelineRefreshSeconds} onValueChange={setPipelineRefreshSeconds}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">Every 10 sec</SelectItem>
+                  <SelectItem value="20">Every 20 sec</SelectItem>
+                  <SelectItem value="30">Every 30 sec</SelectItem>
+                  <SelectItem value="60">Every 60 sec</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label className="text-sm font-medium text-slate-700 dark:text-slate-200">Default performance graph period</Label>
+              <Select value={adminDefaultPerformancePeriod} onValueChange={setAdminDefaultPerformancePeriod}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="quarterly">Quarterly</SelectItem>
+                  <SelectItem value="yearly">Yearly</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Impact Metrics Section */}
       <Card className="bg-white dark:bg-gray-800">
@@ -1020,7 +1115,8 @@ export default function AdminDashboard() {
   const initialSidebarTab = () => {
     const saved = sessionStorage.getItem('adminDashboardSidebarTab');
     sessionStorage.removeItem('adminDashboardSidebarTab');
-    return saved ? saved : 'dashboard';
+    const allowedTabs = new Set(['dashboard', 'requirements', 'pipeline', 'metrics', 'master-data', 'performance', 'report', 'user-management']);
+    return saved && allowedTabs.has(saved) ? saved : 'dashboard';
   };
 
   const [sidebarTab, setSidebarTab] = useState(initialSidebarTab());
@@ -1037,6 +1133,7 @@ export default function AdminDashboard() {
   const [requirementsVisible, setRequirementsVisible] = useState(10);
   const [isAddRequirementModalOpen, setIsAddRequirementModalOpen] = useState(false);
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
+  const [isReassignConfirmOpen, setIsReassignConfirmOpen] = useState(false);
   const [isManageRequirementModalOpen, setIsManageRequirementModalOpen] = useState(false);
   const [isMetricsModalOpen, setIsMetricsModalOpen] = useState(false);
   const [isClientMetricsModalOpen, setIsClientMetricsModalOpen] = useState(false);
@@ -1110,6 +1207,9 @@ export default function AdminDashboard() {
   // Supports filtering by TL (team leader) and TA (team member)
   const [selectedPipelineTL, setSelectedPipelineTL] = useState<string>("all");
   const [selectedPipelineTeamMember, setSelectedPipelineTeamMember] = useState<string>("all");
+  const [pipelineAutoRefreshEnabled, setPipelineAutoRefreshEnabled] = useState<boolean>(() => getStoredAdminSetting('adminPipelineAutoRefreshEnabled', 'true') === 'true');
+  const [pipelineRefreshSeconds, setPipelineRefreshSeconds] = useState<string>(() => getStoredAdminSetting('adminPipelineRefreshSeconds', '10'));
+  const [adminDefaultPerformancePeriod, setAdminDefaultPerformancePeriod] = useState<string>(() => getStoredAdminSetting('adminDefaultPerformancePeriod', 'monthly'));
   const { data: pipelineApplications = [], isLoading: isLoadingPipeline, refetch: refetchPipeline } = useQuery<any[]>({
     queryKey: ["/api/admin/pipeline", selectedPipelineTL, selectedPipelineTeamMember],
     queryFn: async () => {
@@ -1131,9 +1231,36 @@ export default function AdminDashboard() {
     },
     refetchOnMount: true,
     refetchOnWindowFocus: true,
-    refetchInterval: 10000, // Refresh every 10 seconds for real-time updates
+    refetchInterval: pipelineAutoRefreshEnabled ? Number(pipelineRefreshSeconds) * 1000 : false,
   });
   // Refetch interval is handled by useQuery's refetchInterval: 10000 above
+
+  useEffect(() => {
+    window.localStorage.setItem('adminPipelineAutoRefreshEnabled', String(pipelineAutoRefreshEnabled));
+  }, [pipelineAutoRefreshEnabled]);
+
+  useEffect(() => {
+    window.localStorage.setItem('adminPipelineRefreshSeconds', pipelineRefreshSeconds);
+  }, [pipelineRefreshSeconds]);
+
+  useEffect(() => {
+    window.localStorage.setItem('adminDefaultPerformancePeriod', adminDefaultPerformancePeriod);
+  }, [adminDefaultPerformancePeriod]);
+
+  useEffect(() => {
+    const syncAdminSettings = () => {
+      setPipelineAutoRefreshEnabled(getStoredAdminSetting('adminPipelineAutoRefreshEnabled', 'true') === 'true');
+      setPipelineRefreshSeconds(getStoredAdminSetting('adminPipelineRefreshSeconds', '10'));
+      setAdminDefaultPerformancePeriod(getStoredAdminSetting('adminDefaultPerformancePeriod', 'monthly'));
+    };
+
+    window.addEventListener('admin-settings-updated', syncAdminSettings as EventListener);
+    return () => window.removeEventListener('admin-settings-updated', syncAdminSettings as EventListener);
+  }, []);
+
+  useEffect(() => {
+    setSelectedPerformancePeriod(adminDefaultPerformancePeriod);
+  }, [adminDefaultPerformancePeriod]);
 
   // Fetch team leads for reassign dropdown
   const { data: teamLeads = [], isLoading: isLoadingTeamLeads } = useQuery<any[]>({
@@ -1183,17 +1310,21 @@ export default function AdminDashboard() {
         return {
           id: app.id || `app-${index + 1}`,
           appliedOn: app.appliedDate ? new Date(app.appliedDate).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-') : 'N/A',
+          appliedDate: app.appliedDate || null,
           candidateName: app.candidateName || 'Unknown Candidate',
           company: app.company || 'N/A',
-          roleApplied: app.jobTitle || 'N/A',
-          currentStatus: statusMap[app.status] || app.status || 'In-Process',
+          roleApplied: app.roleApplied || app.jobTitle || 'N/A',
+          jobTitle: app.jobTitle || app.roleApplied || 'N/A',
+          currentStatus: statusMap[app.currentStatus || app.status] || app.currentStatus || app.status || 'In-Process',
           email: app.candidateEmail || 'N/A',
           phone: app.candidatePhone || 'N/A',
           location: app.location || 'N/A',
           experience: app.experience || 'N/A',
           skills: parsedSkills,
           resumeUrl: app.resumeUrl || null,
-          rating: 4.0
+          rating: 4.0,
+          recruiter: app.recruiter || 'Unknown',
+          teamLeader: app.teamLeader || null,
         };
       });
     }
@@ -1389,7 +1520,7 @@ export default function AdminDashboard() {
   const [ceoMeetingsData, setCeoMeetingsData] = useState(initialCeoMeetingsData);
   const [isAllMessagesModalOpen, setIsAllMessagesModalOpen] = useState(false);
   const [selectedPerformanceTeam, setSelectedPerformanceTeam] = useState<string>("all");
-  const [selectedPerformancePeriod, setSelectedPerformancePeriod] = useState<string>("monthly");
+  const [selectedPerformancePeriod, setSelectedPerformancePeriod] = useState<string>(() => getStoredAdminSetting('adminDefaultPerformancePeriod', 'monthly'));
   const [isResumeDatabaseModalOpen, setIsResumeDatabaseModalOpen] = useState(false);
   const [isPerformanceDataModalOpen, setIsPerformanceDataModalOpen] = useState(false);
   const [isEditingFeedbackModal, setIsEditingFeedbackModal] = useState(false);
@@ -1835,7 +1966,14 @@ export default function AdminDashboard() {
     clientAcquisitionCost: number;
     chartData: Array<{ name: string; growthMoM: number; burnRate: number; churnRate: number; attrition: number }>;
   }>({
-    queryKey: ['/api/admin/key-aspects'],
+    queryKey: ['/api/admin/key-aspects', selectedKeyMetricsClient, selectedKeyMetricsPeriod],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      params.append('clientId', selectedKeyMetricsClient);
+      params.append('period', selectedKeyMetricsPeriod);
+      const response = await apiRequest('GET', `/api/admin/key-aspects?${params.toString()}`);
+      return await response.json();
+    },
   });
 
   // Key Aspects data with defaults (connected to Key Metrics chart)
@@ -1879,6 +2017,14 @@ export default function AdminDashboard() {
 
   // State for right sidebar period filter (dashboard view)
   const [dashboardPerformancePeriod, setDashboardPerformancePeriod] = useState<string>("quarterly");
+  const currentYear = new Date().getFullYear();
+  const [performanceSummaryScope, setPerformanceSummaryScope] = useState<'overall' | 'quarterly' | 'yearly'>('overall');
+  const [performanceSummaryQuarter, setPerformanceSummaryQuarter] = useState<string>(`Q${Math.floor(new Date().getMonth() / 3) + 1}`);
+  const [performanceSummaryYear, setPerformanceSummaryYear] = useState<string>(String(currentYear));
+  const performanceSummaryYearOptions = useMemo(
+    () => Array.from({ length: 6 }, (_, index) => String(currentYear - index)),
+    [currentYear]
+  );
 
   // Fetch performance metrics from API (with period support for dashboard view)
   const { data: performanceMetrics = {
@@ -1928,11 +2074,13 @@ export default function AdminDashboard() {
     closuresCount: number;
     performancePercentage: number;
   }>({
-    queryKey: ['/api/admin/performance-metrics', 'performance-page', selectedPerformancePeriod],
+    queryKey: ['/api/admin/performance-metrics', 'performance-page', performanceSummaryScope, performanceSummaryQuarter, performanceSummaryYear],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (selectedPerformancePeriod) {
-        params.append('period', selectedPerformancePeriod);
+      params.append('summaryScope', performanceSummaryScope);
+      params.append('summaryYear', performanceSummaryYear);
+      if (performanceSummaryScope === 'quarterly') {
+        params.append('summaryQuarter', performanceSummaryQuarter);
       }
       const url = `/api/admin/performance-metrics${params.toString() ? '?' + params.toString() : ''}`;
       const response = await apiRequest('GET', url);
@@ -1984,6 +2132,13 @@ export default function AdminDashboard() {
     joinedDateRaw?: string | null;
     status: string;
     sourceRequirement?: any | null;
+    closureAction?: {
+      type?: string | null;
+      date?: string | null;
+      reason?: string | null;
+      dayBucket?: string | null;
+      updatedAt?: string | null;
+    } | null;
   }>>({
     queryKey: ['/api/admin/closures-list'],
   });
@@ -2026,6 +2181,42 @@ export default function AdminDashboard() {
     setClosureReportReRequirementRequested(false);
   };
 
+  const closureReportActionMutation = useMutation({
+    mutationFn: async ({
+      id,
+      actionType,
+      actionDate,
+      reason,
+    }: {
+      id: string;
+      actionType: 'offer-drop' | 'early-exit';
+      actionDate: string;
+      reason: string;
+    }) => {
+      const response = await apiRequest('POST', `/api/admin/closures-list/${id}/action`, {
+        actionType,
+        actionDate,
+        reason,
+      });
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/closures-list'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/pipeline'] });
+      toast({
+        title: variables.actionType === 'early-exit' ? 'Early Exit captured' : 'Offer Drop captured',
+        description: 'The admin dashboard has been refreshed with the latest status.',
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to save the closure action. Please try again.',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const earlyExitDayCount = useMemo(() => {
     if (closureReportActionType !== 'early-exit' || !selectedClosureReportAction?.joinedDate || !closureReportActionDate) {
       return null;
@@ -2052,17 +2243,24 @@ export default function AdminDashboard() {
   };
 
   const handleConfirmClosureReportAction = () => {
+    if (!selectedClosureReportAction?.id || !closureReportActionType) {
+      return;
+    }
+
+    closureReportActionMutation.mutate({
+      id: selectedClosureReportAction.id,
+      actionType: closureReportActionType,
+      actionDate: closureReportActionDate,
+      reason: closureReportActionReason,
+    });
+
+    const sourceRequirement = selectedClosureReportAction?.sourceRequirement;
     if (!closureReportReRequirementRequested) {
-      toast({
-        title: closureReportActionType === 'early-exit' ? 'Early Exit captured' : 'Offer Drop captured',
-        description: 'Frontend flow is ready. Backend save can be connected next.',
-      });
       setIsClosureReportActionModalOpen(false);
       resetClosureReportActionState();
       return;
     }
 
-    const sourceRequirement = selectedClosureReportAction?.sourceRequirement;
     const prefilledRequirement = {
       position: sourceRequirement?.position || selectedClosureReportAction?.position || '',
       noOfPositions: sourceRequirement?.noOfPositions || 1,
@@ -2110,24 +2308,24 @@ export default function AdminDashboard() {
   const renderClosureReportActions = (report: any) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 w-8 rounded-xl border border-slate-200 bg-white p-0 text-slate-600 hover:bg-slate-50">
+        <Button variant="ghost" size="sm" className="h-9 w-9 rounded-2xl border border-slate-200 bg-white p-0 text-slate-600 shadow-sm hover:bg-slate-50">
           <MoreVertical className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={6} className="w-56 rounded-2xl border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+      <DropdownMenuContent align="end" sideOffset={8} className="w-64 rounded-[24px] border border-slate-200 bg-white p-2 shadow-[0_24px_60px_rgba(15,23,42,0.14)] dark:border-slate-700 dark:bg-slate-900">
         <DropdownMenuItem
           onClick={() => handleOpenClosureReportActionModal(report, 'offer-drop')}
-          className="flex flex-col items-start rounded-xl px-3 py-2 focus:bg-slate-50 dark:focus:bg-slate-800"
+          className="flex flex-col items-start rounded-2xl px-4 py-3 focus:bg-slate-50 dark:focus:bg-slate-800"
         >
-          <span className="text-base font-medium text-slate-900 dark:text-white">Offer Drop</span>
-          <span className="text-xs text-slate-400">Candidate declined the offer</span>
+          <span className="text-base font-semibold text-slate-900 dark:text-white">Offer Drop</span>
+          <span className="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400">Candidate declined the offer after closure.</span>
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => handleOpenClosureReportActionModal(report, 'early-exit')}
-          className="mt-1 flex flex-col items-start rounded-xl px-3 py-2 focus:bg-slate-50 dark:focus:bg-slate-800"
+          className="mt-1 flex flex-col items-start rounded-2xl px-4 py-3 focus:bg-slate-50 dark:focus:bg-slate-800"
         >
-          <span className="text-base font-medium text-slate-900 dark:text-white">Early Exit</span>
-          <span className="text-xs text-slate-400">Candidate exited within 90 days of joining</span>
+          <span className="text-base font-semibold text-slate-900 dark:text-white">Early Exit</span>
+          <span className="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400">Candidate exited after joining. Day bucket is captured on confirm.</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -2136,6 +2334,25 @@ export default function AdminDashboard() {
   const getClosureQuarterLabel = (report: any) => {
     if (!report?.quarter) return 'N/A';
     return String(report.quarter).replace(', ', ',');
+  };
+
+  const getClosureActionHoverText = (report: any) => {
+    const closureAction = report?.closureAction;
+    if (!closureAction?.type) return '';
+
+    if (closureAction.type === 'offer-drop') {
+      return 'Offer Drop';
+    }
+
+    if (closureAction.dayBucket === '<90') {
+      return 'Early Exit (<90 days)';
+    }
+
+    if (closureAction.dayBucket === '>90') {
+      return 'Early Exit (>90 days)';
+    }
+
+    return 'Early Exit';
   };
 
   // Fetch revenue analysis data from API (with team filter)
@@ -3085,6 +3302,8 @@ export default function AdminDashboard() {
   // Requirements handlers
   const handleReassign = (requirement: Requirement) => {
     setSelectedRequirement(requirement);
+    const currentTeamLead = getTeamLeadMatchForRequirement(requirement);
+    setSelectedTeamLeadId(currentTeamLead ? String(currentTeamLead.id) : "");
     setIsReassignModalOpen(true);
   };
 
@@ -3098,6 +3317,40 @@ export default function AdminDashboard() {
     setManageRequirementAction(requirement.managementStatus === 'hold' ? 'resume' : '');
     setManageRequirementReason('');
     setIsManageRequirementModalOpen(true);
+  };
+
+  useEffect(() => {
+    if (!isReassignModalOpen || selectedTeamLeadId || !selectedRequirement || teamLeads.length === 0) {
+      return;
+    }
+
+    const currentTeamLead = getTeamLeadMatchForRequirement(selectedRequirement);
+    if (currentTeamLead) {
+      setSelectedTeamLeadId(String(currentTeamLead.id));
+    }
+  }, [isReassignModalOpen, selectedRequirement, selectedTeamLeadId, teamLeads]);
+
+  const submitReassignment = () => {
+    if (!selectedRequirement || !selectedTeamLeadId) {
+      toast({ title: "Error", description: "Please select a Team Lead", variant: "destructive" });
+      return;
+    }
+
+    const selectedTL = teamLeads.find((tl: any) => String(tl.id) === String(selectedTeamLeadId));
+
+    updateRequirementMutation.mutate({
+      id: selectedRequirement.id,
+      updates: {
+        teamLead: selectedTL?.name || selectedTeamLeadId
+      }
+    }, {
+      onSuccess: () => {
+        setIsReassignConfirmOpen(false);
+        setIsReassignModalOpen(false);
+        setSelectedTeamLeadId("");
+        toast({ title: "Success", description: "Requirement reassigned successfully" });
+      }
+    });
   };
 
   const handleSubmitManageRequirement = () => {
@@ -3206,6 +3459,40 @@ export default function AdminDashboard() {
       secondary: 'Position Closed',
       secondaryValue: 'closed' as const,
     };
+  };
+
+  const getTeamLeadMatchForRequirement = (requirement: Requirement | null) => {
+    if (!requirement) return null;
+
+    return teamLeads.find((teamLead: any) =>
+      String(teamLead.id) === String((requirement as any).teamLeadId ?? '') ||
+      teamLead.name === requirement.teamLead
+    ) ?? null;
+  };
+
+  const requirementNeedsTalentAdvisorReassignment = (requirement: Requirement) => {
+    if (typeof requirement.needsTalentAdvisorReassignment === 'boolean') {
+      return requirement.needsTalentAdvisorReassignment;
+    }
+
+    if (!requirement.talentAdvisor || !requirement.teamLead) {
+      return false;
+    }
+
+    const currentTeamLead = getTeamLeadMatchForRequirement(requirement);
+    const assignedTalentAdvisor = employees.find((employee: any) =>
+      employee.role === 'recruiter' &&
+      (
+        employee.id === requirement.talentAdvisorId ||
+        employee.name === requirement.talentAdvisor
+      )
+    );
+
+    if (!currentTeamLead || !assignedTalentAdvisor) {
+      return false;
+    }
+
+    return assignedTalentAdvisor.reportingTo !== currentTeamLead.employeeId;
   };
 
   const handleRequirementsViewMore = () => {
@@ -4639,7 +4926,7 @@ export default function AdminDashboard() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg font-semibold text-gray-900 dark:text-white">Target & Incentives</CardTitle>
             <Button
-              className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded-md h-auto font-medium"
+              className="h-10 rounded-[6px] bg-cyan-400 px-7 text-base font-medium text-slate-900 hover:bg-cyan-500"
               onClick={() => setIsTargetModalOpen(true)}
               data-testid="button-view-all-targets"
             >
@@ -5280,7 +5567,7 @@ export default function AdminDashboard() {
 
                   <div className="flex justify-end p-4 border-t border-gray-200 dark:border-gray-700">
                     <Button
-                      className="bg-cyan-400 hover:bg-cyan-500 text-slate-900 px-6 py-2 rounded-md h-auto font-medium text-sm disabled:bg-cyan-200 disabled:text-slate-500"
+                      className="h-10 rounded-[6px] bg-cyan-400 px-7 text-sm font-medium text-slate-900 hover:bg-cyan-500 disabled:bg-cyan-200 disabled:text-slate-500"
                       onClick={handleRequirementsViewMore}
                       disabled={requirements.length <= 10}
                     >
@@ -5516,6 +5803,10 @@ export default function AdminDashboard() {
 
         // Pipeline stages with display names
         const pipelineStages = [
+          { key: 'sourced', display: 'Sourced' },
+          { key: 'shortlisted', display: 'Shortlisted' },
+          { key: 'introCall', display: 'Intro Call' },
+          { key: 'assignment', display: 'Assignment' },
           { key: 'level1', display: 'Level 1' },
           { key: 'level2', display: 'Level 2' },
           { key: 'level3', display: 'Level 3' },
@@ -5618,8 +5909,8 @@ export default function AdminDashboard() {
               <div className="flex flex-col h-[calc(100vh-200px)]">
                 {/* Pipeline Stages - Kanban Board Layout */}
                 <div className="border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-800 p-2 flex-1 flex flex-col min-h-0 mb-6">
-                  <div className="flex-1 overflow-x-hidden overflow-y-hidden min-h-0">
-                    <div className="flex gap-1.5 w-full h-full">
+                  <div className="flex-1 overflow-x-auto overflow-y-hidden min-h-0">
+                    <div className="flex gap-1.5 min-w-max h-full">
                       {pipelineStages.map((stage) => {
                         const candidates = getPipelineCandidatesByStage[stage.key as keyof typeof getPipelineCandidatesByStage] || [];
                         const count = Array.isArray(candidates) ? candidates.length : 0;
@@ -6051,7 +6342,7 @@ export default function AdminDashboard() {
                 <div className="flex justify-end gap-2 mt-4">
                   <Button
                     variant="outline"
-                    className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                    className="rounded-[4px] border-blue-300 text-blue-700 hover:bg-blue-50"
                     onClick={() => setIsIncrementModalOpen(true)}
                     data-testid="button-open-increment-modal"
                   >
@@ -6776,6 +7067,18 @@ export default function AdminDashboard() {
       case 'user-management':
         // User Management is a separate section - render it directly
         return renderUserManagementContent();
+      case 'settings':
+        return (
+          <AdminSettingsSection
+            adminProfile={adminProfile}
+            pipelineAutoRefreshEnabled={pipelineAutoRefreshEnabled}
+            setPipelineAutoRefreshEnabled={setPipelineAutoRefreshEnabled}
+            pipelineRefreshSeconds={pipelineRefreshSeconds}
+            setPipelineRefreshSeconds={setPipelineRefreshSeconds}
+            adminDefaultPerformancePeriod={adminDefaultPerformancePeriod}
+            setAdminDefaultPerformancePeriod={setAdminDefaultPerformancePeriod}
+          />
+        );
       case 'requirements':
         return (
           <div className="h-full flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-900">
@@ -6972,6 +7275,10 @@ export default function AdminDashboard() {
                               <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">
                                 {requirement.talentAdvisor === "Unassigned" || !requirement.talentAdvisor ? (
                                   <span className="text-cyan-500 dark:text-cyan-400">Unassigned</span>
+                                ) : requirementNeedsTalentAdvisorReassignment(requirement) ? (
+                                  <span className="inline-flex rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                                    {requirement.talentAdvisor}
+                                  </span>
                                 ) : (
                                   requirement.talentAdvisor
                                 )}
@@ -7025,8 +7332,7 @@ export default function AdminDashboard() {
 
                   <div className="flex justify-end p-4 border-t border-gray-200 dark:border-gray-700">
                     <Button
-                      className="text-blue-600 hover:text-blue-700 p-0 h-auto font-normal text-sm"
-                      variant="ghost"
+                      className="h-10 rounded-[6px] bg-cyan-400 px-7 text-sm font-medium text-slate-900 hover:bg-cyan-500 disabled:bg-cyan-200 disabled:text-slate-500"
                       onClick={handleRequirementsViewMore}
                       disabled={requirements.length <= 10}
                     >
@@ -7639,7 +7945,7 @@ export default function AdminDashboard() {
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"
-                      className="border-blue-300 text-blue-700 hover:bg-blue-50 text-sm px-4"
+                      className="rounded-[4px] border-blue-300 text-blue-700 hover:bg-blue-50 text-sm px-4"
                       onClick={() => setIsIncrementModalOpen(true)}
                       data-testid="button-open-increment-modal-master-data"
                     >
@@ -8141,24 +8447,67 @@ export default function AdminDashboard() {
 
             {/* Right Sidebar - Quarterly/Yearly Metrics */}
             <div className="w-64 bg-gray-100 dark:bg-gray-800 p-4 flex flex-col space-y-3 overflow-y-auto">
-              {/* Quarterly/Yearly Selector */}
-              <div>
-                <Select value={selectedPerformancePeriod} onValueChange={setSelectedPerformancePeriod}>
+              {/* Separate Summary Selector */}
+              <div className="space-y-3">
+                <Select value={performanceSummaryScope} onValueChange={(value: 'overall' | 'quarterly' | 'yearly') => setPerformanceSummaryScope(value)}>
                   <SelectTrigger className="w-full bg-teal-400 text-black font-medium">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="monthly">Monthly</SelectItem>
-                    <SelectItem value="quarterly">Quarterly</SelectItem>
-                    <SelectItem value="yearly">Yearly</SelectItem>
+                    <SelectItem value="overall">Overall</SelectItem>
+                    <SelectItem value="quarterly">Quarter</SelectItem>
+                    <SelectItem value="yearly">Year</SelectItem>
                   </SelectContent>
                 </Select>
+
+                {performanceSummaryScope === 'quarterly' && (
+                  <>
+                    <Select value={performanceSummaryQuarter} onValueChange={setPerformanceSummaryQuarter}>
+                      <SelectTrigger className="w-full bg-white text-slate-900 font-medium dark:bg-gray-700 dark:text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Q1">Q1</SelectItem>
+                        <SelectItem value="Q2">Q2</SelectItem>
+                        <SelectItem value="Q3">Q3</SelectItem>
+                        <SelectItem value="Q4">Q4</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={performanceSummaryYear} onValueChange={setPerformanceSummaryYear}>
+                      <SelectTrigger className="w-full bg-white text-slate-900 font-medium dark:bg-gray-700 dark:text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {performanceSummaryYearOptions.map((year) => (
+                          <SelectItem key={year} value={year}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
+
+                {performanceSummaryScope === 'yearly' && (
+                  <Select value={performanceSummaryYear} onValueChange={setPerformanceSummaryYear}>
+                    <SelectTrigger className="w-full bg-white text-slate-900 font-medium dark:bg-gray-700 dark:text-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {performanceSummaryYearOptions.map((year) => (
+                        <SelectItem key={year} value={year}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
-              {/* Current Quarter Section */}
+              {/* Summary Label */}
               <div className="bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 p-4 rounded-md">
                 <div className="text-xs font-bold uppercase text-gray-700 dark:text-gray-300">CURRENT</div>
-                <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">QUARTER</div>
+                <div className="text-[10px] text-gray-500 dark:text-gray-400 uppercase">SUMMARY</div>
                 <div className="text-right text-2xl font-bold mt-2" data-testid="text-current-quarter">{performancePageMetrics.currentQuarter}</div>
               </div>
 
@@ -8653,7 +9002,7 @@ export default function AdminDashboard() {
                         value={cashoutForm.month}
                         onValueChange={(value) => setCashoutForm({ ...cashoutForm, month: value })}
                       >
-                        <SelectTrigger className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm" data-testid="select-cashout-month">
+                        <SelectTrigger className="input-styled rounded border-2 border-cyan-300 bg-white text-slate-900 shadow-sm data-[placeholder]:text-slate-400 focus:border-cyan-500 dark:border-cyan-600 dark:bg-gray-800 dark:text-white dark:data-[placeholder]:text-slate-400" data-testid="select-cashout-month">
                           <SelectValue placeholder="Month" />
                         </SelectTrigger>
                         <SelectContent>
@@ -8676,7 +9025,7 @@ export default function AdminDashboard() {
                       <Input
                         type="number"
                         placeholder="Year"
-                        className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm"
+                        className="input-styled rounded border-2 border-cyan-300 bg-white placeholder:text-slate-400 focus:border-cyan-500 shadow-sm dark:border-cyan-600 dark:bg-gray-800 dark:placeholder:text-slate-400"
                         value={cashoutForm.year}
                         onChange={(e) => setCashoutForm({ ...cashoutForm, year: e.target.value })}
                         data-testid="input-cashout-year"
@@ -8686,7 +9035,7 @@ export default function AdminDashboard() {
                       <Input
                         type="number"
                         placeholder="Number of Employees"
-                        className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm"
+                        className="input-styled rounded border-2 border-cyan-300 bg-white placeholder:text-slate-400 focus:border-cyan-500 shadow-sm dark:border-cyan-600 dark:bg-gray-800 dark:placeholder:text-slate-400"
                         value={cashoutForm.employees}
                         onChange={(e) => setCashoutForm({ ...cashoutForm, employees: e.target.value })}
                         data-testid="input-cashout-employees"
@@ -8699,7 +9048,7 @@ export default function AdminDashboard() {
                       <Input
                         type="number"
                         placeholder="Total Salary"
-                        className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm"
+                        className="input-styled rounded border-2 border-cyan-300 bg-white placeholder:text-slate-400 focus:border-cyan-500 shadow-sm dark:border-cyan-600 dark:bg-gray-800 dark:placeholder:text-slate-400"
                         value={cashoutForm.salary}
                         onChange={(e) => setCashoutForm({ ...cashoutForm, salary: e.target.value })}
                         data-testid="input-cashout-salary"
@@ -8709,7 +9058,7 @@ export default function AdminDashboard() {
                       <Input
                         type="number"
                         placeholder="Incentive"
-                        className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm"
+                        className="input-styled rounded border-2 border-cyan-300 bg-white placeholder:text-slate-400 focus:border-cyan-500 shadow-sm dark:border-cyan-600 dark:bg-gray-800 dark:placeholder:text-slate-400"
                         value={cashoutForm.incentive}
                         onChange={(e) => setCashoutForm({ ...cashoutForm, incentive: e.target.value })}
                         data-testid="input-cashout-incentive"
@@ -8719,7 +9068,7 @@ export default function AdminDashboard() {
                       <Input
                         type="number"
                         placeholder="Database & Tools cost"
-                        className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm"
+                        className="input-styled rounded border-2 border-cyan-300 bg-white placeholder:text-slate-400 focus:border-cyan-500 shadow-sm dark:border-cyan-600 dark:bg-gray-800 dark:placeholder:text-slate-400"
                         value={cashoutForm.tools}
                         onChange={(e) => setCashoutForm({ ...cashoutForm, tools: e.target.value })}
                         data-testid="input-cashout-tools"
@@ -8732,7 +9081,7 @@ export default function AdminDashboard() {
                       <Input
                         type="number"
                         placeholder="Rent"
-                        className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm"
+                        className="input-styled rounded border-2 border-cyan-300 bg-white placeholder:text-slate-400 focus:border-cyan-500 shadow-sm dark:border-cyan-600 dark:bg-gray-800 dark:placeholder:text-slate-400"
                         value={cashoutForm.rent}
                         onChange={(e) => setCashoutForm({ ...cashoutForm, rent: e.target.value })}
                         data-testid="input-cashout-rent"
@@ -8742,7 +9091,7 @@ export default function AdminDashboard() {
                       <Input
                         type="number"
                         placeholder="Other Expenses"
-                        className="input-styled rounded bg-white dark:bg-gray-800 border-2 border-cyan-300 dark:border-cyan-600 focus:border-cyan-500 shadow-sm"
+                        className="input-styled rounded border-2 border-cyan-300 bg-white placeholder:text-slate-400 focus:border-cyan-500 shadow-sm dark:border-cyan-600 dark:bg-gray-800 dark:placeholder:text-slate-400"
                         value={cashoutForm.others}
                         onChange={(e) => setCashoutForm({ ...cashoutForm, others: e.target.value })}
                         data-testid="input-cashout-others"
@@ -8949,7 +9298,16 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="flex flex-col bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div className="admin-dashboard flex flex-col bg-gray-50 dark:bg-gray-900 min-h-screen">
+      <style>{`
+        .admin-dashboard table thead th {
+          font-weight: 700 !important;
+          color: #0f172a !important;
+        }
+        .dark .admin-dashboard table thead th {
+          color: #f8fafc !important;
+        }
+      `}</style>
       <div className="pl-11">
         <AdminTopHeader
           companyName="Scaling Theory"
@@ -10201,8 +10559,9 @@ export default function AdminDashboard() {
               type="button"
               className="h-14 w-full rounded-2xl bg-red-600 text-white text-[18px] font-semibold hover:bg-red-700"
               onClick={handleConfirmClosureReportAction}
+              disabled={closureReportActionMutation.isPending}
             >
-              Confirm
+              {closureReportActionMutation.isPending ? 'Saving...' : 'Confirm'}
             </Button>
           </div>
         </DialogContent>
@@ -10254,12 +10613,29 @@ export default function AdminDashboard() {
                     </tr>
                   ) : (
                     filteredClosureReports.map((report) => (
-                      <tr key={report.id} className="bg-white shadow-[0_0_0_1px_rgba(226,232,240,0.8)] dark:bg-gray-900">
+                      <tr
+                        key={report.id}
+                        title={getClosureActionHoverText(report) || undefined}
+                        className={`shadow-[0_0_0_1px_rgba(226,232,240,0.8)] dark:bg-gray-900 ${
+                          report.closureAction?.type
+                            ? 'bg-rose-50/90 hover:bg-rose-100/80'
+                            : 'bg-white'
+                        }`}
+                      >
                         <td className="rounded-l-2xl p-3 text-gray-900 dark:text-white">{report.candidate}</td>
                         <td className="p-3 text-gray-600 dark:text-gray-400">{report.position}</td>
                         <td className="p-3 text-gray-600 dark:text-gray-400">{report.client}</td>
                         <td className="p-3 text-gray-600 dark:text-gray-400">{report.talentAdvisor || 'Unassigned'}</td>
-                        <td className="p-3 text-gray-600 dark:text-gray-400">{getClosureQuarterLabel(report)}</td>
+                        <td className="p-3 text-gray-600 dark:text-gray-400">
+                          <div className="flex items-center gap-2">
+                            <span>{getClosureQuarterLabel(report)}</span>
+                            {report.closureAction?.type && (
+                              <span className="rounded-full bg-rose-100 px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-rose-700">
+                                Flagged
+                              </span>
+                            )}
+                          </div>
+                        </td>
                         <td className="p-3 text-gray-600 dark:text-gray-400">{report.offeredDate}</td>
                         <td className="p-3 text-gray-600 dark:text-gray-400">{report.joinedDate}</td>
                         <td className="rounded-r-2xl p-3">
@@ -10684,27 +11060,37 @@ export default function AdminDashboard() {
       {/* Reassign Requirement Modal */}
       <Dialog open={isReassignModalOpen} onOpenChange={(open) => {
         setIsReassignModalOpen(open);
-        if (!open) setSelectedTeamLeadId("");
+        if (!open) {
+          setSelectedTeamLeadId("");
+          setIsReassignConfirmOpen(false);
+        }
       }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Reassign Requirement</DialogTitle>
+        <DialogContent className="max-w-lg overflow-hidden border-0 p-0">
+          <DialogHeader className="border-b border-slate-200 bg-slate-50 px-6 py-5 dark:border-slate-800 dark:bg-slate-900">
+            <DialogTitle className="text-lg font-semibold text-slate-900 dark:text-white">Reassign Requirement</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Position: {selectedRequirement?.position}
-              </label>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Company: {selectedRequirement?.company}
-              </label>
+          <div className="space-y-5 px-6 py-5">
+            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm dark:border-slate-700 dark:bg-slate-950">
+              <p className="text-base font-semibold text-slate-900 dark:text-white">{selectedRequirement?.position}</p>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{selectedRequirement?.company}</p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl bg-slate-50 px-3 py-3 dark:bg-slate-900">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">Current Team Lead</p>
+                  <p className="mt-1 text-sm font-medium text-slate-900 dark:text-white">{selectedRequirement?.teamLead || 'Unassigned'}</p>
+                </div>
+                <div className="rounded-xl bg-slate-50 px-3 py-3 dark:bg-slate-900">
+                  <p className="text-xs font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">Talent Advisor</p>
+                  <p className="mt-1 text-sm font-medium text-slate-900 dark:text-white">{selectedRequirement?.talentAdvisor || 'Unassigned'}</p>
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
                 Reassign to Team Lead
               </label>
               <Select value={selectedTeamLeadId} onValueChange={setSelectedTeamLeadId}>
-                <SelectTrigger className="input-styled">
+                <SelectTrigger className="input-styled h-12 rounded-xl border-slate-200 bg-slate-50 text-slate-900 shadow-sm data-[placeholder]:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white dark:data-[placeholder]:text-slate-500">
                   <SelectValue placeholder={isLoadingTeamLeads ? "Loading..." : "Select Team Lead"} />
                 </SelectTrigger>
                 <SelectContent>
@@ -10716,47 +11102,57 @@ export default function AdminDashboard() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex justify-end gap-2 pt-4">
+            <div className="flex justify-end gap-3 pt-2">
               <Button
                 variant="outline"
                 onClick={() => {
                   setIsReassignModalOpen(false);
                   setSelectedTeamLeadId("");
                 }}
-                className="btn-rounded"
+                className="rounded-md border-slate-300 px-5"
               >
                 Cancel
               </Button>
               <Button
                 onClick={() => {
-                  // Update the requirement with new assignments
-                  if (selectedRequirement && selectedTeamLeadId) {
-                    const selectedTL = teamLeads.find(tl => tl.id === selectedTeamLeadId);
-                    updateRequirementMutation.mutate({
-                      id: selectedRequirement.id,
-                      updates: {
-                        teamLead: selectedTL?.name || selectedTeamLeadId
-                      }
-                    }, {
-                      onSuccess: () => {
-                        setIsReassignModalOpen(false);
-                        setSelectedTeamLeadId("");
-                        toast({ title: "Success", description: "Requirement reassigned successfully" });
-                      }
-                    });
-                  } else {
+                  if (!selectedTeamLeadId) {
                     toast({ title: "Error", description: "Please select a Team Lead", variant: "destructive" });
+                    return;
                   }
+                  setIsReassignConfirmOpen(true);
                 }}
-                className="bg-cyan-400 hover:bg-cyan-500 text-black btn-rounded"
+                className="h-10 rounded-md bg-cyan-400 px-5 font-medium text-slate-900 hover:bg-cyan-500"
                 disabled={updateRequirementMutation.isPending || !selectedTeamLeadId || isLoadingTeamLeads}
               >
-                {updateRequirementMutation.isPending ? 'Updating...' : 'Update Details'}
+                {updateRequirementMutation.isPending ? 'Updating...' : 'Update'}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={isReassignConfirmOpen} onOpenChange={setIsReassignConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Reassignment</AlertDialogTitle>
+            <AlertDialogDescription>
+              This requirement will be reassigned to {teamLeads.find((tl: any) => String(tl.id) === String(selectedTeamLeadId))?.name || 'the selected Team Lead'}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(event) => {
+                event.preventDefault();
+                submitReassignment();
+              }}
+              className="bg-cyan-500 text-slate-900 hover:bg-cyan-600"
+            >
+              Confirm Update
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={isManageRequirementModalOpen} onOpenChange={(open) => {
         setIsManageRequirementModalOpen(open);
@@ -10916,6 +11312,10 @@ export default function AdminDashboard() {
                           <td className="py-3 px-3 text-gray-600 dark:text-gray-400 text-sm">
                             {requirement.talentAdvisor === "Unassigned" || !requirement.talentAdvisor ? (
                               <span className="text-cyan-500 dark:text-cyan-400">Unassigned</span>
+                            ) : requirementNeedsTalentAdvisorReassignment(requirement) ? (
+                              <span className="inline-flex rounded-md border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                                {requirement.talentAdvisor}
+                              </span>
                             ) : (
                               requirement.talentAdvisor
                             )}
@@ -11173,7 +11573,7 @@ export default function AdminDashboard() {
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleEditCashout(row);
-                                  // Don't close the modal - keep it open for editing
+                                  setIsCashoutModalOpen(false);
                                 }}
                                 className="cursor-pointer"
                                 data-testid={`button-edit-cashout-all-${row.id}`}

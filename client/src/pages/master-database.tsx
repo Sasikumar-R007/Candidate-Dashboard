@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'wouter';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -428,6 +429,7 @@ type ClientStatus = 'Active' | 'Inactive' | 'On Hold' | 'Terminated' | 'frozen' 
 
 interface ResumeData {
   id: string;
+  candidateId?: string;
   name: string;
   position: string;
   experience: string;
@@ -510,6 +512,7 @@ interface ClientData {
 }
 
 export default function MasterDatabase() {
+  const [, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const initialTab = (sessionStorage.getItem('masterDatabaseTab') as ProfileType) || 'resume';
   sessionStorage.removeItem('masterDatabaseTab');
@@ -606,7 +609,8 @@ export default function MasterDatabase() {
   const resumeData: ResumeData[] = useMemo(() => {
     return candidatesRaw.map((candidate: any) => ({
       id: candidate.id,
-      name: candidate.fullName || candidate.name || '-',
+      candidateId: candidate.candidateId || candidate.candidate_id || '-',
+      name: candidate.fullName || candidate.full_name || candidate.name || candidate.email?.split('@')[0] || '-',
       position: candidate.position || candidate.designation || candidate.currentRole || '-',
       experience: candidate.experience || '-',
       skills: candidate.skills || '-',
@@ -1327,7 +1331,7 @@ export default function MasterDatabase() {
         <div className="flex items-center justify-between gap-3 mb-6">
           <div className="flex items-center gap-3">
             <Button
-              onClick={() => window.history.back()}
+              onClick={() => navigate('/admin')}
               variant="ghost"
               size="icon"
               data-testid="button-back"
@@ -1416,6 +1420,9 @@ export default function MasterDatabase() {
               <table className="w-full">
                 <thead>
                   <tr className="bg-blue-200 dark:bg-blue-900 sticky top-0">
+                    {profileType === 'resume' && (
+                      <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">Candidate ID</th>
+                    )}
                     <th className="text-left py-3 px-4 font-semibold text-gray-900 dark:text-gray-100">
                       {profileType === 'resume' ? 'Resume ID' : profileType === 'employee' ? 'Employee ID' : 'Client ID'}
                     </th>
@@ -1488,7 +1495,7 @@ export default function MasterDatabase() {
                 <tbody>
                   {isLoading ? (
                     <tr>
-                      <td colSpan={profileType === 'resume' ? (isResumeDrawerOpen ? 7 : 9) : profileType === 'employee' ? 33 : profileType === 'client' ? 18 : 9} className="py-12 text-center">
+                      <td colSpan={profileType === 'resume' ? (isResumeDrawerOpen ? 8 : 9) : profileType === 'employee' ? 33 : profileType === 'client' ? 18 : 9} className="py-12 text-center">
                         <div className="flex flex-col items-center justify-center gap-2">
                           <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
                           <span className="text-gray-500 dark:text-gray-400">Loading {getProfileTypeLabel().toLowerCase()}s...</span>
@@ -1497,7 +1504,7 @@ export default function MasterDatabase() {
                     </tr>
                   ) : filteredData.length === 0 ? (
                     <tr>
-                      <td colSpan={profileType === 'resume' ? (isResumeDrawerOpen ? 7 : 9) : profileType === 'employee' ? 33 : profileType === 'client' ? 18 : 9} className="py-12 text-center">
+                      <td colSpan={profileType === 'resume' ? (isResumeDrawerOpen ? 8 : 9) : profileType === 'employee' ? 33 : profileType === 'client' ? 18 : 9} className="py-12 text-center">
                         <div className="flex flex-col items-center justify-center gap-2">
                           <span className="text-gray-500 dark:text-gray-400">
                             {searchQuery || statusFilter !== 'all' 
@@ -1522,6 +1529,11 @@ export default function MasterDatabase() {
                         } ${profileType === 'resume' ? 'cursor-pointer hover-elevate' : ''}`}
                         data-testid={`row-${profileType}-${item.id}`}
                       >
+                        {profileType === 'resume' && (
+                          <td className="py-3 px-4 text-gray-900 dark:text-gray-100 font-medium">
+                            {(item as ResumeData).candidateId || '-'}
+                          </td>
+                        )}
                         <td className="py-3 px-4 text-gray-900 dark:text-gray-100 font-medium" data-testid={`text-id-${item.id}`}>
                           {profileType === 'resume' ? (item as ResumeData).id?.substring(0, 8) || '-' : 
                            profileType === 'employee' ? ((item as EmployeeData).employeeId || '-') : 

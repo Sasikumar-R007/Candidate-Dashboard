@@ -51,6 +51,7 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showSignOutDialog, setShowSignOutDialog] = useState(false);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
+  const [profileModalView, setProfileModalView] = useState<"profile" | "settings">("profile");
   const [profileData, setProfileData] = useState<any>(null);
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -187,6 +188,13 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
 
   const handleProfileSettings = () => {
     setShowUserDropdown(false);
+    setProfileModalView("profile");
+    setShowProfileSettings(true);
+  };
+
+  const handleSystemSettings = () => {
+    setShowUserDropdown(false);
+    setProfileModalView("settings");
     setShowProfileSettings(true);
   };
 
@@ -216,9 +224,17 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
             className="flex items-center gap-3 px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
             data-testid="button-user-dropdown"
           >
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white text-sm font-medium">
-              {userName.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
-            </div>
+            {profileData?.profilePicture ? (
+              <img
+                src={profileData.profilePicture}
+                alt={userName}
+                className="h-9 w-9 rounded-full object-cover"
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white text-sm font-medium">
+                {userName.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
+              </div>
+            )}
             <div className="flex flex-col items-start">
               <span className="text-sm font-medium" data-testid="text-profile-name">{userName}</span>
               <span className="text-xs text-gray-500 dark:text-gray-400" data-testid="text-profile-role">{displayRole}</span>
@@ -230,105 +246,66 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
           </button>
 
           {showUserDropdown && (
-            <div 
-              className="absolute right-0 top-full mt-2 w-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-4 z-50"
+            <div
+              className="absolute right-0 top-full mt-3 w-72 rounded-[28px] border border-slate-200 bg-white p-3 shadow-[0_24px_60px_rgba(15,23,42,0.18)] z-50"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="px-4 pb-3 border-b border-gray-200 dark:border-gray-600">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center text-white text-lg font-medium">
+            <div className="mb-3 flex items-center gap-3 rounded-2xl bg-slate-50 px-3 py-3">
+                {profileData?.profilePicture ? (
+                  <img
+                    src={profileData.profilePicture}
+                    alt={userName}
+                    className="h-11 w-11 rounded-2xl object-cover"
+                  />
+                ) : (
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center text-white text-base font-semibold">
                     {userName.split(' ').map((n: string) => n[0]).join('').toUpperCase()}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate" data-testid="text-dropdown-name">
-                      {userName}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate" data-testid="text-dropdown-email">
-                      {userEmail}
-                    </p>
-                    <span className="inline-block mt-1 px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300" data-testid="text-dropdown-role-badge">
-                      {displayRole}
-                    </span>
-                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-slate-900">{userName}</p>
+                  <p className="truncate text-xs text-slate-500">{displayRole}</p>
                 </div>
               </div>
-              
-              {/* Notifications section - commented out for now */}
-              {/* <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-600">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                  <Bell size={16} />
-                  Notifications
-                </h3>
-              </div>
-              
-              <div className="max-h-96 overflow-y-auto">
-                {activitiesLoading ? (
-                  <div className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
-                    <div className="animate-spin w-6 h-6 border-2 border-gray-300 border-t-blue-600 rounded-full mx-auto mb-2"></div>
-                    Loading activities...
-                  </div>
-                ) : activities.length === 0 ? (
-                  <div className="px-4 py-6 text-center text-gray-500 dark:text-gray-400">
-                    <Bell size={24} className="mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No recent activities</p>
-                    <p className="text-xs mt-1">Activities will appear here when actions are taken</p>
-                  </div>
-                ) : (
-                  activities.map((activity, index) => {
-                    const { icon: IconComponent, bgClass, textClass } = getActivityIcon(activity.type);
-                    const isLast = index === activities.length - 1;
-                    
-                    return (
-                      <div 
-                        key={activity.id} 
-                        className={`px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${!isLast ? 'border-b border-gray-100 dark:border-gray-700' : ''}`}
-                        data-testid={`activity-item-${activity.id}`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className={`p-2 ${bgClass} rounded-full`}>
-                            <IconComponent size={16} className={textClass} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                              {activity.title}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
-                              {activity.description}
-                            </p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                              {getRelativeTime(activity.createdAt)} {activity.actorName && `by ${activity.actorName}`}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </div> */}
-              
-              {/* Settings section - commented out for now */}
-              {/* <div className="py-2 border-t border-gray-200 dark:border-gray-600 mt-2">
-                <button 
+
+              <div className="space-y-1">
+                <button
                   onClick={handleProfileSettings}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150"
+                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
                   data-testid="button-profile-settings"
                 >
-                  <Settings size={16} />
+                  <User size={17} />
+                  <span>Profile Edit</span>
+                </button>
+
+                <button
+                  onClick={handleSystemSettings}
+                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium text-slate-700 transition hover:bg-slate-100"
+                  data-testid="button-settings"
+                >
+                  <Settings size={17} />
                   <span>Settings</span>
                 </button>
-                
-                <hr className="my-2 border-gray-200 dark:border-gray-600" />
-              </div> */}
-              
-              <div className="py-2 border-t border-gray-200 dark:border-gray-600 mt-2">
-                <button 
+
+                <button
+                  type="button"
+                  disabled
+                  className="flex w-full cursor-not-allowed items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium text-slate-400 opacity-70"
+                >
+                  <Bell size={17} />
+                  <span>Notification</span>
+                </button>
+
+                <div className="my-2 border-t border-slate-200" />
+
+                <button
                   onClick={handleLogout}
                   disabled={logoutMutation.isPending}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors duration-150 disabled:opacity-50"
+                  className="flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-left text-sm font-medium text-rose-500 transition hover:bg-rose-50 disabled:opacity-50"
                   data-testid="button-admin-header-logout"
                 >
-                  <LogOut size={16} />
-                  <span>{logoutMutation.isPending ? 'Signing out...' : 'Sign out'}</span>
+                  <LogOut size={17} />
+                  <span>{logoutMutation.isPending ? 'Signing out...' : 'Sign Out'}</span>
                 </button>
               </div>
             </div>
@@ -347,6 +324,7 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
       <ProfileSettingsModal
         open={showProfileSettings}
         onOpenChange={setShowProfileSettings}
+        initialView={profileModalView}
       />
     </header>
   );

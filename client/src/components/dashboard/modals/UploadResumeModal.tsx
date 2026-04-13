@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -629,7 +629,9 @@ export default function UploadResumeModal({
         <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(95vh - 4rem)' }}>
           <DialogHeader className="relative">
             <DialogTitle>Upload Resume</DialogTitle>
-            <p className="text-sm text-gray-500 mt-1">Upload resume for easy parsing and auto-fill</p>
+            <DialogDescription className="text-sm text-gray-500 mt-1">
+              Upload resume for easy parsing and auto-fill
+            </DialogDescription>
             <button
               onClick={handleReset}
               className="absolute top-0 right-0 p-2 hover:bg-gray-100 rounded-full transition-colors"

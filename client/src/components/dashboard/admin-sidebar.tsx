@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Users, FileText, GitBranch, BarChart3, Database, Trophy, FileBarChart, Settings, ChevronRight, User, LogOut, Building2, UserCog } from "lucide-react";
+import { Users, FileText, GitBranch, BarChart3, Database, Trophy, FileBarChart, ChevronRight, User, LogOut, Building2, UserCog } from "lucide-react";
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -42,9 +42,6 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
     onSuccess: () => {
       // Use auth context logout to clear session
       logout();
-      // Clear any stored session data
-      localStorage.clear();
-      sessionStorage.clear();
       
       toast({
         title: "Logged out successfully",
@@ -56,8 +53,6 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
     onError: (error: any) => {
       // Even on error, clear session locally
       logout();
-      localStorage.clear();
-      sessionStorage.clear();
       
       toast({
         title: "Logged out",
@@ -87,7 +82,7 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
   return (
     <>
       {/* Main Sidebar */}
-      <div className="w-16 bg-slate-900 text-white flex-shrink-0 h-screen overflow-hidden fixed left-0 top-0 z-50 flex flex-col">
+      <div className="w-16 bg-slate-900 text-white flex-shrink-0 h-screen overflow-visible fixed left-0 top-0 z-50 flex flex-col">
         {/* Logo Section */}
         <div className="h-16 flex items-center justify-center border-b border-slate-700">
           <img 
@@ -126,8 +121,11 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
                 
                 {/* Tooltip */}
                 {hoveredItem === item.id && !isExpanded && (
-                  <div className="absolute left-full ml-2 px-3 py-1.5 bg-black text-white text-sm rounded whitespace-nowrap z-50 shadow-xl">
-                    {item.label}
+                  <div className="absolute left-full ml-3 top-1/2 z-[70] flex -translate-y-1/2 items-center">
+                    <div className="h-3 w-3 rotate-45 rounded-[2px] bg-white shadow-lg" />
+                    <div className="-ml-1 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-[0_14px_34px_rgba(15,23,42,0.18)]">
+                      {item.label}
+                    </div>
                   </div>
                 )}
               </button>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -13,6 +13,7 @@ import { Link } from "wouter";
 import staffosLogo3 from "@/assets/staffos logo 3.png";
 import staffosLogo2 from "@/assets/staffos logo 2.png";
 import { useAuth } from "@/contexts/auth-context";
+import { getDefaultRouteForAuthUser } from "@/lib/auth-routing";
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -34,7 +35,7 @@ export default function EmployerLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const { setUser } = useAuth();
+  const { user, isLoading: isAuthLoading, isVerified, setUser } = useAuth();
   
   const {
     register,
@@ -62,6 +63,17 @@ export default function EmployerLogin() {
       });
     },
   });
+
+  useEffect(() => {
+    if (isAuthLoading || !isVerified) {
+      return;
+    }
+
+    const redirectPath = getDefaultRouteForAuthUser(user);
+    if (redirectPath) {
+      navigate(redirectPath);
+    }
+  }, [user, isAuthLoading, isVerified, navigate]);
 
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);

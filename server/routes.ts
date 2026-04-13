@@ -18,6 +18,7 @@ import { logRequirementAdded, logCandidateSubmitted, logClosureMade, logCandidat
 import { parseResumeFile, parseBulkResumes } from "./resume-parser";
 import { sendEmployeeWelcomeEmail, sendCandidateWelcomeEmail, sendOTPEmail } from "./email-service";
 import { setupGoogleAuth } from "./passport-google";
+import { DEFAULT_EMPLOYEE_WELCOME_MESSAGE, EMPLOYEE_WELCOME_MESSAGE_KEY, getAppSetting, upsertAppSetting } from "./admin-settings";
 import {
   buildSearchQuery,
   getSortOrder,
@@ -40,6 +41,57 @@ if (!fs.existsSync(chatUploadsDir)) {
 const resumeUploadsDir = 'uploads/resumes';
 if (!fs.existsSync(resumeUploadsDir)) {
   fs.mkdirSync(resumeUploadsDir, { recursive: true });
+}
+
+async function ensureClosureActionsTable() {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS closure_actions (
+      id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+      revenue_mapping_id varchar NOT NULL UNIQUE,
+      action_type text NOT NULL,
+      action_date text,
+      reason text,
+      day_bucket text,
+      created_at text NOT NULL,
+      updated_at text NOT NULL
+    )
+  `);
+}
+
+function parseAdminDate(value?: string | null) {
+  if (!value) return null;
+
+  const parsed = new Date(value);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed;
+  }
+
+  const parts = value.split(/[/-]/).map((part) => Number(part));
+  if (parts.length === 3 && parts.every((part) => Number.isFinite(part))) {
+    const [day, month, year] = parts;
+    const fallbackDate = new Date(year, month - 1, day);
+    return Number.isNaN(fallbackDate.getTime()) ? null : fallbackDate;
+  }
+
+  return null;
+}
+
+function getEarlyExitDayBucket(joinedDate?: string | null, actionDate?: string | null) {
+  const joinedOn = parseAdminDate(joinedDate);
+  const selectedDate = parseAdminDate(actionDate);
+
+  if (!joinedOn || !selectedDate) {
+    return null;
+  }
+
+  const diffInMs = selectedDate.getTime() - joinedOn.getTime();
+  const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24)) + 1;
+
+  if (diffInDays <= 90) {
+    return "<90";
+  }
+
+  return ">90";
 }
 
 const upload = multer({
@@ -242,20 +294,25 @@ function isMissingCandidateOwnershipColumnError(error: unknown) {
 }
 
 async function getOwnedCandidatesForEmployee(employee: { id: string; name: string; role: string }) {
-  const ownershipFilter = buildCandidateOwnershipFilter(employee);
-  if (!ownershipFilter) {
+  const ownerRole = normalizeSourcingRole(employee.role);
+  if (!ownerRole) {
     return null;
   }
 
-  try {
-    return await db.select().from(candidates).where(ownershipFilter);
-  } catch (error) {
-    if (!isMissingCandidateOwnershipColumnError(error)) {
-      throw error;
+  const allCandidates = await storage.getAllCandidates();
+  return allCandidates.filter((candidate: any) => {
+    const matchesOwnedRecord =
+      candidate.ownerEmployeeId === employee.id &&
+      candidate.ownerRole === ownerRole;
+
+    if (matchesOwnedRecord) {
+      return true;
     }
 
-    return await db.select().from(candidates).where(eq(candidates.addedBy, employee.name));
-  }
+    return ownerRole === "recruiter" &&
+      !candidate.ownerEmployeeId &&
+      candidate.addedBy === employee.name;
+  });
 }
 
 function buildJobOwnershipFilter(employee: { id: string; role: string }) {
@@ -967,20 +1024,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Password change endpoints
-  app.post("/api/employee/change-password", async (req, res) => {
+  app.post("/api/employee/change-password", requireEmployeeAuth, async (req, res) => {
     try {
-      const { email, currentPassword, newPassword } = req.body;
+      const { currentPassword, newPassword } = req.body;
 
-      if (!email || !currentPassword || !newPassword) {
-        return res.status(400).json({ message: "Email, current password and new password are required" });
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current password and new password are required" });
       }
 
-      if (newPassword.length < 6) {
-        return res.status(400).json({ message: "New password must be at least 6 characters long" });
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: "New password must be at least 8 characters long" });
       }
 
-      // Find employee by email
-      const employee = await storage.getEmployeeByEmail(email);
+      const employee = await storage.getEmployeeById(req.session.employeeId!);
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
       }
@@ -996,7 +1052,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
 
       // Update password in storage
-      const updateSuccess = await storage.updateEmployeePassword(email, hashedNewPassword);
+      const updateSuccess = await storage.updateEmployeePassword(employee.email, hashedNewPassword);
       if (!updateSuccess) {
         return res.status(500).json({ message: "Failed to update password" });
       }
@@ -2700,35 +2756,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         emp => emp.role === 'recruiter' && emp.reportingTo === employee.employeeId
       );
 
-      // Fetch requirements for each team member using ID-based lookup
-      const allRequirements: any[] = [];
-      const addedIds = new Set<string>();
-
-      for (const recruiter of teamRecruiters) {
-        const recruiterRequirements = await storage.getRequirementsByTalentAdvisorId(recruiter.id);
-        for (const req of recruiterRequirements) {
-          if (!addedIds.has(req.id)) {
-            allRequirements.push(req);
-            addedIds.add(req.id);
-          }
-        }
-      }
-
-      // Also fetch requirements assigned to this TL but not yet assigned to any recruiter
-      // These are "unassigned" requirements where teamLead matches TL's name but talentAdvisorId is null
       const allReqs = await storage.getRequirements();
-      const unassignedTLRequirements = allReqs.filter(req =>
-        req.teamLead === employee.name &&
-        !req.talentAdvisorId &&
-        !req.isArchived
+      const teamRecruiterIds = new Set(teamRecruiters.map((rec) => rec.id));
+      const allRequirements = allReqs.filter((req: any) =>
+        !req.isArchived && (
+          req.teamLead === employee.name ||
+          (!req.teamLead && req.talentAdvisorId && teamRecruiterIds.has(req.talentAdvisorId))
+        )
       );
-
-      for (const req of unassignedTLRequirements) {
-        if (!addedIds.has(req.id)) {
-          allRequirements.push(req);
-          addedIds.add(req.id);
-        }
-      }
 
       // Get assignment status for all requirements
       const { requirementAssignments } = await import("@shared/schema");
@@ -2740,21 +2775,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Add assignment status to each requirement
       const requirementsWithStatus = allRequirements.map(req => {
-        // Check if this requirement was reassigned from this TL
-        const assignment = allAssignments.find(a => a.requirementId === req.id);
+        const activeAssignmentForThisTL = allAssignments.find(a =>
+          a.requirementId === req.id &&
+          a.teamLeadId === employee.id &&
+          a.status === "active"
+        );
         const hasActiveAssignmentForOtherTL = allAssignments.some(a =>
           a.requirementId === req.id &&
           a.teamLeadId &&
           a.teamLeadId !== employee.id &&
           a.status === "active"
         );
-
-        const isReassigned = assignment?.status === "reassigned" ||
-          (assignment && hasActiveAssignmentForOtherTL);
+        const assignedTalentAdvisorInThisTeam = req.talentAdvisorId
+          ? teamRecruiterIds.has(req.talentAdvisorId)
+          : teamRecruiters.some(rec => rec.name === req.talentAdvisor);
+        const needsTalentAdvisorReassignment = Boolean(
+          req.teamLead === employee.name &&
+          req.talentAdvisor &&
+          !assignedTalentAdvisorInThisTeam &&
+          !activeAssignmentForThisTL
+        );
 
         return {
           ...req,
-          assignmentStatus: isReassigned ? "reassigned" : (assignment?.status || "active")
+          assignmentStatus: hasActiveAssignmentForOtherTL
+            ? "reassigned"
+            : (activeAssignmentForThisTL?.status || (needsTalentAdvisorReassignment ? "pending_reassignment" : "active")),
+          needsTalentAdvisorReassignment,
         };
       });
 
@@ -3396,6 +3443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Update the employee record in database
       const updatedEmployee = await storage.updateEmployee(employee.id, {
+        name: updates.name !== undefined ? updates.name : employee.name,
         phone: updates.phone !== undefined ? updates.phone : employee.phone,
         bannerImage: updates.bannerImage !== undefined ? updates.bannerImage : employee.bannerImage,
         profilePicture: updates.profilePicture !== undefined ? updates.profilePicture : employee.profilePicture,
@@ -3429,6 +3477,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Update admin profile error:', error);
       res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
+  app.get("/api/admin/system-settings", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      if (employee.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied. Admin role required." });
+      }
+
+      const welcomeMessage = await getAppSetting(EMPLOYEE_WELCOME_MESSAGE_KEY);
+
+      res.json({
+        employeeWelcomeMessage: welcomeMessage?.trim() || DEFAULT_EMPLOYEE_WELCOME_MESSAGE,
+      });
+    } catch (error) {
+      console.error('Get admin system settings error:', error);
+      res.status(500).json({ message: "Failed to fetch system settings" });
+    }
+  });
+
+  app.patch("/api/admin/system-settings", requireEmployeeAuth, async (req, res) => {
+    try {
+      const session = req.session as any;
+      const employee = await storage.getEmployeeById(session.employeeId);
+
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+
+      if (employee.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied. Admin role required." });
+      }
+
+      const welcomeMessage = typeof req.body?.employeeWelcomeMessage === 'string'
+        ? req.body.employeeWelcomeMessage.trim()
+        : '';
+
+      await upsertAppSetting(
+        EMPLOYEE_WELCOME_MESSAGE_KEY,
+        welcomeMessage || DEFAULT_EMPLOYEE_WELCOME_MESSAGE,
+        employee.id,
+      );
+
+      res.json({
+        employeeWelcomeMessage: welcomeMessage || DEFAULT_EMPLOYEE_WELCOME_MESSAGE,
+      });
+    } catch (error) {
+      console.error('Update admin system settings error:', error);
+      res.status(500).json({ message: "Failed to update system settings" });
     }
   });
 
@@ -5072,11 +5176,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/admin/requirements/:id", requireAdminAuth, async (req, res) => {
     try {
       const { id } = req.params;
-      const updates = req.body;
+      const updates = { ...req.body };
 
       // If teamLead is being updated, handle reassignment tracking
       if (updates.teamLead) {
         const { requirementAssignments } = await import("@shared/schema");
+        const requirement = (await storage.getRequirements()).find((req: any) => req.id === id);
+        if (!requirement) {
+          return res.status(404).json({ message: "Requirement not found" });
+        }
+
         const existingAssignments = await db.select().from(requirementAssignments)
           .where(and(
             eq(requirementAssignments.requirementId, id),
@@ -5088,24 +5197,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const newTL = allEmployees.find(emp =>
           emp.role === 'team_leader' && (emp.name === updates.teamLead || emp.id === updates.teamLead)
         );
+        if (!newTL) {
+          return res.status(400).json({ message: "Selected employee is not a valid team leader" });
+        }
+
+        updates.teamLead = newTL.name;
 
         // Mark existing assignments as reassigned if TL changed
-        if (existingAssignments.length > 0 && newTL) {
-          const requirement = await storage.getRequirementById(id);
-          if (requirement) {
-            const oldTL = allEmployees.find(emp =>
-              emp.role === 'team_leader' && emp.name === requirement.teamLead
-            );
+        if (existingAssignments.length > 0) {
+          const oldTL = allEmployees.find(emp =>
+            emp.role === 'team_leader' && emp.name === requirement.teamLead
+          );
 
-            // If TL changed, mark all active assignments for this requirement as reassigned
-            if (oldTL && oldTL.id !== newTL.id) {
-              for (const assignment of existingAssignments) {
-                if (assignment.teamLeadId === oldTL.id) {
-                  await storage.updateRequirementAssignment(assignment.id, {
-                    status: "reassigned"
-                  });
-                }
-              }
+          // If TL changed, mark all active assignments for this requirement as reassigned
+          if (oldTL && oldTL.id !== newTL.id) {
+            for (const assignment of existingAssignments) {
+              await storage.updateRequirementAssignment(assignment.id, {
+                status: "reassigned"
+              });
             }
           }
         }
@@ -5517,8 +5626,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Also count recruiter-tagged applications for delivered/pipeline metrics
-      const allTaggedApplications = await db.select().from(jobApplications)
-        .where(eq(jobApplications.source, 'recruiter_tagged'));
+      const allTaggedApplications = (await storage.getAllJobApplications())
+        .filter((app: any) => app.source === 'recruiter_tagged');
 
       const filteredRequirementIds = new Set(filteredRequirements.map((req: any) => req.id));
       const filteredTaggedApplications = allTaggedApplications.filter(app => {
@@ -5616,9 +5725,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/key-aspects", requireAdminAuth, async (req, res) => {
     try {
       const { revenueMappings, cashOutflows, employees, clients } = await import("@shared/schema");
+      const requestedClientId = typeof req.query.clientId === 'string' && req.query.clientId !== 'all'
+        ? req.query.clientId
+        : null;
+      const requestedPeriod = typeof req.query.period === 'string' && ['monthly', 'quarterly', 'yearly'].includes(req.query.period)
+        ? req.query.period
+        : 'monthly';
 
-      // Get all revenue mappings
-      const allRevenueMappings = await db.select().from(revenueMappings);
+      let allRevenueMappings: any[] = [];
+      try {
+        allRevenueMappings = await db.select().from(revenueMappings);
+      } catch (error) {
+        console.warn("Key aspects revenue mappings fallback:", error);
+      }
 
       // Helper function to safely parse date (handles both Date objects and string formats)
       const parseDate = (dateValue: string | Date | null | undefined): Date | null => {
@@ -5634,46 +5753,142 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       };
 
-      // Get current date
-      const now = new Date();
-      const currentMonth = now.getMonth() + 1; // 1-12
-      const currentYear = now.getFullYear();
+      const monthMap: Record<string, number> = {
+        'january': 1, 'february': 2, 'march': 3, 'april': 4,
+        'may': 5, 'june': 6, 'july': 7, 'august': 8,
+        'september': 9, 'october': 10, 'november': 11, 'december': 12,
+        'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4,
+        'jun': 6, 'jul': 7, 'aug': 8, 'sep': 9,
+        'oct': 10, 'nov': 11, 'dec': 12
+      };
 
-      // Calculate revenue for current month
-      const currentMonthRevenue = allRevenueMappings
-        .filter(rm => {
-          if (!rm.closureDate) return false;
-          const closureDate = parseDate(rm.closureDate);
-          if (!closureDate) return false;
-          return closureDate.getMonth() + 1 === currentMonth && closureDate.getFullYear() === currentYear;
-        })
-        .reduce((sum, rm) => sum + (rm.revenue || 0), 0);
-
-      // Calculate revenue for previous month
-      let prevMonth = currentMonth - 1;
-      let prevYear = currentYear;
-      if (prevMonth === 0) {
-        prevMonth = 12;
-        prevYear = currentYear - 1;
+      let allCashOutflows: any[] = [];
+      try {
+        allCashOutflows = await db.select().from(cashOutflows);
+      } catch (error) {
+        console.warn("Key aspects cash outflows fallback:", error);
       }
-      const previousMonthRevenue = allRevenueMappings
-        .filter(rm => {
-          if (!rm.closureDate) return false;
-          const closureDate = parseDate(rm.closureDate);
-          if (!closureDate) return false;
-          return closureDate.getMonth() + 1 === prevMonth && closureDate.getFullYear() === prevYear;
-        })
-        .reduce((sum, rm) => sum + (rm.revenue || 0), 0);
 
-      // Calculate revenue for same month last year
-      const sameMonthLastYearRevenue = allRevenueMappings
-        .filter(rm => {
-          if (!rm.closureDate) return false;
-          const closureDate = parseDate(rm.closureDate);
-          if (!closureDate) return false;
-          return closureDate.getMonth() + 1 === currentMonth && closureDate.getFullYear() === currentYear - 1;
-        })
-        .reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+      const allClients = await storage.getAllClients();
+      const selectedClient = requestedClientId
+        ? allClients.find((client) => client.id === requestedClientId)
+        : null;
+
+      const filteredRevenueMappings = selectedClient
+        ? allRevenueMappings.filter((rm) => {
+            const clientNames = [
+              selectedClient.brandName,
+              selectedClient.incorporatedName,
+            ]
+              .filter(Boolean)
+              .map((name) => String(name).trim().toLowerCase());
+
+            return rm.clientId === selectedClient.id ||
+              clientNames.includes(String(rm.clientName || '').trim().toLowerCase());
+          })
+        : allRevenueMappings;
+
+      const filteredClients = selectedClient ? allClients.filter((client) => client.id === selectedClient.id) : allClients;
+
+      const getMonthNumber = (value: string | number | null | undefined) => {
+        if (typeof value === 'number') return value;
+        if (!value) return 0;
+        return monthMap[String(value).toLowerCase()] || parseInt(String(value)) || 0;
+      };
+
+      const getPeriodStart = (date: Date, period: 'monthly' | 'quarterly' | 'yearly') => {
+        if (period === 'yearly') {
+          return new Date(date.getFullYear(), 0, 1);
+        }
+        if (period === 'quarterly') {
+          return new Date(date.getFullYear(), Math.floor(date.getMonth() / 3) * 3, 1);
+        }
+        return new Date(date.getFullYear(), date.getMonth(), 1);
+      };
+
+      const shiftPeriod = (date: Date, period: 'monthly' | 'quarterly' | 'yearly', amount: number) => {
+        if (period === 'yearly') {
+          return new Date(date.getFullYear() + amount, 0, 1);
+        }
+        if (period === 'quarterly') {
+          return new Date(date.getFullYear(), date.getMonth() + amount * 3, 1);
+        }
+        return new Date(date.getFullYear(), date.getMonth() + amount, 1);
+      };
+
+      const getPeriodLabel = (date: Date, period: 'monthly' | 'quarterly' | 'yearly') => {
+        if (period === 'yearly') {
+          return String(date.getFullYear());
+        }
+        if (period === 'quarterly') {
+          return `Q${Math.floor(date.getMonth() / 3) + 1} ${date.getFullYear()}`;
+        }
+        return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      };
+
+      const getRevenueForPeriod = (periodStart: Date, period: 'monthly' | 'quarterly' | 'yearly') => {
+        return filteredRevenueMappings
+          .filter((rm) => {
+            if (!rm.closureDate) return false;
+            const closureDate = parseDate(rm.closureDate);
+            if (!closureDate) return false;
+            const normalizedDate = getPeriodStart(closureDate, period);
+            return normalizedDate.getTime() === periodStart.getTime();
+          })
+          .reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+      };
+
+      const getExpensesForPeriod = (periodStart: Date, period: 'monthly' | 'quarterly' | 'yearly') => {
+        return allCashOutflows
+          .filter((cf) => {
+            const monthNum = getMonthNumber(cf.month);
+            const yearNum = Number(cf.year) || 0;
+            if (monthNum < 1 || monthNum > 12 || yearNum <= 0) return false;
+            const cashDate = new Date(yearNum, monthNum - 1, 1);
+            const normalizedDate = getPeriodStart(cashDate, period);
+            return normalizedDate.getTime() === periodStart.getTime();
+          })
+          .reduce((sum, cf) => {
+            return sum + (cf.totalSalary || 0) + (cf.rent || 0) + (cf.toolsCost || 0) + (cf.otherExpenses || 0) + (cf.incentive || 0);
+          }, 0);
+      };
+
+      const reportingDates: Date[] = [];
+      for (const revenueMapping of filteredRevenueMappings) {
+        const closureDate = parseDate(revenueMapping.closureDate);
+        if (closureDate) {
+          reportingDates.push(getPeriodStart(closureDate, requestedPeriod as 'monthly' | 'quarterly' | 'yearly'));
+        }
+      }
+
+      for (const cashOutflow of allCashOutflows) {
+        const monthNum = getMonthNumber(cashOutflow.month);
+        const yearNum = Number(cashOutflow.year) || 0;
+
+        if (monthNum >= 1 && monthNum <= 12 && yearNum > 0) {
+          reportingDates.push(getPeriodStart(new Date(yearNum, monthNum - 1, 1), requestedPeriod as 'monthly' | 'quarterly' | 'yearly'));
+        }
+      }
+
+      // Use the latest month with actual data so the dashboard doesn't stay at zero
+      // when the current calendar month has not been entered yet.
+      const now = new Date();
+      const activeReportingDate = reportingDates.length > 0
+        ? new Date(Math.max(...reportingDates.map((date) => date.getTime())))
+        : now;
+      const currentMonth = activeReportingDate.getMonth() + 1; // retained for debug
+      const currentYear = activeReportingDate.getFullYear();
+      const currentPeriodStart = getPeriodStart(activeReportingDate, requestedPeriod as 'monthly' | 'quarterly' | 'yearly');
+      const previousPeriodStart = shiftPeriod(currentPeriodStart, requestedPeriod as 'monthly' | 'quarterly' | 'yearly', -1);
+      const samePeriodLastYearStart = shiftPeriod(
+        currentPeriodStart,
+        requestedPeriod as 'monthly' | 'quarterly' | 'yearly',
+        requestedPeriod === 'quarterly' ? -4 : -1
+      );
+
+      const currentMonthRevenue = getRevenueForPeriod(currentPeriodStart, requestedPeriod as 'monthly' | 'quarterly' | 'yearly');
+      const previousMonthRevenue = getRevenueForPeriod(previousPeriodStart, requestedPeriod as 'monthly' | 'quarterly' | 'yearly');
+      const sameMonthLastYearRevenue = getRevenueForPeriod(samePeriodLastYearStart, requestedPeriod as 'monthly' | 'quarterly' | 'yearly');
 
       // 1. Growth MoM (Month-over-Month Growth %)
       // Formula: (Revenue in Current Month - Revenue in Previous Month) / Revenue in Previous Month × 100
@@ -5694,34 +5909,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get all revenue for total calculations
-      const totalRevenue = allRevenueMappings.reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+      const totalRevenue = filteredRevenueMappings.reduce((sum, rm) => sum + (rm.revenue || 0), 0);
 
-      // Get all cash outflows for expenses
-      const allCashOutflows = await db.select().from(cashOutflows);
       const totalExpenses = allCashOutflows.reduce((sum, outflow) => {
         return sum + (outflow.totalSalary || 0) + (outflow.rent || 0) + (outflow.toolsCost || 0) + (outflow.otherExpenses || 0) + (outflow.incentive || 0);
       }, 0);
 
       // Calculate current month expenses for Burn Rate
-      const monthMap: Record<string, number> = {
-        'january': 1, 'february': 2, 'march': 3, 'april': 4,
-        'may': 5, 'june': 6, 'july': 7, 'august': 8,
-        'september': 9, 'october': 10, 'november': 11, 'december': 12,
-        'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4,
-        'jun': 6, 'jul': 7, 'aug': 8, 'sep': 9,
-        'oct': 10, 'nov': 11, 'dec': 12
-      };
-
-      const currentMonthExpenses = allCashOutflows
-        .filter(cf => {
-          const monthNum = typeof cf.month === 'string'
-            ? (monthMap[cf.month.toLowerCase()] || parseInt(cf.month) || 0)
-            : parseInt(String(cf.month)) || 0;
-          return monthNum === currentMonth && cf.year === currentYear;
-        })
-        .reduce((sum, cf) => {
-          return sum + (cf.totalSalary || 0) + (cf.rent || 0) + (cf.toolsCost || 0) + (cf.otherExpenses || 0) + (cf.incentive || 0);
-        }, 0);
+      const currentMonthExpenses = getExpensesForPeriod(currentPeriodStart, requestedPeriod as 'monthly' | 'quarterly' | 'yearly');
 
       // 7. Burn Rate (%)
       // Formula: Burn Rate % = (Total Monthly Expenses / Monthly Revenue) × 100
@@ -5814,22 +6009,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get all clients for Churn Rate calculation
-      const allClients = await db.select().from(clients);
-
       // 8. Churn Rate (Customer Churn Rate %)
       // Formula: Churn Rate % = (Number of Customers Lost During Period / Total Customers at Start of Period) × 100
       // Calculate clients at start of month (active clients from previous month)
-      const activeClientsAtStart = allClients.filter(client => {
+      const activeClientsAtStart = filteredClients.filter(client => {
         if (client.isLoginOnly) return false;
         const clientDate = parseDate(client.createdAt || client.startDate);
         if (!clientDate) return false;
-        // Clients created before current month
-        return (clientDate.getFullYear() < currentYear) ||
-          (clientDate.getFullYear() === currentYear && clientDate.getMonth() + 1 < currentMonth);
+        return getPeriodStart(clientDate, requestedPeriod as 'monthly' | 'quarterly' | 'yearly').getTime() <
+          currentPeriodStart.getTime();
       }).length;
 
       // Clients lost this month (changed to frozen/churned status or became inactive)
-      const clientsLostThisMonth = allClients.filter(client => {
+      const clientsLostThisMonth = filteredClients.filter(client => {
         if (client.isLoginOnly) return false;
         // Check if client status changed to frozen or churned this month
         if (client.currentStatus === 'frozen' || client.currentStatus === 'churned') {
@@ -5853,21 +6045,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Marketing costs from current month's cash outflows (using otherExpenses as marketing costs proxy)
       const currentMonthMarketingCosts = allCashOutflows
         .filter(cf => {
-          const monthNum = typeof cf.month === 'string'
-            ? (monthMap[cf.month.toLowerCase()] || parseInt(cf.month) || 0)
-            : parseInt(String(cf.month)) || 0;
-          return monthNum === currentMonth && cf.year === currentYear;
+          const monthNum = getMonthNumber(cf.month);
+          const yearNum = Number(cf.year) || 0;
+          if (monthNum < 1 || yearNum <= 0) return false;
+          const cashDate = new Date(yearNum, monthNum - 1, 1);
+          return getPeriodStart(cashDate, requestedPeriod as 'monthly' | 'quarterly' | 'yearly').getTime() === currentPeriodStart.getTime();
         })
         .reduce((sum, cf) => sum + (cf.otherExpenses || 0), 0);
 
       // Get new customers acquired in current month
-      const newCustomersThisMonth = allClients.filter(client => {
+      const newCustomersThisMonth = filteredClients.filter(client => {
         if (client.isLoginOnly) return false;
         if (!client.createdAt && !client.startDate) return false;
         const clientDate = parseDate(client.createdAt || client.startDate);
         if (!clientDate) return false;
-        return clientDate.getMonth() + 1 === currentMonth &&
-          clientDate.getFullYear() === currentYear;
+        return getPeriodStart(clientDate, requestedPeriod as 'monthly' | 'quarterly' | 'yearly').getTime() === currentPeriodStart.getTime();
       }).length;
 
       let clientAcquisitionCost = 0;
@@ -5878,36 +6070,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate chart data for last 12 months
       const chartData: Array<{ name: string; growthMoM: number; burnRate: number; churnRate: number; attrition: number }> = [];
 
-      for (let i = 11; i >= 0; i--) {
-        const targetDate = new Date(currentYear, currentMonth - 1 - i, 1);
-        const targetMonth = targetDate.getMonth() + 1;
-        const targetYear = targetDate.getFullYear();
-
-        // Calculate revenue for this month
-        const monthRevenue = allRevenueMappings
-          .filter(rm => {
-            if (!rm.closureDate) return false;
-            const closureDate = parseDate(rm.closureDate);
-            if (!closureDate) return false;
-            return closureDate.getMonth() + 1 === targetMonth && closureDate.getFullYear() === targetYear;
-          })
-          .reduce((sum, rm) => sum + (rm.revenue || 0), 0);
-
-        // Calculate previous month revenue for MoM
-        let prevTargetMonth = targetMonth - 1;
-        let prevTargetYear = targetYear;
-        if (prevTargetMonth === 0) {
-          prevTargetMonth = 12;
-          prevTargetYear = targetYear - 1;
-        }
-        const prevMonthRevenue = allRevenueMappings
-          .filter(rm => {
-            if (!rm.closureDate) return false;
-            const closureDate = parseDate(rm.closureDate);
-            if (!closureDate) return false;
-            return closureDate.getMonth() + 1 === prevTargetMonth && closureDate.getFullYear() === prevTargetYear;
-          })
-          .reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+      const chartPointCount = requestedPeriod === 'monthly' ? 12 : requestedPeriod === 'quarterly' ? 8 : 5;
+      for (let i = chartPointCount - 1; i >= 0; i--) {
+        const targetDate = shiftPeriod(currentPeriodStart, requestedPeriod as 'monthly' | 'quarterly' | 'yearly', -i);
+        const monthRevenue = getRevenueForPeriod(targetDate, requestedPeriod as 'monthly' | 'quarterly' | 'yearly');
+        const prevMonthRevenue = getRevenueForPeriod(
+          shiftPeriod(targetDate, requestedPeriod as 'monthly' | 'quarterly' | 'yearly', -1),
+          requestedPeriod as 'monthly' | 'quarterly' | 'yearly'
+        );
 
         // Calculate Growth MoM for this month
         let monthGrowthMoM = 0;
@@ -5918,16 +6088,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Calculate expenses for this month (Burn Rate)
-        const monthExpenses = allCashOutflows
-          .filter(cf => {
-            const monthNum = typeof cf.month === 'string'
-              ? (monthMap[cf.month.toLowerCase()] || parseInt(cf.month) || 0)
-              : parseInt(String(cf.month)) || 0;
-            return monthNum === targetMonth && cf.year === targetYear;
-          })
-          .reduce((sum, cf) => {
-            return sum + (cf.totalSalary || 0) + (cf.rent || 0) + (cf.toolsCost || 0) + (cf.otherExpenses || 0) + (cf.incentive || 0);
-          }, 0);
+        const monthExpenses = getExpensesForPeriod(targetDate, requestedPeriod as 'monthly' | 'quarterly' | 'yearly');
 
         // Calculate Burn Rate for this month
         let monthBurnRate = 0;
@@ -5940,19 +6101,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Calculate Churn Rate for this month (simplified - using all-time data)
         // For proper monthly churn, you'd need to track status changes by date
         let monthChurnRate = 0;
-        const activeClientsAtMonthStart = allClients.filter(client => {
+        const activeClientsAtMonthStart = filteredClients.filter(client => {
           if (client.isLoginOnly) return false;
           const clientDate = parseDate(client.createdAt || client.startDate);
           if (!clientDate) return false;
-          return (clientDate.getFullYear() < targetYear) ||
-            (clientDate.getFullYear() === targetYear && clientDate.getMonth() + 1 < targetMonth);
+          return getPeriodStart(clientDate, requestedPeriod as 'monthly' | 'quarterly' | 'yearly').getTime() <
+            targetDate.getTime();
         }).length;
         if (activeClientsAtMonthStart > 0) {
           // Simplified: assume same churn rate for all months
           monthChurnRate = churnRate;
         }
 
-        const monthName = targetDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        const monthName = getPeriodLabel(targetDate, requestedPeriod as 'monthly' | 'quarterly' | 'yearly');
         chartData.push({
           name: monthName,
           growthMoM: Math.round(monthGrowthMoM * 100) / 100,
@@ -5995,6 +6156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         revenuePerEmployee: Math.round(revenuePerEmployee),
         clientAcquisitionCost: Math.round(clientAcquisitionCost),
         chartData: chartData,
+        period: requestedPeriod,
         // Debug information (optional - remove in production if not needed)
         _debug: {
           currentMonthRevenue,
@@ -7726,9 +7888,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/closures-list", requireAdminAuth, async (req, res) => {
     try {
       const { revenueMappings } = await import("@shared/schema");
+      await ensureClosureActionsTable();
 
-      // Get all revenue mappings (closures)
-      const allRevenueMappings = await db.select().from(revenueMappings);
+      let allRevenueMappings: any[] = [];
+      try {
+        allRevenueMappings = await db.select().from(revenueMappings);
+      } catch (error) {
+        console.warn("Closures list revenue mappings fallback:", error);
+      }
+      const closureActionsResult = await db.execute(sql`
+        SELECT revenue_mapping_id, action_type, action_date, reason, day_bucket, updated_at
+        FROM closure_actions
+      `);
+      const closureActionRows = closureActionsResult.rows as Array<{
+        revenue_mapping_id?: string;
+        action_type?: string;
+        action_date?: string | null;
+        reason?: string | null;
+        day_bucket?: string | null;
+        updated_at?: string | null;
+      }>;
+      const closureActionMap = new Map(
+        closureActionRows
+          .filter((row) => row.revenue_mapping_id)
+          .map((row) => [
+            row.revenue_mapping_id as string,
+            {
+              type: row.action_type || null,
+              date: row.action_date || null,
+              reason: row.reason || null,
+              dayBucket: row.day_bucket || null,
+              updatedAt: row.updated_at || null,
+            }
+          ])
+      );
       const allApplications = await storage.getAllJobApplications();
       const activeRequirements = await storage.getRequirements();
       const archivedRequirements = await storage.getArchivedRequirements();
@@ -7763,6 +7956,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const sourceRequirement = matchedApplication?.requirementId
           ? allKnownRequirements.find((req: any) => req.id === matchedApplication.requirementId || req.originalId === matchedApplication.requirementId)
           : null;
+        const closureAction = closureActionMap.get(rm.id) || null;
 
         return {
           id: rm.id,
@@ -7798,7 +7992,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Keep these for backward compatibility with other closures endpoints
           quarter: `${rm.quarter}, ${rm.year}`,
           ctc: fixedCTC > 0 ? fixedCTC.toLocaleString('en-IN') : "N/A",
-          revenue: rm.revenue ? rm.revenue.toLocaleString('en-IN') : "0"
+          revenue: rm.revenue ? rm.revenue.toLocaleString('en-IN') : "0",
+          closureAction,
         };
       });
 
@@ -7806,6 +8001,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Closures list error:", error);
       res.status(500).json({ message: "Failed to get closures list" });
+    }
+  });
+
+  app.post("/api/admin/closures-list/:id/action", requireAdminAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { actionType, actionDate, reason } = req.body as {
+        actionType?: string;
+        actionDate?: string;
+        reason?: string;
+      };
+
+      if (!actionType || !['offer-drop', 'early-exit'].includes(actionType)) {
+        return res.status(400).json({ message: "Invalid closure action type" });
+      }
+
+      await ensureClosureActionsTable();
+      const allRevenueMappings = await storage.getAllRevenueMappings();
+      const revenueMapping = allRevenueMappings.find((mapping: any) => mapping.id === id);
+      if (!revenueMapping) {
+        return res.status(404).json({ message: "Closure report not found" });
+      }
+
+      if (actionType === 'offer-drop') {
+        const allApplications = await storage.getAllJobApplications();
+        let matchedApplications = allApplications.filter((app: any) =>
+          (app.candidateName || '').trim().toLowerCase() === (revenueMapping.candidateName || '').trim().toLowerCase() &&
+          (app.jobTitle || '').trim().toLowerCase() === (revenueMapping.position || '').trim().toLowerCase() &&
+          (app.company || '').trim().toLowerCase() === (revenueMapping.clientName || '').trim().toLowerCase()
+        );
+
+        if (matchedApplications.length === 0) {
+          matchedApplications = allApplications.filter((app: any) =>
+            (app.candidateName || '').trim().toLowerCase() === (revenueMapping.candidateName || '').trim().toLowerCase() &&
+            (app.jobTitle || '').trim().toLowerCase() === (revenueMapping.position || '').trim().toLowerCase()
+          );
+        }
+
+        await Promise.all(
+          matchedApplications.map((app: any) => storage.updateJobApplicationStatus(app.id, 'Offer Drop'))
+        );
+      }
+
+      const now = new Date().toISOString();
+      const normalizedActionDate = actionDate?.trim() || null;
+      const normalizedReason = reason?.trim() || null;
+      const dayBucket = actionType === 'early-exit'
+        ? getEarlyExitDayBucket(revenueMapping.closureDate, normalizedActionDate)
+        : null;
+
+      await db.execute(sql`
+        INSERT INTO closure_actions (
+          revenue_mapping_id,
+          action_type,
+          action_date,
+          reason,
+          day_bucket,
+          created_at,
+          updated_at
+        )
+        VALUES (
+          ${id},
+          ${actionType},
+          ${normalizedActionDate},
+          ${normalizedReason},
+          ${dayBucket},
+          ${now},
+          ${now}
+        )
+        ON CONFLICT (revenue_mapping_id)
+        DO UPDATE SET
+          action_type = EXCLUDED.action_type,
+          action_date = EXCLUDED.action_date,
+          reason = EXCLUDED.reason,
+          day_bucket = EXCLUDED.day_bucket,
+          updated_at = EXCLUDED.updated_at
+      `);
+
+      res.json({ message: "Closure action saved successfully" });
+    } catch (error) {
+      console.error("Closure action error:", error);
+      res.status(500).json({ message: "Failed to save closure action" });
     }
   });
 
@@ -7915,64 +8192,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { targetMappings, revenueMappings } = await import("@shared/schema");
 
-      const now = new Date();
-      const currentYear = now.getFullYear();
-      const targetYear = currentYear;
-      const currentMonth = now.getMonth() + 1;
+      // `period` is kept for existing dashboard callers.
+      // `summaryScope` powers the right-side performance summary panel.
+      const { period, summaryScope, summaryYear, summaryQuarter } = req.query;
 
-      // Determine current quarter
-      let currentQuarter = "Q1";
-      if (currentMonth >= 1 && currentMonth <= 3) currentQuarter = "Q1";
-      else if (currentMonth >= 4 && currentMonth <= 6) currentQuarter = "Q2";
-      else if (currentMonth >= 7 && currentMonth <= 9) currentQuarter = "Q3";
-      else currentQuarter = "Q4";
-
-      // Support period parameter (quarterly, monthly, yearly)
-      const { period } = req.query;
-      // For now, period parameter is informational - we still use current quarter
-      // Future enhancement: support filtering by different periods
-
-      // Get target mappings for current quarter
       const allTargetMappings = await db.select().from(targetMappings);
-      const currentQuarterTargets = allTargetMappings.filter(tm =>
-        tm.quarter === currentQuarter && tm.year === targetYear
-      );
-
-      // Log for debugging
-      console.log(`[Performance Metrics] Current quarter: ${currentQuarter} ${targetYear}`);
-      console.log(`[Performance Metrics] Total target mappings: ${allTargetMappings.length}`);
-      console.log(`[Performance Metrics] Current quarter targets: ${currentQuarterTargets.length}`);
-
-      // Calculate totals
-      const totalMinTarget = currentQuarterTargets.reduce((sum, tm) => sum + tm.minimumTarget, 0);
-      const totalAchieved = currentQuarterTargets.reduce((sum, tm) => sum + (tm.targetAchieved ?? 0), 0);
-      const totalIncentives = currentQuarterTargets.reduce((sum, tm) => sum + (tm.incentives ?? 0), 0);
-
-      // Get current quarter revenue from revenue mappings
       const allRevenueMappings = await db.select().from(revenueMappings);
-      const currentQuarterClosures = allRevenueMappings.filter(rm => {
-        // Map quarter codes: JFM=Q1, AMJ=Q2, JAS=Q3, OND=Q4
-        const quarterMap: Record<string, string> = {
-          'JFM': 'Q1', 'AMJ': 'Q2', 'JAS': 'Q3', 'OND': 'Q4',
-          'Q1': 'Q1', 'Q2': 'Q2', 'Q3': 'Q3', 'Q4': 'Q4'
-        };
-        return quarterMap[rm.quarter] === currentQuarter && rm.year === currentYear;
+      const quarterOrder: Record<string, number> = { Q1: 1, Q2: 2, Q3: 3, Q4: 4 };
+      const quarterMap: Record<string, string> = {
+        'JFM': 'Q1', 'AMJ': 'Q2', 'JAS': 'Q3', 'OND': 'Q4',
+        'Q1': 'Q1', 'Q2': 'Q2', 'Q3': 'Q3', 'Q4': 'Q4'
+      };
+
+      const availablePeriods: Array<{ year: number; quarter: string }> = [];
+
+      allTargetMappings.forEach((target) => {
+        if (target.year && target.quarter && quarterOrder[target.quarter]) {
+          availablePeriods.push({ year: Number(target.year), quarter: target.quarter });
+        }
       });
 
-      const totalRevenue = currentQuarterClosures.reduce((sum, rm) => sum + (rm.revenue || 0), 0);
-      const closuresCount = currentQuarterClosures.length;
+      allRevenueMappings.forEach((mapping) => {
+        const mappedQuarter = quarterMap[mapping.quarter];
+        if (mapping.year && mappedQuarter) {
+          availablePeriods.push({ year: Number(mapping.year), quarter: mappedQuarter });
+        }
+      });
+
+      const now = new Date();
+      const fallbackQuarter = `Q${Math.floor(now.getMonth() / 3) + 1}`;
+      const latestPeriod = availablePeriods.sort((a, b) => {
+        if (a.year !== b.year) {
+          return b.year - a.year;
+        }
+        return quarterOrder[b.quarter] - quarterOrder[a.quarter];
+      })[0] ?? { year: now.getFullYear(), quarter: fallbackQuarter };
+
+      const targetYear = latestPeriod.year;
+      const currentQuarter = latestPeriod.quarter;
+
+      let filteredTargets = allTargetMappings.filter((target) =>
+        Number(target.year) === targetYear && target.quarter === currentQuarter
+      );
+      let relevantClosures = allRevenueMappings.filter((mapping) => {
+        const mappedQuarter = quarterMap[mapping.quarter];
+        return mappedQuarter === currentQuarter && Number(mapping.year) === targetYear;
+      });
+      let summaryLabel = `${currentQuarter} ${targetYear}`;
+
+      if (typeof summaryScope === 'string') {
+        const requestedYear = Number(summaryYear) || targetYear;
+        if (summaryScope === 'overall') {
+          filteredTargets = allTargetMappings;
+          relevantClosures = allRevenueMappings;
+          summaryLabel = 'Overall';
+        } else if (summaryScope === 'yearly') {
+          filteredTargets = allTargetMappings.filter((target) => Number(target.year) === requestedYear);
+          relevantClosures = allRevenueMappings.filter((mapping) => Number(mapping.year) === requestedYear);
+          summaryLabel = `${requestedYear}`;
+        } else if (summaryScope === 'quarterly') {
+          const requestedQuarter = typeof summaryQuarter === 'string' && quarterOrder[summaryQuarter]
+            ? summaryQuarter
+            : currentQuarter;
+          filteredTargets = allTargetMappings.filter((target) =>
+            Number(target.year) === requestedYear && target.quarter === requestedQuarter
+          );
+          relevantClosures = allRevenueMappings.filter((mapping) => {
+            const mappedQuarter = quarterMap[mapping.quarter];
+            return mappedQuarter === requestedQuarter && Number(mapping.year) === requestedYear;
+          });
+          summaryLabel = `${requestedQuarter} ${requestedYear}`;
+        }
+      }
+
+      const totalMinTarget = filteredTargets.reduce((sum, target) => sum + (target.minimumTarget || 0), 0);
+      const totalAchieved = filteredTargets.reduce((sum, target) => sum + (target.targetAchieved ?? 0), 0);
+      const totalIncentives = filteredTargets.reduce((sum, target) => sum + (target.incentives ?? 0), 0);
+
+      const totalRevenue = relevantClosures.reduce((sum, mapping) => sum + (mapping.revenue || 0), 0);
+      const closuresCount = relevantClosures.length;
 
       // Calculate performance percentage for gauge
       const performancePercentage = totalMinTarget > 0 ? Math.min((totalAchieved / totalMinTarget) * 100, 100) : 0;
 
       res.json({
-        currentQuarter: `${currentQuarter} ${currentYear}`,
+        currentQuarter: summaryLabel,
         minimumTarget: totalMinTarget,
         targetAchieved: totalAchieved,
         incentiveEarned: totalIncentives,
         totalRevenue,
         closuresCount,
-        performancePercentage: Math.round(performancePercentage)
+        performancePercentage: Math.round(performancePercentage),
+        period: typeof period === 'string' ? period : 'quarterly'
       });
     } catch (error) {
       console.error("Performance metrics error:", error);
@@ -9372,7 +9683,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           id: app.id,
           candidateName: app.candidateName || 'Unknown Candidate',
           company: app.company || 'N/A',
+          jobTitle: app.jobTitle || 'N/A',
           roleApplied: app.jobTitle || 'N/A',
+          status: statusMap[app.status] || app.status || 'In-Process',
           currentStatus: statusMap[app.status] || app.status || 'In-Process',
           recruiter: recruiterName,
           recruiterId: recruiterId,

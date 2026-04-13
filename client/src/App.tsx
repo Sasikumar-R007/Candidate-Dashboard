@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/contexts/theme-context";
 import { AuthProvider } from "@/contexts/auth-context";
+import AuthenticatedNavigationGuard from "@/components/authenticated-navigation-guard";
 import { ProtectedRoute } from "@/components/protected-route";
 import ErrorBoundary from "@/components/error-boundary";
 import Landing from "@/pages/landing";
@@ -128,6 +129,7 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
+          <AuthenticatedNavigationGuard />
           <ThemeProvider>
             <TooltipProvider>
               <Toaster />
