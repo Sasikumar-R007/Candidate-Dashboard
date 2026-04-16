@@ -1052,12 +1052,12 @@ export default function RecruiterDashboard2() {
   };
 
   const { data: dailyMetrics } = useQuery({
-    queryKey: ['/api/recruiter/daily-metrics', format(selectedDate, 'yyyy-MM-dd')],
+    queryKey: ['/api/recruiter/daily-metrics', format(selectedDate, 'yyyy-MM-dd'), selectedRequirementForDelivery],
     queryFn: async () => {
       const dateStr = format(selectedDate, 'yyyy-MM-dd');
       const API_BASE_URL = import.meta.env.VITE_API_URL || '';
       const createApiUrl = (path: string) => `${API_BASE_URL}${path}`;
-      const response = await fetch(createApiUrl(`/api/recruiter/daily-metrics?date=${dateStr}`), {
+      const response = await fetch(createApiUrl(`/api/recruiter/daily-metrics?date=${dateStr}&requirementId=${selectedRequirementForDelivery}`), {
         credentials: 'include'
       });
       if (!response.ok) throw new Error('Failed to fetch daily metrics');
@@ -1559,13 +1559,7 @@ export default function RecruiterDashboard2() {
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium text-green-600">Delivered</span>
                           <span className="text-3xl font-bold text-green-600" data-testid="text-delivered-count">
-                            {(() => {
-                              if (selectedRequirementForDelivery === 'Overall') {
-                                return String(dailyMetrics?.dailyDeliveryDelivered ?? 0).padStart(2, '0');
-                              }
-                              const selectedReq = recruiterRequirements.find((r: any) => r.id === selectedRequirementForDelivery);
-                              return String(selectedReq?.deliveredCount || 0).padStart(2, '0');
-                            })()}
+                            {String(dailyMetrics?.dailyDeliveryDelivered ?? 0).padStart(2, '0')}
                           </span>
                         </div>
                       </div>
@@ -1573,17 +1567,7 @@ export default function RecruiterDashboard2() {
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium text-red-600">Defaulted</span>
                           <span className="text-3xl font-bold text-red-600" data-testid="text-defaulted-count">
-                            {(() => {
-                              if (selectedRequirementForDelivery === 'Overall') {
-                                return String(dailyMetrics?.dailyDeliveryDefaulted ?? 0).padStart(2, '0');
-                              }
-                              const selectedReq = recruiterRequirements.find((r: any) => r.id === selectedRequirementForDelivery);
-                              if (!selectedReq) return '00';
-                              const expected = getExpectedCount(selectedReq.criticality, selectedReq.toughness);
-                              const delivered = selectedReq.deliveredCount || 0;
-                              const defaulted = Math.max(0, expected - delivered);
-                              return String(defaulted).padStart(2, '0');
-                            })()}
+                            {String(dailyMetrics?.dailyDeliveryDefaulted ?? 0).padStart(2, '0')}
                           </span>
                         </div>
                       </div>

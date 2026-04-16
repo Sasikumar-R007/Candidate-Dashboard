@@ -25,6 +25,11 @@ import lp02Image from "@/assets/lp02.png";
 import lp03Image from "@/assets/lp03.png";
 import { useAuth } from "@/contexts/auth-context";
 import { getDefaultRouteForAuthUser } from "@/lib/auth-routing";
+import { useQuery } from "@tanstack/react-query";
+import { JobCard } from "@/components/landing/JobCard";
+import { RecruiterJob } from "@shared/schema";
+import { ChevronLeft } from "lucide-react";
+import { motion } from "framer-motion";
 
 type SearchSuggestion = {
   role: string;
@@ -127,6 +132,24 @@ export default function Landing() {
   const [experience, setExperience] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const JOBS_PER_PAGE = 6;
+
+  const { data: jobs = [] } = useQuery<RecruiterJob[]>({
+    queryKey: ["/api/jobs/public"],
+  });
+
+  const totalPages = Math.ceil(jobs.length / JOBS_PER_PAGE);
+  const currentJobs = jobs.slice((currentPage - 1) * JOBS_PER_PAGE, currentPage * JOBS_PER_PAGE);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    const jobsSection = document.getElementById("jobs");
+    if (jobsSection) {
+      jobsSection.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const filteredSearchResults = normalizedSearchQuery
@@ -203,23 +226,17 @@ export default function Landing() {
               </span>
             </div>
 
-            <div className="hidden md:flex items-center space-x-6">
+            <div className="hidden md:flex items-center space-x-4">
               <Link href="/candidate-login">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="bg-transparent text-gray-700 hover:bg-white/40 hover:text-gray-900"
+                <Button 
+                  className="bg-purple-600 hover:bg-purple-700 text-white rounded-[10px] px-6 font-bold transition-all shadow-md shadow-purple-100"
                 >
                   Login
                 </Button>
               </Link>
-              <Link href="/candidate-registration">
-                <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white">
-                  Register
-                </Button>
-              </Link>
+              <div className="h-8 w-px bg-gray-200" />
               <Link href="/employer-login">
-                <button className="rounded-lg border border-white/40 bg-white/20 px-4 py-2 text-sm font-medium text-purple-600 transition-all hover:text-purple-700">
+                <button className="text-[15px] font-bold text-gray-700 hover:text-purple-600 transition-colors">
                   For Employer
                 </button>
               </Link>
@@ -404,25 +421,147 @@ export default function Landing() {
             <p className="text-sm sm:text-base text-gray-600 text-center mb-6">
               Explore roles grouped by industry and find the perfect fit faster.
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap justify-center gap-3 sm:gap-4">
-              {jobCategories.map((category, index) => (
-                <Link key={index} href="/candidate-login">
-                  <button className="flex items-center gap-2 sm:gap-3 px-4 sm:px-6 py-3 sm:py-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow border border-gray-200 w-full sm:w-auto">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#F89252] flex items-center justify-center flex-shrink-0">
-                      <category.icon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            <div className="relative overflow-hidden py-4 group">
+              <motion.div 
+                className="flex gap-4 w-max"
+                animate={{
+                  x: [0, -1000],
+                }}
+                transition={{
+                  x: {
+                    repeat: Infinity,
+                    repeatType: "loop",
+                    duration: 35,
+                    ease: "linear",
+                  },
+                }}
+                whileHover={{ animationPlayState: "paused" }}
+                style={{ display: "flex", gap: "1rem" }}
+              >
+                {/* Double the categories for seamless loop */}
+                {[...jobCategories, ...jobCategories, ...jobCategories].map((category, index) => (
+                  <button 
+                    key={index} 
+                    onClick={() => {
+                      const jobsSection = document.getElementById("jobs");
+                      if (jobsSection) {
+                        jobsSection.scrollIntoView({ behavior: "smooth" });
+                      }
+                    }}
+                    className="flex items-center gap-3 px-6 py-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-all border border-gray-100 min-w-[200px] shrink-0 hover:-translate-y-1"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-[#F89252] flex items-center justify-center flex-shrink-0 shadow-sm shadow-orange-100">
+                      <category.icon className="w-5 h-5 text-white" />
                     </div>
-                    <span className="text-sm sm:text-base font-medium text-gray-900 flex-1 text-left">
+                    <span className="text-base font-semibold text-gray-800 flex-1 text-left whitespace-nowrap">
                       {category.label}
                     </span>
-                    <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-white flex-shrink-0" />
+                    <ChevronRight className="w-4 h-4 text-gray-300" />
                   </button>
-                </Link>
-              ))}
+                ))}
+              </motion.div>
+              
+              {/* Fade gradients for smooth marquee edges */}
+              <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-[#FAF8FF] to-transparent z-10 pointer-events-none" />
+              <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-[#FAF8FF] to-transparent z-10 pointer-events-none" />
             </div>
           </div>
         </section>
 
-        <section className="mb-12 sm:mb-16 relative">
+                <section id="jobs" className="mb-12 sm:mb-16">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-6 sm:mb-8 text-center px-2">
+            Actively Hiring Roles
+          </h2>
+          
+          {jobs.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {currentJobs.map((job) => (
+                  <div key={job.id} className="flex justify-center">
+                    <JobCard job={job} />
+                  </div>
+                ))}
+              </div>
+
+              {totalPages > 1 && (
+                <div className="mt-12 flex justify-center items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="rounded-full w-10 h-10 border-gray-200 bg-white hover:bg-gray-50 flex items-center justify-center p-0"
+                  >
+                    <ChevronLeft className="w-5 h-5 text-gray-600" />
+                  </Button>
+
+                  <div className="flex gap-2 mx-4">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                      <button
+                        key={page}
+                        onClick={() => handlePageChange(page)}
+                        className={`w-10 h-10 rounded-full text-sm font-semibold transition-all ${
+                          currentPage === page
+                            ? "bg-purple-600 text-white shadow-md shadow-purple-200"
+                            : "bg-white text-gray-500 border border-gray-200 hover:border-purple-300 hover:text-purple-600"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    className="rounded-full w-10 h-10 border-gray-200 bg-white hover:bg-gray-50 flex items-center justify-center p-0"
+                  >
+                    <ChevronRight className="w-5 h-5 text-gray-600" />
+                  </Button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+              {[1, 2, 3, 4, 5, 6].map((index) => (
+                <div key={index} className="flex justify-center">
+                  <img
+                    src={lp02Image}
+                    alt="Actively Hiring Roles"
+                    className="w-full h-auto rounded-lg"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-8 sm:mt-12 backdrop-blur-lg bg-white/20 rounded-lg border border-white/30 shadow-xl p-4 sm:p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6 max-w-6xl mx-auto">
+            <div className="flex-1 w-full md:w-auto">
+              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+                Develop Your Potential!
+              </h3>
+              <p className="text-sm sm:text-base text-gray-700 mb-3 sm:mb-4">
+                Unlock your potential with constructive feedback from our recruiters.
+              </p>
+              <Link href="/candidate-login">
+                <Button className="bg-white border border-black text-black hover:bg-gray-50 px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-sm sm:text-base w-full sm:w-auto">
+                  Explore Now!
+                </Button>
+              </Link>
+            </div>
+            <div className="hidden md:block flex-shrink-0">
+              <img
+                src={lp03Image}
+                alt="Develop Your Potential"
+                className="w-auto h-24 sm:h-32"
+              />
+            </div>
+          </div>
+        </section>
+
+<section className="mb-12 sm:mb-16 relative">
           <div className="rounded-2xl border border-white/70 bg-white/45 p-4 shadow-[0_20px_70px_rgba(116,81,255,0.18)] backdrop-blur-lg sm:p-6 md:p-8 lg:p-12">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 items-center">
               <div className="flex justify-center lg:justify-start">
@@ -463,45 +602,7 @@ export default function Landing() {
           </div>
         </section>
 
-        <section id="jobs" className="mb-12 sm:mb-16">
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-6 sm:mb-8 text-center px-2">
-            Actively Hiring Roles
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {[1, 2, 3, 4, 5, 6].map((index) => (
-              <div key={index} className="flex justify-center">
-                <img
-                  src={lp02Image}
-                  alt="Actively Hiring Roles"
-                  className="w-full h-auto rounded-lg"
-                />
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-8 sm:mt-12 backdrop-blur-lg bg-white/20 rounded-lg border border-white/30 shadow-xl p-4 sm:p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-4 sm:gap-6 max-w-6xl mx-auto">
-            <div className="flex-1 w-full md:w-auto">
-              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                Develop Your Potential!
-              </h3>
-              <p className="text-sm sm:text-base text-gray-700 mb-3 sm:mb-4">
-                Unlock your potential with constructive feedback from our recruiters.
-              </p>
-              <Link href="/candidate-login">
-                <Button className="bg-white border border-black text-black hover:bg-gray-50 px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-sm sm:text-base w-full sm:w-auto">
-                  Explore Now!
-                </Button>
-              </Link>
-            </div>
-            <div className="hidden md:block flex-shrink-0">
-              <img
-                src={lp03Image}
-                alt="Develop Your Potential"
-                className="w-auto h-24 sm:h-32"
-              />
-            </div>
-          </div>
-        </section>
+        
 
         <section className="backdrop-blur-lg bg-white/10 border border-white/30 py-12 sm:py-16 mb-12 sm:mb-16 rounded-lg px-4 sm:px-6">
           <div className="text-center">

@@ -87,7 +87,7 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange, chatUnre
   return (
     <>
       {/* Main Sidebar */}
-      <div className="w-16 bg-slate-900 text-white flex-shrink-0 h-screen overflow-hidden fixed left-0 top-0 z-50 flex flex-col">
+      <div className="w-16 bg-slate-900 text-white flex-shrink-0 h-screen overflow-visible fixed left-0 top-0 z-50 flex flex-col">
         {/* Logo Section */}
         <div className="h-16 flex items-center justify-center border-b border-slate-700">
           <div className="flex items-center gap-2">
@@ -133,8 +133,11 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange, chatUnre
                 
                 {/* Tooltip */}
                 {hoveredItem === item.id && !isExpanded && (
-                  <div className="absolute left-full ml-2 px-3 py-1.5 bg-black text-white text-sm rounded whitespace-nowrap z-50 shadow-xl">
-                    {item.label}
+                  <div className="absolute left-full ml-3 top-1/2 z-[70] flex -translate-y-1/2 items-center">
+                    <div className="h-3 w-3 rotate-45 rounded-[2px] bg-white shadow-lg" />
+                    <div className="-ml-1 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-[0_14px_34px_rgba(15,23,42,0.18)]">
+                      {item.label}
+                    </div>
                   </div>
                 )}
               </button>
@@ -160,8 +163,11 @@ export default function TeamLeaderMainSidebar({ activeTab, onTabChange, chatUnre
               
               {/* Tooltip */}
               {hoveredItem === 'logout' && !isExpanded && (
-                <div className="absolute left-full ml-2 px-3 py-1.5 bg-black text-white text-sm rounded whitespace-nowrap z-50 shadow-xl">
-                  {logoutMutation.isPending ? 'Signing out...' : 'Sign Out'}
+                <div className="absolute left-full ml-3 top-1/2 z-[70] flex -translate-y-1/2 items-center">
+                  <div className="h-3 w-3 rotate-45 rounded-[2px] bg-white shadow-lg" />
+                  <div className="-ml-1 whitespace-nowrap rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-[0_14px_34px_rgba(15,23,42,0.18)]">
+                    {logoutMutation.isPending ? 'Signing out...' : 'Sign Out'}
+                  </div>
                 </div>
               )}
             </button>

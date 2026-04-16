@@ -74,7 +74,7 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
   useEffect(() => {
     const loadProfileData = async () => {
       if (!employee?.role) return;
-      
+
       try {
         let endpoint = '';
         switch (employee.role) {
@@ -91,7 +91,7 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
             endpoint = '/api/client/profile';
             break;
         }
-        
+
         if (endpoint) {
           try {
             const response = await apiRequest('GET', endpoint);
@@ -105,8 +105,15 @@ export default function AdminTopHeader({ companyName = "Scaling Theory", onHelpC
         console.error('Failed to load profile data:', error);
       }
     };
-    
+
     loadProfileData();
+
+    const handleProfileUpdated = () => {
+      loadProfileData();
+    };
+
+    window.addEventListener('profile-updated', handleProfileUpdated);
+    return () => window.removeEventListener('profile-updated', handleProfileUpdated);
   }, [employee?.role]);
 
   // Handle click outside to close dropdown

@@ -105,25 +105,17 @@ const upload = multer({
     }
   }),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 20 * 1024 * 1024, // 20MB limit
   },
   fileFilter: (req, file, cb) => {
-    // Allow image files and PDFs only
-    const allowedExtensions = /\.(jpeg|jpg|png|gif|webp|avif|pdf)$/i;
-    const extname = allowedExtensions.test(file.originalname.toLowerCase());
+    const originalName = file.originalname.toLowerCase();
+    const isPdf = originalName.endsWith('.pdf') || file.mimetype === 'application/pdf';
+    const isImage = file.mimetype.startsWith('image/');
 
-    // Check MIME types including modern image formats and PDF
-    const allowedMimeTypes = [
-      'image/jpeg', 'image/jpg', 'image/png', 'image/gif',
-      'image/webp', 'image/avif', // Modern image formats
-      'application/pdf'
-    ];
-    const mimetype = allowedMimeTypes.includes(file.mimetype);
-
-    if (extname && mimetype) {
+    if (isImage || isPdf) {
       return cb(null, true);
     } else {
-      cb(new Error('Only images (JPEG, PNG, GIF, WebP, AVIF), PDFs, and Word documents are allowed!'));
+      cb(new Error('Only image files and PDFs are allowed.'));
     }
   }
 });
@@ -422,6 +414,312 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ status: "unhealthy", error: "Health check failed" });
+    }
+  });
+
+  // Public Jobs API for Landing Page
+  app.get("/api/jobs/public", async (req, res) => {
+    try {
+      const allJobs = await storage.getAllRecruiterJobs();
+      
+      // Filter for active jobs and sort by newest first
+      const activeJobs = allJobs
+        .filter(job => job.status === "Active");
+
+      // Add dummy jobs for design testing if needed
+      const dummyJobs = [
+        {
+          id: "dummy-1",
+          role: "Hardware Developer",
+          companyName: "Symphonix",
+          location: "Trichy",
+          workMode: "On-site",
+          experience: "0+",
+          salaryPackage: "₹ 5.5 LPA",
+          roleDefinitions: "Building next-gen IoT hardware solutions combining design, development, and innovation.",
+          primarySkills: JSON.stringify(["IoT", "Arduino", "C++", "C"]),
+          applicationCount: 12,
+          postedDate: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6 hours ago
+          status: "Active"
+        },
+        {
+          id: "dummy-2",
+          role: "Frontend Engineer",
+          companyName: "MetaTech",
+          location: "Bangalore",
+          workMode: "Remote",
+          experience: "2-4",
+          salaryPackage: "₹ 12-18 LPA",
+          roleDefinitions: "Creating immersive user interfaces with React and Three.js.",
+          primarySkills: JSON.stringify(["React", "Three.js", "TypeScript"]),
+          applicationCount: 45,
+          postedDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+          status: "Active"
+        },
+        {
+          id: "dummy-3",
+          role: "Backend Architect",
+          companyName: "CloudScale",
+          location: "Hyderabad",
+          workMode: "Hybrid",
+          experience: "8+",
+          salaryPackage: "₹ 35-45 LPA",
+          roleDefinitions: "Designing scalable microservices architectures.",
+          primarySkills: JSON.stringify(["Go", "Kubernetes", "Redis"]),
+          applicationCount: 8,
+          postedDate: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          status: "Active"
+        },
+        {
+          id: "dummy-4",
+          role: "UI Designer",
+          companyName: "PixelPerfect",
+          location: "Chennai",
+          workMode: "On-site",
+          experience: "1-3",
+          salaryPackage: "₹ 8-10 LPA",
+          roleDefinitions: "Crafting beautiful designs for mobile and web applications.",
+          primarySkills: JSON.stringify(["Figma", "Adobe XD", "Prototyping"]),
+          applicationCount: 22,
+          postedDate: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
+          status: "Active"
+        },
+        {
+          id: "dummy-5",
+          role: "Python Developer",
+          companyName: "DataFlow",
+          location: "Pune",
+          workMode: "Remote",
+          experience: "2+",
+          salaryPackage: "₹ 10-15 LPA",
+          roleDefinitions: "Building data pipelines and automation scripts.",
+          primarySkills: JSON.stringify(["Python", "Pandas", "Django"]),
+          applicationCount: 31,
+          postedDate: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+          status: "Active"
+        },
+        {
+          id: "dummy-6",
+          role: "DevOps Engineer",
+          companyName: "InfraGen",
+          location: "Mumbai",
+          workMode: "Hybrid",
+          experience: "3-5",
+          salaryPackage: "₹ 15-22 LPA",
+          roleDefinitions: "Managing cloud infrastructure and CI/CD pipelines.",
+          primarySkills: JSON.stringify(["AWS", "Terraform", "Jenkins"]),
+          applicationCount: 15,
+          postedDate: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+          status: "Active"
+        },
+        {
+          id: "dummy-7",
+          role: "Full Stack Developer",
+          companyName: "BrightIdea",
+          location: "Kochi",
+          workMode: "Remote",
+          experience: "4+",
+          salaryPackage: "₹ 18-25 LPA",
+          roleDefinitions: "Working on end-to-end features for our SaaS platform.",
+          primarySkills: JSON.stringify(["Node.js", "React", "MongoDB"]),
+          applicationCount: 28,
+          postedDate: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+          status: "Active"
+        },
+        {
+          id: "dummy-8",
+          role: "Security Analyst",
+          companyName: "CyberShield",
+          location: "Ahmedabad",
+          workMode: "On-site",
+          experience: "5+",
+          salaryPackage: "₹ 20-30 LPA",
+          roleDefinitions: "Ensuring our systems and data are secure from threats.",
+          primarySkills: JSON.stringify(["Cyberspace", "Ethical Hacking", "SOC"]),
+          applicationCount: 10,
+          postedDate: new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(),
+          status: "Active"
+        },
+        {
+          id: "dummy-9",
+          role: "Mobile App Dev",
+          companyName: "AppExpress",
+          location: "Indore",
+          workMode: "Hybrid",
+          experience: "2+",
+          salaryPackage: "₹ 9-14 LPA",
+          roleDefinitions: "Developing high-performance Flutter applications.",
+          primarySkills: JSON.stringify(["Flutter", "Dart", "Firebase"]),
+          applicationCount: 19,
+          postedDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+          status: "Active"
+        },
+        {
+          id: "dummy-10",
+          role: "QA Automation",
+          companyName: "TestFlow",
+          location: "Jaipur",
+          workMode: "Remote",
+          experience: "3+",
+          salaryPackage: "₹ 12-16 LPA",
+          roleDefinitions: "Automating end-to-end tests for complex web apps.",
+          primarySkills: JSON.stringify(["Selenium", "Cypress", "Java"]),
+          applicationCount: 14,
+          postedDate: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+          status: "Active"
+        },
+        {
+          id: "dummy-11",
+          role: "AI Engineer",
+          companyName: "BrainNode",
+          location: "Bangalore",
+          workMode: "Hybrid",
+          experience: "4+",
+          salaryPackage: "₹ 25-40 LPA",
+          roleDefinitions: "Implementing LLM models and fine-tuning neural networks.",
+          primarySkills: JSON.stringify(["PyTorch", "OpenAI", "Python"]),
+          applicationCount: 52,
+          postedDate: new Date(Date.now() - 30 * 60 * 1000).toISOString(), // 30 mins ago
+          status: "Active"
+        },
+        {
+          id: "dummy-12",
+          role: "HR Manager",
+          companyName: "PeopleFirst",
+          location: "New Delhi",
+          workMode: "On-site",
+          experience: "6-8",
+          salaryPackage: "₹ 15-20 LPA",
+          roleDefinitions: "Managing end-to-end HR operations and employee relations.",
+          primarySkills: JSON.stringify(["HRMS", "Strategy", "Recruitment"]),
+          applicationCount: 18,
+          postedDate: new Date(Date.now() - 10 * 60 * 60 * 1000).toISOString(),
+          status: "Active"
+        },
+        {
+          id: "dummy-13",
+          role: "Business Analyst",
+          companyName: "InsightCorp",
+          location: "Mumbai",
+          workMode: "Remote",
+          experience: "3+",
+          salaryPackage: "₹ 14-19 LPA",
+          roleDefinitions: "Bridging the gap between business needs and technical solutions.",
+          primarySkills: JSON.stringify(["SQL", "Tableau", "Agile"]),
+          applicationCount: 26,
+          postedDate: new Date(Date.now() - 15 * 60 * 60 * 1000).toISOString(),
+          status: "Active"
+        },
+        {
+          id: "dummy-14",
+          role: "Product Designer",
+          companyName: "DesignWave",
+          location: "Goa",
+          workMode: "Remote",
+          experience: "5+",
+          salaryPackage: "₹ 20-28 LPA",
+          roleDefinitions: "Defining the product vision through high-fidelity designs.",
+          primarySkills: JSON.stringify(["Figma", "Interaction Design", "UX"]),
+          applicationCount: 40,
+          postedDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+          status: "Active"
+        },
+        {
+          id: "dummy-15",
+          role: "Cloud Engineer",
+          companyName: "SkyHigh",
+          location: "Chennai",
+          workMode: "Hybrid",
+          experience: "3-6",
+          salaryPackage: "₹ 16-24 LPA",
+          roleDefinitions: "Scaling cloud infrastructure on Azure and GCP.",
+          primarySkills: JSON.stringify(["Azure", "GCP", "Kubernetes"]),
+          applicationCount: 12,
+          postedDate: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
+          status: "Active"
+        },
+        {
+          id: "dummy-16",
+          role: "Sales Executive",
+          companyName: "GrowthPlus",
+          location: "Chandigarh",
+          workMode: "On-site",
+          experience: "1-3",
+          salaryPackage: "₹ 6-10 LPA + Incentives",
+          roleDefinitions: "Driving revenue through strategic b2b client acquisitions.",
+          primarySkills: JSON.stringify(["B2B Sales", "CRM", "Negotiation"]),
+          applicationCount: 65,
+          postedDate: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
+          status: "Active"
+        },
+        {
+          id: "dummy-17",
+          role: "Content Writer",
+          companyName: "WordCraft",
+          location: "Remote",
+          workMode: "Remote",
+          experience: "2+",
+          salaryPackage: "₹ 7-9 LPA",
+          roleDefinitions: "Crafting compelling stories and articles for international brands.",
+          primarySkills: JSON.stringify(["Copywriting", "SEO", "Editing"]),
+          applicationCount: 50,
+          postedDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+          status: "Active"
+        },
+        {
+          id: "dummy-18",
+          role: "Network Engineer",
+          companyName: "NetConnect",
+          location: "Lucknow",
+          workMode: "On-site",
+          experience: "4+",
+          salaryPackage: "₹ 11-15 LPA",
+          roleDefinitions: "Setting up and maintaining secure corporate network infrastructures.",
+          primarySkills: JSON.stringify(["Cisco", "Firewalls", "VPN"]),
+          applicationCount: 9,
+          postedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+          status: "Active"
+        },
+        {
+          id: "dummy-19",
+          role: "Android Developer",
+          companyName: "DroidLabs",
+          location: "Gurgaon",
+          workMode: "Hybrid",
+          experience: "3+",
+          salaryPackage: "₹ 15-20 LPA",
+          roleDefinitions: "Building robust native Android applications.",
+          primarySkills: JSON.stringify(["Kotlin", "Jetpack Compose", "MVVM"]),
+          applicationCount: 21,
+          postedDate: new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString(),
+          status: "Active"
+        },
+        {
+          id: "dummy-20",
+          role: "Marketing Specialist",
+          companyName: "BrandBuzz",
+          location: "Remote",
+          workMode: "Remote",
+          experience: "2-5",
+          salaryPackage: "₹ 10-14 LPA",
+          roleDefinitions: "Executing performance marketing campaigns across channels.",
+          primarySkills: JSON.stringify(["Google Ads", "Meta Ads", "Analytics"]),
+          applicationCount: 33,
+          postedDate: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          status: "Active"
+        }
+      ];
+
+      const combinedJobs = [...(activeJobs as any[]), ...dummyJobs].sort((a, b) => {
+        const dateA = a.postedDate ? new Date(a.postedDate).getTime() : 0;
+        const dateB = b.postedDate ? new Date(b.postedDate).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      res.json(combinedJobs);
+    } catch (error) {
+      console.error('Error fetching public jobs:', error);
+      res.status(500).json({ message: "Failed to fetch job postings" });
     }
   });
 
@@ -2015,6 +2313,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get date parameter for filtering
       const dateParam = req.query.date as string | undefined;
+      const requirementId = req.query.requirementId as string | undefined;
       const today = dateParam || new Date().toISOString().split('T')[0];
 
       // Import getResumeTarget for calculations
@@ -3028,7 +3327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: employee.name,
         role: "Team Leader",
         employeeId: employee.employeeId,
-        phone: employee.phoneNumber || '-',
+        phone: employee.phone || employee.phoneNumber || '-',
         email: employee.email,
         joiningDate: employee.joiningDate ? new Date(employee.joiningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }).replace(/ /g, '-') : '-',
         department: employee.department || 'Talent Advisory',
@@ -3062,9 +3361,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const updates = req.body;
 
-      // Update employee record if needed
-      // For now, return the updated profile data
-      res.json({ ...updates, id: employee.id });
+      const employeeUpdates: any = {};
+      if (updates.name !== undefined) employeeUpdates.name = updates.name;
+      if (updates.phone !== undefined) {
+        employeeUpdates.phone = updates.phone;
+        employeeUpdates.phoneNumber = updates.phone;
+      }
+      if (updates.email !== undefined) employeeUpdates.email = updates.email;
+      if (updates.department !== undefined) employeeUpdates.department = updates.department;
+      if (updates.bannerImage !== undefined) employeeUpdates.bannerImage = updates.bannerImage;
+      if (updates.profilePicture !== undefined) employeeUpdates.profilePicture = updates.profilePicture;
+
+      const updatedEmployee = await storage.updateEmployee(employee.id, employeeUpdates);
+
+      if (!updatedEmployee) {
+        return res.status(500).json({ message: "Failed to update profile" });
+      }
+
+      const allEmployees = await storage.getAllEmployees();
+      const teamMembers = allEmployees.filter(
+        emp => emp.role === 'recruiter' && emp.reportingTo === updatedEmployee.employeeId
+      );
+
+      const revenueMappings = await storage.getRevenueMappingsByTeamLeaderId(updatedEmployee.id);
+      const totalContribution = revenueMappings.reduce((sum, rm) => sum + (rm.revenue || 0), 0);
+
+      let reportingToName = '-';
+      if (updatedEmployee.reportingTo) {
+        const manager = allEmployees.find(emp => emp.employeeId === updatedEmployee.reportingTo);
+        if (manager) {
+          reportingToName = manager.name;
+        }
+      }
+
+      const profile = {
+        id: updatedEmployee.id,
+        name: updatedEmployee.name,
+        role: "Team Leader",
+        employeeId: updatedEmployee.employeeId,
+        phone: updatedEmployee.phone || updatedEmployee.phoneNumber || '-',
+        email: updatedEmployee.email,
+        joiningDate: updatedEmployee.joiningDate ? new Date(updatedEmployee.joiningDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }).replace(/ /g, '-') : '-',
+        department: updatedEmployee.department || 'Talent Advisory',
+        reportingTo: reportingToName,
+        totalContribution: totalContribution.toLocaleString('en-IN'),
+        bannerImage: updatedEmployee.bannerImage || null,
+        profilePicture: updatedEmployee.profilePicture || null,
+        teamMembersCount: teamMembers.length
+      };
+
+      res.json(profile);
     } catch (error) {
       console.error('Update team leader profile error:', error);
       res.status(500).json({ message: "Failed to update profile" });
@@ -4085,6 +4431,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('[RECRUITER DAILY METRICS] Employee ID:', employee.id, 'Employee Name:', employee.name, 'Email:', employee.email);
 
       const dateParam = req.query.date as string | undefined;
+      const requirementId = req.query.requirementId as string | undefined;
       const today = dateParam || new Date().toISOString().split('T')[0];
 
       // Import getResumeTarget for calculations
@@ -4120,7 +4467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Filter requirements - include if assigned via talentAdvisorId OR has active assignment
       // Exclude if reassigned to another recruiter
-      const requirements = allRequirements.filter(req => {
+      let requirements = allRequirements.filter(req => {
         // If assigned via talentAdvisorId to this recruiter
         if (req.talentAdvisorId === employee.id) {
           // Check if it's been reassigned to another recruiter via assignment
@@ -4136,6 +4483,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // If has active assignment for this recruiter, include it
         return activeRequirementIds.has(req.id);
       });
+
+      // Filter by requirementId if provided
+      if (requirementId && requirementId !== 'Overall') {
+        requirements = requirements.filter(req => req.id === requirementId);
+      }
 
       // Calculate total required resumes and track per-requirement delivery
       let totalResumesRequired = 0;
@@ -4427,6 +4779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('[RECRUITER DELIVERED CANDIDATES] Employee ID:', employee.id, 'Employee Name:', employee.name, 'Email:', employee.email);
 
       const dateParam = req.query.date as string | undefined;
+      const requirementId = req.query.requirementId as string | undefined;
       const today = dateParam || new Date().toISOString().split('T')[0];
 
       const { resumeSubmissions, jobApplications, requirements } = await import("@shared/schema");
@@ -4793,6 +5146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // If requirement has an active assignment for this recruiter, include it
         return activeRequirementIds.has(req.id);
       });
+
 
       // Also get job applications for each requirement to calculate delivery counts
       const requirementsWithCounts = await Promise.all(
@@ -8937,7 +9291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
       const ownerRole = normalizeSourcingRole(employee.role);
-      const updates = req.body;
+      const reqBody = req.body;
 
       // Verify ownership first
       const existingJob = await storage.getRecruiterJobById(id);
@@ -8951,11 +9305,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Access denied. This job does not belong to you." });
       }
 
-      if (updates.skills && typeof updates.skills === 'string') {
-        updates.skills = updates.skills.split(',').map((s: string) => s.trim());
+      // Map frontend POST fields to database columns
+      const updateData: any = {};
+      if (reqBody.title !== undefined) updateData.role = reqBody.title;
+      if (reqBody.company !== undefined) updateData.companyName = reqBody.company;
+      if (reqBody.location !== undefined) updateData.location = reqBody.location;
+      if (reqBody.locationType !== undefined) updateData.workMode = reqBody.locationType;
+      if (reqBody.description !== undefined) updateData.aboutCompany = reqBody.description;
+      if (reqBody.requirements !== undefined) updateData.roleDefinitions = reqBody.requirements;
+      if (reqBody.responsibilities !== undefined) updateData.keyResponsibility = reqBody.responsibilities;
+      if (reqBody.benefits !== undefined) updateData.companyTagline = reqBody.benefits;
+      if (reqBody.department !== undefined) updateData.field = reqBody.department;
+      if (reqBody.openings !== undefined) updateData.noOfPositions = parseInt(reqBody.openings) || 1;
+      if (reqBody.companyLogo !== undefined) updateData.companyLogo = reqBody.companyLogo;
+
+      if (reqBody.experienceMin !== undefined || reqBody.experienceMax !== undefined) {
+        const min = reqBody.experienceMin;
+        const max = reqBody.experienceMax;
+        updateData.experience = max ? `${min}-${max} years` : `${min}+ years`;
       }
 
-      const job = await storage.updateRecruiterJob(id, updates);
+      if (reqBody.salaryMin !== undefined || reqBody.salaryMax !== undefined) {
+        const minLPA = reqBody.salaryMin ? Math.round(reqBody.salaryMin / 100000) : 0;
+        const maxLPA = reqBody.salaryMax ? Math.round(reqBody.salaryMax / 100000) : null;
+        updateData.salaryPackage = maxLPA ? `${minLPA}-${maxLPA} LPA` : `${minLPA}+ LPA`;
+      }
+
+      if (reqBody.skills !== undefined) {
+        const skillsArray = Array.isArray(reqBody.skills) ? reqBody.skills : (reqBody.skills ? reqBody.skills.split(',').map((s: string) => s.trim()) : []);
+        updateData.primarySkills = JSON.stringify(skillsArray);
+      }
+
+      const job = await storage.updateRecruiterJob(id, updateData);
       res.json({ message: "Job updated successfully", job });
     } catch (error) {
       console.error("Update recruiter job error:", error);

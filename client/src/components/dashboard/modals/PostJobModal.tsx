@@ -9,6 +9,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 
 interface JobFormData {
+  id?: string | number;
   companyName: string;
   companyTagline: string;
   companyType: string;
@@ -66,12 +67,15 @@ export default function PostJobModal({
 
   const postJobMutation = useMutation({
     mutationFn: async (jobData: any) => {
+      if (jobData.id) {
+        return apiRequest('PUT', `/api/recruiter/jobs/${jobData.id}`, jobData);
+      }
       return apiRequest('POST', '/api/recruiter/jobs', jobData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/recruiter/jobs'] });
       queryClient.invalidateQueries({ queryKey: ['/api/recruiter/jobs/counts'] });
-      toast({ title: 'Job posted successfully!', description: 'Your job listing is now active.' });
+      toast({ title: formData.id ? 'Job updated successfully!' : 'Job posted successfully!', description: formData.id ? 'Your job listing has been updated.' : 'Your job listing is now active.' });
       onClose();
       onSuccess();
       setFormError('');
@@ -162,6 +166,7 @@ export default function PostJobModal({
     ];
 
     const jobData = {
+      id: formData.id,
       title: formData.role || 'Software Developer',
       company: formData.companyName,
       location: formData.location,
@@ -292,7 +297,7 @@ export default function PostJobModal({
       <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
         <DialogContent className="max-w-2xl max-h-[95vh] overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Post the job</DialogTitle>
+            <DialogTitle>{formData.id ? 'Edit Job' : 'Post the job'}</DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto scrollbar-hide" style={{ maxHeight: 'calc(85vh - 4rem)' }}>
             
@@ -707,10 +712,10 @@ export default function PostJobModal({
                   {postJobMutation.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Posting...
+                      {formData.id ? 'Updating...' : 'Posting...'}
                     </>
                   ) : (
-                    'Post the Job'
+                    formData.id ? 'Update Job' : 'Post the Job'
                   )}
                 </Button>
               </div>

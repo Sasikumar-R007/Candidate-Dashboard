@@ -192,6 +192,17 @@ export function ProfileSettingsModal({
       const response = await apiRequest("PATCH", endpoint, payload);
       const updatedProfile = await response.json();
       setProfileData(updatedProfile);
+      setFormData((prev) => ({
+        ...prev,
+        name: updatedProfile?.name || prev.name,
+        email: updatedProfile?.email || prev.email,
+        phone: updatedProfile?.phone || prev.phone,
+        role: updatedProfile?.role || prev.role,
+        employeeId: updatedProfile?.employeeId || prev.employeeId,
+        department: updatedProfile?.department || prev.department,
+        joiningDate: updatedProfile?.joiningDate || prev.joiningDate,
+      }));
+      setProfilePreview(updatedProfile?.profilePicture || uploadedProfilePicture || null);
       setSelectedProfileFile(null);
       setIsEditingProfile(false);
       if (user) {
@@ -207,6 +218,7 @@ export function ProfileSettingsModal({
           },
         });
       }
+      window.dispatchEvent(new CustomEvent("profile-updated"));
       toast({
         title: "Success",
         description: "Profile updated successfully.",

@@ -436,6 +436,16 @@ export default function TeamLeaderDashboard() {
     enabled: !!employee,
   });
 
+  useEffect(() => {
+    const handleProfileUpdated = () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/team-leader/profile'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/team-leader/stats'] });
+    };
+
+    window.addEventListener('profile-updated', handleProfileUpdated);
+    return () => window.removeEventListener('profile-updated', handleProfileUpdated);
+  }, [queryClient]);
+
   // Get available talent advisors dynamically from team members
   const talentAdvisors = useMemo(() => {
     if (Array.isArray(teamMembers) && teamMembers.length > 0) {
@@ -472,6 +482,44 @@ export default function TeamLeaderDashboard() {
     const parsedDate = value instanceof Date ? value : new Date(value);
     if (Number.isNaN(parsedDate.getTime())) return '-';
     return format(parsedDate, 'dd MMM yyyy');
+  };
+
+  const handleEditJob = (job: any) => {
+    let skills = [];
+    try { skills = typeof job.primarySkills === 'string' ? JSON.parse(job.primarySkills) : (job.primarySkills || []); } catch(e) {}
+    
+    setJobFormData({
+      id: job.id,
+      companyName: job.companyName || '',
+      companyTagline: job.companyTagline || '',
+      companyType: job.companyType || '',
+      market: job.market || '',
+      field: job.field || '',
+      noOfPositions: String(job.noOfPositions || 1),
+      role: job.role || '',
+      experience: job.experience || '',
+      location: job.location || '',
+      workMode: job.workMode || '',
+      employmentType: 'Full-time', // Not mapped in DB schema
+      salaryPackage: job.salaryPackage || '',
+      aboutCompany: job.aboutCompany || '',
+      roleDefinitions: job.roleDefinitions || '',
+      keyResponsibility: job.keyResponsibility || '',
+      primarySkills: skills.slice(0, 5),
+      secondarySkills: skills.slice(5, 10),
+      knowledgeOnly: skills.slice(10, 15),
+      companyLogo: job.companyLogo || ''
+    });
+    
+    // Ensure arrays have at least one element for inputs
+    setJobFormData(prev => ({
+      ...prev,
+      primarySkills: prev.primarySkills.length > 0 ? prev.primarySkills : [''],
+      secondarySkills: prev.secondarySkills.length > 0 ? prev.secondarySkills : [''],
+      knowledgeOnly: prev.knowledgeOnly.length > 0 ? prev.knowledgeOnly : ['']
+    }));
+    
+    setIsPostJobModalOpen(true);
   };
 
   const renderSourcingJobCards = (jobs: any[], emptyMessage: string) => {
@@ -523,7 +571,17 @@ export default function TeamLeaderDashboard() {
             </div>
             <div className="mt-4 rounded-xl bg-blue-50 px-3 py-3 text-sm text-slate-700">
               <p className="text-[11px] font-medium uppercase tracking-wide text-blue-500">Package</p>
-              <p className="mt-1 font-medium text-slate-900">{job.salaryPackage || '-'}</p>
+              <p className="mt-1 font-medium text-slate-900">{job.salaryPackage || `${job.salaryMin ? job.salaryMin/100000 + 'L - ' : ''}${job.salaryMax ? job.salaryMax/100000 + 'L' : ''}`}</p>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center gap-1 text-blue-600 border-blue-200 hover:bg-blue-50"
+                onClick={() => handleEditJob(job)}
+              >
+                <EditIcon className="w-4 h-4" /> Edit
+              </Button>
             </div>
           </div>
         ))}
@@ -532,7 +590,6 @@ export default function TeamLeaderDashboard() {
   };
   
   // Static priority distribution - fixed counts that never change
-  // These represent the expected number of resumes to be delivered based on priority/criticality
   const priorityDistribution = {
     HIGH: { Easy: 6, Medium: 4, Tough: 2 },
     MEDIUM: { Easy: 5, Medium: 3, Tough: 2 },
@@ -893,167 +950,140 @@ export default function TeamLeaderDashboard() {
           />
           <div className="flex h-screen">
             {/* Main Content - Middle Section (Scrollable) */}
-            <div className="px-6 py-6 space-y-6 flex-1 overflow-y-auto h-full">
-              {/* Top Section - Profile Card and Performance Gauge */}
-              <div className="grid grid-cols-2 gap-6">
-                {/* Left - Profile Card with Metrics */}
-                <Card className="bg-white border border-gray-200">
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4 mb-6">
-                      {/* Profile Picture */}
-                      <div className="relative flex-shrink-0">
-                        {stats.image ? (
-                          <img 
-                            src={stats.image} 
-                            alt={stats.name}
-                            className="w-20 h-20 rounded-full object-cover border-2 border-gray-200"
-                          />
-                        ) : (
-                          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center border-2 border-gray-200">
-                            <span className="text-2xl font-bold text-white">
-                              {stats.name?.charAt(0) || 'T'}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Name and Role */}
-                      <div className="flex-1">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-1">{stats.name}</h2>
-                        <p className="text-sm font-medium text-gray-600">Team Leader</p>
-                      </div>
-                    </div>
-
-                    {/* Metrics Cards */}
-                    <div className="grid grid-cols-3 gap-3 mb-6">
-                      {/* Qtrs Achieved */}
-                      <div className="bg-green-50 rounded-lg p-4 border border-green-100">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Trophy className="h-4 w-4 text-green-600" />
-                          <span className="text-xs font-medium text-green-700">Qtrs Achieved</span>
+            <div className="px-4 py-4 space-y-4 flex-1 overflow-y-auto h-full">
+              {/* Top Section - TL Summary and Performance */}
+              <div className="space-y-4">
+                <Card className="overflow-hidden border border-slate-200 bg-[linear-gradient(180deg,_#ffffff_0%,_#f8fbff_100%)] shadow-[0_16px_34px_rgba(15,23,42,0.06)]">
+                  <CardContent className="p-4">
+                    <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="relative flex-shrink-0">
+                          {stats.image ? (
+                            <img
+                              src={stats.image}
+                              alt={stats.name}
+                              className="h-14 w-14 rounded-[18px] object-cover border-2 border-white shadow-md"
+                            />
+                          ) : (
+                            <div className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-gradient-to-br from-blue-500 to-blue-700 border-2 border-white shadow-md">
+                              <span className="text-lg font-bold text-white">
+                                {stats.name?.charAt(0) || 'T'}
+                              </span>
+                            </div>
+                          )}
                         </div>
-                        <p className="text-2xl font-bold text-green-600">{stats.qtrsAchieved ?? 0}</p>
-                      </div>
 
-                      {/* Next Milestone */}
-                      <div className="bg-orange-50 rounded-lg p-4 border border-orange-100">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Flag className="h-4 w-4 text-orange-600" />
-                          <span className="text-xs font-medium text-orange-700">Next Milestone</span>
+                        <div className="min-w-0">
+                          <h2 className="text-lg font-bold tracking-tight text-slate-900">{stats.name}</h2>
+                          <p className="mt-0.5 text-xs font-medium text-slate-500">Team Leader</p>
                         </div>
-                        <p className="text-2xl font-bold text-orange-600">{stats.nextMilestone ?? "0"}</p>
                       </div>
 
-                      {/* Tenure */}
-                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
-                        <div className="flex items-center gap-2 mb-2">
-                          <CalendarIcon className="h-4 w-4 text-blue-600" />
-                          <span className="text-xs font-medium text-blue-700">Tenure</span>
-                        </div>
-                        <p className="text-2xl font-bold text-blue-600">{tenureYears} <span className="text-sm">years</span></p>
-                      </div>
-                    </div>
-
-                    {/* Team Members Section */}
-                    <div className="border-t border-gray-200 pt-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-sm font-semibold text-gray-700">Team Members</h3>
-                        {Array.isArray(teamMembers) && teamMembers.length > 3 && (
-                          <span className="text-xs text-gray-500">+{teamMembers.length - 3} more</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {Array.isArray(teamMembers) && teamMembers.slice(0, 3).map((member: any, index: number) => (
-                          <div key={member.id || index} className="relative">
-                            {member.profilePicture ? (
-                              <img 
-                                src={member.profilePicture} 
-                                alt={member.name}
-                                className="w-10 h-10 rounded-full object-cover border-2 border-white"
-                              />
-                            ) : (
-                              <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center border-2 border-white">
-                                <span className="text-xs font-semibold text-gray-600">
-                                  {member.name?.charAt(0) || 'M'}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                        {Array.isArray(teamMembers) && teamMembers.length > 3 && (
-                          <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center border-2 border-white">
-                            <span className="text-xs font-semibold text-white">+{teamMembers.length - 3}</span>
-                          </div>
-                        )}
+                      <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-3 xl:max-w-[560px]">
+                        <button
+                          onClick={() => setIsPostJobModalOpen(true)}
+                          className="whitespace-nowrap rounded border border-blue-600 bg-white px-3 py-2 text-sm font-semibold text-blue-600 transition-colors hover:bg-blue-50"
+                          data-testid="button-tl-post-job"
+                        >
+                          Post Jobs
+                        </button>
+                        <button
+                          onClick={() => setIsUploadResumeModalOpen(true)}
+                          className="whitespace-nowrap rounded border border-blue-600 bg-white px-3 py-2 text-sm font-semibold text-blue-600 transition-colors hover:bg-blue-50"
+                          data-testid="button-tl-upload-resume"
+                        >
+                          Upload Resume
+                        </button>
+                        <button
+                          onClick={() => window.open('/source-resume', '_blank')}
+                          className="whitespace-nowrap rounded border border-blue-600 bg-white px-3 py-2 text-sm font-semibold text-blue-600 transition-colors hover:bg-blue-50"
+                          data-testid="button-tl-source-resume"
+                        >
+                          Source Resume
+                        </button>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Right - Action Strip + Performance Gauge */}
-                <div className="space-y-4">
-                  <div className="rounded-[24px] bg-gradient-to-br from-slate-100 via-slate-50 to-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.06)]">
-                      <div className="rounded-[18px] bg-white/85 px-4 py-3">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => setIsPostJobModalOpen(true)}
-                            className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
-                            data-testid="button-tl-post-job"
-                          >
-                            Post Jobs
-                          </button>
-                          <button
-                            onClick={() => setIsUploadResumeModalOpen(true)}
-                            className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
-                            data-testid="button-tl-upload-resume"
-                          >
-                            Upload Resume
-                          </button>
-                          <button
-                            onClick={() => window.open('/source-resume', '_blank')}
-                            className="px-4 py-2 border border-blue-600 text-blue-600 hover:bg-blue-50 rounded text-sm font-medium transition-colors"
-                            data-testid="button-tl-source-resume"
-                          >
-                            Source Resume
-                          </button>
-                        </div>
-                        <div className="mt-4 flex justify-end">
-                          <div className="grid grid-cols-3 gap-3">
-                            <button
-                              type="button"
-                              onClick={() => setIsActiveJobsModalOpen(true)}
-                              className="min-w-[120px] rounded-2xl bg-emerald-50 px-4 py-3 text-right transition hover:bg-emerald-100"
-                            >
-                              <p className="text-xs font-medium text-emerald-600">Active Jobs</p>
-                              <p className="mt-1 text-2xl font-semibold text-emerald-700">{activeTlJobs.length || sourcingJobCounts?.active || 0}</p>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setIsPostedJobsModalOpen(true)}
-                              className="min-w-[120px] rounded-2xl bg-slate-50 px-4 py-3 text-right transition hover:bg-slate-100"
-                            >
-                              <p className="text-xs font-medium text-slate-500">Posted Jobs</p>
-                              <p className="mt-1 text-2xl font-semibold text-slate-900">{tlSourcingJobs.length || sourcingJobCounts?.total || 0}</p>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setIsUploadedResumesModalOpen(true)}
-                              className="min-w-[120px] rounded-2xl bg-blue-50 px-4 py-3 text-right transition hover:bg-blue-100"
-                            >
-                              <p className="text-xs font-medium text-blue-600">Uploaded Resumes</p>
-                              <p className="mt-1 text-2xl font-semibold text-blue-700">{tlResumeCount || sourcingCandidateCounts?.total || 0}</p>
-                            </button>
+                <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(330px,0.9fr)]">
+                  <Card className="overflow-hidden border border-slate-200 bg-[linear-gradient(180deg,_#ffffff_0%,_#f8fbff_100%)] shadow-[0_16px_34px_rgba(15,23,42,0.06)]">
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-1 gap-2.5 md:grid-cols-3">
+                        <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-4 flex flex-col justify-between min-h-[100px]">
+                          <div className="flex items-center gap-2">
+                            <Trophy className="h-4 w-4 text-emerald-600" />
+                            <span className="text-xs font-semibold text-emerald-700">Qtrs Achieved</span>
                           </div>
+                          <p className="mt-2.5 text-2xl font-bold text-emerald-700">{stats.qtrsAchieved ?? 0}</p>
                         </div>
-                      </div>
-                  </div>
 
-                  <Card className="border border-slate-200 bg-gradient-to-br from-white via-slate-50 to-blue-50/40 shadow-[0_16px_40px_rgba(15,23,42,0.08)]">
-                    <CardContent className="p-6">
-                      <div className="rounded-[28px] border border-white/80 bg-white/90 px-4 py-6 shadow-inner">
-                        <div className="flex items-center justify-center">
-                          <TeamLeaderPerformanceGauge value={stats.performanceScore ?? 0} size={250} />
+                        <div className="rounded-lg border border-orange-100 bg-orange-50 p-4 flex flex-col justify-between min-h-[100px]">
+                          <div className="flex items-center gap-2">
+                            <Flag className="h-4 w-4 text-orange-600" />
+                            <span className="text-xs font-semibold text-orange-700">Next Milestone</span>
+                          </div>
+                          <p className="mt-2.5 text-2xl font-bold text-orange-600">{stats.nextMilestone ?? "0"}</p>
                         </div>
+
+                        <div className="rounded-lg border border-blue-100 bg-blue-50 p-4 flex flex-col justify-between min-h-[100px]">
+                          <div className="flex items-center gap-2">
+                            <CalendarIcon className="h-4 w-4 text-blue-600" />
+                            <span className="text-xs font-semibold text-blue-700">Tenure</span>
+                          </div>
+                          <p className="mt-2.5 text-2xl font-bold text-blue-700">
+                            {tenureYears}
+                            <span className="ml-1 text-sm font-semibold text-blue-500">y</span>
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setIsActiveJobsModalOpen(true)}
+                          className="rounded-lg border border-emerald-100 bg-white p-4 text-left transition-colors hover:bg-emerald-50 flex flex-col justify-between min-h-[100px]"
+                        >
+                          <div className="flex items-start justify-between gap-2 w-full">
+                            <p className="text-xs font-semibold text-emerald-600">Active Jobs</p>
+                            <ExternalLink className="h-3.5 w-3.5 text-emerald-500" />
+                          </div>
+                          <p className="mt-2.5 text-2xl font-bold text-emerald-700">{activeTlJobs.length || sourcingJobCounts?.active || 0}</p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setIsPostedJobsModalOpen(true)}
+                          className="rounded-lg border border-slate-200 bg-white p-4 text-left transition-colors hover:bg-slate-50 flex flex-col justify-between min-h-[100px]"
+                        >
+                          <div className="flex items-start justify-between gap-2 w-full">
+                            <p className="text-xs font-semibold text-slate-500">Posted Jobs</p>
+                            <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
+                          </div>
+                          <p className="mt-2.5 text-2xl font-bold text-slate-900">{tlSourcingJobs.length || sourcingJobCounts?.total || 0}</p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setIsUploadedResumesModalOpen(true)}
+                          className="rounded-lg border border-blue-100 bg-white p-4 text-left transition-colors hover:bg-blue-50 flex flex-col justify-between min-h-[100px]"
+                        >
+                          <div className="flex items-start justify-between gap-2 w-full">
+                            <p className="text-xs font-semibold text-blue-600">Uploaded Resumes</p>
+                            <ExternalLink className="h-3.5 w-3.5 text-blue-500" />
+                          </div>
+                          <p className="mt-2.5 text-2xl font-bold text-blue-700">{tlResumeCount || sourcingCandidateCounts?.total || 0}</p>
+                        </button>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border border-slate-200 bg-white shadow-[0_16px_34px_rgba(15,23,42,0.06)]">
+                    <CardContent className="flex h-full flex-col p-4">
+                      <div className="mb-2.5">
+                        <p className="text-lg font-semibold text-slate-900">Team Performance</p>
+                      </div>
+
+                      <div className="flex flex-1 items-center justify-center rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,_#ffffff_0%,_#f8fbff_100%)] p-2.5">
+                        <TeamLeaderPerformanceGauge value={stats.performanceScore ?? 0} size={230} />
                       </div>
                     </CardContent>
                   </Card>

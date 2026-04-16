@@ -1359,10 +1359,20 @@ const SourceResume = () => {
     const isFromRecruiter = sessionStorage.getItem('sourceResumeAccess') === 'true';
     const referrer = document.referrer;
     
-    // Check if accessed from recruiter page or if referrer contains the recruiter dashboard path
-    if (!isFromRecruiter && !referrer.includes('/recruiter-login-2') && !referrer.includes('/source-resume')) {
-      // If accessed directly via URL, redirect to recruiter login
-      setLocation('/recruiter-login-2');
+    // Check if accessed from allowed pages or if referrer contains an allowed path
+    if (!isFromRecruiter && 
+        !referrer.includes('/recruiter-login-2') && 
+        !referrer.includes('/team-leader') && 
+        !referrer.includes('/admin') && 
+        !referrer.includes('/source-resume')) {
+      // If accessed directly via URL, redirect to appropriate dashboard based on role
+      if (employee.role === 'team_leader') {
+        setLocation('/team-leader');
+      } else if (employee.role === 'admin') {
+        setLocation('/admin');
+      } else {
+        setLocation('/recruiter-login-2');
+      }
       return;
     }
     

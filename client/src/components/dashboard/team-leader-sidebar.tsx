@@ -172,14 +172,6 @@ export default function TeamLeaderSidebar() {
                       </span>
                     </div>
                   )}
-                  <Badge 
-                    className={`absolute -bottom-1 -right-1 ${
-                      selectedMember.status === 'online' ? 'bg-green-500' : 'bg-gray-400'
-                    } text-white`}
-                    data-testid="badge-member-status"
-                  >
-                    {selectedMember.status || 'offline'}
-                  </Badge>
                 </div>
                 <div className="flex-1">
                   <h3 className="text-2xl font-bold text-gray-900 dark:text-white" data-testid="text-member-name">{selectedMember.name}</h3>
